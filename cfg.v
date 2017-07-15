@@ -1,5 +1,6 @@
 
 Require Import List.
+Require Import Omega.
 
 Inductive Empty_set : Type := .
 Fixpoint nat_iter {T : Type} (n : nat) (f : T -> T) (base : T) :=
@@ -9,6 +10,12 @@ Fixpoint nat_iter {T : Type} (n : nat) (f : T -> T) (base : T) :=
   end.
 Definition Fin (n : nat): Type := nat_iter n option Empty_set.
 
+Fixpoint members (n : nat) : list (Fin n) :=
+  match n with
+  | O => nil
+  | S n' => @None (Fin n') :: (map (fun e => Some e) (members n'))
+  end.
+
 Fixpoint In2 {A : Type} (a a' : A) (l : list A) : Prop :=
   match l with
   | nil => False
@@ -17,6 +24,21 @@ Fixpoint In2 {A : Type} (a a' : A) (l : list A) : Prop :=
                | Some b' => (a = b /\ a' = b') \/ In2 a a' l'
                end
   end.
+
+
+Lemma allin :
+  forall n p, n > 0 -> In p (members n).
+Proof.
+  intros.
+  induction H.
+  + simpl. cbv in p. destruct p.
+    - destruct e; auto.
+    - auto.
+  + destruct p.
+    - simpl. right. 
+      apply in_map. apply IHle.
+    - simpl. auto.
+Qed.
 
 Section CFG.
   Variable N : nat.
@@ -31,21 +53,26 @@ Section CFG.
   Variables eff : Conf -> option Conf.
   Variables has_edge : Lab -> Lab -> bool.
 
+  Variables dummy : Conf.
+  Definition nodes := members N.
+
+
   Definition is_effect_on (p q : Lab) :=
     exists i i' s s', eff ((p, i), s) = Some ((q, i'), s').
 
   Variables edge_spec :
     forall p q, is_effect_on p q -> has_edge p q = true.
 
-  
+  Definition preds (p : Lab) := filter (fun q => has_edge q p) nodes.
+
   Definition Trace := list Conf.
 
   Definition step (t : Trace) : Trace :=
     match t with
     | nil => nil
     | k :: t' => match eff k with
-                 | Some k' => k' :: t
-                 | None => t
+                 | Some k' => k' :: k :: t'
+                 | None => dummy :: k :: t'
                  end
     end.
 
@@ -53,26 +80,153 @@ Section CFG.
   Definition Hyper := Traces -> Prop.
 
   (* This is the concrete transformer for sets of traces *)
-  Definition concrete (ts : Traces) : Traces :=
-    fun t' =>  ts t' \/ forall t, ts t -> t' = step t.
+  Definition sem_trace (ts : Traces) : Traces :=
+    fun t' => (exists t, ts t /\ t' = step t).
 
-  Definition Uni := Lab -> Var -> bool.
-  Definition Hom := Lab -> bool.
+  Definition sem_hyper (T : Hyper) : Hyper :=
+    fun ts' => exists ts, T ts /\ ts' = sem_trace ts.
+  
+  Definition Uni := Lab -> Var -> Prop.
+  Definition Hom := Lab -> Prop.
   
   Definition uni_concr (u : Uni) : Hyper :=
     fun ts => forall t t', ts t -> ts t' ->
                            forall x p i s s', In ((p, i), s) t ->
                                               In ((p, i), s') t' ->
-                                              u p x = true -> s x = s' x.
+                                              u p x -> s x = s' x.
 
   Definition hom_concr (h : Hom) : Hyper :=
     fun ts => forall t t', ts t -> ts t' ->
-                           forall p, h p = true ->
+                           forall p, h p ->
                                      forall q q' j j' i s s' s1 s2, In2 ((q, j), s) ((p, i), s1) t ->
                                                                     In2 ((q', j'), s') ((p, i), s2) t ->
                                                                     q = q' /\ j = j'.
+  (*
+                                     forall q q' j j' i s s' s1 s2, In2 ((q, j), s) ((p, i), s1) t ->
+                                                                    In2 ((q', j'), s') ((p, i), s2) t ->
+                                                                    q = q' /\ j = j'.
+*)
+
+  Definition red_prod (h h' : Hyper) : Hyper :=
+    fun ts => h ts /\ h' ts.
+  
+  Definition uni_trans (uni : Uni) (hom : Hom) : Uni :=
+    fun p => fun x => hom p /\ forall q, has_edge q p = true -> uni q x.
+
+  (*
+  Lemma sem_trace_ok :
+    forall ts c t, sem_trace ts (c :: t) -> ts t.
+  Proof.
+    intros.
+    induction t; unfold sem_trace in H.
+    inversion H.
+    ; destruct H as [Hsame | t' [Hts' Hstep]].
+    unfold step in Hstep.
+    destruct t'.
+    inversion Hstep.
+    destruct (eff c0).
+    inversion Hstep; subst; intuition.
+    inversion Hstep; subst.
+
+    unfold sem_trace.
+*)
+
+  Lemma step_rewr :
+    forall c t t', 
+      c :: t = step t' -> t = t'.
+  Proof.
+    intros.
+    unfold step in H.
+    destruct t'.
+    inversion H.
+    destruct (eff c0); inversion H; subst; reflexivity.
+  Qed.
+
+  Lemma uni_correct :
+    forall uni hom, forall T,
+        sem_hyper (red_prod (uni_concr uni) (hom_concr hom)) T ->
+        uni_concr (uni_trans uni hom) T.
+  Proof.
+    intros uni hom T Hred.
+    unfold uni_concr.
+    intros t t' HTin HTin' x p i s s'.
+    intros HIn HIn'.
+    intros.
+
+    destruct H as [Hhom Hpred].
+    unfold sem_hyper in Hred.
+    destruct Hred as [ts [Hconcr Hstep]]; subst.
+    unfold red_prod in Hconcr.
+    destruct Hconcr as [HCuni HChom].
+    
+    destruct t as [| c t]; try (apply in_nil in HIn; contradiction).
+    destruct t' as [| c' t']; try (apply in_nil in HIn'; contradiction).
+
+    destruct HTin as [r [Hr Hstep]].
+    destruct HTin' as [r' [Hr' Hstep']].
+    inversion HIn.
+    inversion HIn'.
+
+    subst.
+    clear HIn HIn'.
+    
+    simpl in HIn.
+    apply step_rewr in Hstep; subst.
+    apply step_rewr in Hstep'; subst.
+    
+
+    unfold hom_concr in *.
+    specialize (HChom r r' Hr Hr' p Hhom).
+    unfold uni_concr in HCuni.
+
+    unfold step in *.
+    destruct r; try inversion Hstep.
+    destruct (eff c0).
 
 
+
+    
+    inversion HIn; inversion HIn'; subst.
+
+
+
+    destruct r; try (inversion Hstep).
+    destruct r'; try (inversion Hstep').
+    
+    unfold uni_concr in HCuni.
+    destruct t' as [| c' t']; try (inversion HIn').
+    admit.
+    , t' as [| c' t']; inversion HIn.
+    + inversion HIn'.
+    + inversion HIn'.
+    + admit.
+    + inversion HIn.
+    + unfold sem_trace in *.
+    unfold uni_concr in *.
+    eapply HCuni.
+
+    apply Hr.
+    apply Hr'.
+
+    hnf in Hcuni, Hchom.
+    eapply Hcuni.
+    unfold sem_hyper, sem_trace in *.
+    un
+    pose proof (Hcuni).
+    pose (hom_concr hom T) as H.
+    unfold hom_concr in H.
+    clearbody H.
+
+    cut (hom_concr hom T).
+    unfold hom_concr.
+    intros.
+    generalize hom.
+    apply hom_concr in (hom H0).
+
+    unfold sem_hyper, sem_trace in H.
+    unfold 
+    intros.
+      
 End CFG.
 
   
