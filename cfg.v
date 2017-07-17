@@ -88,48 +88,37 @@ Section CFG.
   
   Definition Uni := Lab -> Var -> Prop.
   Definition Hom := Lab -> Prop.
+
+  Definition traces_closed (ts : Traces) : Prop :=
+    forall t,  ts t -> ts (step t).
   
   Definition uni_concr (u : Uni) : Hyper :=
-    fun ts => forall t t', ts t -> ts t' ->
+    fun ts => traces_closed ts /\
+              forall t t', ts t -> ts t' ->
                            forall x p i s s', In ((p, i), s) t ->
                                               In ((p, i), s') t' ->
                                               u p x -> s x = s' x.
 
   Definition hom_concr (h : Hom) : Hyper :=
-    fun ts => forall t t', ts t -> ts t' ->
+    fun ts => traces_closed ts /\
+              forall t t', ts t -> ts t' ->
                            forall p, h p ->
                                      forall q q' j j' i s s' s1 s2, In2 ((q, j), s) ((p, i), s1) t ->
                                                                     In2 ((q', j'), s') ((p, i), s2) t ->
                                                                     q = q' /\ j = j'.
-  (*
-                                     forall q q' j j' i s s' s1 s2, In2 ((q, j), s) ((p, i), s1) t ->
-                                                                    In2 ((q', j'), s') ((p, i), s2) t ->
-                                                                    q = q' /\ j = j'.
-*)
-
   Definition red_prod (h h' : Hyper) : Hyper :=
     fun ts => h ts /\ h' ts.
   
   Definition uni_trans (uni : Uni) (hom : Hom) : Uni :=
     fun p => fun x => hom p /\ forall q, has_edge q p = true -> uni q x.
 
-  (*
-  Lemma sem_trace_ok :
-    forall ts c t, sem_trace ts (c :: t) -> ts t.
+  Lemma in_to_in2 :
+    forall (k : Conf) (t t' : Trace), In k t -> In k t' -> (exists k' k'', In2 k k' t /\ In2 k k'' t') \/ (t = nil \/ t' = nil).
   Proof.
-    intros.
-    induction t; unfold sem_trace in H.
-    inversion H.
-    ; destruct H as [Hsame | t' [Hts' Hstep]].
-    unfold step in Hstep.
-    destruct t'.
-    inversion Hstep.
-    destruct (eff c0).
-    inversion Hstep; subst; intuition.
-    inversion Hstep; subst.
-
-    unfold sem_trace.
-*)
+    intros k t t'.
+    intros HIn HIn'.
+  Admitted.
+    
 
   Lemma step_rewr :
     forall c t t', 
@@ -149,23 +138,48 @@ Section CFG.
   Proof.
     intros uni hom T Hred.
     unfold uni_concr.
-    intros t t' HTin HTin' x p i s s'.
-    intros HIn HIn'.
-    intros.
-
-    destruct H as [Hhom Hpred].
     unfold sem_hyper in Hred.
     destruct Hred as [ts [Hconcr Hstep]]; subst.
     unfold red_prod in Hconcr.
     destruct Hconcr as [HCuni HChom].
+    destruct HChom as [Hclosed HChom].
+
+    split.
+    + unfold traces_closed in *.
+      intros.
+      unfold sem_trace in *.
+      destruct H. destruct H. subst.
+      apply Hclosed in H.
+      exists (step x).
+      auto.
+    + intros t t' HTin HTin' x p i s s'.
+      intros HIn HIn' Htrans.
+      unfold uni_trans in Htrans.
+      destruct Htrans as [Hhom Htrans].
+      destruct HTin as [r [Hr Hstep]].
+      destruct HTin' as [r' [Hr' Hstep']].
+      subst.
+      apply Hclosed in Hr.
+      apply Hclosed in Hr'.
+      specialize (HChom (step r) (step r') Hr Hr' p Hhom).
+      assert (((p, i, s) :: t) ts).
+
+      apply Hclosed in H.
+
+    intros.
+
+    destruct H as [Hhom Hpred].
+    unfold sem_hyper in Hred.
     
     destruct t as [| c t]; try (apply in_nil in HIn; contradiction).
     destruct t' as [| c' t']; try (apply in_nil in HIn'; contradiction).
 
-    destruct HTin as [r [Hr Hstep]].
-    destruct HTin' as [r' [Hr' Hstep']].
+
+    
     inversion HIn.
     inversion HIn'.
+
+    Goal 3.
 
     subst.
     clear HIn HIn'.
