@@ -42,65 +42,65 @@ Qed.
 
 Section CFG.
   Variable N : nat.
-  Definition Lab := Fin N.
-  Variables Var : Type.
-  Variables Val : Type.
+  Variable Lab : Type.
+  Variable Var : Type.
+  Variable Val : Type.
+  Variable init_uni : Var -> Prop.
 
   Definition IVec := (list nat).
   Definition State := Var -> Val.
   Definition Coord := prod Lab IVec.
   Definition Conf := prod Coord State.
-  Variables eff : Conf -> option Conf.
-  Variables has_edge : Lab -> Lab -> bool.
 
-  Variables dummy : Conf.
-  Definition nodes := members N.
+  Variable eff : Conf -> option Conf.
+  Variable has_edge : Lab -> Lab -> Prop.
+  Variable dummy : Conf.
+  Variable root : Lab.
+  Variable initial_uni : Var -> Prop.
+  Variable is_root : Lab -> bool.
+  Variable is_root_spec : forall l, is_root l = true <-> l = root.
 
+  Definition start_coord := (root, @nil nat) : Coord.
 
   Definition is_effect_on (p q : Lab) :=
     exists i i' s s', eff ((p, i), s) = Some ((q, i'), s').
 
   Variables edge_spec :
-    forall p q, is_effect_on p q -> has_edge p q = true.
-
-  Definition preds (p : Lab) := filter (fun q => has_edge q p) nodes.
+    forall p q, is_effect_on p q -> has_edge p q.
+  
+  Inductive tr : list Conf -> Prop := 
+    | Init : forall s, tr ((start_coord, s) :: nil)
+    | Step : forall k k' t, tr (k :: t) -> eff k = Some k' -> tr (k' :: k :: t).
 
   Definition Trace := list Conf.
-
-  Definition step (t : Trace) : Trace :=
-    match t with
-    | nil => nil
-    | k :: t' => match eff k with
-                 | Some k' => k' :: k :: t'
-                 | None => dummy :: k :: t'
-                 end
-    end.
-
   Definition Traces := Trace -> Prop.
   Definition Hyper := Traces -> Prop.
 
   (* This is the concrete transformer for sets of traces *)
   Definition sem_trace (ts : Traces) : Traces :=
-    fun t' => (exists t, ts t /\ t' = step t).
+    fun t' => (exists s, ts ((start_coord, s) :: nil))
+              \/ (exists k k' t, ts (k :: t) /\ Some k' = eff k /\ t' = k' :: k :: t). 
 
-  Definition sem_hyper (T : Hyper) : Hyper :=
-    fun ts' => exists ts, T ts /\ ts' = sem_trace ts.
-  
   Definition Uni := Lab -> Var -> Prop.
   Definition Hom := Lab -> Prop.
 
-  Definition traces_closed (ts : Traces) : Prop :=
-    forall t,  ts t -> ts (step t).
-  
+  Definition sem_hyper (T : Hyper) : Hyper :=
+    fun ts' => exists ts, T ts /\ ts' = sem_trace ts.
+
+  Definition traces (ts : Traces) : Prop :=
+    forall t, ts t -> tr t.
+    (* (forall s, ts ((start_coord, s) :: nil)) /\ forall t, ts t -> ts (step t). *)
+
   Definition uni_concr (u : Uni) : Hyper :=
-    fun ts => traces_closed ts /\
+   fun ts => traces ts /\
               forall t t', ts t -> ts t' ->
                            forall x p i s s', In ((p, i), s) t ->
                                               In ((p, i), s') t' ->
                                               u p x -> s x = s' x.
 
+
   Definition hom_concr (h : Hom) : Hyper :=
-    fun ts => traces_closed ts /\
+    fun ts => traces ts /\
               forall t t', ts t -> ts t' ->
                            forall p, h p ->
                                      forall q q' j j' i s s' s1 s2, In2 ((q, j), s) ((p, i), s1) t ->
@@ -110,16 +110,12 @@ Section CFG.
     fun ts => h ts /\ h' ts.
   
   Definition uni_trans (uni : Uni) (hom : Hom) : Uni :=
-    fun p => fun x => hom p /\ forall q, has_edge q p = true -> uni q x.
+    fun p => match is_root p with
+             | true => init_uni
+             | false => fun x => hom p /\ forall q, has_edge q p -> uni q x
+             end.
 
-  Lemma in_to_in2 :
-    forall (k : Conf) (t t' : Trace), In k t -> In k t' -> (exists k' k'', In2 k k' t /\ In2 k k'' t') \/ (t = nil \/ t' = nil).
-  Proof.
-    intros k t t'.
-    intros HIn HIn'.
-  Admitted.
-    
-
+  (*
   Lemma step_rewr :
     forall c t t', 
       c :: t = step t' -> t = t'.
@@ -130,6 +126,38 @@ Section CFG.
     inversion H.
     destruct (eff c0); inversion H; subst; reflexivity.
   Qed.
+*)
+
+  Lemma all_sem_trace :
+    forall ts, traces ts -> traces (sem_trace ts).
+  Proof.
+    intros.
+    unfold traces in *.
+    intros.
+    unfold sem_trace in *.
+    destruct H0.
+    destruct H0.
+    subst.
+    specialize (H ((start_coord, x) :: nil) H0).
+    destruct H as [Hstart Hstep].
+    split; intros; unfold sem_trace.
+    + left. exists s. reflexivity.
+    + right. exists t. split; try reflexivity.
+      destruct H; destruct H; subst.
+      - apply Hstart.
+      - destruct H; subst. auto.
+  Qed.
+
+  Lemma in_root :
+    forall (s : State) t ts, traces ts -> ts t -> In (start_coord, s) t -> t = (start_coord, s) :: nil.
+  Proof.
+    intros s t ts Ht Histrace Hin. 
+    unfold traces in Ht.
+    induction (step t).
+    inversion Hin.
+    destruct Ht.
+    + 
+    inversion H.
 
   Lemma uni_correct :
     forall uni hom, forall T,
@@ -142,26 +170,33 @@ Section CFG.
     destruct Hred as [ts [Hconcr Hstep]]; subst.
     unfold red_prod in Hconcr.
     destruct Hconcr as [HCuni HChom].
-    destruct HChom as [Hclosed HChom].
+    destruct HCuni as [Hclosed HCuni].
 
     split.
-    + unfold traces_closed in *.
-      intros.
-      unfold sem_trace in *.
-      destruct H. destruct H. subst.
-      apply Hclosed in H.
-      exists (step x).
-      auto.
-    + intros t t' HTin HTin' x p i s s'.
+    + apply all_sem_trace. assumption.
+    + intros t t' HTrace HTrace' x p i s s'.
       intros HIn HIn' Htrans.
       unfold uni_trans in Htrans.
-      destruct Htrans as [Hhom Htrans].
-      destruct HTin as [r [Hr Hstep]].
-      destruct HTin' as [r' [Hr' Hstep']].
+      destruct HTrace as [[s0 Hstart] | Hstep]; subst.
+      - destruct HTrace' as [[s0' Hstart'] | Hstep']; subst.
+        * destruct Hclosed as [Hclosed _].
+          specialize (HCuni ((start_coord, s0) :: nil) ((start_coord, s0') :: nil)).
+          eapply HCuni; try auto.
+          apply HIn.
+          apply HIn'.
+          admit.
+        * 
+        
+        inversion HIn; subst.
+        inversion HIn; try contradiction; subst.
+        inversion HIn'; try contradiction; subst.
+        * 
+      destruct HTrace' as [r' [Hr' Hstep']].
       subst.
       apply Hclosed in Hr.
       apply Hclosed in Hr'.
       specialize (HChom (step r) (step r') Hr Hr' p Hhom).
+      unfold uni_concr in HCuni.
       assert (((p, i, s) :: t) ts).
 
       apply Hclosed in H.
