@@ -99,21 +99,30 @@ Section CFG.
     assumption.
   Qed.
 
+  Definition prefix_closed : Hyper :=
+    fun ts => (forall s, ts (start_coord, s) (Init s))
+              \/ (forall k tk l tl step, ts k tk -> tk = (Step k l tl step) -> ts l tl).
+
   Definition uni_concr (u : Uni) : Hyper :=
     fun ts => forall t t' tr tr', ts t tr -> ts t' tr' ->
-                           forall x p i s s', In t tr ((p, i), s) ->
-                                              In t' tr' ((p, i), s') ->
-                                              u p x -> s x = s' x.
+                                  forall x p i s s', In t tr ((p, i), s) ->
+                                                     In t' tr' ((p, i), s') ->
+                                                     u p x -> s x = s' x.
 
 
   Definition hom_concr (h : Hom) : Hyper :=
-    fun ts => forall t t' tr tr', ts t tr -> ts t' tr' ->
-                           forall p, h p ->
-                                     forall q q' j j'
-                                            i s s'
-                                            s1 s2, Follows t tr ((p, i), s1) ((q, j), s) ->
-                                                   Follows t' tr' ((p, i), s2) ((q', j'), s')  ->
-                                                   q = q' /\ j = j'.
+    fun ts =>
+      forall t t'
+             tr tr', ts t tr -> ts t' tr' ->
+                     forall p, h p ->
+                               forall q q' j j'
+                                      k k' step step'
+                                      i s s'
+                                      s1 s2, Follows k (Step k t tr step)
+                                                     ((p, i), s1) ((q, j), s) ->
+                                             Follows k' (Step k' t' tr' step')
+                                                     ((p, i), s2) ((q', j'), s')  ->
+                                             q = q' /\ j = j'.
 
   Definition red_prod (h h' : Hyper) : Hyper :=
     fun ts => h ts /\ h' ts.
@@ -226,6 +235,31 @@ Section CFG.
         auto.
   Qed.
 
+  Lemma follows_implies_in2 :
+    forall k' tr' k step succ pred, Follows k (Step k k' tr' step) succ pred -> In k' tr' pred.
+  Proof.
+    intro k'.
+    intro tr'.
+    induction tr'; intros.
+    + inversion H; subst.
+      - injection H0; intros; subst.
+        apply inj_pair2_eq_dec in H1; try (apply Conf_dec); subst.
+        constructor.
+      - injection H0; intros; subst.
+        apply inj_pair2_eq_dec in H2; try (apply Conf_dec); subst.
+        inversion H1; subst; exfalso; eapply start_no_tgt; eassumption.
+    + inversion H; subst.
+      - injection H0; intros; subst.
+        apply inj_pair2_eq_dec in H1; try (apply Conf_dec); subst.
+        constructor.
+      - injection H0; intros; subst.
+        apply inj_pair2_eq_dec in H2; try (apply Conf_dec); subst.
+        econstructor.
+        econstructor.
+        eapply IHtr'.
+        apply H1.
+  Qed.
+
   Lemma uni_correct :
     forall uni hom ts,
         sem_hyper (red_prod (uni_concr uni) (hom_concr hom)) ts ->
@@ -256,10 +290,9 @@ Section CFG.
           injection H1; intros; subst.
           apply inj_pair2_eq_dec in H; try (apply Conf_dec); subst; clear H1.
           eapply (HCuni k'0 k'1 tr'0 tr'); try eassumption.
-    + destruct Htrans as [Hhom Hpred].
+    + destruct Htrans as [Hhom Hpred]. 
       apply follows_exists in HIn; try eassumption.
       apply follows_exists in HIn'; try eassumption.
-      clear c.
       destruct HIn as [[[q j] sq] Hflw].
       destruct HIn' as [[[q' j'] sq'] Hflw'].
 
@@ -272,13 +305,14 @@ Section CFG.
         rename j' into j.
         rename q' into q.
         eapply (local_uni_corr (uni q)).
+        unfold uni_state_concr.
         - intros. 
           unfold uni_concr in HCuni.
           eapply HCuni.
-          admit.
-          admit.
-          admit.
-          admit.
+          apply Hlin.
+          apply Hlin'.
+          eapply follows_implies_in2. apply Hflw.
+          eapply follows_implies_in2. apply Hflw'.
           apply H.
         - eapply follows_implies_step; eassumption.
         - eapply follows_implies_step; eassumption.
@@ -286,265 +320,7 @@ Section CFG.
           eapply edge_spec.
           unfold is_effect_on.
           exists j. exists i. exists sq. exists s. eapply follows_implies_step. apply Hflw.
-      * apply follows_red in Hflw. destruct Hflw as [ ptr [ Hflw Hprefix ]].
-        apply follows_red in Hflw'. destruct Hflw' as [ ptr' [ Hflw' Hprefix' ]].
-        eapply (HChom (p, i, s) (p, i, s') ptr ptr'); try eassumption.
-        - admit.
-        - admit.
-
-
-
-      unfold hom_concr in HChom.
-      inversion Hflw; subst.
-      - injection H; intros; subst; clear H.
-        apply inj_pair2_eq_dec in H0; try (apply Conf_dec); subst.
-        inversion Hflw'; subst.
-        * injection H; intros; subst; clear H.
-          apply inj_pair2_eq_dec in H0; try (apply Conf_dec); subst.
-          eapply (HChom (p, i, s) (p, i, s')
-                        (Step (p, i, s) (q, j, sq) pred_tr lstep)
-                        (Step (p, i, s') (q', j', sq') pred_tr0 lstep') _ _ p Hhom); try eassumption.
-        * injection H; intros; subst; clear H.
-          apply inj_pair2_eq_dec in H1; try (apply Conf_dec); subst.
-
-       * 
-
-
-      unfold hom_concr in HChom.
-      - apply Hflw.
-      admit.
-      admit.
-      apply Hhom. clear Hhom.
-      apply Hflw.
-      apply Hflw'.
-      inversion_clear H as [Hq Hj]; subst.
-      rename j' into j.
-      rename q' into q.
-      
-      inversion Hlstep; subst.
-      apply inj_pair2_eq_dec in H; try (apply Conf_dec); subst.
-      inversion Hlstep'; subst.
-      apply inj_pair2_eq_dec in H1; try (apply Conf_dec); subst.
-      clear lstep lstep'.
-
-      inversion Hflw; subst.
-      - inversion Hflw'; subst.
-        * apply closed in Hsem.
-          apply closed in Hsem'.
-          destruct Hsem as [l [ltr [lstep [Hlin Hlstep]]]].
-          destruct Hsem' as [l' [ltr' [lstep' [Hlin' Hlstep']]]].
-          inversion Hlstep; subst; clear Hlstep.
-          apply inj_pair2_eq_dec in H1; try (apply Conf_dec); subst.
-          inversion Hlstep'; subst; clear Hlstep'.
-          apply inj_pair2_eq_dec in H1; try (apply Conf_dec); subst.
-          clear lstep lstep'.
-
-          unfold hom_concr in HChom.
-          eapply (HChom (p, i, s) (p, i, s')).
-          admit.
-          admit.
-          apply Hhom. clear Hhom.
-          apply Hflw.
-          apply Hflw'.
-          inversion_clear H as [Hq Hj]; subst.
-          rename j' into j.
-          rename q' into q.
-
-          eapply (abs_uni_spec _ _ _ s s' x).
-          eapply Hpred.
-          eapply edge_spec.
-          unfold is_effect_on.
-          exists j. exists i. exists sq. exists s. eapply step.
-          unfold uni_concr in HCuni.
-          admit. 
-          admit.
-        * admit.
-      -
-          eapply concr_uni_state.
-          unfold abs_uni_eff in Hpred.
-          cut (sq' x = sq x); intros.
-          subst.
-          rewrite step0 in lstep.
-          inversion lstep; subst; clear lstep.
-          reflexivity.
-
-          cut (uni q x); intros.
-          
-        * admit.
-      - admit.
-        
-        eapply (HCuni (q, j, sq) (q, j, sq') ltr ltr' Hlin Hlin' x q j sq sq').
-        
-
-
-        inversion H; subst; clear H.
-        * inversion H; subst; clear H.
-          apply inj_pair2_eq_dec in H2; try (apply Conf_dec); subst.
-          unfold hom_concr in HChom.
-          specialize (HChom (p, i, s) (p', i', sq') pred_tr pred_tr0 Hlin Hlin' p Hhom).
-
-        +
-      admit.
-      specialize (HChom q q' j j' i sq sq' s s' Hflw Hflw').
-      clear Hlin Hlin' Hhom Hlstep Hlstep' lstep lstep'.
-
-      
-
-
-      simpl in Hroot. unfold uni_concr in HCuni. eapply HCuni.
-
-    apply in2_exists in HIn.
-    apply in2_exists in HIn'.
-    des
-
-
-    unfold hom_concr in HChom.
-
-
-
-
-
-
-
-    unfold uni_concr in HCuni.
-    specialize (HCuni l l' ltr ltr' Hlin Hlin' x).
-    apply closed in Hsem.
-    unfold sem_trace in Hsem, Hsem'.
-
-    intros.
-    eapply HCuni.
-    destruct HCuni as [Hclosed HCuni].
-    + split. assumption.
-      unfold closed in *.
-      intros.
-      destruct H as [k' [tr' [step  [Hin Hstep]]]].
-      specialize (Hclosed k' tr' Hin).
-
-    + unfold closed in *.
-      intros.
-    intros.
-    destruct HCuni as [Hclosed HCuni].
-      intros.
-      eapply Hclosed.
-    invers
-
-    destruct Hsem as [k'' [tr'' [step [Hts'' Hstep'']]]].
-    + eapply (HCuni k k' tr tr').
-      rewrite is_root_root in Htrans.
-      rewrite uni_trans_root_inv in Htrans.
-      
-      cut is_root root; 
-
-    destruct Hsem, Hsem'.
-    + 
-
-    destruct HTrace as [[s0 Hstart] | Hstep]; subst.
-
-      induction HTrace.
-      unfold uni_trans in Htrans.
-      - destruct HTrace' as [[s0' Hstart'] | Hstep']; subst.
-        * unfold traces in Hclosed. 
-          specialize (HCuni ((start_coord, s0) :: nil) ((start_coord, s0') :: nil)).
-          eapply HCuni; try auto.
-          apply HIn.
-          apply HIn'.
-          admit.
-        * 
-        
-        inversion HIn; subst.
-        inversion HIn; try contradiction; subst.
-        inversion HIn'; try contradiction; subst.
-        * 
-      destruct HTrace' as [r' [Hr' Hstep']].
-      subst.
-      apply Hclosed in Hr.
-      apply Hclosed in Hr'.
-      specialize (HChom (step r) (step r') Hr Hr' p Hhom).
-      unfold uni_concr in HCuni.
-      assert (((p, i, s) :: t) ts).
-
-      apply Hclosed in H.
-
-    intros.
-
-    destruct H as [Hhom Hpred].
-    unfold sem_hyper in Hred.
-    
-    destruct t as [| c t]; try (apply in_nil in HIn; contradiction).
-    destruct t' as [| c' t']; try (apply in_nil in HIn'; contradiction).
-
-
-    
-    inversion HIn.
-    inversion HIn'.
-
-    Goal 3.
-
-    subst.
-    clear HIn HIn'.
-    
-    simpl in HIn.
-    apply step_rewr in Hstep; subst.
-    apply step_rewr in Hstep'; subst.
-    
-
-    unfold hom_concr in *.
-    specialize (HChom r r' Hr Hr' p Hhom).
-    unfold uni_concr in HCuni.
-
-    unfold step in *.
-    destruct r; try inversion Hstep.
-    destruct (eff c0).
-
-
-
-    
-    inversion HIn; inversion HIn'; subst.
-
-
-
-    destruct r; try (inversion Hstep).
-    destruct r'; try (inversion Hstep').
-    
-    unfold uni_concr in HCuni.
-    destruct t' as [| c' t']; try (inversion HIn').
-    admit.
-    , t' as [| c' t']; inversion HIn.
-    + inversion HIn'.
-    + inversion HIn'.
-    + admit.
-    + inversion HIn.
-    + unfold sem_trace in *.
-    unfold uni_concr in *.
-    eapply HCuni.
-
-    apply Hr.
-    apply Hr'.
-
-    hnf in Hcuni, Hchom.
-    eapply Hcuni.
-    unfold sem_hyper, sem_trace in *.
-    un
-    pose proof (Hcuni).
-    pose (hom_concr hom T) as H.
-    unfold hom_concr in H.
-    clearbody H.
-
-    cut (hom_concr hom T).
-    unfold hom_concr.
-    intros.
-    generalize hom.
-    apply hom_concr in (hom H0).
-
-    unfold sem_hyper, sem_trace in H.
-    unfold 
-    intros.
-      
-End CFG.
-
-  
-                  
-        
-           |
-  
- 
+      * clear HCuni. subst.
+        unfold hom_concr in HChom.
+        eapply (HChom l l' ltr ltr'); try eassumption.
+Qed.
