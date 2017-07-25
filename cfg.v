@@ -32,7 +32,6 @@ Section CFG.
       uni_state_concr (abs_uni_eff uni) qs qs'.
 
   Variable has_edge : Lab -> Lab -> Prop.
-  Variable dummy : Conf.
   Variable root : Lab.
   Variable Lab_dec : forall (x y : Lab), {x = y} + {x <> y}.
   Program Instance lab_eq_eqdec : EqDec Lab eq := Lab_dec.
@@ -265,7 +264,6 @@ Section CFG.
         sem_hyper (red_prod (uni_concr uni) (hom_concr hom)) ts ->
         uni_concr (uni_trans uni hom) ts.
   Proof.
-    clear dummy.
     intros uni hom ts' Hred.
     unfold uni_concr.
     unfold sem_hyper in Hred.
