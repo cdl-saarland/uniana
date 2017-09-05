@@ -56,9 +56,10 @@ Section CFG.
     | Step : forall k k', Tr k' -> eff k' = Some k -> Tr k.
 
   Ltac inv_tr H := inversion H; subst; 
-      repeat match goal with
-      | [ H0: @existT Conf _ _ _ = @existT _ _ _ _  |- _ ] => apply inj_pair2_eq_dec in H0; try (apply Conf_dec); subst
-      end.
+                   repeat match goal with
+                          | [ H0: @existT Conf _ _ _ = @existT _ _ _ _  |- _ ] => apply inj_pair2_eq_dec in H0;
+                                                                                  try (apply Conf_dec); subst
+                          end.
 
   Fixpoint len (k : Conf) (t : Tr k) : nat.
     inversion t.
@@ -106,37 +107,58 @@ Section CFG.
   | Prefix_Step : forall k l ltr l' ltr' step, HasPrefix l ltr l' ltr' ->
                                                HasPrefix k (Step k l ltr step) l' ltr'.
 
-  Lemma closed :
-    forall ts k tr, sem_trace ts k tr -> exists k' tr' step, ts k' tr' /\ tr = (Step k k' tr' step).
-  Proof.
-    intros.
-    unfold sem_trace in H.
-    assumption.
-  Qed.
-
   Definition prefix_closed : Hyper :=
     fun ts => (forall s, ts (start_coord, s) (Init s))
               \/ (forall k tk l tl step, ts k tk -> tk = (Step k l tl step) -> ts l tl).
 
+  Definition all : Traces -> Prop :=
+    fun ts => forall k t, ts k t -> forall k' step, ts k' (Step k' k t step).
+
+  Lemma all_closed :
+    forall ts, all ts -> all (sem_trace ts).
+  Proof.
+    unfold all in *.
+    intros.
+    unfold sem_trace.
+    exists k. exists t. exists step. 
+    split.
+    - unfold sem_trace in H0.
+      destruct H0 as [k0 [tr0 [step0 [Htr0 HStep0]]]]; subst.
+      apply H.
+      assumption.
+    - reflexivity.
+  Qed.    
+
+  Lemma all_trace :
+    forall ts k tr, all ts -> sem_trace ts k tr -> ts k tr.
+  Proof.
+    intros.
+    destruct H0 as [k' [tr' [step' [Hts HStep]]]]; subst.
+    auto.
+  Qed.
+  
   Definition uni_concr (u : Uni) : Hyper :=
-    fun ts => forall t t' tr tr', ts t tr -> ts t' tr' ->
+    fun ts => all ts /\ forall t t' tr tr', ts t tr -> ts t' tr' ->
                                   forall x p i s s', In t tr ((p, i), s) ->
                                                      In t' tr' ((p, i), s') ->
                                                      u p x -> s x = s' x.
 
-
-  Definition hom_concr (h : Hom) : Hyper :=
-    fun ts =>
-      forall t t'
-             tr tr', ts t tr -> ts t' tr' ->
-                     forall p, h p ->
-                               forall q q' j j'
-                                      k k' step step'
-                                      i s s'
+  (*
                                       s1 s2, Follows k (Step k t tr step)
                                                      ((p, i), s1) ((q, j), s) ->
                                              Follows k' (Step k' t' tr' step')
                                                      ((p, i), s2) ((q', j'), s')  ->
+  *)
+
+  Definition hom_concr (h : Hom) : Hyper :=
+    fun ts =>  all ts /\
+      forall t t'
+             tr tr', ts t tr -> ts t' tr' ->
+                     forall p, h p ->
+                               forall q q' j j'
+                                      i s s'
+                                      s1 s2, Follows t tr ((p, i), s1) ((q, j), s) ->
+                                             Follows t' tr' ((p, i), s2) ((q', j'), s')  ->
                                              q = q' /\ j = j'.
 
                                            
@@ -166,10 +188,9 @@ Section CFG.
   Definition Since (k k' : Conf) (t : Tr k) (t' : Tr k') (x : Var) (from to : Lab) := 
     forall i c c' s s', At k t c (to, i, s) -> 
                         At k' t' c' (to, i, s') ->
-                        exists j r r' a a', At k t a (from, j, r) /\
-                                            At k' t' a' (from, j, r') /\
-                                            forall b b', Unch_Between k t s x a b c /\
-                                                         Unch_Between k' t' s' x a' b' c'.
+                        exists j r r' a a', a <= c /\ At k t a (from, j, r) /\
+                                            a' <= c' /\ At k' t' a' (from, j, r') /\
+                                            s x = r x /\ s' x = r' x.
   
   Definition unch_concr (unch : Unch) : Hyper :=
     fun ts => forall k k' t t', ts k t -> ts k' t' -> 
@@ -239,12 +260,11 @@ Section CFG.
     intros.
     induction tr.
     + inversion H. subst. contradiction.
-    + inversion H; subst.
+    + inv_tr H.
       * dependent inversion tr1; subst.
         - contradiction.
         - exists k'0. constructor.
-      * apply inj_pair2_eq_dec in H4; subst; try (apply Conf_dec).
-        apply IHtr in H5.
+      * apply IHtr in H5.
         inversion_clear H5 as [pred H'].
         exists pred. econstructor; try eassumption.
   Qed.
@@ -256,14 +276,12 @@ Section CFG.
     intros.
     induction tr.
     + inversion H; exfalso; eapply start_no_tgt; eassumption.
-    + inversion H; subst.
-      - apply inj_pair2_eq_dec in H3; try (apply Conf_dec); subst. 
-        exists (Step succ pred tr e).
+    + inv_tr H.
+      - exists (Step succ pred tr e).
         split.
         * assumption.
         * constructor.
-      - apply inj_pair2_eq_dec in H3; try (apply Conf_dec); subst. 
-        apply IHtr in H5. clear IHtr.
+      - apply IHtr in H5. clear IHtr.
         destruct H5 as [tr' [ Hfollow Hprefix ]].
         exists tr'.
         split; try assumption.
@@ -276,68 +294,70 @@ Section CFG.
     intros.
     induction tr.
     - inversion H; exfalso; eapply start_no_tgt; eassumption.
-    - inversion H; subst.
-      * assumption.
-      * apply inj_pair2_eq_dec in H3; try (apply Conf_dec); subst.
-        auto.
+    - inv_tr H; auto.
   Qed.
 
   Lemma follows_implies_in2 :
-    forall k' tr' k step succ pred, Follows k (Step k k' tr' step) succ pred -> In k' tr' pred.
+    forall k tr succ pred, Follows k tr succ pred -> In k tr pred.
   Proof.
-    intro k'.
-    intro tr'.
-    induction tr'; intros.
-    + inv_tr H.
-      - constructor.
-      - inversion H5; subst; exfalso; eapply start_no_tgt; eassumption.
-    + inv_tr H.
-      - constructor.
-      - econstructor.
-        eapply IHtr'.
-        eauto.
+    intros k tr.
+    induction tr; intros; inv_tr H.
+    - repeat constructor. 
+    - econstructor. eapply IHtr. eauto.
   Qed.
 
   Lemma in_implies_at :
-    forall k k' t, In k t k' <-> exists a, At k t a k'.
+    forall k k' t, In k t k' -> exists a, At k t a k'.
   Proof.
-    intros. split; intro.
-    + induction t.
-      - inversion H; subst.
-        apply inj_pair2_eq_dec in H2; try (apply Conf_dec); subst.
-        exists 0. econstructor.
-      - inv_tr H.
-        * dependent inversion tr0; subst.
-          ** exists 0. econstructor.
-          ** exists (1 + len k'1 t0).
-             apply AtStep.
-        * apply IHt in H4.
-          destruct H4 as [a HAt].
-          exists a.
-          econstructor. assumption.
-    + induction t; destruct H as [a H].
-      - inversion H; subst. constructor.
-      - inv_tr H.
-        apply In_Other.
-        * apply IHt. exists a. auto.
-        * constructor.
+    intros. 
+    induction t.
+    - inv_tr H. exists 0. econstructor.
+    - inv_tr H.
+      * dependent inversion tr0; subst.
+        ** exists 0. econstructor.
+        ** exists (1 + len k'1 t0).
+           apply AtStep.
+      * apply IHt in H4.
+        destruct H4 as [a HAt].
+        exists a.
+        econstructor. assumption.
+  Qed.
+
+  Lemma at_implies_in :
+    forall a k t k', At k t a k' -> In k t k'.
+  Proof.
+    intros.
+    induction t.
+    - inversion H; subst. constructor.
+    - inv_tr H.
+      apply In_Other.
+      * apply IHt. assumption.
+      * constructor.
   Qed.
 
   Lemma uni_correct :
-    forall uni hom unch ts,
-        sem_hyper (red_prod (red_prod (uni_concr uni) (hom_concr hom)) (unch_concr unch)) ts ->
-        uni_concr (uni_trans uni hom unch) ts.
+    forall uni hom unch t,
+        sem_hyper (red_prod (red_prod (uni_concr uni) (hom_concr hom)) (unch_concr unch)) t ->
+        uni_concr (uni_trans uni hom unch) t.
   Proof.
-    intros uni hom unch ts' Hred.
-    unfold uni_concr.
+    intros uni hom unch t Hred.
     unfold sem_hyper in Hred.
     destruct Hred as [ts [Hconcr Hstep]]; subst.
     destruct Hconcr as [[HCuni HChom] HCunch].
+
+    split.
+    unfold uni_concr in HCuni.
+    destruct HCuni as [Hall _].
+    eapply all_closed; auto.
 
     intros k k' tr tr' Hsem Hsem' x p i s s'.
     intros HIn HIn' Htrans.
 
     unfold uni_trans in Htrans. 
+    destruct HCuni as [Hall HCuni].
+    assert (ts k tr) as Hts by (eapply all_trace; eassumption).
+    assert (ts k' tr') as Hts' by (eapply all_trace; eassumption).
+
     destruct (equiv_dec p root).
     + rewrite e in *; clear e.
       destruct Hsem as [l [ltr [lstep [Hlin Hlstep]]]].
@@ -353,26 +373,12 @@ Section CFG.
         apply follows_exists in HIn'; try eassumption.
         destruct HIn as [[[q j] sq] Hflw].
         destruct HIn' as [[[q' j'] sq'] Hflw'].
-
-        apply closed in Hsem.
-        apply closed in Hsem'.
-
-        destruct Hsem as [l [ltr [lstep [Hlin Hlstep]]]].
-        destruct Hsem' as [l' [ltr' [lstep' [Hlin' Hlstep']]]].
         cut (q = q' /\ j = j'); intros.
-        * inversion_clear H as [Hq Hj]; subst.
-          rename j' into j.
-          rename q' into q.
+        * inversion_clear H as [Hq Hj]; subst j' q'.
           unfold uni_state_concr in *.
-          eapply (local_uni_corr (uni q)).
-          ** intros. 
-             unfold uni_concr in HCuni.
-             eapply HCuni.
-             apply Hlin.
-             apply Hlin'.
-             eapply follows_implies_in2. apply Hflw.
-             eapply follows_implies_in2. apply Hflw'.
-             apply H.
+          eapply (local_uni_corr (uni q) q j p i sq sq' s s').
+          ** intros.
+             eapply (HCuni k k' tr tr' Hts Hts' x0 q j); try eapply follows_implies_in2; eassumption.
           ** eapply follows_implies_step; eassumption.
           ** eapply follows_implies_step; eassumption.
           ** apply Hpred.
@@ -380,37 +386,22 @@ Section CFG.
              unfold is_effect_on.
              exists j. exists i. exists sq. exists s. eapply follows_implies_step. apply Hflw.
         * clear HCuni. subst.
-          unfold hom_concr in HChom.
-          eapply (HChom l l' ltr ltr'); try eassumption.
+          destruct HChom as [_ HChom].
+          eapply (HChom k k' tr tr'); try eassumption.
       - clear HChom.
-        destruct Hsem as [l [ltr [lstep [Hlin Hlstep]]]].
-        destruct Hsem' as [l' [ltr' [lstep' [Hlin' Hlstep']]]].
-        subst tr tr'.
         rename c into HProot.
         remember (unch p x) as q; symmetry in Heqq.
         rename Hunch into Huniq.
+        unfold unch_concr in HCunch.
+        specialize (HCunch k k' tr tr' Hts Hts' p x q Heqq).
+        unfold Since in HCunch.
 
         apply in_implies_at in HIn.
         apply in_implies_at in HIn'.
         destruct HIn as [c HAt].
         destruct HIn' as [c' HAt'].
-
-        unfold unch_concr in HCunch.
-        specialize (HCunch l l' ltr ltr' Hlin Hlin' p x q Heqq).
-        unfold Since in HCunch.
-        specialize (HCunch i c c' s s').
-        
-
-        unfold uni_concr in HCuni.
-        specialize (HCuni l l' ltr ltr' Hlin Hlin' x q).
-
-
-        specialize (Hlin p x q Heqq).
-        specialize (Hlin' p x q Heqq).
-        unfold Between in *.
-
-
-        
-
-
+        specialize (HCunch i c c' s s' HAt HAt').
+        destruct HCunch as [j [r [r' [a [a' [Hle [HAta [Hle' [HAta' [Heq Heq']]]]]]]]]].
+        rewrite Heq. rewrite Heq'.
+        eapply (HCuni k k' tr tr'); try eapply at_implies_in; eassumption. 
 Qed.
