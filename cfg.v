@@ -216,6 +216,8 @@ Section CFG.
                                       forall i s, In k t (to, i, s) ->
                                                   exists j r, In k t (from 
 *)
+  Definition unch_hyper_concr (unch : Unch) : Hyper :=
+    fun ts => all ts /\ forall k k' t t' x to, ts k t -> ts k' t' -> Since k k' t t' x (unch to x) to.
   
   Definition unch_concr (unch : Unch) : Traces :=
     fun k => fun t => forall x to i s, In k t (to, i, s) ->
@@ -228,8 +230,8 @@ Section CFG.
 
   Variable unch_trans : Unch -> Unch.
   Variable unch_trans_spec :
-    forall unch p x r, unch_trans unch p x = r ->
-                       (p =/= root /\ forall q, unch_trans_local unch q p x = r) \/ r = p.
+    forall unch p x, (p =/= root /\ forall q, unch_trans_local unch q p x = unch_trans unch p x)
+                     \/ unch_trans unch p x = p.
     
   Definition uni_trans (uni : Uni) (hom : Hom) (unch : Unch) : Uni :=
     fun p => if p == root then uni root
@@ -399,6 +401,79 @@ Section CFG.
       inversion H1.
   Qed.
 
+  Lemma unch_hyper_correct :
+    forall unch t, 
+      sem_hyper (unch_hyper_concr unch) t -> unch_hyper_concr (unch_trans unch) t.
+  Proof.
+    intros unch t Hred.
+    unfold sem_hyper in Hred.
+    destruct Hred as [ts [Hconcr Hstep]]; subst.
+    unfold unch_hyper_concr in Hconcr.
+    destruct Hconcr as [Hall Hconcr].
+    unfold unch_hyper_concr.
+
+    split; try (eapply all_closed; auto).
+    unfold Since in *.
+    intros k k' t t' x to Hsem Hsem' i s s' HIn HIn'.
+    apply all_trace in Hsem; try apply Hall.
+    apply all_trace in Hsem'; try apply Hall.
+    assert (Htrans := unch_trans_spec unch to x).
+    inversion_clear Htrans.
+    - destruct H as [Hroot Hpreds].
+      assert (Hfollow := HIn).
+      eapply follows_exists in Hfollow; [| eauto].
+      destruct Hfollow as [[[q j] r] Hfollow].
+      assert (Hfollow' := HIn').
+      eapply follows_exists in Hfollow'; [| eauto].
+      destruct Hfollow' as [[[q' j'] r'] Hfollow'].
+      assert (Hstep := Hfollow).
+      assert (Hstep' := Hfollow').
+      apply follows_implies_step in Hstep.
+      apply follows_implies_step in Hstep'.
+      apply follows_implies_in2 in Hfollow.
+      apply follows_implies_in2 in Hfollow'.
+      assert (Hpred := unch_trans_local_spec q to x unch).
+      assert (Hpred' := unch_trans_local_spec q' to x unch).
+      assert (Hpreds' := Hpreds q').
+      specialize (Hpreds q).
+      remember (is_def x q to) as xdef.
+      remember (is_def x q' to) as xdef'.
+      destruct xdef, xdef'.
+      + rewrite Hpreds in Hpred.
+        rewrite Hpred.
+        exists i; exists s; exists s'; auto.
+      + rewrite Hpreds in Hpred.
+        rewrite Hpred.
+        exists i; exists s; exists s'; auto.
+      + rewrite Hpreds' in Hpred'.
+        rewrite Hpred'.
+        exists i; exists s; exists s'; auto.
+      + rewrite Hpreds' in Hpred'.
+        rewrite Hpreds in Hpred.
+        rewrite Hpred.
+        rewrite Hpred' in Hpred.
+        clear Hpreds' Hpreds Hpred'.
+        assert (Hconcr' := Hconcr k' k' t' t' x q' Hsem' Hsem' j' r' r' Hfollow' Hfollow').
+        specialize (Hconcr k k t t x q Hsem Hsem j r r Hfollow Hfollow).
+        rewrite Hpred in Hconcr'.
+        destruct Hconcr as [h [u [v [HInf [HInf' [Heq Heq']]]]]].
+        destruct Hconcr' as [h' [u' [v' [HInf'' [HInf''' [Heq'' Heq''']]]]]].
+        cut (h = h'); intros.
+        * symmetry in Heqxdef.
+          symmetry in Heqxdef'.
+          subst h'.
+          exists h; exists u; exists u'; try (repeat split; try eauto).
+          ** rewrite <- Heq.
+             symmetry.
+             eapply no_def_untouched. apply Heqxdef. apply Hstep.
+          ** rewrite <- Heq''.
+             symmetry.
+             eapply no_def_untouched. apply Heqxdef'. apply Hstep'.
+        * admit.
+    - rewrite H.
+      exists i; exists s; exists s'; auto.
+  Qed.
+
   Lemma unch_correct :
     forall unch k t,
       sem_trace (unch_concr unch) k t -> unch_concr (unch_trans unch) k t.
@@ -448,7 +523,7 @@ Section CFG.
 
   Lemma uni_correct :
     forall uni hom unch t,
-        sem_hyper (red_prod (red_prod (uni_concr uni) (hom_concr hom)) (lift (unch_concr unch))) t ->
+        sem_hyper (red_prod (red_prod (uni_concr uni) (hom_concr hom)) (unch_hyper_concr unch)) t ->
         uni_concr (uni_trans uni hom unch) t.
   Proof.
     intros uni hom unch t Hred.
@@ -500,6 +575,22 @@ Section CFG.
           destruct HChom as [_ HChom].
           eapply (HChom k k' tr tr'); try eassumption.
       - clear HChom.
+
+        (* The unch hyper case *)
+        apply all_trace in Hsem.
+        apply all_trace in Hsem'.
+        unfold unch_hyper_concr in HCunch.
+        specialize (HCunch k k' tr tr' x p Hsem Hsem').
+        unfold Since in HCunch.
+        specialize (HCunch i s s' HIn HIn').
+        destruct HCunch as [j [r [r' [HIn_from [HIn_from' [Heq Heq']]]]]].
+        rewrite Heq. rewrite Heq'.
+        eapply (HCuni k k' tr tr' Hsem Hsem' x (unch p x) j r r' HIn_from HIn_from'); try eassumption.
+        apply Hall.
+        apply Hall.
+
+          
+      (* The unch non-hyper case 
         rename c into HProot.
         remember (unch p x) as q; symmetry in Heqq.
         rename Hunch into Huniq.
@@ -516,4 +607,5 @@ Section CFG.
           rewrite Heq. rewrite Heq'.
           eapply (HCuni k k' tr tr' Hsem Hsem' x (unch p x) j r r' Hin_from Hin_from' Huniq).
         * admit.
+       *)
 Qed.
