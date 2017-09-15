@@ -124,12 +124,6 @@ Section CFG.
     | In_At : forall k tr, In k tr k
     | In_Other : forall l k k' tr' step, In k' tr' l -> In k (Step k k' tr' step) l.
 
-  Lemma in_root :
-    forall p i s s' t, In (start_coord, s) t (p, i, s') -> (p, i, s) = (start_coord, s).
-  Proof.
-    intros.
-  Admitted.
-
   Inductive Follows : forall k, Tr k -> Conf -> Conf -> Prop := 
   | Follows_At : forall k pred pred_tr step, Follows k (Step k pred pred_tr step) k pred
   | Follows_Other : forall succ pred k k' tr' step, Follows k' tr' succ pred ->
@@ -182,13 +176,6 @@ Section CFG.
                                                      In t' tr' ((p, i), s') ->
                                                      u p x -> s x = s' x.
 
-  (*
-                                      s1 s2, Follows k (Step k t tr step)
-                                                     ((p, i), s1) ((q, j), s) ->
-                                             Follows k' (Step k' t' tr' step')
-                                                     ((p, i), s2) ((q', j'), s')  ->
-  *)
-
   Definition hom_concr (h : Hom) : Hyper :=
     fun ts =>  all ts /\
       forall t t'
@@ -200,9 +187,6 @@ Section CFG.
                                              Follows t' tr' ((p, i), s2) ((q', j'), s')  ->
                                              q = q' /\ j = j'.
 
-  Definition Unch_Between (k : Conf) (t : Tr k) (s : State) (x : Var) (a b c : nat) :=
-    forall q i s', a < b -> b <= c -> At k t b (q, i, s') -> s x = s' x.
-  
   Definition Since (k k' : Conf) (t : Tr k) (t' : Tr k') (x : Var) (from to : Lab) := 
     forall i s s', In k t (to, i, s) -> 
                    In k' t' (to, i, s') ->
@@ -210,12 +194,6 @@ Section CFG.
                                    In k' t' (from, j, r') /\
                                    s x = r x /\ s' x = r' x.
 
-  (*
-  Definition unch_concr2 (unch : Unch) : Traces :=
-    fun k, fun t => forall to x from, unch to x = from ->
-                                      forall i s, In k t (to, i, s) ->
-                                                  exists j r, In k t (from 
-*)
   Definition unch_hyper_concr (unch : Unch) : Hyper :=
     fun ts => all ts /\ forall k k' t t' x to, ts k t -> ts k' t' -> Since k k' t t' x (unch to x) to.
   
@@ -462,7 +440,7 @@ Section CFG.
         * symmetry in Heqxdef.
           symmetry in Heqxdef'.
           subst h'.
-          exists h; exists u; exists u'; try (repeat split; try eauto).
+          exists h; exists u; exists u'; repeat split; try eauto.
           ** rewrite <- Heq.
              symmetry.
              eapply no_def_untouched. apply Heqxdef. apply Hstep.
