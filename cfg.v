@@ -63,6 +63,7 @@ Module CFG.
   Parameter nesting : Lab -> Lab -> Prop.
   Notation "a <<= b" := (nesting a b) (at level 70, right associativity).
   Parameter nesting_dec : forall x y : Lab, { x <<= y } + { ~ x <<= y }.
+  Parameter nesting_refl : forall l, l <<= l.
   Parameter nesting_root : forall l, root <<= l.
 
   Lemma step_implies_edge :
@@ -103,7 +104,7 @@ Module CFG.
 
   Definition Uni := Lab -> Var -> Prop.
   Definition Hom := Lab -> Prop.
-  Definition Unch := { unch: Lab -> Var -> Lab | forall p x, unch p x <<= p }.
+  Definition Unch := Lab -> Var -> Lab.
 
   Inductive In : forall k, Tr k -> Conf -> Prop := (* (k : Conf) (tr : Tr k) : Conf -> Prop :=  *)
     | In_At : forall k tr, In k tr k
@@ -126,10 +127,11 @@ Module CFG.
   | Prec_other : forall k' k t c c' step, Precedes k t c c' ->
                                           Precedes k' (Step k' k t step) c c'.
 
-  Parameter ivec_nesting : forall k k' t t' p q j j' i i' r r' s s',
+  Parameter nesting_spec : forall q p,
+      q <<= p ->
+      forall k k' t t' j j' i i' r r' s s',
       Precedes k t (q, j, r) (p, i, s) ->
       Precedes k' t' (q, j', r') (p, i', s') ->
-      q <<= p ->
       j' = j /\ r = r'.
 
   Definition all : Traces -> Prop :=
@@ -176,49 +178,122 @@ Module CFG.
                                                           q = q' /\ j = j'.
 
   
-  Definition unch_hyper_concr (unch : Unch) : Hyper :=
-    fun ts => all ts /\
-              forall k t to i s x, ts k t ->
-                                   In k t (to, i, s) ->
-                                   exists j r, Precedes k t (proj1_sig unch to x, j, r) (to, i, s) /\ r x = s x.
-                                  
-  (*
-  Definition unch_hyper_concr (unch : Unch) : Hyper :=
-    fun ts => all ts /\
-              forall k t to i s x, In k t (to, i, s) ->
-                                   exists j r, Precedes k t (unch to x, j, r) (to, i, s) /\ s x = r x /\
-                                               forall k' t' s', In k' t' (to, i, s') -> exists r',
-                                                   Precedes k' t' (unch to x, j, r') (to, i, s') /\
-                                                   s' x = r' x.
-   *)
-  
   Definition unch_concr (unch : Unch) : Traces :=
-    fun k => fun t => forall to i s x, In k t (to, i, s) ->
-                                       exists j r, Precedes k t (proj1_sig unch to x, j, r) (to, i, s) /\ r x = s x.
+    fun k => fun t => forall to i s x, unch to x <<= to /\
+                                       (In k t (to, i, s) ->
+                                       exists j r, Precedes k t (unch to x, j, r) (to, i, s) /\ r x = s x).
 
-  Definition unch_trans_local : Unch -> Lab -> Lab -> Var -> Lab.
-    refine(fun unch => fun q => fun p => fun x => if is_def x q p then p else
-                                                    if nesting_dec q p then proj1_sig unch q x else
-                                                      p).
-                                                             
+  Definition unch_trans_local (unch : Unch) (q p : Lab) (x : Var) : Lab :=
+    if is_def x q p then p else if nesting_dec (unch q x) p then unch q x else p.
 
-  Variable unch_trans_local : Unch -> Lab -> Lab -> Var -> Lab.
-  Variable unch_trans_local_spec :
-    forall q p x unch, if is_def x q p then unch_trans_local unch q p x = p
-                       else unch_trans_local unch q p x = proj1_sig unch q x.
+  Lemma unch_trans_local_nesting : forall unch q p x, unch_trans_local unch q p x <<= p.
+  Proof.
+    intros.
+    unfold unch_trans_local.
+    destruct (is_def x q p).
+    * apply nesting_refl.
+    * destruct (nesting_dec (unch q x) p).
+      - assumption.
+      - apply nesting_refl.
+  Qed.
 
-  Variable unch_trans : Unch -> Unch.
-  Variable unch_trans_spec :
-    forall unch p x, (p =/= root /\ forall q, unch_trans_local unch q p x = proj1_sig (unch_trans unch) p x)
-                     \/ proj1_sig (unch_trans unch) p x = p.
+  Lemma unch_trans_local_res : forall unch q p x, unch_trans_local unch q p x = p \/
+                                                  is_def x q p = false /\
+                                                  unch_trans_local unch q p x = unch q x.
+  Proof.
+    intros.
+    unfold unch_trans_local.
+    destruct (is_def x q p); auto.
+    destruct (nesting_dec (unch q x) p); auto.
+  Qed.
+
+  Parameter preds : Lab -> list Lab.
+
+  Parameter preds_spec : forall p q, has_edge q p = true <-> List.In q (preds p).
+
+  Lemma nesting_join_nest : forall a b c, a <<= c -> b <<= c -> nesting_join a b <<= c.
+  Proof.
+    intros a b c Ha Hb.
+    assert (H := nesting_join_spec a b c Ha Hb).
+    inversion H; rewrite H0; auto.
+  Qed.
     
+  Fixpoint all_equal {A : Type} `{EqDec A} (l : list A) (default : A) : A :=
+    match l with
+    | nil => default
+    | a :: l' => fold_right (fun a acc => if a == acc then a else default) a l'
+    end.
+
+  Definition unch_trans (unch : Unch) : Unch :=
+    fun p => fun x => all_equal (map (fun q => unch_trans_local unch q p x) (preds p)) p.
+
+  Lemma unch_trans_nesting unch p x : unch_trans unch p x <<= p.
+  Proof.
+    intros.
+    unfold unch_trans.
+    destruct (preds p); simpl.
+    - apply nesting_refl.
+    - destruct l0; simpl.
+      + apply unch_trans_local_nesting.
+      + destruct ((unch_trans_local unch l0 p x) == _).
+        * apply unch_trans_local_nesting.
+        * apply nesting_refl.
+  Qed.      
+
+  Lemma unch_trans_res : forall unch q p x, is_effect_on q p ->
+                                            (unch_trans unch p x = p \/
+                                             is_def x q p = false /\
+                                             unch_trans unch p x = unch q x).
+  Proof.
+    intros.
+    unfold unch_trans.
+    cut (List.In q (preds p)). 
+    - destruct (preds p); intros; [ auto | simpl ]. 
+      induction l0; simpl in *.
+      + inversion_clear H0; [ subst | contradiction ].
+        apply unch_trans_local_res.
+      + inversion_clear H0; subst; simpl.
+        * destruct ((unch_trans_local unch a p x) == _); auto.
+          rewrite e.
+          eapply IHl0.
+          auto.
+        * inversion_clear H1; subst; simpl.
+          -- destruct ((unch_trans_local unch q p x) == _); auto.
+             apply unch_trans_local_res.
+          -- destruct ((unch_trans_local unch a p x) == _); auto.
+             rewrite e.
+             eapply IHl0.
+             auto.
+    - apply preds_spec.
+      apply edge_spec.
+      assumption.
+  Qed.
+
+  Lemma list_emp_in : forall {A: Type} l, (forall (a: A), ~ List.In a l) -> l = nil.
+  Proof.
+  Admitted.
+
+  Lemma unch_trans_root : forall unch x, unch_trans unch root x = root.
+  Proof.
+    intros.
+    cut (preds root = nil); intros.
+    + unfold unch_trans.
+      rewrite H.
+      simpl.
+      reflexivity.
+    + cut (forall q, ~ List.In q (preds root)); intros.
+      * apply list_emp_in.
+        assumption.
+      * intro.
+        eapply preds_spec in H.
+        rewrite root_no_pred in H.
+        inversion H.
+  Qed.
+
   Definition uni_trans (uni : Uni) (hom : Hom) (unch : Unch) : Uni :=
     fun p => if p == root then uni root
              else fun x => (hom p /\ forall q, has_edge q p = true -> abs_uni_eff (uni q) x)
-                             \/ uni (proj1_sig unch p x) x.
-             
-  Definition red_prod (h h' : Hyper) : Hyper :=
-    fun ts => h ts /\ h' ts.
+                             \/ uni (unch p x) x.
 
   Lemma uni_trans_root_inv :
     forall uni hom unch x, uni_trans uni hom unch root x = uni root x.
@@ -347,13 +422,6 @@ Module CFG.
     induction t; intros; inv_tr H; constructor; eauto.
    Qed.
 
-  Lemma precedes_implies_in_to : 
-    forall k t c c', Precedes k t c c' -> In k t c'.
-  Proof.
-    intros k t c.
-    induction t; intros; inv_tr H; constructor; eauto.
-   Qed.
-
   Definition lab_of (k : Conf) :=
     match k with
       ((p, i), s) => p
@@ -410,265 +478,67 @@ Module CFG.
       inversion H1.
   Qed.
 
-  Lemma precedes_self_same :
-    forall k t p i s j r, Precedes k t (p, j, r) (p, i, s) -> j = i /\ r = s.
-  Proof.
-    induction t; intros; inv_tr H.
-    + auto.
-    + auto.
-    + exfalso; auto.
-    + eapply IHt; eapply H5.
-  Qed.
-
-  Lemma precedes_no_root :
-    forall k t c p i s, Precedes k t c (p, i, s) -> lab_of c <> root -> p <> root.
-  Proof.
-  Admitted.
-
-  (*
-  Lemma unch_prec_correct :
-    forall unch t,
-      sem_hyper (unch_prec_concr unch) t -> unch_prec_concr (unch_trans unch) t.
-  Proof.
-    intros unch t Hred.
-    unfold sem_hyper in Hred.
-    destruct Hred as [ts [Hconcr Hstep]]; subst.
-    unfold unch_prec_concr in *.
-    intros k k' t t' j j' r r' s s' i to x Hsem Hsem' Hprec Hprec'.
-
-    assert (Htrans := unch_trans_spec unch to x).
-    destruct Htrans as [[Hroot Htrans] | Htrans].
-    + assert (Hin := Hprec). apply precedes_implies_in_to in Hin.
-      assert (Hin' := Hprec'). apply precedes_implies_in_to in Hin'.
-      apply follows_exists_detail in Hin.
-      apply follows_exists_detail in Hin'.
-
-      destruct Hin as [q [h [u Hflw]]].
-      destruct Hin' as [q' [h' [u' Hflw']]].
-      assert (Htrans' := Htrans q').
-      specialize (Htrans q).
-      rewrite <- Htrans' in Htrans.
-      assert (Hpred := unch_trans_local_spec q to x unch).
-      assert (Hpred' := unch_trans_local_spec q' to x unch).
-
-      destruct (is_def x q to), (is_def x q' to).
-    - rewrite Hpred' in Htrans'.
-      rewrite <- Htrans' in *.
-      apply precedes_self_same in Hprec. destruct Hprec as [Hprec _].
-      apply precedes_self_same in Hprec'. destruct Hprec' as [Hprec' _].
-      rewrite Hprec. rewrite Hprec'. reflexivity.
-    - rewrite <- Htrans in Htrans'.
-      rewrite Hpred in Htrans'.
-      rewrite <- Htrans' in *.
-      apply precedes_self_same in Hprec. destruct Hprec as [Hprec _].
-      apply precedes_self_same in Hprec'. destruct Hprec' as [Hprec' _].
-      rewrite Hprec. rewrite Hprec'. reflexivity.
-    - rewrite Hpred' in Htrans'.
-      rewrite <- Htrans' in *.
-      apply precedes_self_same in Hprec. destruct Hprec as [Hprec _].
-      apply precedes_self_same in Hprec'. destruct Hprec' as [Hprec' _].
-      rewrite Hprec. rewrite Hprec'. reflexivity.
-    - rewrite Hpred in Htrans.
-      rewrite <- Htrans in Htrans'.
-      rewrite <- Htrans' in *.
-      eapply Hconcr; try assumption.
-      admit.
-      admit.
-      eapply Hprec.
-    + rewrite Htrans in *.
-      apply precedes_self_same in Hprec. destruct Hprec as [Hprec _].
-      apply precedes_self_same in Hprec'. destruct Hprec' as [Hprec' _].
-      rewrite Hprec. rewrite Hprec'. reflexivity.
-      (*
-
-
-          
-        
-        
-      (*
-*)
-*)
-  Admitted.
-  *)
-
-  Lemma unch_hyper_correct :
-    forall unch t, 
-      sem_hyper (unch_hyper_concr unch) t -> unch_hyper_concr (unch_trans unch) t. 
-    (*
-    forall unch k t,
-      sem_trace (unch_concr unch) k t -> unch_concr (unch_trans unch) k t.
-    *)
-  Proof.
-    intros unch t Hred.
-    unfold sem_hyper in Hred.
-    destruct Hred as [ts [Hconcr Hstep]]; subst.
-    unfold unch_hyper_concr in Hconcr.
-    destruct Hconcr as [Hall Hconcr].
-    unfold unch_hyper_concr.
-    split; [ eapply all_closed; eassumption |].
-    intros k t to i s x Hsem Hin.
-    assert (Htrans := unch_trans_spec unch to x).
-    destruct Htrans as [[Hroot Htrans] | Htrans].
-    + eapply follows_exists_detail in Hin; try auto.
-      destruct Hin as [q [j [r Hflw]]].
-      assert (Hpred := unch_trans_local_spec q to x unch).
-      specialize (Htrans q).
-      remember (is_def x q to) as xdef.
-      destruct xdef.
-    - rewrite Hpred in Htrans.
-      rewrite <- Htrans in *.
-      exists i; exists s.
-      split; [| auto].
-      apply precedes_self.
-      eapply follows_implies_in.
-      eassumption.
-    - rewrite <- Htrans.
-      rewrite Hpred.
-      assert (Hinq := Hflw).
-      destruct Hsem as [k0 [t0 [step0 [Hts Hstep]]]]; subst t.
-      apply follows_implies_in2_step in Hinq.
-      specialize (Hconcr k0 t0 q j r x Hts Hinq).
-      destruct Hconcr as [h [u [Hprec Heq]]].
-      ++ destruct (equiv_dec (proj1_sig unch q x) to).
-         ** rewrite e in *.
-            exists i. exists s.
-            split; [| reflexivity].
-            apply precedes_self.
-            eapply follows_implies_in; eassumption.
-         ** eapply Prec_other in Hprec.
-            exists h. exists u.
-            split.
-            -- eapply precedes_follows; try eassumption.
-            -- rewrite Heq.
-               eapply no_def_untouched; [ symmetry; eassumption |].
-               eapply follows_implies_step; eassumption.
-      + rewrite Htrans.
-        exists i; exists s.
-        split; [| reflexivity].
-        apply precedes_self.
-        assumption.
-  Qed.
-
-
-  (*
   Lemma unch_correct :
     forall unch k t,
       sem_trace (unch_concr unch) k t -> unch_concr (unch_trans unch) k t.
   Proof.
-    intros unch k t Hsem.
-    destruct Hsem as [k' [t' [step [Hconcr Hstep]]]]; subst.
-    unfold unch_concr.
-    intros x to i s HIn.
-    unfold unch_concr in Hconcr.
-    assert (unch_trans unch to x = unch_trans unch to x) by reflexivity.
-    assert (Hspec := unch_trans_spec unch to x (unch_trans unch to x) H).
-    clear H.
-    inversion Hspec.
-    - assert (Hfollow := HIn).
-      destruct H as [Hroot H].
-      eapply follows_exists in Hfollow; [| eauto].
-      destruct Hfollow as [[[q j] r] Hfollow].
-      specialize (unch_trans_local_spec q to x unch).
-      specialize (H q).
-      remember (is_def x q to) as def.
-      destruct def; rewrite unch_trans_local_spec in H.
-      * rewrite <- H.
-        exists i; exists s; split; eauto.
-      * unfold unch_concr in Hconcr.
-        assert (Hstep := Hfollow).
-        apply follows_implies_in2_step in Hfollow.
-        apply follows_implies_step in Hstep.
-        rewrite <- H in *.
-        specialize (Hconcr x q j r Hfollow).
-        destruct Hconcr as [h [u [Hfromin Hfromeq]]].
-        exists h; exists u.
-        split; try (constructor; assumption).
-        cut (s x = r x).
-        ** intros Heq_qp.
-           rewrite Heq_qp.
-           assumption.
-        ** symmetry in Heqdef.
-           symmetry.
-           eapply no_def_untouched; try eassumption.
-    - exists i; exists s.
-      rewrite H.
-      auto.
-  Qed.
-  *)
+    intros unch k t Hred.
+    unfold sem_trace in Hred.
+    destruct Hred as [k' [t' [step [Hconcr H]]]]; subst.
+    unfold unch_concr in *.
+    intros to i s x.
+    split; [ apply unch_trans_nesting |].
+    intros Hin.
+    destruct (to == root).
+    - rewrite e in *.
+      exists i. exists s.
+      split; [| reflexivity ].
+      rewrite unch_trans_root.
+      apply precedes_self.
+      assumption.
+    - apply follows_exists_detail in Hin; auto.
+      destruct Hin as [q [j [r Hflw]]].
+      specialize (Hconcr q j r x).
+      destruct Hconcr as [_ Hconcr].
+      assert (Hinq := Hflw).
+      apply follows_implies_in2_step in Hinq.
+      specialize (Hconcr Hinq).
+      destruct Hconcr as [h [u [Hprec Heq]]].
+      assert (Htrans := unch_trans_res unch q to x).
+      destruct Htrans.
+      unfold is_effect_on.
+      exists j. exists i. exists r. exists s.
+      eapply follows_implies_step; eassumption.
+      * rewrite H.
+        exists i. exists s.
+        split; [| reflexivity].
+        apply precedes_self.
+        eapply follows_implies_in; eassumption.
+      * destruct H as [Hdef H].
+        rewrite H.
+        exists h. exists u.
+        split.
+        + eapply precedes_follows.
+          ++ constructor. eassumption.
+          ++ eassumption.
+          ++ simpl.
+             admit.
+        + eapply no_def_untouched in Hdef.
+          ++ rewrite Heq. rewrite Hdef.
+             reflexivity.
+          ++ eapply follows_implies_step.
+             apply Hflw.
+  Admitted.
 
   Definition lift (tr : Traces) : Hyper :=
     fun ts => ts = tr.
 
-  (*
-  Lemma uni_correct :
-    forall uni hom unch t,
-        sem_hyper (red_prod (red_prod (uni_concr uni) (hom_concr hom)) (unch_hyper_concr unch)) t ->
-        uni_concr (uni_trans uni hom unch) t.
-  Proof.
-    intros uni hom unch t Hred.
-    unfold sem_hyper in Hred.
-    destruct Hred as [ts [Hconcr Hstep]]; subst.
-    destruct Hconcr as [[HCuni HChom] HCunch].
-    destruct HCuni as [Hall HCuni].
-    unfold uni_concr.
-    split; [ eapply all_closed; assumption |].
-    
-    intros k k' tr tr' Hsem Hsem' x p i s s'.
-    intros HIn HIn' Htrans.
-    unfold uni_trans in Htrans. 
-
-    destruct (equiv_dec p root).
-    + rewrite e in *; clear e.
-      destruct Hsem as [l [ltr [lstep [Hlin Hlstep]]]].
-      destruct Hsem' as [l' [ltr' [lstep' [Hlin' Hlstep']]]].
-      (* unfold uni_concr in HCuni. *)
-      inv_tr HIn.
-      - exfalso. eapply start_no_tgt. eassumption.
-      - inv_tr HIn'.
-        * exfalso. eapply start_no_tgt. eassumption.
-        * inv_tr H. eapply (HCuni l l' ltr ltr'); try eassumption.
-    + destruct Htrans as [[Hhom Hpred] | Hunch].
-      - apply all_trace in Hsem; try eassumption.
-        apply all_trace in Hsem'; try eassumption.
-        apply follows_exists in HIn; try eassumption.
-        apply follows_exists in HIn'; try eassumption.
-        destruct HIn as [[[q j] sq] Hflw].
-        destruct HIn' as [[[q' j'] sq'] Hflw'].
-    
-        cut (q = q' /\ j = j'); intros.
-        * inversion_clear H as [Hq Hj]; subst j' q'.
-          unfold uni_state_concr in *.
-          eapply (local_uni_corr (uni q) q j p i sq sq' s s').
-          ** intros.
-             eapply (HCuni k k' tr tr' Hsem Hsem' x0 q j); try eapply follows_implies_in2; try eassumption.
-          ** eapply follows_implies_step; eassumption.
-          ** eapply follows_implies_step; eassumption.
-          ** apply Hpred.
-             eapply edge_spec.
-             unfold is_effect_on.
-             exists j. exists i. exists sq. exists s. eapply follows_implies_step. apply Hflw.
-        * clear HCuni. subst.
-          destruct HChom as [_ HChom].
-          eapply (HChom k k' tr tr'); try eassumption.
-      - apply all_trace in Hsem; try eassumption.
-        apply all_trace in Hsem'; try eassumption.
-        destruct HCunch as [_ [Hsync HCunch]].
-        assert (HCunch' := HCunch k' tr' p i s' x Hsem' HIn').
-        assert (HCunch  := HCunch k tr p i s x Hsem HIn).
-        destruct HCunch as [j [r [Hprec Heq]]].
-        destruct HCunch' as [j' [r' [Hprec' Heq']]].
-        specialize (Hsync k k' tr tr' j j' r r' s s' i (unch p x) p Hsem Hsem' Hprec Hprec').
-        subst j'.
-        rewrite <- Heq. rewrite <- Heq'.
-        eapply (HCuni k k' tr tr' Hsem Hsem' x (unch p x) j r r'); try assumption.
-        admit.
-        admit.
-  Admitted.
-  *)
+  Definition red_prod (h h' : Hyper) : Hyper :=
+    fun ts => h ts /\ h' ts.
 
   Lemma uni_correct :
     forall uni hom unch t,
-        sem_hyper (red_prod (red_prod (uni_concr uni) (hom_concr hom)) (unch_hyper_concr unch)) t ->
+        sem_hyper (red_prod (red_prod (uni_concr uni) (hom_concr hom)) (lift (unch_concr unch))) t ->
         uni_concr (uni_trans uni hom unch) t.
   Proof.
     intros uni hom unch t Hred.
@@ -719,46 +589,27 @@ Module CFG.
         * clear HCuni. subst.
           destruct HChom as [_ HChom].
           eapply (HChom k k' tr tr'); try eassumption.
-      - clear HChom.
 
-        (* The unch hyper case *)
+        (* The unch case *)
+      - clear HChom.
+        unfold lift in HCunch.
+        subst.
+
         apply all_trace in Hsem; [|eauto].
         apply all_trace in Hsem'; [|eauto].
-        unfold unch_hyper_concr in HCunch.
-        destruct HCunch as [_ HCunch].
-        assert (HCunch' := HCunch k' tr' p i s' x Hsem' HIn').
-        assert (HCunch  := HCunch k tr p i s x Hsem HIn).
-        destruct HCunch as [j [r [Hprec Heq]]].
-        destruct HCunch' as [j' [r' [Hprec' Heq']]].
-
-        cut (j = j'); intros.
-        * (* specialize (Hsync k k' tr tr' j j' r r' s s' i p p p x Hsem Hsem' Hprec Hprec'). *)
-          subst j'.
-          rewrite <- Heq. rewrite <- Heq'.
-          eapply (HCuni k k' tr tr' Hsem Hsem' x (proj1_sig unch p x) j r r'); try eassumption.
-          ** eapply precedes_implies_in; eassumption.
-          ** eapply precedes_implies_in; eassumption.
-        * destruct unch as [unch Hunch_nest].
-          eapply ivec_nesting; try eauto.
-Qed.
-
-          
-      (* The unch non-hyper case 
-        rename c into HProot.
-        remember (unch p x) as q; symmetry in Heqq.
-        rename Hunch into Huniq.
-        unfold lift in HCunch; subst.
-        unfold unch_concr in Hts.
-        assert (Hconcr := Hts x p i s HIn).
-        assert (Hconcr' := Hts' x p i s' HIn').
-        destruct Hconcr as [j [r [Hin_from Heq]]].
-        destruct Hconcr' as [j' [r' [Hin_from' Heq']]].
+        assert (HCunch := Hsem).
+        assert (HCunch' := Hsem').
+        specialize (HCunch p i s x).
+        specialize (HCunch' p i s' x).
+        destruct HCunch as [Hnest [j [r [Hprec Heq]]]].
+        assumption.
+        destruct HCunch' as [_ [j' [r' [Hprec' Heq']]]].
+        assumption.
         cut (j = j'); intros.
         * subst j'.
-          apply all_trace in Hsem; try eassumption.
-          apply all_trace in Hsem'; try eassumption.
-          rewrite Heq. rewrite Heq'.
-          eapply (HCuni k k' tr tr' Hsem Hsem' x (unch p x) j r r' Hin_from Hin_from' Huniq).
-        * admit.
-       *)
+          rewrite <- Heq. rewrite <- Heq'.
+          eapply (HCuni k k' tr tr' Hsem Hsem' x (unch p x) j r r'); try eassumption.
+          ** eapply precedes_implies_in; eassumption.
+          ** eapply precedes_implies_in; eassumption.
+        * eapply nesting_spec; eauto.
 Qed.
