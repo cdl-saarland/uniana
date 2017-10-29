@@ -64,6 +64,7 @@ Module CFG.
   Notation "a <<= b" := (nesting a b) (at level 70, right associativity).
   Parameter nesting_dec : forall x y : Lab, { x <<= y } + { ~ x <<= y }.
   Parameter nesting_refl : forall l, l <<= l.
+  Parameter nesting_antisym : forall p q, p <<= q -> q <<= p -> p = q.
   Parameter nesting_root : forall l, root <<= l.
 
   Lemma step_implies_edge :
@@ -198,6 +199,7 @@ Module CFG.
   Qed.
 
   Lemma unch_trans_local_res : forall unch q p x, unch_trans_local unch q p x = p \/
+                                                  unch q x =/= p /\
                                                   is_def x q p = false /\
                                                   unch_trans_local unch q p x = unch q x.
   Proof.
@@ -205,19 +207,13 @@ Module CFG.
     unfold unch_trans_local.
     destruct (is_def x q p); auto.
     destruct (nesting_dec (unch q x) p); auto.
+    destruct (unch q x == p); auto.
   Qed.
 
   Parameter preds : Lab -> list Lab.
 
   Parameter preds_spec : forall p q, has_edge q p = true <-> List.In q (preds p).
 
-  Lemma nesting_join_nest : forall a b c, a <<= c -> b <<= c -> nesting_join a b <<= c.
-  Proof.
-    intros a b c Ha Hb.
-    assert (H := nesting_join_spec a b c Ha Hb).
-    inversion H; rewrite H0; auto.
-  Qed.
-    
   Fixpoint all_equal {A : Type} `{EqDec A} (l : list A) (default : A) : A :=
     match l with
     | nil => default
@@ -242,7 +238,7 @@ Module CFG.
 
   Lemma unch_trans_res : forall unch q p x, is_effect_on q p ->
                                             (unch_trans unch p x = p \/
-                                             is_def x q p = false /\
+                                             unch q x =/= p /\ is_def x q p = false /\
                                              unch_trans unch p x = unch q x).
   Proof.
     intros.
@@ -271,7 +267,17 @@ Module CFG.
 
   Lemma list_emp_in : forall {A: Type} l, (forall (a: A), ~ List.In a l) -> l = nil.
   Proof.
-  Admitted.
+    intros.
+    induction l.
+    - reflexivity.
+    - cut (forall a, ~ List.In a l).
+      + intros.
+        apply IHl in H0.
+        subst. specialize (H a).
+        exfalso. simpl in H. auto.
+      + intros. specialize (H a0).
+        simpl in H. auto.
+  Qed.
 
   Lemma unch_trans_root : forall unch x, unch_trans unch root x = root.
   Proof.
@@ -499,7 +505,7 @@ Module CFG.
     - apply follows_exists_detail in Hin; auto.
       destruct Hin as [q [j [r Hflw]]].
       specialize (Hconcr q j r x).
-      destruct Hconcr as [_ Hconcr].
+      destruct Hconcr as [Hnest Hconcr].
       assert (Hinq := Hflw).
       apply follows_implies_in2_step in Hinq.
       specialize (Hconcr Hinq).
@@ -514,21 +520,17 @@ Module CFG.
         split; [| reflexivity].
         apply precedes_self.
         eapply follows_implies_in; eassumption.
-      * destruct H as [Hdef H].
+      * destruct H as [Hqto [Hdef H]].
         rewrite H.
         exists h. exists u.
         split.
-        + eapply precedes_follows.
-          ++ constructor. eassumption.
-          ++ eassumption.
-          ++ simpl.
-             admit.
+      + eapply precedes_follows; [ constructor | |]; eassumption.
         + eapply no_def_untouched in Hdef.
           ++ rewrite Heq. rewrite Hdef.
              reflexivity.
           ++ eapply follows_implies_step.
              apply Hflw.
-  Admitted.
+  Qed.
 
   Definition lift (tr : Traces) : Hyper :=
     fun ts => ts = tr.
