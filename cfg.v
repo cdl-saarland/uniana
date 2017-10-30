@@ -111,7 +111,7 @@ Module CFG.
     | In_At : forall k tr, In k tr k
     | In_Other : forall l k k' tr' step, In k' tr' l -> In k (Step k k' tr' step) l.
 
-  Parameter ivec_fresh : forall p i s k t, Some (p, i, s) = eff k ->
+  Parameter ivec_fresh : forall p i s k t, eff k = Some (p, i, s) ->
                                            forall q j r, In k t (q, j, r) ->
                                                          j <> i.
 
@@ -433,6 +433,18 @@ Module CFG.
       ((p, i), s) => p
     end.
 
+  Lemma follows_pred_unique :
+    forall k' k t step d, Follows k' (Step k' k t step) k' d -> d = k.
+  Proof.
+    intros.
+    inv_tr H.
+    - reflexivity.
+    - destruct k' as [[p i] s].
+      apply follows_implies_in in H5.
+      eapply ivec_fresh in step1; [| apply H5].
+      exfalso. auto.
+  Qed.
+    
   Lemma precedes_follows :
     forall k t c d e,
       Precedes k t c d ->
@@ -443,7 +455,7 @@ Module CFG.
     intros k t.
     induction t; intros c d next Hprec Hflw Hlab.
     - inv_tr Hflw.
-    - destruct (equiv_dec k next).
+    - destruct (k == next).
       * rewrite <- e0 in *; clear e0.
         inv_tr Hprec.
         + constructor.
@@ -451,18 +463,24 @@ Module CFG.
           assumption. assumption.
         + destruct c as [[cp ci] cs].
           destruct k as [[kp ki] ks].
-          econstructor.
-          ++ assert (k' === d) by admit.
-             rewrite H.
-             assumption.
-          ++ auto.
+          econstructor; eauto.
+          replace k' with d; [ assumption |].
+          eapply follows_pred_unique; eassumption.
       * inv_tr Hflw.
         + contradiction c0; reflexivity.
-        + assert (k =/= d) by admit.
-          eapply Prec_other.
-          inv_tr Hprec; try (exfalso; apply H; reflexivity).
-          eauto.
-  Admitted.
+        + cut (k =/= d); intros.
+          -- eapply Prec_other.
+             inv_tr Hprec; try (exfalso; apply H; reflexivity).
+             eauto.
+          -- intro.
+             apply follows_implies_step in Hflw.
+             destruct k as [[p i] s].
+             destruct d as [[q j] r].
+             eapply follows_implies_in2 in H4.
+             eapply ivec_fresh in step0; [| eassumption].
+             injection H; intros.
+             auto.
+  Qed.
   
   Lemma no_def_untouched :
     forall p q x, is_def x q p = false -> forall i j s r, eff (q, j, r) = Some (p, i, s) -> r x = s x.
