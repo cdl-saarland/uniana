@@ -64,7 +64,6 @@ Module CFG.
   Notation "a <<= b" := (nesting a b) (at level 70, right associativity).
   Parameter nesting_dec : forall x y : Lab, { x <<= y } + { ~ x <<= y }.
   Parameter nesting_refl : forall l, l <<= l.
-  Parameter nesting_antisym : forall p q, p <<= q -> q <<= p -> p = q.
   Parameter nesting_root : forall l, root <<= l.
 
   Lemma step_implies_edge :
@@ -130,9 +129,9 @@ Module CFG.
 
   Parameter nesting_spec : forall q p,
       q <<= p ->
-      forall k k' t t' j j' i i' r r' s s',
+      forall k k' t t' j j' i r r' s s',
       Precedes k t (q, j, r) (p, i, s) ->
-      Precedes k' t' (q, j', r') (p, i', s') ->
+      Precedes k' t' (q, j', r') (p, i, s') ->
       j' = j /\ r = r'.
 
   Definition all : Traces -> Prop :=
@@ -162,15 +161,13 @@ Module CFG.
   Qed.
   
   Definition uni_concr (u : Uni) : Hyper :=
-    fun ts => all ts /\
-              forall t t' tr tr', ts t tr -> ts t' tr' ->
+    fun ts => forall t t' tr tr', ts t tr -> ts t' tr' ->
                                   forall x p i s s', In t tr ((p, i), s) ->
                                                      In t' tr' ((p, i), s') ->
                                                      u p x -> s x = s' x.
 
   Definition hom_concr (h : Hom) : Hyper :=
-    fun ts => all ts /\
-              forall t t' tr tr', ts t tr -> ts t' tr' ->
+    fun ts => forall t t' tr tr', ts t tr -> ts t' tr' ->
                                   forall p, h p ->
                                             forall q q' j j'
                                                    i s s'
@@ -296,10 +293,16 @@ Module CFG.
         inversion H.
   Qed.
 
+  Parameter hom_trans : Hom -> Hom.
+
+  Parameter hom_trans_sound : forall hom t,
+      sem_hyper (hom_concr hom) t -> hom_concr (hom_trans hom) t.
+  
   Definition uni_trans (uni : Uni) (hom : Hom) (unch : Unch) : Uni :=
     fun p => if p == root then uni root
-             else fun x => (hom p /\ forall q, has_edge q p = true -> abs_uni_eff (uni q) x)
-                             \/ uni (unch p x) x.
+             else fun x => (hom_trans hom p /\ forall q, has_edge q p = true ->
+                                                         abs_uni_eff (uni q) x)
+                           \/ (let u := unch_trans unch p x in u =/= p /\ uni u x).
 
   Lemma uni_trans_root_inv :
     forall uni hom unch x, uni_trans uni hom unch root x = uni root x.
@@ -481,6 +484,18 @@ Module CFG.
              injection H; intros.
              auto.
   Qed.
+
+  Lemma precedes_step :
+    forall k k' t step p s, Precedes k' (Step k' k t step) p s ->
+                            lab_of p =/= lab_of s ->
+                            In k t p.
+  Proof.
+    intros.
+    inv_tr H.
+    - exfalso. apply H0. reflexivity.
+    - eapply precedes_implies_in. eauto.
+    - eapply precedes_implies_in. eauto.
+  Qed.
   
   Lemma no_def_untouched :
     forall p q x, is_def x q p = false -> forall i j s r, eff (q, j, r) = Some (p, i, s) -> r x = s x.
@@ -563,73 +578,72 @@ Module CFG.
   Proof.
     intros uni hom unch t Hred.
     unfold sem_hyper in Hred.
-    destruct Hred as [ts [Hconcr Hstep]]; subst.
-    destruct Hconcr as [[HCuni HChom] HCunch].
-
-    split.
-    unfold uni_concr in HCuni.
-    destruct HCuni as [Hall _].
-    eapply all_closed; auto.
-
+    destruct Hred as [ts [Hconcr Hstep]].
     intros k k' tr tr' Hsem Hsem' x p i s s'.
     intros HIn HIn' Htrans.
 
-    unfold uni_trans in Htrans. 
-    destruct HCuni as [Hall HCuni].
-    assert (ts k tr) as Hts by (eapply all_trace; eassumption).
-    assert (ts k' tr') as Hts' by (eapply all_trace; eassumption).
+    assert (hom_concr (hom_trans hom) t) as HChom.
+    apply hom_trans_sound.
+    destruct Hconcr as [[_ Hhom] _].
+    exists ts; auto.
 
-    destruct (equiv_dec p root).
+    assert (unch_concr (unch_trans unch) k tr) as HCunch.
+    destruct Hconcr as [[_ _] Hunch].
+    unfold lift in *; subst.
+    apply unch_correct. assumption.
+    
+    assert (unch_concr (unch_trans unch) k' tr') as HCunch'.
+    destruct Hconcr as [[_ _] Hunch].
+    unfold lift in *; subst.
+    apply unch_correct. assumption.
+
+    destruct Hconcr as [[HCuni _] _].
+
+    subst.
+    destruct Hsem as [l [ltr [lstep [Hts Hlstep]]]]; subst.
+    destruct Hsem' as [l' [ltr' [lstep' [Hts' Hlstep']]]]; subst.
+    unfold uni_trans in Htrans. 
+
+    destruct (equiv_dec p root); [ subst | ].
     + rewrite e in *; clear e.
-      destruct Hsem as [l [ltr [lstep [Hlin Hlstep]]]].
-      destruct Hsem' as [l' [ltr' [lstep' [Hlin' Hlstep']]]].
-      (* unfold uni_concr in HCuni. *)
       inv_tr HIn.
       - exfalso. eapply start_no_tgt. eassumption.
       - inv_tr HIn'.
         * exfalso. eapply start_no_tgt. eassumption.
-        * inv_tr H. eapply (HCuni l l' ltr ltr'); try eassumption.
+        * eapply (HCuni l l' ltr ltr'); try eassumption.
     + destruct Htrans as [[Hhom Hpred] | Hunch].
+        (* The uni/hom case *)
       - apply follows_exists in HIn; try eassumption.
         apply follows_exists in HIn'; try eassumption.
         destruct HIn as [[[q j] sq] Hflw].
         destruct HIn' as [[[q' j'] sq'] Hflw'].
         cut (q = q' /\ j = j'); intros.
         * inversion_clear H as [Hq Hj]; subst j' q'.
-          
           eapply (local_uni_corr (uni q) q j p i sq sq' s s'); unfold uni_state_concr in *.
           ** intros.
-             eapply (HCuni k k' tr tr' Hts Hts' x0 q j); try eapply follows_implies_in2; eassumption.
+             unfold uni_concr in HCuni .
+             eapply (HCuni l l' ltr ltr' Hts Hts' x0 q j);
+               try eapply follows_implies_in2_step; eassumption.
           ** eapply follows_implies_step; eassumption.
           ** eapply follows_implies_step; eassumption.
           ** apply Hpred.
              eapply edge_spec.
              unfold is_effect_on.
              exists j. exists i. exists sq. exists s. eapply follows_implies_step. apply Hflw.
-        * clear HCuni. subst.
-          destruct HChom as [_ HChom].
-          eapply (HChom k k' tr tr'); try eassumption.
-
+        * eapply (HChom k k' _ _); try eassumption.
+          exists l; exists ltr; exists lstep; auto.
+          exists l'; exists ltr'; exists lstep'; auto.
         (* The unch case *)
-      - clear HChom.
-        unfold lift in HCunch.
-        subst.
-
-        apply all_trace in Hsem; [|eauto].
-        apply all_trace in Hsem'; [|eauto].
-        assert (HCunch := Hsem).
-        assert (HCunch' := Hsem').
-        specialize (HCunch p i s x).
+      - specialize (HCunch p i s x).
         specialize (HCunch' p i s' x).
-        destruct HCunch as [Hnest [j [r [Hprec Heq]]]].
-        assumption.
-        destruct HCunch' as [_ [j' [r' [Hprec' Heq']]]].
-        assumption.
+        destruct HCunch as [Hnest [j [r [Hprec Heq]]]]; try eassumption.
+        destruct HCunch' as [_ [j' [r' [Hprec' Heq']]]]; try eassumption.
+        destruct Hunch as [ Hlab Hunch ].
+        rewrite <- Heq. rewrite <- Heq'.
         cut (j = j'); intros.
         * subst j'.
-          rewrite <- Heq. rewrite <- Heq'.
-          eapply (HCuni k k' tr tr' Hsem Hsem' x (unch p x) j r r'); try eassumption.
-          ** eapply precedes_implies_in; eassumption.
-          ** eapply precedes_implies_in; eassumption.
-        * eapply nesting_spec; eauto.
+          eapply HCuni; [ apply Hts | apply Hts' | | | apply Hunch ].
+          eapply precedes_step; eassumption.
+          eapply precedes_step; eassumption.
+        * eapply nesting_spec; eassumption.
 Qed.
