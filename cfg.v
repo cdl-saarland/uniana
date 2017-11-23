@@ -134,32 +134,6 @@ Module CFG.
       Precedes k' t' (q, j', r') (p, i, s') ->
       j' = j /\ r = r'.
 
-  Definition all : Traces -> Prop :=
-    fun ts => forall k t, ts k t -> forall k' step, ts k' (Step k' k t step).
-
-  Lemma all_closed :
-    forall ts, all ts -> all (sem_trace ts).
-  Proof.
-    unfold all in *.
-    intros.
-    unfold sem_trace.
-    exists k. exists t. exists step. 
-    split.
-    - unfold sem_trace in H0.
-      destruct H0 as [k0 [tr0 [step0 [Htr0 HStep0]]]]; subst.
-      apply H.
-      assumption.
-    - reflexivity.
-  Qed.    
-
-  Lemma all_trace :
-    forall ts k tr, all ts -> sem_trace ts k tr -> ts k tr.
-  Proof.
-    intros.
-    destruct H0 as [k' [tr' [step' [Hts HStep]]]]; subst.
-    auto.
-  Qed.
-  
   Definition uni_concr (u : Uni) : Hyper :=
     fun ts => forall t t' tr tr', ts t tr -> ts t' tr' ->
                                   forall x p i s s', In t tr ((p, i), s) ->
