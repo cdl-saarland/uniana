@@ -20,11 +20,9 @@ Module CFG.
   Definition Conf := prod Coord State.
 
   Definition UniState := Var -> Prop.
-  Definition UnchState := Var -> Lab.
 
   Parameter eff : Conf -> option Conf.
   Parameter abs_uni_eff : UniState -> UniState.
-  Parameter abs_unch_eff : UnchState -> UnchState.
 
   Definition uni_state_concr (uni : UniState) : State -> State -> Prop :=
     fun s => fun s' => forall x, uni x -> s x = s' x.
