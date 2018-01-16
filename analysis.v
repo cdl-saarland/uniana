@@ -69,12 +69,6 @@ Module Uniana.
   Parameter def_spec :
     forall p q x, (exists i j s r, eff (p, i, s) = Some (q, j, r) /\ r x <> s x) -> is_def x p q = true.
 
-  Parameter nesting : Lab -> Lab -> Prop.
-  Notation "a <<= b" := (nesting a b) (at level 70, right associativity).
-  Parameter nesting_dec : forall x y : Lab, { x <<= y } + { ~ x <<= y }.
-  Parameter nesting_refl : forall l, l <<= l.
-  Parameter nesting_root : forall l, root <<= l.
-
   Lemma step_implies_edge :
     forall k k', eff k = Some k' -> exists p q i j s r, has_edge p q = true /\ k = (p, i, s) /\ k' = (q, j, r).
   Proof.
@@ -130,10 +124,10 @@ Module Uniana.
                                                     Follows k (Step k k' tr' step) succ pred.
 
   Inductive Precedes : forall k, Tr k -> Conf -> Conf -> Prop :=
-  | Prec_in : forall k t, Precedes k t k k
-  | Prec_cont : forall k t q p i j r s step, Precedes k t (q, j, r) k -> 
-                                             p <> q ->
-                                             Precedes (p, i, s) (Step (p, i, s) k t step) (q, j, r) (p, i, s)
+  | Prec_in : forall k t , Precedes k t k k
+  | Prec_cont : forall q q' p i j j' r' r s t step, Precedes (q', j', r') t (q, j, r) (q', j', r') -> 
+                                                    (q === q' -> (j === j' /\ r === r')) ->
+                                                    Precedes (p, i, s) (Step (p, i, s) (q', j', r') t step) (q, j, r) (p, i, s)
   | Prec_other : forall k' k t c c' step, Precedes k t c c' ->
                                           Precedes k' (Step k' k t step) c c'.
   Definition unique_preceding q p :=
@@ -141,11 +135,6 @@ Module Uniana.
       Precedes k t (q, j, r) (p, i, s) ->
       Precedes k' t' (q, j', r') (p, i, s') ->
       j' = j.
-
-
-  Parameter nesting_spec : forall q p,
-      q <<= p ->
-      unique_preceding q p.
 
   Inductive Path : Lab -> Lab -> Prop :=
     | PathInit : forall p, Path p p
@@ -241,26 +230,6 @@ Module Uniana.
 
   Definition unch_trans (upi : Upi) (uni : Uni) (unch : Unch) : Unch :=
     fun p => fun x => all_equal (map (fun q => unch_trans_local upi uni unch q p x) (preds p)) p.
-
-  (*
-  Lemma unch_trans_res2 :
-    forall upi uni unch p x,
-      unch_trans upi uni unch p x = p \/ exists q, upi (unch q x) p = true.
-  Proof.
-    intros.
-    unfold unch_trans.
-    destruct (preds p); intros; [ auto | simpl ].
-    induction l0; simpl in *.
-    - unfold unch_trans_local.
-      destruct (is_def x l p); auto.
-      remember (upi (unch l x) p) as upt.
-      symmetry in Hequpt.
-      destruct upt; auto.
-      right. exists l. assumption.
-    - destruct IHl0; try destruct (equiv_dec (unch_trans_local upi uni unch a p x) _); auto.
-      rewrite e. rewrite H. auto.
-  Qed.
-*)
 
   Lemma unch_trans_res : forall upi uni unch q p x, q --> p ->
                                                     (unch_trans upi uni unch p x = p \/
@@ -495,6 +464,18 @@ Module Uniana.
     - econstructor. eauto.
   Qed.
 
+  Lemma follows_pred_unique :
+    forall k' k t step d, Follows k' (Step k' k t step) k' d -> d = k.
+  Proof.
+    intros.
+    inv_tr H.
+    - reflexivity.
+    - destruct k' as [[p i] s].
+      apply follows_implies_in in H5.
+      eapply ivec_fresh in step1; [| apply H5].
+      exfalso. auto.
+  Qed.
+
   Lemma precedes_self :
     forall k t c, In k t c -> Precedes k t c c.
   Proof.
@@ -518,39 +499,36 @@ Module Uniana.
     forall k t c c', Precedes k t c c' -> In k t c.
   Proof.
     intros k t c.
-    induction t; intros; inv_tr H; constructor; eauto.
+    induction t; intros; inv_tr H; econstructor; eauto.
    Qed.
-
-  Lemma follows_pred_unique :
-    forall k' k t step d, Follows k' (Step k' k t step) k' d -> d = k.
-  Proof.
-    intros.
-    inv_tr H.
-    - reflexivity.
-    - destruct k' as [[p i] s].
-      apply follows_implies_in in H5.
-      eapply ivec_fresh in step1; [| apply H5].
-      exfalso. auto.
-  Qed.
 
   Lemma follows_implies_precedes :
     forall k t p q i j s r,
-      p =/= q -> Follows k t (p, i, s) (q, j, r) -> Precedes k t (q, j, r) (p, i, s).
+      Follows k t (p, i, s) (q, j, r) -> Precedes k t (q, j, r) (p, i, s).
   Proof.
-    intros k t p q i j s r Hneq Hflw.
+    intros k t p q i j s r Hflw.
     induction t; inv_tr Hflw.
-    * constructor.
-      constructor.
-      assumption.
-    * econstructor.
-      auto.
+    - constructor; try reflexivity. constructor. intros; split; reflexivity.
+    - constructor. eauto.
+  Qed.
+
+  Lemma precedes_step :
+    forall k k' t step p s, Precedes k' (Step k' k t step) p s ->
+                            lab_of p =/= lab_of s ->
+                            In k t p.
+  Proof.
+    intros.
+    inv_tr H.
+    - exfalso. apply H0. reflexivity.
+    - eapply precedes_implies_in. eauto.
+    - eapply precedes_implies_in. eauto.
   Qed.
 
   Lemma precedes_follows :
     forall k t c d e,
       Precedes k t c d ->
       Follows k t e d ->
-      lab_of c =/= lab_of e ->
+      (lab_of c =/= lab_of d \/ c = d) ->
       Precedes k t c e.
   Proof.
     intros k t.
@@ -562,11 +540,19 @@ Module Uniana.
         + constructor.
         + constructor.
           assumption. assumption.
-        + destruct c as [[cp ci] cs].
-          destruct k as [[kp ki] ks].
-          econstructor; eauto.
-          replace k' with d; [ assumption |].
-          eapply follows_pred_unique; eassumption.
+        + cut (d === k'). intros Heq.
+          -- rewrite Heq in *.
+             inversion_clear Hlab.
+             ** destruct c as [[cp ci] cs].
+                destruct k as [[kp ki] ks].
+                destruct k' as [[kp' ki'] ks'].
+                eapply Prec_cont; [ eassumption |].
+                intros. contradiction H.
+             ** rewrite H in *.
+                destruct k as [[kp ki] ks].
+                destruct k' as [[kp' ki'] ks'].
+                eapply Prec_cont; [ eassumption | firstorder ].
+          -- eapply follows_pred_unique; eassumption.
       * inv_tr Hflw.
         + contradiction c0; reflexivity.
         + cut (k =/= d); intros.
@@ -583,18 +569,6 @@ Module Uniana.
              auto.
   Qed.
 
-  Lemma precedes_step :
-    forall k k' t step p s, Precedes k' (Step k' k t step) p s ->
-                            lab_of p =/= lab_of s ->
-                            In k t p.
-  Proof.
-    intros.
-    inv_tr H.
-    - exfalso. apply H0. reflexivity.
-    - eapply precedes_implies_in. eauto.
-    - eapply precedes_implies_in. eauto.
-  Qed.
-  
   Lemma no_def_untouched :
     forall p q x, is_def x q p = false -> forall i j s r, eff (q, j, r) = Some (p, i, s) -> r x = s x.
   Proof.
@@ -652,14 +626,20 @@ Module Uniana.
         eapply follows_implies_in; eassumption.
       * destruct H as [Hqto [Hdef [_ H]]].
         rewrite H.
-        exists h. exists u.
-        split.
-      + eapply precedes_follows; [ constructor | |]; eassumption.
-        + eapply no_def_untouched in Hdef.
-          ++ rewrite Heq. rewrite Hdef.
-             reflexivity.
-          ++ eapply follows_implies_step.
-             apply Hflw.
+        destruct (unch q x == q).
+        + exists j. exists r.
+          split.
+          -- eapply precedes_follows; [ | eassumption | ].
+             ** rewrite e. apply precedes_self.
+                eapply follows_implies_in2; eassumption.
+             ** right. rewrite e. reflexivity.
+          -- eapply no_def_untouched; try eassumption.
+             eapply follows_implies_step; eassumption.
+        + exists h. exists u.
+          split.
+          -- eapply precedes_follows; [ constructor | | left; simpl ]; eassumption.
+          -- rewrite Heq. eapply no_def_untouched; try eassumption.
+             eapply follows_implies_step; eassumption.
   Qed.
 
   Definition lift (tr : Traces) : Hyper :=
@@ -735,17 +715,14 @@ Module Uniana.
                 eapply Hpred.
                 assumption.
           -- (* unique preceding instances *)
-             destruct (p == q).
-             ** rewrite <- e in *; clear e.
-                admit.
-             ** eapply HCupi.
-                exists l; exists ltr; exists lstep; auto.
-                exists l'; exists ltr'; exists lstep'; auto.
-                eapply joinb_true_iff in Hupi.
-                eapply Hupi.
-                eassumption.
-                eapply follows_implies_precedes; try eassumption.
-                eapply follows_implies_precedes; try eassumption.
+             eapply HCupi.
+             exists l; exists ltr; exists lstep; auto.
+             exists l'; exists ltr'; exists lstep'; auto.
+             eapply joinb_true_iff in Hupi.
+             eapply Hupi.
+             eassumption.
+             eapply follows_implies_precedes; try eassumption.
+             eapply follows_implies_precedes; try eassumption.
         * (* disjoint paths! *)
           admit.
 
