@@ -233,6 +233,24 @@ Module Uniana.
     eauto using step_conf_implies_edge.
   Qed.
 
+  Lemma not_in_trace_exists_path (q : Lab) (k k' : Conf) (t : Tr k) :
+    In k t k' ->
+    ~ (exists j r, In k t (q, j, r)) ->
+    exists (p : Path (lab_of k') (lab_of k)), ~ PathIn q (lab_of k') (lab_of k) p.
+  Proof.
+    destruct k as [[p i] s].
+    destruct k' as [[a l] u].
+    simpl in *.
+    intros Hin Hnin.
+    dependent induction t.
+    + inv_tr Hin. exists (PathInit root).
+      intro. apply Hnin.
+      destruct (q == root).
+      - rewrite e in *. exists start_ivec, u. constructor.
+      - inversion H. firstorder.
+    + admit.
+  Admitted.
+
   Lemma Path_in_dec :
     forall a x z p, {PathIn a x z p} + {~ PathIn a x z p}.
   Proof.
@@ -286,13 +304,16 @@ Module Uniana.
     fun k => fun t => forall to i s x, (In k t (to, i, s) ->
                                        exists j r, Precedes k t (unch to x, j, r) (to, i, s) /\ r x = s x).
 
+
+  Definition upi_prop q p k k' t t' :=
+    forall j j' i r r' s s', Precedes k t (q, j, r) (p, i, s) ->
+                             Precedes k' t' (q, j', r') (p, i, s') ->
+                             j' = j.
+
   Definition upi_concr (upi : Upi) : Hyper :=
     fun ts => forall k k' t t',
         ts k t -> ts k' t' ->
-        forall q p, upi q p = true ->
-                    forall j j' i r r' s s', Precedes k t (q, j, r) (p, i, s) ->
-                                             Precedes k' t' (q, j', r') (p, i, s') ->
-                                             j' = j.
+        forall q p, upi q p = true -> upi_prop q p k k' t t'.
 
   Parameter upi_trans : Upi -> Uni -> Upi.
 
@@ -761,6 +782,25 @@ Module Uniana.
     | (Step k' k t _) => (l ==b lab_of k') || (label_in_trace l k t)
     end.
 
+  Fixpoint last_inst_of (l : Lab) (k : Conf) (t : Tr k) : option IVec :=
+    match t with
+    | (Init s) => if l ==b root then Some start_ivec else None
+    | (Step (q, j, _) k t _) => if (l ==b q) then Some j else last_inst_of l k t
+    end.
+
+  Lemma last_inst_not_exists :
+    forall l k t, last_inst_of l k t = None <-> ~ exists i s, In k t (l, i, s).
+  Proof.
+    intros.
+  Admitted.
+
+  Lemma last_inst_precedes :
+    forall l k t i, last_inst_of l k t = Some i <-> exists s, Precedes k t (l, i, s) k.
+  Proof.
+    intros.
+    dependent induction t.
+  Admitted.
+
   Lemma label_in_trace_in :
     forall l k t, label_in_trace l k t = true <-> exists i s, In k t (l, i, s).
   Proof.
@@ -863,21 +903,31 @@ Module Uniana.
     intros.
     dependent induction t; inv_tr H; try firstorder.
     destruct (p == k').
-    + admit.
+    + rewrite e0 in *. clear e0.
+      inv_tr H; firstorder.
+      rewrite H1 in step1. injection step1; intros. symmetry in H3. subst. constructor.
     + constructor. eauto.
-  Admitted.
+  Qed.
 
   Lemma in_succ_exists p q i j s r t :
     In (p, i, s) t (q, j, r) -> (exists k', eff (q, j, r) = Some k' /\ In (p, i, s) t k') \/ (p, i, s) = (q, j, r).
   Proof.
-  Admitted.
+    intros Hin.
+    dependent induction t; inv_tr Hin; eauto.
+    destruct k' as [[a l] u].
+    left.
+    specialize (IHt a l u t).
+    destruct IHt; eauto.
+    + destruct H as [k' H]. exists k'. split; try constructor; firstorder.
+    + injection H; intros; subst. exists (p, i, s). firstorder. constructor.
+  Qed.
 
   Definition DivergentBranch br k k' t t' :=
-    exists x l u u' a b, DisjointPaths br (lab_of k) (lab_of k') a b /\
-                         val_true (u x) =/= val_true (u' x) /\
-                         In k t (br, l, u) /\
-                         In k' t' (br, l, u') /\
-                         exists tt ff, branch br = Some (tt, ff, x).
+    (exists a b, DisjointPaths br (lab_of k) (lab_of k') a b) /\
+    (exists x l u u', val_true (u x) =/= val_true (u' x) /\
+                      In k t (br, l, u) /\
+                      In k' t' (br, l, u') /\
+                      exists tt ff, branch br = Some (tt, ff, x)).
 
   Lemma different_tgt_is_branch {br : Lab} {i : IVec} {s s' : State} {k k' : Conf} :
     eff (br, i, s) = Some k ->
@@ -917,44 +967,67 @@ Module Uniana.
     rewrite H0 in *. clear H0. contradiction H. eauto.
   Qed.
 
-  Lemma contains_label_tag_disjoint p i q a j l r u' (t : Tr (q, j, r)) (t' : Tr (a, l, u')) :
-    (exists s, eff (q, j, r) = Some (p, i, s)) ->
-    (exists s', eff (a, l, u') = Some (p, i, s')) ->
-    label_tag_in_trace a l (q, j, r) t = true ->
-    q =/= a \/ j =/= l ->
-    DivergentBranch a (q, j, r) (a, l, u') t t'.
-  Proof.
-    intros Hstep Hstep' Hintr Hneq.
-    apply label_tag_in_trace_in in Hintr.
-    destruct Hintr as [u Hinq].
-    destruct Hstep' as [s' Hstep'].
-    destruct Hstep as [s Hstep].
-    + assert (Hnext := Hinq).
-      apply in_succ_exists in Hnext.
-      destruct Hnext as [[k' [Hnext Hin]] | H]; [ | inversion H; intros; subst; firstorder ].
-      destruct k' as [[b m] w].
-      enough (b =/= p).
-      * specialize (different_tgt_is_branch Hnext Hstep' H) as Hbr.
-        destruct Hbr as [x [Hneqx Hbr]]. simpl in Hbr.
-        unfold DivergentBranch. simpl.
-        exists x, l, u, u'.
-        exists (trace_exists_path Hinq). exists (PathInit a).
-        split.
-        - unfold DisjointPaths.
-          intros p' Paq' Paa. simpl in Paa. eauto.
-        - repeat split; try eauto; try constructor.
-          inversion_clear Hbr; eauto.
-     * intro. rewrite H in *. clear H. eapply ivec_fresh.
-       apply Hstep. apply Hin. eauto using ivec_det.
-  Qed.
+  Section Disjoint.
+    Variable p q q' : Lab.
+    Variable i j j' : IVec.
+    Variable s s' r r' : State.
+
+    Variable t : Tr (q, j, r).
+    Variable t' : Tr (q', j', r').
+
+    Variable Hstep: eff (q, j, r) = Some (p, i, s).
+    Variable Hstep': eff (q', j', r') = Some (p, i, s').
+
+    Section ContainsQ.
+    
+      Lemma contains_label_tag_disjoint : 
+        label_tag_in_trace q j (q', j', r') t' = true ->
+        q =/= q' \/ j =/= j' ->
+        DivergentBranch q (q, j, r) (q', j', r') t t'.
+      Proof.
+        intros Hintr Hneq.
+        apply label_tag_in_trace_in in Hintr.
+        destruct Hintr as [u Hinq].
+        + assert (Hnext := Hinq).
+          apply in_succ_exists in Hnext.
+          destruct Hnext as [[k' [Hnext Hin]] | H]; [| injection H; intros; subst; firstorder ].
+          destruct k' as [[b m] w].
+          enough (b =/= p).
+          * specialize (different_tgt_is_branch Hnext Hstep H) as Hbr.
+            destruct Hbr as [x [Hneqx Hbr]]. simpl in Hbr.
+            unfold DivergentBranch. split; simpl.
+            - unfold DisjointPaths.
+              exists (PathInit q). exists (trace_exists_path Hinq).
+              intros p' Paq' Paa. simpl in Paa. eauto.
+            - exists x, j, r, u. symmetry in Hneqx.
+              repeat split; try eauto; try constructor.
+              inversion_clear Hbr; eauto.
+          * intro. rewrite H in *. clear H. eapply ivec_fresh.
+            apply Hstep'. apply Hin. eauto using ivec_det.
+      Qed.
+
+    End ContainsQ.
+
+    Section NotContainsQ.
+
+      Variable Hqq' : label_tag_in_trace q j (q', j', r') t' = false.
+      Variable Hq'q : label_tag_in_trace q' j' (q, j, r) t = false.
+
+      Lemma last_instance :
+        forall j'', last_inst_of q (q', j', r') t' = Some j'' ->
+        j = j'' \/ ~ upi_prop q p (q, j, r) (q', j', r') t t'.
+      Proof.
+      Admitted.
+
 
   Lemma not_contains_label_tag_last_common p i s' q q' j j' r r' step' t t' : 
     Follows (p, i, s') (Step (p, i, s') (q', j', r') t' step') (p, i, s') (q', j', r') ->
+    (exists s, eff (q, j, r) = Some (p, i, s)) ->
     label_tag_in_trace q j (q', j', r') t' = false ->
     label_tag_in_trace q' j' (q, j, r) t = false ->
-    exists br, DivergentBranch br (q', j', r') (q, j, r) t' t.
+    (exists br, DivergentBranch br (q', j', r') (q, j, r) t' t) \/ ~ upi_prop q p (q, j, r) (q', j', r') t t'.
   Proof.
-    intros Hflw' Hqq' Hq'q.
+    intros Hflw' Hstepqp Hqq' Hq'q.
     (* assert (Hsucc : exists k', eff (q, j, r) = Some k') by (eauto using follows_implies_step). *)
     dependent induction t.
     - simpl in Hqq'.
@@ -969,7 +1042,6 @@ Module Uniana.
       simpl in Hq'q. conv_bool Hq'q. destruct Hq'q as [Hnj Hnq].
       destruct (label_tag_in_trace a l (q', j', r') t') eqn:Hal.
       + clear IHt.
-        exists a. 
 
         (* show that q',j' cannot be the branch *)
         apply not_label_tag_in_trace_in in Hnq.
@@ -983,32 +1055,49 @@ Module Uniana.
         inversion_clear Hain'.
         -- destruct H as [[[b m] w] [step Hxin]].
            enough (q =/= b).
-           ++ specialize (different_tgt_is_branch e step H) as Hbr.
-              destruct Hbr as [x [Hneqx Hbr]]. simpl in Hbr.
-              symmetry in Hneqx.
-              exists x, l, u', u. simpl.
-              exists (trace_exists_path Hain).
-              exists (step_exists_path e).
-              split.
-              ** admit.
-              ** repeat split; try eauto; try repeat constructor.
-                 inversion Hbr; eauto.
-           ++ intro. rewrite H in *. clear H.
+           ** destruct (last_inst_of q (q', j', r') t') as [j''|] eqn:Hinst.
+              ++ eapply last_inst_precedes in Hinst. destruct Hinst as [s'' Hinst].
+                 destruct (j'' == j).
+                 +++ exfalso. rewrite e0 in *. clear e0.
+                     apply precedes_implies_in in Hinst.
+                     eapply not_label_tag_in_trace_in in Hqq'. firstorder.
+                 +++ right. intro. apply c. eapply H0; admit.
+              ++ eapply last_inst_not_exists in Hinst.
+                 left. exists a. unfold DivergentBranch. split.
+                 +++ remember (trace_exists_path Hain) as Paq'.
+                     eapply (not_in_trace_exists_path _ _ _ _ Hain) in Hinst.
+                     destruct Hinst as [path Hinst]. 
+                     simpl in *. eexists path.
+                     eauto using single_edge_disjoint_path, step_conf_implies_edge.
+                 +++ assert (Hdiff := different_tgt_is_branch e step H).
+                     destruct Hdiff as [x [Hneq Hbr]].
+                     simpl in Hbr. exists x, l, u', u. symmetry in Hneq.
+                     repeat split; eauto; try repeat constructor.
+                     inversion Hbr; eauto.
+           ** intro. rewrite H in *. clear H.
               replace m with j in * by (eauto using ivec_det).
               apply not_label_tag_in_trace_in in Hqq'. apply Hqq'; eauto.
         -- injection H; intros; subst. exfalso. apply Hnq. exists u. constructor.
-      + assert (exists br, DivergentBranch br (q', j', r') (a, l, u) t' t) by eauto.
+      + destruct (last_inst_of q (q', j', r') t') as [j''|] eqn:Hinst.
+        ++ eapply last_inst_precedes in Hinst. destruct Hinst as [s'' Hinst].
+           destruct (j'' == j).
+           +++ exfalso. rewrite e0 in *. clear e0.
+               apply precedes_implies_in in Hinst.
+               eapply not_label_tag_in_trace_in in Hqq'. firstorder.
+           +++ right. intro. apply c. eapply H; admit.
+        ++
+
+        assert (exists br, DivergentBranch br (q', j', r') (a, l, u) t' t) by eauto.
         clear Hflw' IHt.
         unfold DivergentBranch in *. 
-        destruct H as [br [x [m [w [w' [b [c [Hdisj [Hneqx [Hin Hin']]]]]]]]]].
+        destruct H as [br [[Pbrq' [Pbra Hdisj]] [x [m [w [w' [Hneqx [Hin [Hin' Hbr']]]]]]]]].
         simpl in *.
-        assert (Hedge := e).
-        apply step_conf_implies_edge in Hedge.
-        exists br, x, m, w, w', b. exists (PathStep br a q c Hedge).
+        exists br.
         split.
-        * unfold DisjointPaths in *.
-          admit.
-        * inversion_clear Hin'.
+        * exists Pbrq'.
+          destruct (Path_in_dec q br q' Pbrq') eqn:Hinp.
+          +++ admit.
+        * exists x, m, w, w'.
           repeat split; try repeat constructor; eauto.
    Admitted.
 
