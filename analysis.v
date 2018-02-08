@@ -301,10 +301,10 @@ Module Uniana.
 
   Parameter splits : Lab -> list (Lab * Var).
 
-  Parameter splits_spec : forall conv br x, List.In (br, x) (splits conv) <->
-                                            exists qt qf a b, qt -->* conv /\
-                                                              qf -->* conv /\
-                                                              DisjointPaths br qt qf a b.
+  Parameter splits_spec : forall conv br, (exists x, List.In (br, x) (splits conv)) <->
+                                          exists qt qf a b, qt -->* conv /\
+                                                            qf -->* conv /\
+                                                            DisjointPaths br qt qf a b.
 
   Definition uni_concr (u : Uni) : Hyper :=
     fun ts => forall t t' tr tr', ts t tr -> ts t' tr' ->
@@ -818,6 +818,13 @@ Module Uniana.
     + simpl. replace (a ==b a) with true. reflexivity. symmetry. eapply beq_true. reflexivity.
   Qed.
 
+  Lemma last_inst_step l p i s k t step : 
+    l =/= p -> last_inst_of l k t = last_inst_of l (p, i, s) (Step (p, i, s) k t step).
+  Proof.
+    intros Hneq.
+    simpl. rewrite <- beq_false in Hneq. rewrite Hneq. reflexivity.
+  Qed.
+    
   Lemma last_inst_not_exists :
     forall l k t, last_inst_of l k t = None <-> ~ exists i s, In k t (l, i, s).
   Proof.
@@ -829,6 +836,10 @@ Module Uniana.
   Proof.
     intros.
     dependent induction t.
+  Admitted.
+
+  Lemma last_in_upi_prop q p k k' t t' :
+    upi_prop q p k k' t t' -> last_inst_of q k t = last_inst_of q k' t'.
   Admitted.
 
   Lemma last_inst_in :
@@ -1104,28 +1115,24 @@ Module Uniana.
         * left. destruct H as [br [Hdisj Hwit]]. exists br. split.
           ** clear Hwit.
              destruct Hdisj as [m [w [Hinbr [Pbra Hdisj]]]].
-             exists m, w, Hinbr. eexists (PathStep br a q Pbra _).
+             exists m, w, Hinbr. eapply step_conf_implies_edge in e.
+             eexists (PathStep br a q Pbra e).
              intros p'. intros Pbrq'1. intros Pbrq1. eapply Hdisj; eauto.
              destruct Pbrq1; try eassumption.
              exfalso. rewrite H in *. clear H.
              eapply (not_in_trace_exists_path _ _ _ _ Hinbr) in Hinst. simpl in *. eauto.
-             (*
-          ** clear Hdisj. destruct Hwit as [x [m [w [w' [Hneq [Hin [Hin' Hbr]]]]]]].
-             unfold DivergenceWitness.
-             exists x, m, w, w'.
-             repeat split; try repeat constructor; eauto. *)
           ** clear Hdisj. intros Hlast.
              simpl in Hlast.
              destruct (br == q).
-             ++ rewrite <- e0 in *. clear e0.
-                replace (br ==b br) with true in Hlast.
-                admit.
-             ++ replace (br ==b q) with false in Hlast. specialize (Hwit Hlast). clear Hlast.
+             ++ rewrite <- e0 in *. clear e0. conv_bool Hlast.
+                exfalso. eapply not_label_tag_in_trace_in. eapply Hqq'. eapply last_inst_in.
+                eassumption.
+             ++ replace (br ==b q) with false in Hlast by (symmetry; apply beq_false; eassumption).
+                specialize (Hwit Hlast). clear Hlast.
                 destruct Hwit as [x [m [w [w' [Hneq [Hin [Hin' Hbr]]]]]]].
                 unfold DivergenceWitness.
                 exists x, m, w, w'.
                 repeat split; try repeat constructor; eauto.
-                admit.
         * destruct H as [l' [Hlneq Hlast]]. left.
           eapply last_inst_in in Hlast. destruct Hlast as [u' Hlast].
           exists a. split.
@@ -1144,6 +1151,69 @@ Module Uniana.
                 eapply not_label_tag_in_trace_in. eapply Hal. eauto using last_inst_in.
                 symmetry. eapply beq_false. assumption.
   Qed.
+
+  Lemma disjoint p q q' i j j' s s' r r' t t'
+        (Hstep : eff (q, j, r) = Some (p, i, s)) (Hstep' : eff (q', j', r') = Some (p, i, s')) :
+    let tr := (Step (p, i, s) (q, j, r) t Hstep) in 
+    let tr' := (Step (p, i, s') (q', j', r') t' Hstep') in
+    upi_prop q p (p, i, s) (p, i, s') tr tr' ->
+    (forall spl x, List.In (spl, x) (splits p) -> upi_prop spl p (p, i, s) (p, i, s') tr tr') ->
+    q' =/= q ->
+    exists br, (exists a b, DisjointPaths br q' q a b) /\
+               DivergenceWitness br (q', j', r') (q, j, r) t' t.
+  Proof.
+    simpl.
+    intros Hupi Hspl Hneq.
+    destruct (label_tag_in_trace q j (q', j', r') t') eqn:Hin, (label_tag_in_trace q' j' (q, j, r) t) eqn:Hin';
+      eauto using contains_label_tag_disjoint.
+    + symmetry in Hneq.
+      specialize (contains_label_tag_disjoint p q q').
+      intros. edestruct H; eauto.
+      exists q. split.
+      unfold DisjointPaths in *. firstorder.
+      unfold DivergenceWitness in *.  
+      destruct H1 as [x [l [u [u' [Hneqv H1]]]]].
+      symmetry in Hneqv. exists x, l, u', u. firstorder. eapply H1.
+    + edestruct not_contains_label_tag_last_common; eauto.
+      - destruct H as [br [Hdis Hwit]].
+        clear Hupi.
+        exists br. split.
+        * destruct Hdis as [m [w [Hinbr [Pbrq Hdis]]]]. eauto.
+        * eapply Hwit. 
+          destruct Hdis as [m [w [Hinbr [Pbrq Hdisj]]]].
+          destruct (splits_spec p br) as [_ Hspec]. 
+          destruct Hspec as [x Hspec].
+          exists q', q. eexists. eexists.
+          repeat split; eauto using step_conf_implies_edge. 
+          erewrite (last_inst_step _ p i s'). symmetry.
+          erewrite (last_inst_step _ p i s). 
+          eauto using last_in_upi_prop. 
+          eapply Hspl.
+          specialize (Hspl br x Hspec).
+
+          eapply last_in_upi_prop. unfold upi_prop in *. intros.
+          eapply Prec_other in H. eapply Prec_other in H0. eapply Hspl. clear Hspl.
+          ++ eapply H0.
+          ++
+             eapply Hdisj.
+             
+          generalize dependent H0, H, s'0, s0, r'0, r0, i0, j'0, j0. j0, j'0, i0, r0, r'0, s0, s'0.
+
+          destruct Hdis as [m [w [Hinbr [Pbrq Hdisj]]]].
+
+
+          admit.
+      - exfalso. unfold upi_prop in Hupi.
+        destruct H as [j'' [Hneq'' Hin'']].
+        eapply last_inst_precedes in Hin''.
+        eapply Hneq''. symmetry.
+        destruct Hin'' as [s'' Hin''].
+        eapply Hupi.
+        * repeat constructor. 
+        * econstructor. eapply Hin''. intros.
+          rewrite <- H in *. firstorder.
+  Admitted.
+
 
   Definition lift (tr : Traces) : Hyper :=
     fun ts => ts = tr.
