@@ -128,19 +128,33 @@ Module Uniana.
                                                                                   try (apply Conf_dec); subst
                           end.
 
-  Lemma beq_true (A : Type) `{EqDec A} (a c : A) :
+  Lemma beq_true {A : Type} `{EqDec A} (a c : A) :
     (a ==b c) = true <-> (a === c).
   Proof.
     unfold equiv_decb; destruct (a == c); firstorder.
   Qed.
 
-  Lemma beq_false (A : Type) `{EqDec A} (a b : A) :
+  Lemma beq_false {A : Type} `{EqDec A} (a b : A) :
     (a ==b b) = false <-> (a =/= b).
   Proof.
     unfold equiv_decb; destruct (a == b); firstorder.
   Qed.
 
+  Lemma beq_refl {A : Type} `{EqDec A} (a : A) :
+    (a ==b a) = true.
+  Proof.
+    unfold equiv_decb. destruct (equiv_dec a a); firstorder.
+  Qed.
+
+  Lemma bne_not_refl {A : Type} `{EqDec A} (a : A) :
+    (a <>b a) = false.
+  Proof.
+    unfold nequiv_decb. rewrite negb_false_iff. apply beq_refl. 
+  Qed.
+
   Ltac conv_bool H := repeat match goal with
+                             | [ H: context[?a ==b ?a] |- _ ] => rewrite beq_refl in H
+                             | [ H: context[?a <>b ?a] |- _ ] => rewrite bne_not_refl in H
                              | [ H: context[_ ==b _ = true] |- _ ] => rewrite beq_true in H
                              | [ H: context[_ ==b _ = false] |- _ ] => rewrite beq_false in H
                              | [ H: context[_ || _ = true] |- _ ] => rewrite orb_true_iff in H
@@ -796,6 +810,14 @@ Module Uniana.
     | (Step (q, j, _) k t _) => if (l ==b q) then Some j else last_inst_of l k t
     end.
 
+  Lemma last_inst_self a l u t :
+     last_inst_of a (a, l, u) t = Some l.
+  Proof.
+    dependent induction t.
+    + simpl. replace (root ==b root) with true. reflexivity. symmetry. eapply beq_true. reflexivity.
+    + simpl. replace (a ==b a) with true. reflexivity. symmetry. eapply beq_true. reflexivity.
+  Qed.
+
   Lemma last_inst_not_exists :
     forall l k t, last_inst_of l k t = None <-> ~ exists i s, In k t (l, i, s).
   Proof.
@@ -808,6 +830,13 @@ Module Uniana.
     intros.
     dependent induction t.
   Admitted.
+
+  Lemma last_inst_in :
+    forall l k t i, last_inst_of l k t = Some i -> exists s, In k t (l, i, s).
+  Proof.
+    intros. eapply last_inst_precedes in H. destruct H. exists x. 
+    eauto using precedes_implies_in.
+  Qed.
 
   Lemma label_in_trace_in :
     forall l k t, label_in_trace l k t = true <-> exists i s, In k t (l, i, s).
@@ -1004,23 +1033,17 @@ Module Uniana.
             apply Hstep'. apply Hin. eauto using ivec_det.
   Qed.
 
-  Lemma last_instance p q q' i j j' s' r r' t t' :
+  Lemma last_instance p q q' i j j' s' r' t' :
     eff (q', j', r') = Some (p, i, s') -> 
     label_tag_in_trace q j (q', j', r') t' = false ->
     forall j'', last_inst_of q (q', j', r') t' = Some j'' ->
-                ~ upi_prop q p (q, j, r) (q', j', r') t t'.
+                j <> j''.
   Proof.
     intros Hstep' Hqq' j'' Hinst.
-    eapply last_inst_precedes in Hinst. destruct Hinst as [s'' Hinst].
-    destruct (j == j'').
-    + exfalso. rewrite <- e in *. clear e.
-      apply precedes_implies_in in Hinst.
-      eapply not_label_tag_in_trace_in. apply Hqq'. firstorder.
-    + unfold upi_prop. intro. apply c.
-      symmetry. eapply H.
-      * admit.
-      * admit.
-  Admitted.
+    eapply not_label_tag_in_trace_in in Hqq'. intro. subst j''. eapply Hqq'.
+    eapply last_inst_precedes in Hinst. destruct Hinst as [s Hinst].
+    eauto using precedes_implies_in.
+  Qed.
 
   Lemma not_contains_label_tag_last_common p q q' i j j' s' r r' t t' :
     eff (q', j', r') = Some (p, i, s') -> 
@@ -1029,7 +1052,9 @@ Module Uniana.
     (exists br, (exists m w Hinbr Pbrq,
                    (let Pbrq' := path_for_trace (q', j', r') t' (br, m, w) Hinbr
                    in DisjointPaths br q' q Pbrq' Pbrq)) /\
-               DivergenceWitness br (q', j', r') (q, j, r) t' t) \/ ~ upi_prop q p (q, j, r) (q', j', r') t t'.
+                (last_inst_of br (q', j', r') t' = last_inst_of br (q, j, r) t ->
+                DivergenceWitness br (q', j', r') (q, j, r) t' t)) \/
+    (exists j'', j <> j'' /\ last_inst_of q (q', j', r') t' = Some j'').
 
   Proof.
     intros Hstep' Hqq' Hq'q.
@@ -1059,7 +1084,7 @@ Module Uniana.
         -- destruct H as [[[b m] w] [step Hxin]].
            enough (q =/= b).
            ** destruct (last_inst_of q (q', j', r') t') as [j''|] eqn:Hinst; [ right; eauto using last_instance |].
-              left. exists a. eapply last_inst_not_exists in Hinst. split.
+              left. eapply last_inst_not_exists in Hinst. exists a. split.
               ++ exists l, u', Hain. 
                  eapply (not_in_trace_exists_path _ _ _ _ Hain) in Hinst. simpl in *.
                  eauto using single_edge_disjoint_path, step_conf_implies_edge.
@@ -1073,7 +1098,7 @@ Module Uniana.
               replace m with j in * by (eauto using ivec_det).
               apply not_label_tag_in_trace_in in Hqq'. apply Hqq'; eauto.
         -- injection H; intros; subst. exfalso. apply Hnq. exists u. constructor.
-      + destruct (last_inst_of q (q', j', r') t') as [j''|] eqn:Hinst; [ right; eauto using last_instance |].
+      + destruct (last_inst_of q (q', j', r') t') as [l''|] eqn:Hinst; [ right; eauto using last_instance |].
         eapply last_inst_not_exists in Hinst.
         edestruct IHt; eauto; clear IHt.
         * left. destruct H as [br [Hdisj Hwit]]. exists br. split.
@@ -1084,13 +1109,40 @@ Module Uniana.
              destruct Pbrq1; try eassumption.
              exfalso. rewrite H in *. clear H.
              eapply (not_in_trace_exists_path _ _ _ _ Hinbr) in Hinst. simpl in *. eauto.
+             (*
           ** clear Hdisj. destruct Hwit as [x [m [w [w' [Hneq [Hin [Hin' Hbr]]]]]]].
              unfold DivergenceWitness.
              exists x, m, w, w'.
-             repeat split; try repeat constructor; eauto.
-        * right. unfold upi_prop. exfalso. apply H. clear H. unfold upi_prop.
-          intros. inv_tr H. admit. admit.
-          constructor. admit.
+             repeat split; try repeat constructor; eauto. *)
+          ** clear Hdisj. intros Hlast.
+             simpl in Hlast.
+             destruct (br == q).
+             ++ rewrite <- e0 in *. clear e0.
+                replace (br ==b br) with true in Hlast.
+                admit.
+             ++ replace (br ==b q) with false in Hlast. specialize (Hwit Hlast). clear Hlast.
+                destruct Hwit as [x [m [w [w' [Hneq [Hin [Hin' Hbr]]]]]]].
+                unfold DivergenceWitness.
+                exists x, m, w, w'.
+                repeat split; try repeat constructor; eauto.
+                admit.
+        * destruct H as [l' [Hlneq Hlast]]. left.
+          eapply last_inst_in in Hlast. destruct Hlast as [u' Hlast].
+          exists a. split.
+          ** exists l', u', Hlast.
+             eapply (not_in_trace_exists_path _ _ _ _ Hlast) in Hinst. simpl in *.
+             eauto using single_edge_disjoint_path, step_conf_implies_edge.
+          ** intros. unfold DivergenceWitness. simpl in H.
+             exfalso. 
+             destruct (a == q).
+             ++ rewrite <- e0 in *. clear e0.
+                eapply not_label_tag_in_trace_in. eapply Hqq'. 
+                replace (a ==b a) with true in H by firstorder.
+                eauto using last_inst_in. 
+             ++ replace (a ==b q) with false in H.
+                rewrite last_inst_self in H.
+                eapply not_label_tag_in_trace_in. eapply Hal. eauto using last_inst_in.
+                symmetry. eapply beq_false. assumption.
   Qed.
 
   Definition lift (tr : Traces) : Hyper :=
