@@ -830,7 +830,27 @@ Module Uniana.
     forall l k t, last_inst_of l k t = None <-> ~ exists i s, In k t (l, i, s).
   Proof.
     intros.
-  Admitted.
+    destruct k as [[p i] s].
+    dependent induction t.
+    + split; intros.
+      - simpl in H. destruct (l == root); try inversion H.
+        intro. destruct H0 as [j [r H0]].
+        inv_tr H0. contradiction c. reflexivity.
+      - simpl. destruct (l == root); try firstorder.
+        exfalso. rewrite e in *. eapply H. exists s. constructor.
+    + destruct k' as [[q j] r].
+      split; intros.
+      - simpl in H. destruct (l == p); [ inversion H |].
+        intro. eapply IHt; eauto.
+        destruct H0 as [m [w H0]]. exists m, w.
+        inv_tr H0; firstorder.
+      - simpl.
+        destruct (l == p).
+        * exfalso. apply H. rewrite e0. eauto using In.
+        * eapply IHt; eauto. intro. apply H.
+          destruct H0 as [m [w H0]].
+          eauto using In.
+  Qed.
 
   Lemma precedes_same p m s w t :
     Precedes (p, m, s) t (p, m, w) (p, m, s) -> w === s.
@@ -841,20 +861,22 @@ Module Uniana.
     exfalso. eapply ivec_fresh; eauto.
   Qed.
   
-  Lemma last_inst_precedes q j r br m t :
-    last_inst_of br (q, j, r) t = Some m <-> exists w, Precedes (q, j, r) t (br, m, w) (q, j, r).
+  Lemma last_inst_precedes q j r br m t : 
+    last_inst_of br (q, j, r) t = Some m <->
+    (forall p i s (step : eff (q, j, r) = Some (p, i, s)), 
+        exists w, Precedes (p, i, s) (Step (p, i, s) (q, j, r) t step) (br, m, w) (q, j, r)).
   Proof.
     dependent induction t.
     + split; intros.
       admit. admit.
-    + destruct k' as [[p i] s].
+    + destruct k' as [[q' j'] r'].
       split; intros.
-      * edestruct IHt; eauto. clear H1.
+      * edestruct IHt; eauto. clear H1 IHt.
         simpl in H.
         destruct (br == q). rewrite e0 in *.
-        - conv_bool H. injection H; intros; subst.
-          exists r. constructor.
-        - specialize (H0 H).
+        - injection H; intros; subst.
+          exists r. repeat constructor. 
+        - eapply H0 in H. clear H0.
           destruct H0 as [w H0]. exists w. constructor. apply H0.
           intros. rewrite H1 in *. rewrite last_inst_self in H. injection H; intros; subst.
           split. reflexivity. eapply precedes_same. eapply H0.
@@ -1382,12 +1404,6 @@ Module Uniana.
         destruct HCunch as [j [r [Hprec Heq]]]; try eassumption.
         destruct HCunch' as [j' [r' [Hprec' Heq']]]; try eassumption.
         destruct Hunch as [ Hlab Hunch ].
-        conv_bool Hlab.
-        unfold nequiv_decb in Hlab.
-        unfold equiv_decb in Hlab.
-        apply negb_true_iff in Hlab.
-        destruct ((unch_trans upi uni unch p x) == p);
-          [inversion Hlab | clear Hlab].
         rewrite <- Heq. rewrite <- Heq'.
         cut (j' = j); intros.
         * subst j'.
