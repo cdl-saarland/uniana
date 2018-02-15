@@ -213,13 +213,95 @@ Module Uniana.
   | Follows_Other : forall succ pred k k' tr' step, Follows k' tr' succ pred ->
                                                     Follows k (Step k k' tr' step) succ pred.
 
-  Inductive Precedes : forall k, Tr k -> Conf -> Conf -> Prop :=
-  | Prec_in : forall k t , Precedes k t k k
-  | Prec_cont : forall q q' p i j j' r' r s t step, Precedes (q', j', r') t (q, j, r) (q', j', r') -> 
+  Inductive Prec : forall k, Tr k -> Conf -> Conf -> Prop :=
+  | Prec_in : forall k t , Prec k t k k
+  | Prec_cont : forall q q' p i j j' r' r s t step, Prec (q', j', r') t (q, j, r) (q', j', r') -> 
                                                     (q === q' -> (j === j' /\ r === r')) ->
-                                                    Precedes (p, i, s) (Step (p, i, s) (q', j', r') t step) (q, j, r) (p, i, s)
-  | Prec_other : forall k' k t c c' step, Precedes k t c c' ->
-                                          Precedes k' (Step k' k t step) c c'.
+                                                    Prec (p, i, s) (Step (p, i, s) (q', j', r') t step) (q, j, r) (p, i, s)
+  | Prec_other : forall k' k t c c' step, Prec k t c c' ->
+                                          Prec k' (Step k' k t step) c c'.
+
+  Inductive Precedes : forall k, Tr k -> Conf -> Conf -> Prop :=
+  | Pr_in : forall k' k t step , Precedes k' (Step k' k t step) k' k
+  | Pr_cont : forall q q' p i j j' r' r s t step, Precedes (q', j', r') t (q, j, r) (q', j', r') -> 
+                                                  p =/= q ->
+                                                  Precedes (p, i, s) (Step (p, i, s) (q', j', r') t step) (q, j, r) (p, i, s)
+  | Pr_other : forall k' k t c c' step, Precedes k t c c' ->
+                                        Precedes k' (Step k' k t step) c c'.
+
+
+  Lemma prec_implies_in_pred k t k' k'' :
+    Precedes k t k' k'' -> In k t k'.
+  Proof.
+    intros H.
+    dependent induction t.
+    - inversion H.
+    - inv_tr H; eauto using In.
+  Qed.
+
+  Lemma prec_implies_in_succ k t k' k'' :
+    Precedes k t k' k'' -> In k t k''.
+  Proof.
+    intros H.
+    dependent induction t.
+    - inversion H.
+    - inv_tr H; eauto using In.
+  Qed.
+
+  Lemma prec_same p i i' s s' q j r t step :
+    Precedes (p, i, s) (Step (p, i, s) (q, j, r) t step) (p, i' , s') (p, i, s) ->
+    (q, j, r) = (p, i, s).
+  Proof.
+    intros.
+    inv_tr H; try firstorder.
+    exfalso. eapply ivec_fresh. eapply step. eapply prec_implies_in_succ. eapply H5. reflexivity.
+  Qed.
+    
+  Fixpoint last_inst_of (l : Lab) (k : Conf) (t : Tr k) : option IVec :=
+    match t with
+    | (Init s) => if l == root then Some start_ivec else None
+    | (Step (q, j, _) k t _) => if (l == q) then Some j else last_inst_of l k t
+    end.
+
+  Lemma last_inst_precedes_inv_helper p i s q j r q' j' r' t e step br m w :
+    Precedes (p, i, s) (Step (p, i, s) (q, j, r) (Step (q, j, r) (q', j', r') t e) step)
+            (br, m, w) (p, i, s) ->
+    br =/= q ->
+    Precedes (q, j, r) (Step (q, j, r) (q', j', r') t e) (br, m, w) (q, j, r).
+  Proof.
+    intros Hprec Hneq.
+    inv_tr Hprec.
+    - contradiction Hneq; reflexivity.
+    - eauto.
+    - exfalso. eapply (ivec_fresh _ _ _ (q, j, r) _ step). eapply prec_implies_in_succ.
+      eauto using prec_implies_in_succ. reflexivity.
+  Qed.
+
+  Lemma last_inst_precedes_inv q j r br m w t : 
+    forall p i s step, Precedes (p, i, s) (Step (p, i, s) (q, j, r) t step) (br, m, w) (p, i, s) ->
+    last_inst_of br (q, j, r) t = Some m.
+  Proof.
+    intros p i s step Hprec.
+    dependent induction t; intros; simpl.
+    + inv_tr Hprec.
+      - destruct (root == root); firstorder.
+      - eapply prec_implies_in_pred in H1. inv_tr H1.
+        destruct (root == root); firstorder.
+      - eapply prec_implies_in_pred in H4. inv_tr H4.
+        destruct (root == root); firstorder.
+    + destruct k' as [[q' j'] r']. 
+      destruct (br == q).
+      * rewrite e0 in *. clear e0.
+        inv_tr Hprec; try reflexivity.
+        - eapply prec_same in H1. injection H1; intros; subst.
+          exfalso. eapply (ivec_fresh _ _ _ (q, j, r) t e).
+          constructor. reflexivity.
+        - exfalso. eapply ivec_fresh. eapply step.
+          eapply prec_implies_in_succ. eassumption. reflexivity.
+      * eapply IHt; try reflexivity. 
+        eauto using last_inst_precedes_inv_helper.
+  Qed.
+
   Definition unique_preceding q p :=
       forall k k' t t' j j' i r r' s s',
       Precedes k t (q, j, r) (p, i, s) ->
@@ -860,36 +942,63 @@ Module Uniana.
     inv_tr H; try reflexivity. 
     exfalso. eapply ivec_fresh; eauto.
   Qed.
+
+  Lemma in_same_state p i s s' t :
+    In (p, i, s) t (p, i, s') -> s === s'.
+  Proof.
+    intros.
+    inv_tr H; try reflexivity.
+    + inv_tr H. reflexivity.
+      exfalso. eapply ivec_fresh; eauto.
+  Qed.
   
   Lemma last_inst_precedes q j r br m t : 
-    last_inst_of br (q, j, r) t = Some m <->
-    (forall p i s (step : eff (q, j, r) = Some (p, i, s)), 
-        exists w, Precedes (p, i, s) (Step (p, i, s) (q, j, r) t step) (br, m, w) (q, j, r)).
+    last_inst_of br (q, j, r) t = Some m ->
+    exists w, Precedes (q, j, r) t (br, m, w) (q, j, r).
   Proof.
-    dependent induction t.
-    + split; intros.
-      admit. admit.
+    dependent induction t; intros; simpl in H.
+    + destruct (br == root).
+      * exists r. rewrite e. injection H; intros; subst. constructor.
+      * inversion H.
     + destruct k' as [[q' j'] r'].
-      split; intros.
-      * edestruct IHt; eauto. clear H1 IHt.
-        simpl in H.
-        destruct (br == q). rewrite e0 in *.
-        - injection H; intros; subst.
-          exists r. repeat constructor. 
-        - eapply H0 in H. clear H0.
-          destruct H0 as [w H0]. exists w. constructor. apply H0.
-          intros. rewrite H1 in *. rewrite last_inst_self in H. injection H; intros; subst.
-          split. reflexivity. eapply precedes_same. eapply H0.
-      * simpl.
-        edestruct IHt; eauto. clear H0 IHt.
-        destruct H as [w H].
-        destruct (br == q). rewrite e0 in *.
-        - f_equal. inv_tr H; try reflexivity.
-          admit. admit.
-        - eapply H1.
-          inv_tr H; firstorder.
-          admit.
-  Admitted.
+      destruct (br == q). rewrite e0 in *.
+      * injection H; intros; subst.
+        exists r. constructor.
+      * assert (H' := H).
+        eapply IHt in H; eauto. clear IHt.
+        destruct H as [w Hprec].
+        eexists.
+        econstructor. eapply Hprec. intros. rewrite H in *.
+        rewrite last_inst_self in H'. injection H'. intros; subst.
+        split. reflexivity.
+        symmetry. eauto using in_same_state, precedes_implies_in.
+  Qed.
+
+  Lemma last_inst_precedes_inv q j r br m w t : 
+    forall p i s step, Precedes (p, i, s) (Step (p, i, s) (q, j, r) t step) (br, m, w) (p, i, s) ->
+    last_inst_of br (q, j, r) t = Some m.
+  Proof.
+    intros p i s step Hprec.
+    dependent induction t; intros; simpl.
+    + admit.
+    + destruct k' as [[q' j'] r']. 
+      destruct (br == q).
+      * rewrite e0 in *. clear e0.
+        inv_tr Hprec.
+        destruct (q == q').
+        - admit.
+        - 
+          clear H10 H H0. 
+        exists r. constructor.
+      * assert (H' := H).
+        eapply IHt in H; eauto. clear IHt.
+        destruct H as [w Hprec].
+        eexists.
+        econstructor. eapply Hprec. intros. rewrite H in *.
+        rewrite last_inst_self in H'. injection H'. intros; subst.
+        split. reflexivity.
+        symmetry. eauto using in_same_state, precedes_implies_in.
+  Qed.
 
   Lemma last_inst_upi_prop p br q q' i j j' s s' r r' step step' t t' :
     let tr := (Step (p, i, s) (q, j, r) t step) in
@@ -902,8 +1011,13 @@ Module Uniana.
     destruct (last_inst_of br (q, j, r) t) as [m | ] eqn:Hlast,
              (last_inst_of br (q', j', r') t') as [m' | ] eqn:Hlast'.
     + f_equal.
+      eapply last_inst_precedes in Hlast. destruct Hlast as [w Hprec]. 
+      eapply last_inst_precedes in Hlast'. destruct Hlast' as [w' Hprec']. 
+      symmetry.
       eapply Hupi.
-      * constructor.
+      * constructor. eapply Hprec.
+        intros. rewrite H in *. clear H.
+      * admit.
   Admitted.
 
   Lemma last_inst_in :
