@@ -128,7 +128,11 @@ Module Uniana.
                                                                                   try (apply Conf_dec); subst
                           end.
 
-  Lemma beq_true {A : Type} `{EqDec A} (a c : A) :
+  Inductive Prefix : forall k, Tr k -> forall k', Tr k' -> Prop :=
+  | PrefixSame : forall k t, Prefix k t k t
+  | PrefixStep : forall k'' k' k step t t', Prefix k t k' t' -> Prefix k t k'' (Step k'' k' t' step).
+
+ Lemma beq_true {A : Type} `{EqDec A} (a c : A) :
     (a ==b c) = true <-> (a === c).
   Proof.
     unfold equiv_decb; destruct (a == c); firstorder.
@@ -622,7 +626,9 @@ Module Uniana.
 
   Definition uni_trans (uni : Uni) (upi : Upi) (unch : Unch) : Uni :=
     fun p => if p == root then uni root
-             else fun x => ((joinb (map (fun spl => match spl with (s, x) => uni s x end) (splits p))) 
+             else fun x => ((joinb (map (fun spl => 
+                                           match spl with (s, x) => uni s x &&
+                                                upi_trans upi uni s p end) (splits p))) 
                               && (joinb (map (fun q => abs_uni_eff (uni q) x) (preds p)))
                               && (joinb (map (fun q => upi_trans upi uni q p) (preds p)))
                            )
@@ -1054,6 +1060,24 @@ Module Uniana.
       - rewrite e0 in *. inversion H; subst. eexists. constructor.
       - edestruct IHt; eauto. exists x. constructor. eassumption.
   Qed.
+  
+  Lemma last_inst_in_inv :
+    forall k t l i s, In k t (l, i, s) -> exists j, last_inst_of l k t = Some j.
+  Proof.
+    intros. dependent induction t; simpl in H.
+    + destruct (l == root). 
+      - rewrite e in *. simpl. exists start_ivec. destruct (root == root); firstorder.
+      - inv_tr H. firstorder.
+    + destruct k as [[q j] r].
+      destruct (l == q).
+      - rewrite e0 in *. simpl. exists j. destruct (q == q); firstorder.
+      - inv_tr H.
+        * firstorder.
+        * eapply IHt in H4. destruct H4 as [j' Hlast].
+          eexists. simpl. destruct (l == q).
+          ** contradiction c. 
+          ** eapply Hlast.
+  Qed.
 
   Lemma precedes_same p m s w t :
     Precedes (p, m, s) t (p, m, w) (p, m, s) -> w === s.
@@ -1073,7 +1097,7 @@ Module Uniana.
       exfalso. eapply ivec_fresh; eauto.
   Qed.
 
-  Lemma last_inst_upi_prop p br m m' w w' q q' i j j' s s' r r' step step' t t' :
+  Lemma last_inst_upi_prop {p br m m' w w' q q' i j j' s s' r r' step step' t t'} :
     let tr := (Step (p, i, s) (q, j, r) t step) in
     let tr' := (Step (p, i, s') (q', j', r') t' step') in
     upi_prop br p (p, i, s) (p, i, s') tr tr' ->
@@ -1082,19 +1106,17 @@ Module Uniana.
     p =/= br ->
     last_inst_of br (q, j, r) t = last_inst_of br (q', j', r') t'.
   Proof.
-  Admitted.
-  (*
     simpl. intros Hupi Hin Hin' Hneq.
-    rewrite last_inst_in in Hin.
-    destruct (last_inst_of br (q, j, r) t) as [n |] eqn:Hlast,
-             (last_inst_of br (q', j', r') t') as [n' |] eqn:Hlast'.
+    eapply last_inst_in_inv in Hin.
+    eapply last_inst_in_inv in Hin'.
+    destruct Hin as [k Hlast].
+    destruct Hin' as [k' Hlast'].
+    rewrite Hlast. rewrite Hlast'.
     unfold upi_prop in Hupi.
-    eapply last_inst_precedes in Hlast. destruct Hlast as [w Hprec]. 
-    eapply last_inst_precedes in Hlast'. destruct Hlast' as [w' Hprec']. 
-    symmetry. eauto using Precedes.
+    eapply last_inst_precedes in Hlast. destruct Hlast as [u Hprec]. 
+    eapply last_inst_precedes in Hlast'. destruct Hlast' as [u' Hprec']. 
+    symmetry. f_equal. eauto using Precedes.
   Qed.
-*)
-
 
   Lemma last_inst_step_pred p j r a l u t e : 
     a =/= p -> last_inst_of a (p, j, r) (Step (p, j, r) (a, l, u) t e) = Some l.
@@ -1444,19 +1466,135 @@ Module Uniana.
     split; intros; destruct H as [l [u [u' [Hneq [Hin [Hin' Hbr]]]]]]; exists l, u', u; firstorder.
   Qed.
     
-  Lemma disjoint p q q' i j j' s s' r r' t t'
-        (Hstep : eff (q, j, r) = Some (p, i, s)) (Hstep' : eff (q', j', r') = Some (p, i, s')) :
-    let tr := (Step (p, i, s) (q, j, r) t Hstep) in 
-    let tr' := (Step (p, i, s') (q', j', r') t' Hstep') in
-    upi_prop q p (p, i, s) (p, i, s') tr tr' ->
-    upi_prop q' p (p, i, s) (p, i, s') tr tr' ->
-    (forall spl x, List.In (spl, x) (splits p) -> upi_prop spl p (p, i, s) (p, i, s') tr tr') ->
+  Lemma in_prefix k t c : 
+    In k t c ->
+    exists pt, Prefix c pt k t /\
+               In c pt c.
+  Proof.
+    intros.
+    dependent induction t.
+    + inv_tr H. exists (Init s). split; constructor.
+    + inv_tr H.
+      - exists tr0. split; constructor.
+      - eapply IHt in H4. destruct H4 as [pt [Hprefix Hin]].
+        exists pt. split; [ constructor | ]; eassumption.
+  Qed.
+      
+  Lemma in_prefix_in k t c k' t' :
+    In k t c ->
+    Prefix k t k' t' ->
+    In k' t' c.
+  Proof.
+    intros Hin Hprefix. dependent induction Hprefix; eauto using In.
+  Qed.
+
+  Lemma precedes_prefix k t c c' : 
+    Precedes k t c c' ->
+    exists tr, Prefix c' tr k t /\ Precedes c' tr c c'.
+  Proof.
+    intros Hprec.
+    dependent induction t.
+    + inv_tr Hprec.
+      - eexists. split; eauto using Prefix.
+    + inv_tr Hprec.
+      - eexists. split; constructor.
+      - eexists. split; [ constructor | eassumption ].
+      - eapply IHt in H4.
+        destruct H4 as [tr [Hprefix Hprec']].
+        exists tr. split; eauto using Prefix. 
+  Qed.
+
+  Lemma precedes_prefix_inv k t c c' l tr k' step : 
+    Precedes k' (Step k' k t step) c c' ->
+    Prefix k t l tr ->
+    forall l' step', Precedes l' (Step l' l tr step') c c'.
+  Proof.
+    intros Hprec Hprefix.
+    dependent induction Hprefix; intros l' step'.
+    + cut (Some k' = Some l'); intros.
+      - inversion H; subst.
+        cut (step = step'); intros; subst; try eassumption.
+        clear Hprec H. destruct step'. eapply UIP_refl.
+      - rewrite <- step. eassumption.
+    + constructor. eapply IHHprefix. eassumption.
+  Qed.
+
+  Lemma upi_prefix2 {p i s s' q j r q' j' r' k k' kp kp' pstep pstep' t t'}
+        (step : eff (q, j, r) = Some (p, i, s))
+        (step' : eff (q', j', r') = Some (p, i, s')) :
+    In kp t (q, j, r) ->
+    In kp' t' (q', j', r') ->
+    upi_prop q p k k' (Step k kp t pstep) (Step k' kp' t' pstep') ->
+    upi_prop q' p k k' (Step k kp t pstep) (Step k' kp' t' pstep') ->
+    exists tr tr', Prefix (q, j, r) tr kp t /\
+                   Prefix (q', j', r') tr' kp' t' /\
+                   upi_prop q p (p, i, s) (p, i, s') (Step (p, i, s) (q, j, r) tr step)
+                            (Step (p, i, s') (q', j', r') tr' step') /\
+                   upi_prop q' p (p, i, s) (p, i, s') (Step (p, i, s) (q, j, r) tr step)
+                            (Step (p, i, s') (q', j', r') tr' step').
+  Proof.
+    intros Hin Hin' Hupi Hupi'.
+    eapply in_prefix in Hin.
+    eapply in_prefix in Hin'.
+    destruct Hin as [pt [Hprefix Hin]].
+    destruct Hin' as [pt' [Hprefix' Hin']].
+    exists pt, pt'.
+    repeat split; try assumption; unfold upi_prop in *; intros; eauto using precedes_prefix_inv.
+  Qed.
+
+  Lemma upi_prefix {b p i s s' q j r q' j' r' k k' kp kp' pstep pstep' t t' tr tr'}
+        (step : eff (q, j, r) = Some (p, i, s)) 
+        (step' : eff (q', j', r') = Some (p, i, s')) :
+    Prefix (q, j, r) tr kp t ->
+    Prefix (q', j', r') tr' kp' t' ->
+    upi_prop b p k k' (Step k kp t pstep) (Step k' kp' t' pstep') ->
+    upi_prop b p (p, i, s) (p, i, s') (Step (p, i, s) (q, j, r) tr step)
+             (Step (p, i, s') (q', j', r') tr' step').
+  Proof.
+    intros Hupi Hprefix Hprefix'.
+    repeat split; try assumption; unfold upi_prop in *; intros; eauto using precedes_prefix_inv.
+  Qed.
+
+  Lemma upi_comm q p k k' t t' :
+    upi_prop q p k k' t t' ->
+    upi_prop q p k' k t' t.
+  Proof.
+    unfold upi_prop in *. intros. symmetry. eauto.
+  Qed.  
+
+  Lemma disjoint p q q' i j j' s s' r r' l l' k k' tr tr' step step'
+        (Hstep : eff (q, j, r) = Some (p, i, s))
+        (Hstep' : eff (q', j', r') = Some (p, i, s')) :
+    let ltr := (Step l k tr step) in
+    let ltr' := (Step l' k' tr' step') in 
+    In k tr (q, j, r) ->
+    In k' tr' (q', j', r') ->
+    upi_prop q p l l' ltr ltr' ->
+    upi_prop q' p l l' ltr ltr' ->
+    (forall spl x, List.In (spl, x) (splits p) -> upi_prop spl p l l' ltr ltr') ->
     q' =/= q ->
-    exists br x, DivergenceWitness br x (q', j', r') (q, j, r) t' t /\
+    exists br x, DivergenceWitness br x k' k tr' tr /\
                  List.In (br, x) (splits p).
   Proof.
     simpl.
-    intros Hupi Hupi' Hspl Hneq.
+    intros Hpref Hpref' Hupi Hupi' Hspl Hneq.
+    eapply in_prefix in Hpref.
+    eapply in_prefix in Hpref'.
+    destruct Hpref as [t [Hpref Hqin]].
+    destruct Hpref' as [t' [Hpref' Hqin']].
+    eapply (upi_prefix Hstep Hstep') in Hupi; try eassumption.
+    eapply upi_comm in Hupi'.
+    eapply (upi_prefix Hstep' Hstep) in Hupi'; try eassumption.
+    eapply upi_comm in Hupi'.
+
+    cut (exists br x, DivergenceWitness br x (q', j', r') (q, j, r) t' t /\
+                      List.In (br, x) (splits p)); intros.
+    destruct H as [br [x [Hwit Hinbr]]].
+    unfold DivergenceWitness in *.
+    destruct Hwit as [m [u [u' [Hneqv [Hin [Hin' Hbr]]]]]].
+    exists br, x. split; [|eassumption].
+    exists m, u, u'. repeat split; eauto using in_prefix_in.
+
     destruct (label_tag_in_trace q j (q', j', r') t') eqn:Hin,
              (label_tag_in_trace q' j' (q, j, r) t) eqn:Hin';
       eauto using disjoint_contains.
@@ -1471,8 +1609,10 @@ Module Uniana.
         eapply (splits_spec).
         exists q', q. eexists. exists Pbrq.
         repeat split; eauto using step_conf_implies_edge. 
+        specialize (Hspl _ _ H).
         split; [ | assumption].
-        eapply Hwit. symmetry. eapply last_inst_upi_prop; try eauto.
+        eapply (upi_prefix Hstep Hstep' Hpref Hpref') in Hspl.
+        eapply Hwit. symmetry. eapply last_inst_upi_prop; try eassumption.
         destruct (p == br); try eassumption.
         rewrite <- e in *. clear e. exfalso. eapply Hneq.
         eapply in_out_spec; eauto using step_conf_implies_edge.
@@ -1561,27 +1701,29 @@ Module Uniana.
              ** eapply joinb_true_iff in Hpred; try eassumption.
           -- (* unique preceding instances *)
              eapply joinb_true_iff in Hupi; try eassumption.
-             eapply HCupi; eauto.
-             ** admit. 
-             ** admit.
+             assert (p =/= q) by (symmetry; eauto using step_conf_implies_edge, no_self_loops).
+             eapply HCupi; [ eapply Hsem | eapply Hsem' | eassumption | | ].
+             all: eauto using precedes_step.
         * (* disjoint paths! *)
           destruct (q == q') as [ Heq | Hneq ]; [ eauto | exfalso ].
           assert (List.In q' (preds p)) as Hqpred'.
           eapply preds_spec. eauto using step_conf_implies_edge. 
-          eapply disjoint in Hneq.
+          unfold upi_concr in HCupi.
+          eapply (joinb_true_iff _ _ Hupi) in Hqpred'.
+          eapply (joinb_true_iff _ _ Hupi) in Hqpred.
+          symmetry in Hneq.
+          eapply disjoint with (q := q) (step := lstep) in Hneq; eauto.
           ++ destruct Hneq as [br [y [Hwit Hspl]]].
-             unfold DivergenceWitness in Hwit.
-             destruct Hwit as [m [u [u' [Hney [Hinbr [Hinbr' _]]]]]].
-             eapply joinb_true_iff in Hsplit; try eapply Hspl.
-             simpl in Hsplit.
+             destruct Hwit as [m [u' [u [Hney [Hinbr' [Hinbr _]]]]]].
+             eapply joinb_true_iff in Hsplit; try eapply Hspl. simpl in Hsplit. conv_bool Hsplit.
+             destruct Hsplit as [Hsplit _].
              apply Hney.
-             cut (u y = u' y); intros. rewrite H. reflexivity.
-             eapply HCuni; eauto.
-             admit.
-             admit.
-         ++ eapply HCupi; eauto.
-         ++ admit.
-         ++ admit.
+             cut (u' y = u y); intros. rewrite H. reflexivity.
+             eapply HCuni; [ exact Hts' | exact Hts | | | ]; eauto.
+          ++ intros.
+             eapply HCupi; eauto.
+             eapply (joinb_true_iff _ _ Hsplit) in H.
+             conv_bool H. eauto. destruct H as [_ H]. eassumption.
         (* The unch case *)
       - specialize (HCunch p i s x).
         specialize (HCunch' p i s' x).
