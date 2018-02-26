@@ -1446,9 +1446,7 @@ Module Uniana.
     + rewrite e in *; clear e.
       inv_tr HIn.
       - exfalso. eauto using start_no_tgt. 
-      - inv_tr HIn'.
-        * exfalso. eauto using start_no_tgt. 
-        * eauto. 
+      - inv_tr HIn'; [ exfalso |]; eauto using start_no_tgt. 
 
     + conv_bool Htrans.
       destruct Htrans as [Htrans | Hunch].
