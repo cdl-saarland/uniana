@@ -145,7 +145,7 @@ Module Uniana.
     unfold nequiv_decb, equiv_decb. rewrite negb_false_iff. destruct (a == b); firstorder.
   Qed.
 
-  Ltac conv_bool H := repeat match goal with
+  Ltac conv_bool := repeat match goal with
                              | [ H: context[_ ==b _ = true] |- _ ] => rewrite beq_true in H
                              | [ H: context[_ ==b _ = false] |- _ ] => rewrite beq_false in H
                              | [ H: context[_ <>b _ = true] |- _ ] => rewrite bne_true in H
@@ -924,7 +924,7 @@ Module Uniana.
     intros.
     induction t.
     - simpl. split; intros.
-      + exists start_ivec, s. conv_bool H. rewrite H. constructor.
+      + exists start_ivec, s. conv_bool. rewrite H. constructor.
       + destruct H as [i [s' Hin]].
         inv_tr Hin.
         unfold equiv_decb.
@@ -934,7 +934,7 @@ Module Uniana.
       + destruct (l == p).
         * rewrite e0 in *. exists j, s. constructor.
         * destruct IHt as [IHt _].
-          simpl in H. conv_bool H.
+          simpl in H. conv_bool.
           destruct H; [ exfalso; firstorder |].
           destruct IHt as [r [s' Hin]]; eauto.
           exists r, s'. eauto using In.
@@ -971,7 +971,7 @@ Module Uniana.
     intros.
     induction t.
     - simpl. split; intros.
-      + exists s. conv_bool H. destruct H. rewrite H. rewrite H0. constructor.
+      + exists s. conv_bool. destruct H. rewrite H. rewrite H0. constructor.
       + destruct H as [s' Hin].
         inv_tr Hin.
         unfold equiv_decb.
@@ -980,10 +980,10 @@ Module Uniana.
       split; intros.
       remember (lab_tag_matches l i (p, j, s)) as eq.
       symmetry in Heqeq. simpl in Heqeq.
-      + destruct eq; conv_bool Heqeq.
+      + destruct eq; conv_bool.
         * destruct Heqeq. rewrite H0. rewrite H1. exists s. constructor.
         * destruct IHt as [IHt _].
-          simpl in H. conv_bool H.
+          simpl in H. conv_bool.
           destruct H; [ exfalso; firstorder |].
           destruct IHt as [r Hin]; eauto.
           exists r. eauto using In.
@@ -1135,7 +1135,7 @@ Module Uniana.
       + exists s; eauto using In. 
       + destruct IHt'; eauto using In.
     - destruct k' as [[a l] u].
-      simpl in Hq'q. conv_bool Hq'q. destruct Hq'q as [Hnj Hnq].
+      simpl in Hq'q. conv_bool. destruct Hq'q as [Hnj Hnq].
       destruct (label_tag_in_trace a l (q', j', r') t') eqn:Hal.
       + clear IHt.
 
@@ -1189,7 +1189,7 @@ Module Uniana.
              *** clear Hdisj. intros Hlast.
                  simpl in Hlast.
                  destruct (br == q).
-                 ++ rewrite <- e0 in *. clear e0. conv_bool Hlast.
+                 ++ rewrite <- e0 in *. clear e0. conv_bool.
                     exfalso. eapply not_label_tag_in_trace_in. eapply Hqq'. eapply last_inst_in.
                     eassumption.
                  ++ replace (br ==b q) with false in Hlast
@@ -1448,7 +1448,7 @@ Module Uniana.
       - exfalso. eauto using start_no_tgt. 
       - inv_tr HIn'; [ exfalso |]; eauto using start_no_tgt. 
 
-    + conv_bool Htrans.
+    + conv_bool.
       destruct Htrans as [Htrans | Hunch].
         (* The uni/hom case *)
       - destruct Htrans as [[Hsplit Hpred] Hupi].
@@ -1482,7 +1482,7 @@ Module Uniana.
           eapply disjoint with (q := q) (step := lstep) in Hneq; eauto.
           ++ destruct Hneq as [br [y [Hwit Hspl]]].
              destruct Hwit as [m [u' [u [Hney [Hinbr' [Hinbr _]]]]]].
-             eapply joinb_true_iff in Hsplit; try eapply Hspl. simpl in Hsplit. conv_bool Hsplit.
+             eapply joinb_true_iff in Hsplit; try eapply Hspl. simpl in Hsplit. conv_bool.
              destruct Hsplit as [Hsplit _].
              apply Hney.
              cut (u' y = u y); intros. rewrite H. reflexivity.
@@ -1490,7 +1490,7 @@ Module Uniana.
           ++ intros.
              eapply HCupi; eauto.
              eapply (joinb_true_iff _ _ Hsplit) in H.
-             conv_bool H. eauto. destruct H as [_ H]. eassumption.
+             conv_bool. eauto. destruct H as [_ H]. eassumption.
         (* The unch case *)
       - specialize (HCunch p i s x).
         specialize (HCunch' p i s' x).
