@@ -102,20 +102,8 @@ Module Uniana.
   Qed.
 
   Parameter def_spec :
-    forall p q x, (exists i j s r, eff (p, i, s) = Some (q, j, r) /\ r x <> s x) -> is_def x p q = true.
-
-  Lemma step_implies_edge :
-    forall k k', eff k = Some k' -> exists p q i j s r, has_edge p q = true /\ k = (p, i, s) /\ k' = (q, j, r).
-  Proof.
-    intros.
-    destruct k as [[p i] s].
-    destruct k' as [[q j] r].
-    exists p. exists q. exists i. exists j. exists s. exists r.
-    split; auto.
-    apply edge_spec.
-    exists i. exists j. exists s. exists r.
-    assumption.
-  Qed.
+    forall p q x, (exists i j s r, eff (p, i, s) = Some (q, j, r) /\ r x <> s x) ->
+                  is_def x p q = true.
 
   (* TODO *)
   Inductive Tr : Conf -> Type :=
@@ -130,7 +118,8 @@ Module Uniana.
 
   Inductive Prefix : forall k, Tr k -> forall k', Tr k' -> Prop :=
   | PrefixSame : forall k t, Prefix k t k t
-  | PrefixStep : forall k'' k' k step t t', Prefix k t k' t' -> Prefix k t k'' (Step k'' k' t' step).
+  | PrefixStep : forall k'' k' k step t t', Prefix k t k' t' ->
+                                            Prefix k t k'' (Step k'' k' t' step).
 
  Lemma beq_true {A : Type} `{EqDec A} (a c : A) :
     (a ==b c) = true <-> (a === c).
@@ -180,7 +169,6 @@ Module Uniana.
     fun ts' => exists ts, T ts /\ ts' = sem_trace ts.
 
   Definition Uni := Lab -> Var -> bool.
-  Definition Hom := Lab -> bool.
   Definition Unch := Lab -> Var -> Lab.
   Definition Upi := Lab -> Lab -> bool.
 
@@ -270,11 +258,6 @@ Module Uniana.
       eff (q, j, r) = Some (p, i, s) ->
       eff (q, j, r') = Some (p, i', s') ->
       i = i'.
-
-  Inductive Follows : forall k, Tr k -> Conf -> Conf -> Prop := 
-  | Follows_At : forall k pred pred_tr step, Follows k (Step k pred pred_tr step) k pred
-  | Follows_Other : forall succ pred k k' tr' step, Follows k' tr' succ pred ->
-                                                    Follows k (Step k k' tr' step) succ pred.
 
   Inductive Prec : forall k, Tr k -> Conf -> Conf -> Prop :=
   | Prec_in : forall k t , Prec k t k k
@@ -477,16 +460,6 @@ Module Uniana.
                                                      In t' tr' ((p, i), s') ->
                                                      u p x = true -> s x = s' x.
 
-  Definition hom_concr (h : Hom) : Hyper :=
-    fun ts => forall t t' tr tr', ts t tr -> ts t' tr' ->
-                                  forall p, h p = true ->
-                                            forall q q' j j'
-                                                   i s s'
-                                                   s1 s2, Follows t tr ((p, i), s1) ((q, j), s) ->
-                                                          Follows t' tr' ((p, i), s2) ((q', j'), s')  ->
-                                                          q = q' /\ j = j'.
-
-  
   Definition unch_concr (unch : Unch) : Traces :=
     fun k => fun t => forall to i s x, (In k t (to, i, s) ->
                                        exists j r, Precedes k t (unch to x, j, r) (to, i, s) /\ r x = s x).
@@ -665,116 +638,6 @@ Module Uniana.
     unfold is_effect_on.
     exists i. exists i'. exists s. exists s'.
     assumption.
-  Qed.
-
-  Lemma follows_exists_detail :
-    forall p i s h tr, In h tr (p, i, s) -> p <> root ->
-                       exists q j r, Follows h tr (p, i, s) (q, j, r).
-  Proof.
-    intros.
-    induction tr.
-    + inversion H. subst. contradiction.
-    + inv_tr H.
-      * dependent inversion tr1; subst.
-        - contradiction.
-        - destruct k'0 as [[q j] r]. exists q. exists j. exists r. constructor.
-      * apply IHtr in H5.
-        inversion_clear H5 as [q [j [r H']]].
-        exists q. exists j. exists r. econstructor; try eassumption.
-  Qed.
-
-  Lemma follows_exists :
-    forall p i s h tr, In h tr (p, i, s) -> p <> root ->
-                       exists pred, Follows h tr (p, i, s) pred.
-  Proof.
-    intros.
-    apply (follows_exists_detail p i s h tr H) in H0.
-    destruct H0 as [q [j [r H0]]].
-    exists (q, j, r). assumption.
-  Qed.
-
-  Lemma follows_exists_succ :
-    forall p i s k tr, In k tr (p, i, s) ->
-                       k =/= (p, i, s) ->
-                       exists succ, Follows k tr succ (p, i, s).
-  Proof.
-    intros p i s k tr Hin Hneq.
-    induction tr; inv_tr Hin; firstorder.
-    destruct ((p, i, s) == k').
-    - exists k. rewrite e0 in *. econstructor. 
-    - symmetry in c. destruct H as [succ Hflw]; eauto.
-      exists succ. constructor. eassumption.
-  Qed.
-
-  Lemma in_step_implies_follows k t p q :
-    In k t p -> p =/= k -> eff p = Some q -> Follows k t q p.
-  Proof.
-    intros.
-    induction t; inv_tr H; firstorder.
-    - destruct (p == k').
-      + rewrite e0 in *. rewrite e in H1. inversion H1; subst. constructor.
-      + constructor. eauto.
-  Qed.
-
-  Lemma follows_implies_step :
-    forall k tr succ pred, Follows k tr succ pred -> eff pred = Some succ.
-  Proof.
-    intros.
-    induction tr.
-    - inversion H; exfalso; eapply start_no_tgt; eassumption.
-    - inv_tr H; auto.
-  Qed.
-
-  Lemma follows_implies_edge :
-    forall k tr p q i j r s, Follows k tr (p, i, s) (q, j, r) -> has_edge q p = true.
-  Proof.
-    intros.
-    apply follows_implies_step in H.
-    apply step_implies_edge in H.
-    repeat destruct H.
-    destruct H0.
-    injection H; intros; subst; clear H.
-    injection H0; intros; subst; clear H0.
-    reflexivity.
-  Qed.
-
-  Lemma follows_implies_in2 :
-    forall k tr succ pred, Follows k tr succ pred -> In k tr pred.
-  Proof.
-    intros k tr.
-    induction tr; intros; inv_tr H.
-    - repeat constructor. 
-    - econstructor. eapply IHtr. eauto.
-  Qed.
-
-  Lemma follows_implies_in2_step :
-    forall k' k tr step succ pred, Follows k' (Step k' k tr step) succ pred -> In k tr pred.
-  Proof.
-    intros.
-    inv_tr H.
-    - constructor.
-    - eapply follows_implies_in2; eauto.
-  Qed.
-
-  Lemma follows_implies_in :
-    forall k t succ pred, Follows k t succ pred -> In k t succ.
-  Proof.
-    intros k t.
-    induction t; intros; inv_tr H.
-    - constructor.
-    - econstructor. eauto.
-  Qed.
-
-  Lemma follows_pred_unique :
-    forall c s s' k t step d, Follows (c, s) (Step (c, s) k t step) (c, s') d -> d = k.
-  Proof.
-    intros.
-    inv_tr H.
-    - reflexivity.
-    - apply follows_implies_in in H5.
-      destruct c as [p i].
-      eapply ivec_fresh in step1; [| apply H5].
-      firstorder.
   Qed.
 
   Lemma precedes_self k t :
