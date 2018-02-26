@@ -519,7 +519,7 @@ Module Uniana.
     - destruct (preds p); intros; [ auto | simpl ]. 
       induction l0; simpl in *.
       + inversion_clear H0; [ subst | contradiction ].
-        assert (Hlocal := unch_trans_local_res upi uni unch q p x).
+        assert (Hlocal := unch_trans_local_res upi uni unch q p x). 
         firstorder.
       + inversion_clear H0; subst; simpl.
         * destruct ((unch_trans_local upi uni unch a p x) == _); auto.
@@ -1141,8 +1141,9 @@ Module Uniana.
 
         (* show that q',j' cannot be the branch *)
         apply not_label_tag_in_trace_in in Hnq.
-        assert (Haq: (a, l) =/= (q', j')).
-        intro. apply Hnq. injection H; intros; subst. exists u. constructor.
+        assert (Haq: (a, l) =/= (q', j')). {
+          intro. apply Hnq. injection H; intros; subst. exists u. constructor.
+        }
         
         (* show that a,l has a successor that is on the q',j' trace *)
         apply label_tag_in_trace_in in Hal. destruct Hal as [u' Hain].
@@ -1374,10 +1375,11 @@ Module Uniana.
         destruct Hinbr as [m' [w' Hinbr]].
         clear Hupi Hupi'. exists br, x.
         destruct Hdis as [m [w [Hinbr' [Pbrq [Hbr Hdis]]]]]. 
-        assert (List.In (br, x) (splits p)).
-        eapply (splits_spec).
-        exists q', q. eexists. exists Pbrq.
-        repeat split; eauto using step_conf_implies_edge. 
+        assert (List.In (br, x) (splits p)). {
+          eapply (splits_spec).
+          exists q', q. eexists. exists Pbrq.
+          repeat split; eauto using step_conf_implies_edge. 
+        }
         specialize (Hspl _ _ H).
         split; [ | assumption].
         eapply (upi_prefix Hstep Hstep' Hpref Hpref') in Hspl.
@@ -1386,8 +1388,9 @@ Module Uniana.
         rewrite <- e in *. clear e. exfalso. eapply Hneq.
         eapply in_out_spec; eauto using step_conf_implies_edge.
       - clear Hspl.
-        assert (p =/= q /\ p =/= q') by
-            (split; symmetry; eauto using step_conf_implies_edge, no_self_loops).
+        assert (p =/= q /\ p =/= q'). {
+          split; symmetry; eauto using step_conf_implies_edge, no_self_loops.
+        }
         destruct H0 as [Hnqp Hnqp'].
         exfalso.
         destruct H as [[j'' [Hneq'' Hin'']] | [j'' [Hneq'' Hin'']]].
@@ -1420,20 +1423,23 @@ Module Uniana.
     intros k k' tr tr' Hsem Hsem' x p i s s'.
     intros HIn HIn' Htrans.
 
-    assert (upi_concr (upi_trans upi uni) t) as HCupi.
-    apply upi_correct. 
-    destruct Hconcr as [[_ Hhom] _].
-    exists ts; auto.
+    assert (upi_concr (upi_trans upi uni) t) as HCupi. {
+      apply upi_correct. 
+      destruct Hconcr as [[_ Hhom] _].
+      exists ts; auto.
+    }
 
-    assert (unch_concr (unch_trans upi uni unch) k tr) as HCunch.
-    destruct Hconcr as [[_ _] Hunch].
-    unfold lift in *; subst.
-    apply unch_correct. assumption.
+    assert (unch_concr (unch_trans upi uni unch) k tr) as HCunch. {
+      destruct Hconcr as [[_ _] Hunch].
+      unfold lift in *; subst.
+      apply unch_correct. assumption.
+    } 
     
-    assert (unch_concr (unch_trans upi uni unch) k' tr') as HCunch'.
-    destruct Hconcr as [[_ _] Hunch].
-    unfold lift in *; subst.
-    apply unch_correct. assumption.
+    assert (unch_concr (unch_trans upi uni unch) k' tr') as HCunch'. {
+      destruct Hconcr as [[_ _] Hunch].
+      unfold lift in *; subst.
+      apply unch_correct. assumption.
+    }
 
     destruct Hconcr as [[HCuni HCupi'] _].
 
@@ -1473,8 +1479,9 @@ Module Uniana.
              all: eauto using precedes_step.
         * (* disjoint paths! *)
           destruct (q == q') as [ Heq | Hneq ]; [ eauto | exfalso ].
-          assert (List.In q' (preds p)) as Hqpred'.
-          eapply preds_spec. eauto using step_conf_implies_edge. 
+          assert (List.In q' (preds p)) as Hqpred'. {
+            eapply preds_spec. eauto using step_conf_implies_edge. 
+          }
           unfold upi_concr in HCupi.
           eapply (joinb_true_iff _ _ Hupi) in Hqpred'.
           eapply (joinb_true_iff _ _ Hupi) in Hqpred.
