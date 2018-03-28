@@ -7,16 +7,27 @@ Require Import Nat.
 Require Import Omega.
 Require Import Coq.Logic.Classical_Prop.
 
+Require Import Util.
+
 Module Uniana.
   Parameter Lab : Type.
   Parameter Var : Type.
   Parameter Val : Type.
-  Parameter init_uni : Var -> Prop.
+  Parameter Tag : Type.
 
-  Definition IVec := (list nat).
   Definition State := Var -> Val.
+
+  Context {Lab_dec : EqDec Lab eq}.
+  Context {Val_dec : EqDec Var eq}.
+  Context {Var_dec : EqDec Val eq}.
+  Context {Tag_dec : EqDec Tag eq}.
+  Context {State_dec : EqDec State eq}.
+
+  Parameter init_uni : Var -> Prop.
+  Parameter start_tag : Tag.
+
   Definition States := State -> Prop.
-  Definition Coord := prod Lab IVec.
+  Definition Coord := prod Lab Tag.
   Definition Conf := prod Coord State.
 
   Hint Unfold Conf Coord.
@@ -43,14 +54,6 @@ Module Uniana.
   Parameter has_edge : Lab -> Lab -> bool.
   Parameter is_def : Var -> Lab -> Lab -> bool.
   Parameter root : Lab.
-  Parameter Lab_dec : forall (x y : Lab), {x = y} + {x <> y}.
-  Parameter Val_dec : forall (x y : Val), {x = y} + {x <> y}.
-  Parameter Var_dec : forall (x y : Var), {x = y} + {x <> y}.
-  Parameter State_dec : forall (x y : State), {x = y} + {x <> y}.
-  Instance lab_eq_eqdec : EqDec Lab eq := Lab_dec.
-  Instance val_eq_eqdec : EqDec Val eq := Val_dec.
-  Instance var_eq_eqdec : EqDec Var eq := Var_dec.
-  Instance state_eq_eqdec : EqDec State eq := State_dec.
 
   Lemma Conf_dec :
     forall (x y : Conf), {x = y} + {x <> y}.
@@ -66,19 +69,11 @@ Module Uniana.
   Proof.
     intros.
     destruct x as [xa xb], y as [ya yb].
-    destruct (xa == ya).
-    - rewrite e.
-      destruct (xb == yb).
-      + rewrite e0.
-        left. reflexivity.
-      + right. intro. apply c. inversion H. reflexivity.
-    - right. intro. apply c. inversion H. reflexivity.
+    destruct ((xa, xb) == (ya, yb)); firstorder.
   Qed.
   Program Instance lab_var_eq_eqdec : EqDec (Lab * Var) eq := Lab_var_dec.
 
-  Definition start_ivec := @nil nat.
-
-  Definition start_coord := (root, start_ivec) : Coord.
+  Definition start_coord := (root, start_tag) : Coord.
 
   Definition is_effect_on (p q : Lab) :=
     exists i i' s s', eff ((p, i), s) = Some ((q, i'), s').
@@ -107,7 +102,7 @@ Module Uniana.
 
   (* TODO *)
   Inductive Tr : Conf -> Type :=
-    | Init : forall s, Tr (root, start_ivec, s)
+    | Init : forall s, Tr (root, start_tag, s)
     | Step : forall k k', Tr k' -> eff k' = Some k -> Tr k.
 
   Ltac inv_tr H := inversion H; subst; 
@@ -120,41 +115,6 @@ Module Uniana.
   | PrefixSame : forall k t, Prefix k t k t
   | PrefixStep : forall k'' k' k step t t', Prefix k t k' t' ->
                                             Prefix k t k'' (Step k'' k' t' step).
-
- Lemma beq_true {A : Type} `{EqDec A} (a c : A) :
-    (a ==b c) = true <-> (a === c).
-  Proof.
-    unfold equiv_decb; destruct (a == c); firstorder.
-  Qed.
-
-  Lemma beq_false {A : Type} `{EqDec A} (a b : A) :
-    (a ==b b) = false <-> (a =/= b).
-  Proof.
-    unfold equiv_decb; destruct (a == b); firstorder.
-  Qed.
-
-  Lemma bne_true {A : Type} `{EqDec A} (a c : A) :
-    (a <>b c) = true <-> (a =/= c).
-  Proof.
-    unfold nequiv_decb, equiv_decb. rewrite negb_true_iff. destruct (a == c); firstorder.
-  Qed.
-
-  Lemma bne_false {A : Type} `{EqDec A} (a b : A) :
-    (a <>b b) = false <-> (a === b).
-  Proof.
-    unfold nequiv_decb, equiv_decb. rewrite negb_false_iff. destruct (a == b); firstorder.
-  Qed.
-
-  Ltac conv_bool := repeat match goal with
-                             | [ H: context[_ ==b _ = true] |- _ ] => rewrite beq_true in H
-                             | [ H: context[_ ==b _ = false] |- _ ] => rewrite beq_false in H
-                             | [ H: context[_ <>b _ = true] |- _ ] => rewrite bne_true in H
-                             | [ H: context[_ <>b _ = false] |- _ ] => rewrite bne_false in H
-                             | [ H: context[_ || _ = true] |- _ ] => rewrite orb_true_iff in H
-                             | [ H: context[_ || _ = false] |- _ ] => rewrite orb_false_iff in H
-                             | [ H: context[_ && _ = true] |- _ ] => rewrite andb_true_iff in H
-                             | [ H: context[_ && _ = false] |- _ ] => rewrite andb_false_iff in H
-                             end.
 
   Definition Traces := forall k, Tr k -> Prop.
   Definition Hyper := Traces -> Prop.
@@ -181,31 +141,15 @@ Module Uniana.
   Proof.
     intros k'.
     induction t.
-    - destruct (conf_eq_eqdec (root, start_ivec, s) k').
+    - destruct (conf_eq_eqdec (start_coord, s) k').
       + left. rewrite <- e. econstructor.
       + right. intro. apply c. inv_tr H. reflexivity.
-    - destruct (conf_eq_eqdec k k').
+    - destruct (k == k').
       + left. rewrite <- e0. constructor.
       + inversion_clear IHt.
         * left. econstructor. eassumption.
         * right. intro. apply H. inv_tr H0; firstorder.
   Qed.
-
-  (*
-  Lemma in_pred_in k' k p q t step :
-    In k' (Step k' k t step) p ->
-    eff q = Some p ->
-    In k t q.
-  Proof.
-    intros Hin Hstep.
-    dependent induction t; inv_tr Hin.
-    destruct (p == k').
-    + rewrite e0 in *. clear e0.
-      inv_tr H; firstorder.
-      rewrite H1 in step1. injection step1; intros. symmetry in H3. subst. constructor.
-    + constructor. eauto.
-  Qed.
-  *)
 
   Lemma in_succ_in k p q t :
     In k t p -> p =/= k -> eff p = Some q -> In k t q.
@@ -240,7 +184,7 @@ Module Uniana.
     intros k' step Hin Hneq.
     dependent induction t.
     - inv_tr Hin.
-      + exists root, start_ivec, s0. split; [ constructor | assumption ].
+      + exists root, start_tag, s0. split; [ constructor | assumption ].
       + inv_tr H3. firstorder.
     - inv_tr Hin.
       + destruct k as [[q j] r].
@@ -258,14 +202,6 @@ Module Uniana.
       eff (q, j, r) = Some (p, i, s) ->
       eff (q, j, r') = Some (p, i', s') ->
       i = i'.
-
-  Inductive Prec : forall k, Tr k -> Conf -> Conf -> Prop :=
-  | Prec_in : forall k t , Prec k t k k
-  | Prec_cont : forall q q' p i j j' r' r s t step, Prec (q', j', r') t (q, j, r) (q', j', r') -> 
-                                                    (q === q' -> (j === j' /\ r === r')) ->
-                                                    Prec (p, i, s) (Step (p, i, s) (q', j', r') t step) (q, j, r) (p, i, s)
-  | Prec_other : forall k' k t c c' step, Prec k t c c' ->
-                                          Prec k' (Step k' k t step) c c'.
 
   Inductive Precedes : forall k, Tr k -> Conf -> Conf -> Prop :=
   | Pr_in : forall k t, Precedes k t k k
@@ -294,9 +230,9 @@ Module Uniana.
     - inv_tr H; eauto using In.
   Qed.
 
-  Fixpoint last_inst_of (l : Lab) (k : Conf) (t : Tr k) : option IVec :=
+  Fixpoint last_inst_of (l : Lab) (k : Conf) (t : Tr k) : option Tag :=
     match t with
-    | (Init s) => if l == root then Some start_ivec else None
+    | (Init s) => if l == root then Some start_tag else None
     | (Step (q, j, _) k t _) => if (l == q) then Some j else last_inst_of l k t
     end.
 
@@ -462,7 +398,8 @@ Module Uniana.
 
   Definition unch_concr (unch : Unch) : Traces :=
     fun k => fun t => forall to i s x, (In k t (to, i, s) ->
-                                       exists j r, Precedes k t (unch to x, j, r) (to, i, s) /\ r x = s x).
+                                        exists j r, Precedes k t (unch to x, j, r) (to, i, s) /\
+                                                    r x = s x).
 
 
   Definition upi_prop q p k k' t t' :=
@@ -676,7 +613,7 @@ Module Uniana.
   Proof.
     intros k' step H Hneq.
     dependent induction t; inv_tr H.
-    - exists root, start_ivec, s0. split; [ constructor | eauto ].
+    - exists root, start_tag, s0. split; [ constructor | eauto ].
     - inv_tr H4. firstorder.
     - destruct k as [[q j] r]. exists q, j, r.
       split; [ constructor | eauto ].
@@ -782,14 +719,14 @@ Module Uniana.
           -- rewrite Heq. eauto using no_def_untouched.
   Qed.
 
-  Definition lab_tag_matches (l : Lab) (j : IVec) (k : Conf) : bool :=
+  Definition lab_tag_matches (l : Lab) (j : Tag) (k : Conf) : bool :=
     match k with
     | ((p, i), s) => (j ==b i) && (l ==b p) 
     end.
 
-  Fixpoint label_tag_in_trace (l : Lab) (i : IVec) (k : Conf) (t : Tr k) : bool :=
+  Fixpoint label_tag_in_trace (l : Lab) (i : Tag) (k : Conf) (t : Tr k) : bool :=
     match t with
-    | (Init s) => lab_tag_matches l i (root, start_ivec, s)
+    | (Init s) => lab_tag_matches l i (root, start_tag, s)
     | (Step k' k t _) => (lab_tag_matches l i k') || (label_tag_in_trace l i k t)
     end.
 
@@ -858,7 +795,7 @@ Module Uniana.
   Proof.
     intros. dependent induction t; simpl in H.
     + destruct (l == root). 
-      - rewrite e in *. simpl. exists start_ivec. destruct (root == root); firstorder.
+      - rewrite e in *. simpl. exists start_tag. destruct (root == root); firstorder.
       - inv_tr H. firstorder.
     + destruct k as [[q j] r].
       destruct (l == q).
@@ -924,11 +861,11 @@ Module Uniana.
     intros.
     induction t.
     - simpl. split; intros.
-      + exists start_ivec, s. conv_bool. rewrite H. constructor.
+      + exists start_tag, s. conv_bool. rewrite H. constructor.
       + destruct H as [i [s' Hin]].
         inv_tr Hin.
         unfold equiv_decb.
-        destruct (root == root); destruct (start_ivec == start_ivec); firstorder.
+        destruct (root == root); destruct (start_tag == start_tag); firstorder.
     - destruct k as [[p j] s].
       split; intros.
       + destruct (l == p).
@@ -975,7 +912,7 @@ Module Uniana.
       + destruct H as [s' Hin].
         inv_tr Hin.
         unfold equiv_decb.
-        destruct (root == root); destruct (start_ivec == start_ivec); firstorder.
+        destruct (root == root); destruct (start_tag == start_tag); firstorder.
     - destruct k as [[p j] s].
       split; intros.
       remember (lab_tag_matches l i (p, j, s)) as eq.
@@ -1020,7 +957,7 @@ Module Uniana.
                     In k' t' (br, l, u') /\
                     exists tt ff, branch br = Some (tt, ff, x)).
 
-  Lemma different_tgt_is_branch {br : Lab} {i : IVec} {s s' : State} {k k' : Conf} :
+  Lemma different_tgt_is_branch {br : Lab} {i : Tag} {s s' : State} {k k' : Conf} :
     eff (br, i, s) = Some k ->
     eff (br, i, s') = Some k' ->
     lab_of k =/= lab_of k' ->
@@ -1509,3 +1446,8 @@ Module Uniana.
         * subst j'. eauto using precedes_step_inv.
         * eapply (HCupi _ _ _ _ Hsem Hsem'); eauto using upi_unch.
 Qed.
+
+End Uniana.
+
+
+
