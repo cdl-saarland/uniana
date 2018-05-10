@@ -2,6 +2,7 @@ Require Import Coq.Classes.EquivDec.
 Require Import Coq.Bool.Bool.
 Require Import Coq.Logic.Eqdep_dec.
 Require Import Coq.Program.Equality.
+Require Import Coq.Program.Utils.
 Require Import List.
 Require Import Nat.
 Require Import Omega.
@@ -17,11 +18,11 @@ Module Uniana.
 
   Definition State := Var -> Val.
 
-  Context {Lab_dec : EqDec Lab eq}.
-  Context {Val_dec : EqDec Var eq}.
-  Context {Var_dec : EqDec Val eq}.
-  Context {Tag_dec : EqDec Tag eq}.
-  Context {State_dec : EqDec State eq}.
+  Variable  Lab_dec : EqDec Lab eq.
+  Variable Val_dec : EqDec Var eq.
+  Variable Var_dec : EqDec Val eq.
+  Variable Tag_dec : EqDec Tag eq.
+  Variable State_dec : EqDec State eq.
 
   Parameter init_uni : Var -> Prop.
   Parameter start_tag : Tag.
@@ -167,7 +168,7 @@ Module Uniana.
     fun ts' => exists ts, T ts /\ ts' = sem_trace ts.
 
   Definition Uni := Lab -> Var -> bool.
-  Definition Unch := Lab -> Var -> Lab.
+  Definition Unch := Lab -> Var -> option Lab.
   Definition Upi := Lab -> Lab -> bool.
 
   Inductive In : forall k, Tr k -> Conf -> Prop :=
@@ -436,9 +437,10 @@ Module Uniana.
                                                      u p x = true -> s x = s' x.
 
   Definition unch_concr (unch : Unch) : Traces :=
-    fun k => fun t => forall to i s x, (In k t (to, i, s) ->
-                                        exists j r, Precedes k t (unch to x, j, r) (to, i, s) /\
-                                                    r x = s x).
+    fun k => fun t => forall to i s u x, (In k t (to, i, s) ->
+                                          unch to x = Some u ->
+                                          exists j r, Precedes k t (u, j, r) (to, i, s) /\
+                                                      r x = s x).
 
 
   Definition upi_prop q p k k' t t' :=
@@ -455,24 +457,40 @@ Module Uniana.
 
   Parameter upi_correct : forall upi uni t, sem_hyper (upi_concr upi) t -> upi_concr (upi_trans upi uni) t.
 
-  Definition unch_trans_local (upi : Upi) (uni: Uni) (unch : Unch) (q p : Lab) (x : Var) : Lab :=
-    if is_def x q p then p else if upi_trans upi uni (unch q x) p then unch q x else p.
+  Definition unch_trans_local (unch : Unch) (q p : Lab) (x : Var) : option Lab :=
+    if is_def x q p then Some p else unch q x.
 
-  Lemma unch_trans_local_res : forall upi uni unch q p x, unch_trans_local upi uni unch q p x = p \/
-                                                          unch q x =/= p /\
-                                                          is_def x q p = false /\
-                                                          unch_trans_local upi uni unch q p x = unch q x.
+  Lemma unch_trans_local_res `{EqDec (option Lab) eq}
+    : forall unch q p x, unch_trans_local unch q p x = Some p \/
+                             unch q x =/= Some p /\
+                             is_def x q p = false /\
+                             unch_trans_local unch q p x = unch q x.
   Proof.
     intros.
     unfold unch_trans_local.
     destruct (is_def x q p); auto.
-    destruct (upi_trans upi uni (unch q x) p); auto.
-    destruct (unch q x == p); auto.
+    destruct (unch q x == Some p); auto.
   Qed.
 
   Parameter preds : Lab -> list Lab.
 
   Parameter preds_spec : forall p q, has_edge q p = true <-> List.In q (preds p).
+
+  Instance : forall A, EqDec A _ -> EqDec (option A) _ :=
+    {
+      equiv_dec x y := match x, y with
+                    | None, None => in_left
+                    | Some a, Some b => if equiv_dec a b then in_left else in_right
+                    | _, _ => in_right
+                    end
+                      
+      }.
+  + rewrite e0. reflexivity.
+  + intro. eapply c. inversion H. reflexivity.
+  + intro. inversion H.
+  + intro. inversion H.
+  + reflexivity.
+  Qed.
 
   Fixpoint all_equal {A : Type} `{EqDec A} (l : list A) (default : A) : A :=
     match l with
@@ -480,14 +498,14 @@ Module Uniana.
     | a :: l' => fold_right (fun a acc => if a == acc then a else default) a l'
     end.
 
-  Definition unch_trans (upi : Upi) (uni : Uni) (unch : Unch) : Unch :=
-    fun p => fun x => all_equal (map (fun q => unch_trans_local upi uni unch q p x) (preds p)) p.
+  Definition unch_trans `{EqDec (option Lab)} (unch : Unch) : Unch :=
+    fun p => fun x => all_equal (map (fun q => unch_trans_local unch q p x) (preds p)) (Some p).
 
-  Lemma unch_trans_res : forall upi uni unch q p x, q --> p ->
-                                                    (unch_trans upi uni unch p x = p \/
-                                                     unch q x =/= p /\ is_def x q p = false /\
-                                                     unch_trans_local upi uni unch q p x = unch q x /\
-                                                     unch_trans upi uni unch p x = unch q x).
+  Lemma unch_trans_res : forall unch q p x, q --> p ->
+                                            (unch_trans unch p x = Some p \/
+                                             unch q x =/= Some p /\ is_def x q p = false /\
+                                             unch_trans_local unch q p x = unch q x /\
+                                             unch_trans unch p x = unch q x).
   Proof.
     intros.
     unfold unch_trans.
@@ -495,18 +513,18 @@ Module Uniana.
     - destruct (preds p); intros; [ auto | simpl ]. 
       induction l0; simpl in *.
       + inversion_clear H0; [ subst | contradiction ].
-        assert (Hlocal := unch_trans_local_res upi uni unch q p x). 
+        assert (Hlocal := unch_trans_local_res unch q p x). 
         firstorder.
       + inversion_clear H0; subst; simpl.
-        * destruct ((unch_trans_local upi uni unch a p x) == _); auto.
+        * destruct ((unch_trans_local unch a p x) == _); auto.
           rewrite e.
           eapply IHl0.
           auto.
         * inversion_clear H1; subst; simpl.
-          -- destruct ((unch_trans_local upi uni unch q p x) == _); auto.
-             assert (Hlocal := unch_trans_local_res upi uni unch q p x).
+          -- destruct ((unch_trans_local unch q p x) == _); auto.
+             assert (Hlocal := unch_trans_local_res unch q p x).
              firstorder.
-          -- destruct ((unch_trans_local upi uni unch a p x) == _); auto.
+          -- destruct ((unch_trans_local unch a p x) == _); auto.
              rewrite e.
              eapply IHl0.
              auto.
@@ -514,9 +532,9 @@ Module Uniana.
       assumption.
   Qed.
 
-  Lemma upi_unch :
-    forall upi uni unch p x,
-    unch_trans upi uni unch p x =/= p -> upi_trans upi uni (unch_trans upi uni unch p x) p = true .
+  (*
+  Lemma upi_unch : forall uni unch p x,
+      unch_trans uni unch p x =/= p -> upi_trans upi uni (unch_trans upi uni unch p x) p = true .
   Proof.
     intros.
     remember (preds p) as pr.
@@ -538,6 +556,7 @@ Module Uniana.
         * exfalso; apply Huneq; symmetry; assumption.
       - rewrite <- Heqpr. simpl. auto.
   Qed.
+  *)
   
   Lemma list_emp_in : forall {A: Type} l, (forall (a: A), ~ List.In a l) -> l = nil.
   Proof.
@@ -553,7 +572,7 @@ Module Uniana.
         simpl in H. auto.
   Qed.
 
-  Lemma unch_trans_root : forall upi uni unch x, unch_trans upi uni unch root x = root.
+  Lemma unch_trans_root : forall unch x, unch_trans unch root x = Some root.
   Proof.
     intros.
     cut (preds root = nil); intros.
@@ -588,8 +607,10 @@ Module Uniana.
                               && (joinb (map (fun q => abs_uni_eff (uni q) x) (preds p)))
                               && (joinb (map (fun q => upi_trans upi uni q p) (preds p)))
                            )
-                           || (let u := unch_trans upi uni unch p x in (u <>b p) && uni u x).
-
+                           || (match unch_trans unch p x with
+                               | Some u => (u <>b p) && uni u x && upi u p
+                               | None => false
+                               end).
 
   Lemma uni_trans_root_inv :
     forall uni hom unch x, uni_trans uni hom unch root x = uni root x.
@@ -723,38 +744,40 @@ Module Uniana.
   Qed.
 
   Lemma unch_correct :
-    forall upi uni unch k t,
-      sem_trace (unch_concr unch) k t -> unch_concr (unch_trans upi uni unch) k t.
+    forall unch k t,
+      sem_trace (unch_concr unch) k t -> unch_concr (unch_trans unch) k t.
   Proof.
-    intros upi uni unch k t Hred.
+    intros unch k t Hred.
     unfold sem_trace in Hred.
     destruct Hred as [k' [t' [step [Hconcr H]]]]; subst.
     unfold unch_concr in *.
-    intros to i s x.
-    intros Hin.
+    intros to i s u x.
+    intros Hin Hunch.
     destruct (to == root).
     - rewrite e in *; clear e.
       exists i, s.
       split; [| reflexivity ].
-      rewrite unch_trans_root.
+      rewrite unch_trans_root in Hunch. inversion Hunch. subst u. clear Hunch.
       eauto using precedes_self.
     - assert (Hpred := Hin).
       eapply in_exists_pred in Hpred; eauto.
       destruct Hpred as [q [j [r [Hpredin Hpred]]]].
       assert (Hedge: q --> to) by (eauto using step_conf_implies_edge).
-      edestruct (unch_trans_res upi uni unch q to x Hedge) as [Hunch | Hunch].
-      + rewrite Hunch. exists i, s.
-        split; eauto using precedes_self.
-      + destruct Hunch as [Hneq [Hdef [_ Hunch]]].
-        rewrite Hunch.
+      edestruct (unch_trans_res unch q to x Hedge) as [Hunch' | Hunch'].
+      + rewrite Hunch' in Hunch. inversion Hunch. subst u. clear Hunch.
+        exists i, s. split; eauto using precedes_self.
+      + destruct Hunch' as [Hneq [Hdef [_ Hunch']]].
+        rewrite Hunch' in Hunch.
         symmetry in Hneq.
-        destruct (unch q x == q).
+        destruct (unch q x == Some q).
         * exists j, r. split.
-          -- rewrite e in *. eauto using precedes_step.
+          -- rewrite e in *. inversion Hunch. subst q. eapply precedes_step; eauto.
+             intro. apply Hneq. rewrite H. reflexivity.
           -- eauto using no_def_untouched.
-        * destruct (Hconcr q j r x) as [j' [r' [Hprec Heq]]]; eauto.
+        * destruct (Hconcr q j r u x) as [j' [r' [Hprec Heq]]]; eauto.
           exists j', r'. split.
-          -- eauto using precedes_succ.
+          -- eapply precedes_succ; eauto. rewrite Hunch in Hneq.
+             intro. apply Hneq. rewrite H. reflexivity.
           -- rewrite Heq. eauto using no_def_untouched.
   Qed.
 
@@ -1405,13 +1428,13 @@ Module Uniana.
       exists ts; auto.
     }
 
-    assert (unch_concr (unch_trans upi uni unch) k tr) as HCunch. {
+    assert (unch_concr (unch_trans unch) k tr) as HCunch. {
       destruct Hconcr as [[_ _] Hunch].
       unfold lift in *; subst.
       apply unch_correct. assumption.
     } 
     
-    assert (unch_concr (unch_trans upi uni unch) k' tr') as HCunch'. {
+    assert (unch_concr (unch_trans unch) k' tr') as HCunch'. {
       destruct Hconcr as [[_ _] Hunch].
       unfold lift in *; subst.
       apply unch_correct. assumption.
@@ -1475,15 +1498,18 @@ Module Uniana.
              eapply (joinb_true_iff _ _ Hsplit) in H.
              conv_bool. eauto. destruct H as [_ H]. eassumption.
         (* The unch case *)
-      - specialize (HCunch p i s x).
-        specialize (HCunch' p i s' x).
+      - rename Hunch into H.
+        destruct (unch_trans unch p x) as [ u | ] eqn:Hunch; [| inversion H ].
+        conv_bool.
+        destruct H as [[Hneq Huni] Hupi].
+        specialize (HCunch p i s u x).
+        specialize (HCunch' p i s' u x).
         destruct HCunch as [j [r [Hprec Heq]]]; try eassumption.
         destruct HCunch' as [j' [r' [Hprec' Heq']]]; try eassumption.
-        destruct Hunch as [ Hlab Hunch ].
         rewrite <- Heq. rewrite <- Heq'.
         cut (j' = j); intros.
-        * subst j'. eauto using precedes_step_inv.
-        * eapply (HCupi _ _ _ _ Hsem Hsem'); eauto using upi_unch.
+        * subst j'. eauto using precedes_step_inv. 
+        * eapply (HCupi _ _ _ _ Hsem Hsem'); eauto. 
 Qed.
 
 End Uniana.
