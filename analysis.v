@@ -1,12 +1,12 @@
 Require Import Coq.Classes.EquivDec.
 Require Import Coq.Bool.Bool.
 Require Import Coq.Logic.Eqdep_dec.
+Require Import Coq.Logic.Decidable.
 Require Import Coq.Program.Equality.
 Require Import Coq.Program.Utils.
+Require Import Lists.ListSet.
 Require Import List.
 Require Import Nat.
-Require Import Omega.
-Require Import Coq.Logic.Classical_Prop.
 
 Require Import Util.
 
@@ -19,7 +19,8 @@ Module Uniana.
 
   Definition State := Var -> Val.
 
-  Variable  Lab_dec : EqDec Lab eq.
+  Variable Lab_dec' : forall (l l' : Lab), { l = l' } + { l <> l'}.
+  Variable Lab_dec : EqDec Lab eq.
   Variable Val_dec : EqDec Var eq.
   Variable Var_dec : EqDec Val eq.
   Variable Tag_dec : EqDec Tag eq.
@@ -53,9 +54,14 @@ Module Uniana.
       eff (p, i, s') = Some (q, j, qs') ->
       uni_state_concr (abs_uni_eff uni) qs qs'.
 
-  Parameter has_edge : Lab -> Lab -> bool.
   Parameter is_def : Var -> Lab -> Lab -> bool.
   Parameter root : Lab.
+
+  Parameter preds : Lab -> list Lab.
+  Notation "p --> q" := (List.In p (preds q)) (at level 70, right associativity).
+
+  Notation "p -->* q" := (p === q \/ p --> q) (at level 70, right associativity).
+
 
   Lemma Conf_dec :
     forall (x y : Conf), {x = y} + {x <> y}.
@@ -80,37 +86,40 @@ Module Uniana.
   Definition is_effect_on (p q : Lab) :=
     exists i i' s s', eff ((p, i), s) = Some ((q, i'), s').
 
-  Parameter root_no_pred : forall p, has_edge p root = false.
+  Parameter root_no_pred : forall p, ~ p --> root.
 
   Parameter edge_spec :
-    forall p q, is_effect_on p q -> has_edge p q = true.
-
-  Notation "p --> q" := (has_edge p q = true) (at level 70, right associativity).
-
-  Notation "p -->* q" := (p === q \/ p --> q) (at level 70, right associativity).
+    forall p q, is_effect_on p q -> p --> q.
 
   Lemma step_conf_implies_edge :
     forall p q i j s r, eff (p, i, s) = Some (q, j, r) -> (p --> q).
   Proof.
     intros.
-    eapply edge_spec.
-    exists i; exists j; exists s; exists r.
-    assumption.
+    eapply edge_spec. 
+    unfold is_effect_on. eauto.
   Qed.
 
   Parameter def_spec :
     forall p q x, (exists i j s r, eff (p, i, s) = Some (q, j, r) /\ r x <> s x) ->
                   is_def x p q = true.
 
+  Parameter def_edge :
+    forall p q x, is_def x p q = true -> p --> q.
+
   (* TODO *)
   Inductive Tr : Conf -> Type :=
     | Init : forall s, Tr (root, start_tag, s)
     | Step : forall k k', Tr k' -> eff k' = Some k -> Tr k.
 
+  Ltac inv_dep H Dec := inversion H; subst; 
+                        repeat match goal with
+                               | [ H0: @existT _ _ _ _ = @existT _ _ _ _  |- _ ] =>
+                                 apply inj_pair2_eq_dec in H0; try (apply Dec); subst
+                               end.
+
   Ltac inv_tr H := inversion H; subst; 
                    repeat match goal with
-                          | [ H0: @existT Conf _ _ _ = @existT _ _ _ _  |- _ ] => apply inj_pair2_eq_dec in H0;
-                                                                                  try (apply Conf_dec); subst
+                          | [ H0: @existT Conf _ _ _ = @existT _ _ _ _  |- _ ] => apply inj_pair2_eq_dec in H0; try (apply Conf_dec); subst
                           end.
 
   Inductive Prefix : forall k, Tr k -> forall k', Tr k' -> Prop :=
@@ -131,7 +140,6 @@ Module Uniana.
     fun ts' => exists ts, T ts /\ ts' = sem_trace ts.
 
   Definition Uni := Lab -> Var -> bool.
-  Definition Unch := Lab -> Var -> option Lab.
   Definition Upi := Lab -> Lab -> bool.
 
   Inductive In : forall k, Tr k -> Conf -> Prop :=
@@ -197,8 +205,8 @@ Module Uniana.
   Qed.
 
   Parameter ivec_fresh : forall p i s k t, eff k = Some (p, i, s) ->
-                                           forall q j r, In k t (q, j, r) ->
-                                                         j <> i.
+                                      forall q j r, In k t (q, j, r) ->
+                                               j <> i.
 
   Parameter ivec_det : forall q j r r' p i i' s s',
       eff (q, j, r) = Some (p, i, s) ->
@@ -308,8 +316,8 @@ Module Uniana.
 
   Fixpoint PathIn {a b} (q : Lab) (p : Path a b) : Prop :=
     match p with
-    | PathInit v => q === v
-    | PathStep from mid to p edge => (q === to) \/ PathIn q p
+    | PathInit v => q = v
+    | PathStep from mid to p edge => (q = to) \/ PathIn q p
     end.
 
   Definition step_exists_path {q p} {j i} {r s} (step : eff (q, j, r) = Some (p, i, s)) :=
@@ -350,30 +358,71 @@ Module Uniana.
     eauto.
   Qed.
 
-  Lemma Path_in_dec :
-    forall a x z p, {@PathIn x z a p} + {~ @PathIn x z a p}.
+  Lemma Path_in_dec {z a} x (p: Path a z) :
+    {PathIn x p} + {~ PathIn x p}.
   Proof.
-    intros a x z p.
     induction p.
-    + destruct (a == p); firstorder.
-    + simpl in *. destruct (a == to); firstorder.
+    + destruct (x == p); firstorder.
+    + simpl in *. destruct (x == to); firstorder.
   Qed.
 
-  Parameter branch : Lab -> option (Lab * Lab * Var).
+  Lemma path_first_in {a} b (p : Path a b) :
+    PathIn a p.
+  Proof.
+    induction p.
+    + constructor.
+    + simpl. eauto.
+  Qed.
 
-  Definition is_branch br x := (exists tt ff, branch br = Some (tt, ff, x)).
+  Lemma path_last_in {a} b (p : Path a b) :
+    PathIn b p.
+  Proof.
+    induction p.
+    + constructor.
+    + simpl. left. reflexivity.
+  Qed.
+
+  Fixpoint acyclic {a c} (p : Path a c) : Prop :=
+    match p with
+    | PathInit p => True
+    | PathStep a b c p' e => acyclic p' /\ ~ PathIn c p'
+    end.
+
+  Lemma path_in_single_acyclic {a} (p : Path a a) :
+    acyclic p -> forall q, PathIn q p -> q = a.
+  Proof.
+    intros Hacyc q Hin.
+    dependent induction p; simpl in Hin; [ eauto |].
+    simpl in Hacyc.
+    exfalso. apply Hacyc. eapply path_first_in.
+  Qed.
+
+  Lemma acyclic_prefix {a b c} (p : Path a b) (e : b --> c) :
+    acyclic (PathStep a b c p e) -> acyclic p.
+  Proof.
+    intros.
+    destruct p; simpl in *; firstorder.
+  Qed.
+
+  Parameter branch : Lab -> option (Lab * Lab * Var * Var).
+
+  Definition is_branch br x := exists tt ff xb, branch br = Some (tt, ff, x, xb).
 
   Parameter val_true : Val -> bool.
 
   Parameter branch_spec :
     forall b, match branch b with
-              | Some (t, f, x) => forall i s k, eff (b, i, s) = Some k ->
-                                                lab_of k = (if val_true (s x) then t else f) /\
-                                                t =/= f
+              | Some (t, f, x, xb) => t =/= f /\
+                                      forall i s k, eff (b, i, s) = Some k ->
+                                                    lab_of k = (if val_true (s x) then t else f)
               | None => forall i i' s s' k k', eff (b, i, s) = Some k ->
                                                eff (b, i', s') = Some k' ->
                                                lab_of k = lab_of k'
               end.
+
+  Parameter branch_spec_var : 
+    forall b t f x xb, branch b = Some (t, f, x, xb) -> is_def xb b t = true /\ is_def xb b f = true /\
+                                                        forall b', b =/= b' -> forall p, is_def xb b' p = false.
 
   Parameter in_out_spec :
    forall p q q', (exists x, is_branch p x) -> q --> p -> q' --> p -> q = q'.
@@ -389,7 +438,7 @@ Module Uniana.
 
   Parameter splits_spec : forall conv br x, (exists qt qf a b, qt -->* conv /\
                                                                qf -->* conv /\
-                                                               DisjointPaths br x qt qf a b) ->
+                                                               DisjointPaths br x qt qf a b) <->
                                             List.In (br, x) (splits conv).
 
   Definition uni_concr (u : Uni) : Hyper :=
@@ -397,12 +446,6 @@ Module Uniana.
                                   forall x p i s s', In t tr ((p, i), s) ->
                                                      In t' tr' ((p, i), s') ->
                                                      u p x = true -> s x = s' x.
-
-  Definition unch_concr (unch : Unch) : Traces :=
-    fun k => fun t => forall to i s u x, (In k t (to, i, s) ->
-                                          unch to x = Some u ->
-                                          exists j r, Precedes k t (u, j, r) (to, i, s) /\
-                                                      r x = s x).
 
 
   Definition upi_prop q p k k' t t' :=
@@ -418,161 +461,276 @@ Module Uniana.
   Parameter upi_trans : Upi -> Uni -> Upi.
 
   Parameter upi_correct : forall upi uni t, sem_hyper (upi_concr upi) t -> upi_concr (upi_trans upi uni) t.
-
-  Definition unch_trans_local (unch : Unch) (q p : Lab) (x : Var) : option Lab :=
-    if is_def x q p then Some p else unch q x.
-
-  Lemma unch_trans_local_res `{EqDec (option Lab) eq}
-    : forall unch q p x, unch_trans_local unch q p x = Some p \/
-                             unch q x =/= Some p /\
-                             is_def x q p = false /\
-                             unch_trans_local unch q p x = unch q x.
-  Proof.
-    intros.
-    unfold unch_trans_local.
-    destruct (is_def x q p); auto.
-    destruct (unch q x == Some p); auto.
-  Qed.
-
-  Parameter preds : Lab -> list Lab.
-
-  Parameter preds_spec : forall p q, has_edge q p = true <-> List.In q (preds p).
-
-  Instance : forall A, EqDec A _ -> EqDec (option A) _ :=
-    {
-      equiv_dec x y := match x, y with
-                    | None, None => in_left
-                    | Some a, Some b => if equiv_dec a b then in_left else in_right
-                    | _, _ => in_right
-                    end
-                      
-      }.
-  + rewrite e0. reflexivity.
-  + intro. eapply c. inversion H. reflexivity.
-  + intro. inversion H.
-  + intro. inversion H.
-  + reflexivity.
-  Qed.
-
-  Fixpoint all_equal {A : Type} `{EqDec A} (l : list A) (default : A) : A :=
-    match l with
-    | nil => default
-    | a :: l' => fold_right (fun a acc => if a == acc then a else default) a l'
-    end.
-
-  Definition unch_trans `{EqDec (option Lab)} (unch : Unch) : Unch :=
-    fun p => fun x => all_equal (map (fun q => unch_trans_local unch q p x) (preds p)) (Some p).
-
-  Lemma unch_trans_res : forall unch q p x, q --> p ->
-                                            (unch_trans unch p x = Some p \/
-                                             unch q x =/= Some p /\ is_def x q p = false /\
-                                             unch_trans_local unch q p x = unch q x /\
-                                             unch_trans unch p x = unch q x).
-  Proof.
-    intros.
-    unfold unch_trans.
-    cut (List.In q (preds p)). 
-    - destruct (preds p); intros; [ auto | simpl ]. 
-      induction l0; simpl in *.
-      + inversion_clear H0; [ subst | contradiction ].
-        assert (Hlocal := unch_trans_local_res unch q p x). 
-        firstorder.
-      + inversion_clear H0; subst; simpl.
-        * destruct ((unch_trans_local unch a p x) == _); auto.
-          rewrite e.
-          eapply IHl0.
-          auto.
-        * inversion_clear H1; subst; simpl.
-          -- destruct ((unch_trans_local unch q p x) == _); auto.
-             assert (Hlocal := unch_trans_local_res unch q p x).
-             firstorder.
-          -- destruct ((unch_trans_local unch a p x) == _); auto.
-             rewrite e.
-             eapply IHl0.
-             auto.
-    - apply preds_spec.
-      assumption.
-  Qed.
-
-  (*
-  Lemma upi_unch : forall uni unch p x,
-      unch_trans uni unch p x =/= p -> upi_trans upi uni (unch_trans upi uni unch p x) p = true .
-  Proof.
-    intros.
-    remember (preds p) as pr.
-    destruct pr.
-    + unfold unch_trans in H.
-      rewrite <- Heqpr in H.
-      simpl in H.
-      contradiction H; reflexivity.
-    + cut (List.In l (preds p)). intro Hedge.
-      - apply preds_spec in Hedge.
-        assert (Hunch := unch_trans_res upi uni unch l p x Hedge).
-        destruct Hunch as [Hunch | Hunch]; [ exfalso; contradiction H; reflexivity | ].
-        destruct Hunch as [Huneq [Hdef [Hlocal Hunch]]].
-        rewrite Hunch.
-        unfold unch_trans_local in Hlocal.
-        destruct (is_def x l p); [ inversion Hdef | clear Hdef ].
-        destruct (upi_trans upi uni (unch l x) p).
-        * reflexivity.
-        * exfalso; apply Huneq; symmetry; assumption.
-      - rewrite <- Heqpr. simpl. auto.
-  Qed.
-  *)
   
-  Lemma list_emp_in : forall {A: Type} l, (forall (a: A), ~ List.In a l) -> l = nil.
-  Proof.
-    intros.
-    induction l.
-    - reflexivity.
-    - cut (forall a, ~ List.In a l).
-      + intros.
-        apply IHl in H0.
-        subst. specialize (H a).
-        exfalso. simpl in H. auto.
-      + intros. specialize (H a0).
-        simpl in H. auto.
-  Qed.
+  Definition Unch := Lab -> Var -> set Lab.
 
-  Lemma unch_trans_root : forall unch x, unch_trans unch root x = Some root.
+  Definition unch_concr (unch : Unch) : Traces :=
+    fun k => fun t => forall to i s u x, (In k t (to, i, s) ->
+                               set_In u (unch to x) ->
+                               exists j r, Precedes k t (u, j, r) (to, i, s) /\
+                                      r x = s x).
+
+  Definition unch_join_ptw (d d' : set Lab) := set_inter Lab_dec' d d'. 
+
+  Definition unch_join (u u' : Unch) : Unch :=
+    fun l x => unch_join_ptw (u l x) (u' l x).
+
+  Definition unch_trans_local (unch : Unch) (q p : Lab) (x : Var) : set Lab :=
+    set_add Lab_dec' p (if is_def x q p then empty_set Lab else unch q x).
+
+  Definition unch_trans_ptw (unch : Unch) l x : set Lab :=
+    let f := fun q acc => unch_join_ptw q acc in
+    let t := fun q => unch_trans_local unch q l x in
+    fold_right f (empty_set Lab) (map t (preds l)).
+      
+  Definition unch_trans (unch : Unch) : Unch :=
+    fun l x => unch_trans_ptw unch l x.
+
+  Lemma unch_trans_root : forall unch x, unch_trans unch root x = empty_set Lab.
   Proof.
     intros.
     cut (preds root = nil); intros.
-    + unfold unch_trans.
+    + unfold unch_trans, unch_trans_ptw.
       rewrite H.
       simpl.
       reflexivity.
-    + cut (forall q, ~ List.In q (preds root)); intros.
-      * apply list_emp_in.
-        assumption.
-      * intro.
-        eapply preds_spec in H.
-        rewrite root_no_pred in H.
-        inversion H.
+    + cut (forall q, ~ List.In q (preds root)); intros; eauto using list_emp_in, root_no_pred. 
   Qed.
 
-  Definition joinb (l : list bool) := fold_right andb true l.
+  Inductive Front (u : Unch) : Var -> Lab -> Type :=
+    | FrontDef : forall x p, (exists q, is_def x q p = true) -> Front u x p
+    | FrontIter : forall x l l' r r' p, Front u x l ->
+                                   Front u x r ->
+                                   l' --> p ->
+                                   r' --> p ->
+                                   set_In l (u l' x) ->
+                                   set_In r (u r' x) ->
+                                   ~ set_In l (u p x) ->
+                                   ~ set_In r (u p x) ->
+                                   Front u x p.
+                           
+  (*
+    Definition Disjoint {a b c d} (π : Path a b) (π' : Path c d) :=
+      forall p, (PathIn p π -> ~ PathIn p π') /\ (PathIn p π' -> ~ PathIn p π).
+*)
 
-  Lemma joinb_true_iff {A : Type} : 
-    forall f (l : list A), (joinb (map f l) = true) -> (forall x, List.In x l -> f x = true).
+      (*
+    Definition Join l ps :=
+      exists t t' f f' (π : Path t t') (π' : Path f f'), ps t t' π /\ ps f f' π' /\ Defs t /\ Defs f /\ 
+                                                    t <> f /\
+                                                    acyclic π /\
+                                                    acyclic π' /\
+                                                    Disjoint π π' /\
+                                                    t' --> l /\ f' --> l.
+  *)
+
+  (* Paths *)
+
+  Lemma path_exists_pred {a b} (p : Path a b) :
+    a <> b -> exists q (p' : Path a q) (e : q --> b),  p = (PathStep a q b p' e).
   Proof.
     intros.
-    unfold joinb in H.
+    induction p; [ firstorder |].
+    destruct (from == p).
+    - rewrite e in *. eauto.
+    - eapply IHp in c. eauto. 
+  Qed.
+
+  Lemma path_acyclic_pred {a q} (p : Path a q) b e :
+    acyclic (PathStep a q b p e) -> acyclic p.
+  Proof.
+    intros.
+    dependent induction p; simpl in *; firstorder.
+  Qed.
+
+  Lemma path_acyclic_next {a q p} (π : Path a q) (edge : q --> p) :
+        acyclic π -> acyclic (PathStep a q p π edge) \/ exists (π' : Path a p), acyclic π' /\ forall q, PathIn q π' -> PathIn q π.
+  Proof.
+    intros.
+    simpl.
+    destruct (Path_in_dec p π).
+    - right.
+      clear edge.
+      induction π.
+      + inject p0. exists (PathInit p1). simpl. eauto.
+      + inject p0.
+        * exists (PathStep from p1 to π i). split; try eauto.
+        * eapply path_acyclic_pred in H. destruct (IHπ H H0) as [π' [Hacyc Hin]].
+          exists π'. split; [ assumption |]. intros. simpl. eauto.
+    - left. eauto.
+  Qed.
+  
+  Fixpoint path_concat {a b c} (π : Path a b) (π' : Path b c) : Path a c.
+    refine ((match π' as y in (Path b' c) return
+                  (b' = b -> Path a c) with
+    | PathInit _ => _
+    | PathStep b c c' π' e => _
+    end) (eq_refl b)); intros; subst.
+    - apply π.
+    - eapply (PathStep _ _ _ (path_concat _ _ _ π π') e).
+  Defined.
+  
+  Lemma concat_in1 {a b c} (π : Path a b) (π' : Path b c) :
+    forall q, PathIn q π -> PathIn q (path_concat π π').
+  Proof.
+    intros. induction π'; simpl; eauto.
+  Qed.
+
+  Lemma path_pred {a b} (p : Path a b) :
+    a = b \/ exists pred, pred --> b.
+  Proof.
+    induction p; eauto.
+  Qed.
+
+  Lemma path_nodes_neq {a b} (p : Path a b) r s :
+    PathIn r p ->
+    ~ PathIn s p ->
+    r <> s.
+  Proof.
+    intros Hin Hnin.
+    induction p.
+    - inject Hin. intro. apply Hnin. subst. constructor.
+    - intro. subst. apply Hnin. assumption.
+  Qed.
+
+  (*
+  Definition disjoint {a b c d} (p : Path a b) (p' : Path c d) :=
+    (forall q, PathIn q p -> ~ PathIn q p') /\ (forall q, PathIn q p' -> ~ PathIn q p).
+  *)
+
+  Definition deciabable_PathIn a b (p : Path a b) q :
+    decidable (PathIn q p).
+  Proof.
+    unfold decidable.
+    induction p.
+    + simpl. destruct (q == p); firstorder.
+    + simpl. destruct IHp; firstorder.
+      destruct (q == to); firstorder.
+  Qed.
+
+  (*
+  Section Disj.
+    Variable unch : Unch.
+    Variable s t f : Lab.
+    Variable x xs : Var.
+    Variable Hst : s --> t.
+    Variable Hsf : s --> f.
+    Variable Hbr : branch s = Some (t, f, x, xs).
+    Variable Hfp : unch_lfp unch.
+
+    Lemma unch_split_is_on_path dl to (p : Path f to) :
+      unch to xs = Some dl ->
+      PathIn dl p.
+    Proof.
+      intros Hunch.
+      induction p.
+      - rename p into f. simpl.
+        assert (Hbrspec := branch_spec_var s t f x xs Hbr).
+        destruct Hbrspec as [Hl [Hr _]].
+        destruct (unch_trans_res unch s f xs Hsf).
+        + rewrite unch_lfp_trans_eq in H; try eassumption.
+          rewrite Hunch in H. inject H. reflexivity.
+        + destruct H as [_ [H _]].  rewrite H in *; firstorder.
+      - rename from into f. rename p into q. simpl.
+        destruct (unch_trans_res unch q to xs e).
+        + rewrite unch_lfp_trans_eq in H; try eassumption.
+          rewrite Hunch in H. inject H. left. reflexivity.
+        + destruct H as [_ [_ [_ H]]].
+          rewrite unch_lfp_trans_eq in H; try eassumption.
+          rewrite H in Hunch. right. eauto.
+    Qed.
+    
+    Lemma unch_split_exists {to} (p : Path f to) :
+      exists dl, unch to xs = Some dl /\ PathIn dl p.
+    Proof.
+      induction p.
+      - rename p into f. simpl.
+        assert (Hbrspec := branch_spec_var s t f x xs Hbr).
+        destruct Hbrspec as [Hl [Hr _]].
+        destruct (unch_trans_res unch s f xs Hsf).
+        + rewrite unch_lfp_trans_eq in H; try eassumption.
+          exists f. split; [ eauto | reflexivity ].
+        + destruct H as [_ [H _]]. rewrite H in *; firstorder.
+      - rename from into f. rename p into q. simpl.
+        destruct (unch_trans_res unch q to xs e).
+        + rewrite unch_lfp_trans_eq in H; try eassumption.
+          exists to. split; eauto. 
+        + destruct H as [_ [_ [_ H]]].
+          rewrite unch_lfp_trans_eq in H; try eassumption.
+          destruct IHp as [dl [IHp Hin]]; try eassumption. rewrite IHp in H.
+          exists dl. eauto. 
+    Qed.
+
+    Variable l r : Lab.
+
+    Section PathsGiven.
+      Variable a : Path t l.
+      Variable b : Path f r.
+  
+      Lemma unch_disj_l :
+        disjoint a b ->
+        exists dl dr, unch l xs = Some dl /\ unch r xs = Some dr /\ dl =/= dr.
+      Proof.
+        intros Hdis.
+        unfold disjoint in Hdis.
+        destruct Hdis as [Hl Hr].
+        induction a as [t | t].
+        - destruct (branch_spec_var s t f x xs Hbr) as [Hdef _].
+          destruct (unch_trans_res unch s t xs Hst); rewrite unch_lfp_trans_eq in H; try eassumption.
+          + destruct (unch_split_exists b) as [dr [Hu Hp]].
+            exists t, dr. repeat split; try eassumption.
+            intro. eapply Hl. constructor. rewrite H0. assumption.
+          + destruct H as [_ [H _]]. rewrite Hdef in H. firstorder.
+        - rename p0 into b', p into l.
+          destruct IHp; try eassumption.
+          + intros. apply Hl. simpl. auto.
+          + intros. apply Hr in H. contradict H. simpl. auto.
+          + destruct H as [dr [Hul [Hur Hneq]]].
+            destruct (unch_trans_res unch l to xs e); rewrite unch_lfp_trans_eq in H; try eassumption.
+            * exists to, dr. repeat split; eauto. 
+              intro. eapply (Hl to). simpl. left. reflexivity. eapply unch_split_is_on_path. auto.
+              rewrite H0. eassumption.
+            * destruct H as [_ [_ [_ H]]].
+              rewrite H. eauto.
+      Qed.
+
+*)
+  
+  Definition join_andb (l : list bool) := fold_right andb true l.
+
+  Lemma join_andb_true_iff {A : Type} : 
+    forall f (l : list A), (join_andb (map f l) = true) -> (forall x, List.In x l -> f x = true).
+  Proof.
+    intros.
+    unfold join_andb in H.
     induction l; inversion H0; simpl in H; apply andb_true_iff in H; try subst; destruct H; auto.
+  Qed.
+
+  Definition join_orb (l : list bool) := fold_right orb false l.
+
+  Lemma join_orb_true_iff {A : Type} :
+    forall f (l : list A), (join_orb (map f l) = true) -> (exists x, List.In x l /\ f x = true).
+  Proof.
+    intros.
+    unfold join_orb in H.
+    induction l; simpl in H.
+    - inversion H.
+    - conv_bool.
+      inject H.
+      * exists a. simpl. eauto.
+      * eapply IHl in H0. destruct H0 as [x [Hin Hf]].
+        exists x. simpl. eauto.
   Qed.
 
   Definition uni_trans (uni : Uni) (upi : Upi) (unch : Unch) : Uni :=
     fun p => if p == root then uni root
-             else fun x => ((joinb (map (fun spl => 
+             else fun x => ((join_andb (map (fun spl => 
                                            match spl with (s, x) => uni s x &&
                                                 upi_trans upi uni s p end) (splits p))) 
-                              && (joinb (map (fun q => abs_uni_eff (uni q) x) (preds p)))
-                              && (joinb (map (fun q => upi_trans upi uni q p) (preds p)))
+                              && (join_andb (map (fun q => abs_uni_eff (uni q) x) (preds p)))
+                              && (join_andb (map (fun q => upi_trans upi uni q p) (preds p)))
                            )
-                           || (match unch_trans unch p x with
-                               | Some u => (u <>b p) && uni u x && upi u p
-                               | None => false
-                               end).
+                        || join_orb (map (fun q => (q <>b p) && uni q x && upi_trans upi uni q p) (unch_trans unch p x)).
 
   Lemma uni_trans_root_inv :
     forall uni hom unch x, uni_trans uni hom unch root x = uni root x.
@@ -592,10 +750,9 @@ Module Uniana.
     unfold start_coord in H.
     cut (is_effect_on p root); intros.
     apply edge_spec in H0.
-    rewrite root_no_pred in H0.
-    inversion H0.
+    eapply root_no_pred. eassumption.
     unfold is_effect_on.
-    exists i. exists i'. exists s. exists s'.
+    exists i, i', s, s'. 
     assumption.
   Qed.
 
@@ -705,6 +862,27 @@ Module Uniana.
       inversion H1.
   Qed.
 
+  Lemma unch_trans_lem u to x unch :
+    set_In u (unch_trans unch to x) ->
+    u = to \/ (forall q, List.In q (preds to) -> (is_def x q to = false /\ set_In u (unch q x))).
+  Proof.
+    intros.
+    unfold unch_trans, unch_trans_ptw, unch_join_ptw, unch_trans_local in H.
+    induction (preds to); simpl in *.
+    - inversion H.
+    - eapply set_inter_elim in H.
+      destruct H as [Hin Hother].
+      eapply IHl in Hother. clear IHl.
+      inject Hother; [ eauto |].
+      destruct (Lab_dec' u to); subst; eauto.
+      right.
+      intros.
+      inject H0; [ subst | eauto].
+      destruct (is_def x q to).
+      + simpl in Hin. firstorder.
+      + eauto using set_add_elim2.
+  Qed.
+
   Lemma unch_correct :
     forall unch k t,
       sem_trace (unch_concr unch) k t -> unch_concr (unch_trans unch) k t.
@@ -719,28 +897,20 @@ Module Uniana.
     - rewrite e in *; clear e.
       exists i, s.
       split; [| reflexivity ].
-      rewrite unch_trans_root in Hunch. inversion Hunch. subst u. clear Hunch.
-      eauto using precedes_self.
+      rewrite unch_trans_root in Hunch. inversion Hunch. 
     - assert (Hpred := Hin).
       eapply in_exists_pred in Hpred; eauto.
       destruct Hpred as [q [j [r [Hpredin Hpred]]]].
       assert (Hedge: q --> to) by (eauto using step_conf_implies_edge).
-      edestruct (unch_trans_res unch q to x Hedge) as [Hunch' | Hunch'].
-      + rewrite Hunch' in Hunch. inversion Hunch. subst u. clear Hunch.
-        exists i, s. split; eauto using precedes_self.
-      + destruct Hunch' as [Hneq [Hdef [_ Hunch']]].
-        rewrite Hunch' in Hunch.
-        symmetry in Hneq.
-        destruct (unch q x == Some q).
-        * exists j, r. split.
-          -- rewrite e in *. inversion Hunch. subst q. eapply precedes_step; eauto.
-             intro. apply Hneq. rewrite H. reflexivity.
-          -- eauto using no_def_untouched.
-        * destruct (Hconcr q j r u x) as [j' [r' [Hprec Heq]]]; eauto.
-          exists j', r'. split.
-          -- eapply precedes_succ; eauto. rewrite Hunch in Hneq.
-             intro. apply Hneq. rewrite H. reflexivity.
-          -- rewrite Heq. eauto using no_def_untouched.
+      eapply unch_trans_lem in Hunch.
+      destruct (Lab_dec' to u) as [ Heq | Hneq ]; subst.
+      + exists i, s. split; [ | reflexivity ]. eapply precedes_self. assumption.
+      + inject Hunch; [ firstorder |].
+        eapply H in Hedge. destruct Hedge as [Hndef Huin].
+        edestruct Hconcr as [j' [r' [Hprec Heq]]]; eauto.
+        exists j', r'. split.
+        * eauto using precedes_succ.
+        * rewrite Heq. eauto using no_def_untouched.
   Qed.
 
   Definition lab_tag_matches (l : Lab) (j : Tag) (k : Conf) : bool :=
@@ -975,11 +1145,11 @@ Module Uniana.
       apply label_tag_in_trace_in; assumption.
   Qed.
   
-  Definition DivergenceWitness br x k k' t t' := 
+  Definition DivergenceWitness br x xb k k' t t' := 
     (exists l u u', val_true (u x) =/= val_true (u' x) /\
                     In k t (br, l, u) /\
                     In k' t' (br, l, u') /\
-                    exists tt ff, branch br = Some (tt, ff, x)).
+                    exists tt ff, branch br = Some (tt, ff, x, xb)).
 
   Lemma different_tgt_is_branch {br : Lab} {i : Tag} {s s' : State} {k k' : Conf} :
     eff (br, i, s) = Some k ->
@@ -989,16 +1159,15 @@ Module Uniana.
   Proof.
     intros Hstep Hstep' Hneq.
     assert (Hspec := branch_spec br).
-    destruct (branch br) as [[[tt ff] x] | ] eqn:Hbr.
-    + assert (Hspec' := Hspec i s' k' Hstep').
+    destruct (branch br) as [ [[[tt ff] x] xb] | ] eqn:Hbr.
+    + destruct Hspec as [Hneqtf Hspec].
+      assert (Hspec' := Hspec i s' k' Hstep').
       specialize (Hspec i s k Hstep).
       destruct k as [[q j] r], k' as [[q' j'] r']. simpl in *.
-      destruct Hspec as [Hspec _].
-      destruct Hspec' as [Hspec' _].
-      destruct (val_true (s x) == val_true (s' x)).
-      * rewrite <- e in *. clear e.
-        destruct (val_true (s x)), (val_true (s' x)); subst; firstorder.
-      * exists x. split. eassumption. firstorder.
+      exists x. split.
+      - destruct (val_true (s x)) eqn:Hv, (val_true (s' x)) eqn:Hv';
+          subst; firstorder.
+      - unfold is_branch. firstorder.
     + specialize (Hspec i i s s' k k' Hstep Hstep'). firstorder.
   Qed.
 
@@ -1039,8 +1208,8 @@ Module Uniana.
     eff (q, j, r) = Some (p, i, s) ->
     eff (q', j', r') = Some (p, i, s') ->
     q =/= q' \/ j =/= j' ->
-    exists x, (exists a b, DisjointPaths q x q q' a b) /\
-              DivergenceWitness q x (q, j, r) (q', j', r') t t'.
+    exists x xb, (exists a b, DisjointPaths q x q q' a b) /\
+            DivergenceWitness q x xb (q, j, r) (q', j', r') t t'.
   Proof.
     intros Hintr Hstep Hstep' Hneq.
     apply label_tag_in_trace_in in Hintr.
@@ -1051,13 +1220,15 @@ Module Uniana.
       destruct k' as [[b m] w].
       enough (b =/= p).
       * specialize (different_tgt_is_branch Hnext Hstep H) as Hbr.
-        destruct Hbr as [x [Hneqx Hbr]]. simpl in Hbr. exists x.
+        destruct Hbr as [x [Hneqx Hbr]].
+        unfold is_branch in Hbr.
+        destruct Hbr as [tt [ff [xb Hbr]]]. exists x, xb.
         split; simpl.
         - unfold DisjointPaths.
           exists (PathInit q). eexists (proj1_sig (path_for_trace _ _ _ Hinq)).
           split; [ firstorder |].
           intros p' Paq' Paa. simpl in Paa. eauto.
-        - exists j, r, u. symmetry in Hneqx.
+        - exists j, r, u. symmetry in Hneqx. unfold is_branch in Hbr.
           repeat split; try eauto; try constructor.
       * intro. rewrite H in *. clear H. eapply ivec_fresh.
         apply Hstep'. apply Hin. eauto using ivec_det.
@@ -1078,12 +1249,12 @@ Module Uniana.
     eff (q', j', r') = Some (p, i, s') -> 
     label_tag_in_trace q j (q', j', r') t' = false ->
     label_tag_in_trace q' j' (q, j, r) t = false ->
-    (exists br x, (exists m w Hinbr Pbrq, 
+    (exists br x xb, (exists m w Hinbr Pbrq, 
                       let Pbrq' := proj1_sig (path_for_trace (q', j', r') t' (br, m, w) Hinbr) in
                       DisjointPaths br x q' q Pbrq' Pbrq) /\
                   (exists m w, In (q, j, r) t (br, m, w)) /\ 
                   (last_inst_of br (q', j', r') t' = last_inst_of br (q, j, r) t ->
-                   DivergenceWitness br x (q', j', r') (q, j, r) t' t)) \/
+                   DivergenceWitness br x xb (q', j', r') (q, j, r) t' t)) \/
     (exists j'', j <> j'' /\ last_inst_of q (q', j', r') t' = Some j'') \/
     (exists j'', j' <> j'' /\ last_inst_of q' (q, j, r) t = Some j'').
   Proof.
@@ -1113,20 +1284,22 @@ Module Uniana.
         inversion_clear Hain'.
         -- destruct H as [[[b m] w] [step Hxin]].
            enough (q =/= b).
-           ** destruct (last_inst_of q (q', j', r') t') as [j''|] eqn:Hinst;
+           ++ destruct (last_inst_of q (q', j', r') t') as [j''|] eqn:Hinst;
                 [ right; eauto using last_instance |].
               assert (Hdiff := different_tgt_is_branch e step H).
-              destruct Hdiff as [x [Hneqx Hbr]]. simpl in Hbr.
-              left. eapply last_inst_not_exists in Hinst. exists a, x. split.
-           ++ exists l, u', Hain.
-              eapply (not_in_trace_exists_path _ _ _ _ Hain) in Hinst. simpl in *.
-              eauto 20 using single_edge_disjoint_path, step_conf_implies_edge. 
-           ++ split.
-              +++ exists l, u. eauto using In.
-              +++ unfold DivergenceWitness.
-                  simpl in Hbr. exists l, u', u. symmetry in Hneqx.
-                  repeat split; eauto; try repeat constructor.
-           ** intro. rewrite H in *. clear H.
+              destruct Hdiff as [x [Hneqx Hbr]]. unfold is_branch in Hbr.
+              destruct Hbr as [tt [ff [xb Hbr]]].
+              left. eapply last_inst_not_exists in Hinst. exists a, x, xb. split.
+              ** exists l, u', Hain.
+                 eapply (not_in_trace_exists_path _ _ _ _ Hain) in Hinst. 
+                 assert (Hbr' : is_branch a x) by (firstorder).
+                 eauto 30 using single_edge_disjoint_path, step_conf_implies_edge. 
+              ** split.
+                 --- exists l, u. eauto using In.
+                 --- unfold DivergenceWitness.
+                     simpl in Hbr. exists l, u', u. symmetry in Hneqx.
+                     repeat split; eauto; try repeat constructor.
+           ++ intro. rewrite H in *. clear H.
               replace m with j in * by (eauto using ivec_det).
               apply not_label_tag_in_trace_in in Hqq'. apply Hqq'; eauto.
         -- injection H; intros; subst. exfalso. apply Hnq. exists u. constructor.
@@ -1134,8 +1307,8 @@ Module Uniana.
           [ right; eauto using last_instance |].
         eapply last_inst_not_exists in Hinst.
         edestruct IHt; eauto; clear IHt.
-        * left. destruct H as [br [x [Hdisj [Hinbr' Hwit]]]].
-          exists br, x. split.
+        * left. destruct H as [br [x [xb [Hdisj [Hinbr' Hwit]]]]].
+          exists br, x, xb. split.
           ** clear Hwit.
              destruct Hdisj as [m [w [Hinbr [Pbra [Hbr Hdisj]]]]].
              exists m, w, Hinbr. eapply step_conf_implies_edge in e.
@@ -1163,8 +1336,8 @@ Module Uniana.
                     repeat split; try repeat constructor; eauto.
         * destruct H as [[l' [Hlneq Hlast]] | [j'' [Hjneq Hlast]]].
           eapply last_inst_in in Hlast. destruct Hlast as [u' Hlast].
-          destruct (branch a) as [[[tt ff] x] | ] eqn:Hbr.
-          ++ left. exists a, x. split.
+          destruct (branch a) as [[[[tt ff] x] xb] | ] eqn:Hbr.
+          ++ left. exists a, x, xb. split.
              ** exists l', u', Hlast.
                 eapply (not_in_trace_exists_path _ _ _ _ Hlast) in Hinst. simpl in *.
                 assert (Hbr': is_branch a x) by (unfold is_branch; eauto).
@@ -1200,21 +1373,21 @@ Module Uniana.
     eff (q, j, r) = Some (p, i, s) ->
     eff (q', j', r') = Some (p, i, s') ->
     q =/= q' ->
-    exists br x, DivergenceWitness br x (q, j, r) (q', j', r') t t' /\ List.In (br, x) (splits p).
+    exists br x xb, DivergenceWitness br x xb (q, j, r) (q', j', r') t t' /\ List.In (br, x) (splits p).
                  
   Proof.
     intros Hcont Hstep Hstep' Hneq.
-    edestruct contains_label_tag_disjoint as [x [Hdis Hwit]]; eauto.
+    edestruct contains_label_tag_disjoint as [x [xb [Hdis Hwit]]]; eauto.
     destruct Hdis as [a [b [Hbr Hdis]]].
-    exists q, x. split; eauto.
+    exists q, x, xb. split; eauto.
     eapply splits_spec. 
     exists q, q'. eexists. eexists.
     repeat split; eauto using step_conf_implies_edge.
   Qed.
 
-  Lemma witness_commutative br x q q' j j' r r' t t' :
-    DivergenceWitness br x (q, j, r) (q', j', r') t t' <->
-    DivergenceWitness br x (q', j', r') (q, j, r) t' t.
+  Lemma witness_commutative br x xb q q' j j' r r' t t' :
+    DivergenceWitness br x xb (q, j, r) (q', j', r') t t' <->
+    DivergenceWitness br x xb (q', j', r') (q, j, r) t' t.
   Proof.
     unfold DivergenceWitness.
     split; intros; destruct H as [l [u [u' [Hneq [Hin [Hin' Hbr]]]]]]; exists l, u', u; firstorder.
@@ -1268,10 +1441,10 @@ Module Uniana.
     + cut (Some k' = Some l'); intros.
       - inversion H; subst.
         cut (step = step'); intros; subst; try eassumption.
-        clear Hprec H. destruct step'. eapply UIP_refl.
+        clear Hprec H. destruct step'. admit.
       - rewrite <- step. eassumption.
     + constructor. eapply IHHprefix. eassumption.
-  Qed.
+  Admitted.
 
   Lemma upi_prefix {b p i s s' q j r q' j' r' k k' kp kp' pstep pstep' t t' tr tr'}
         (step : eff (q, j, r) = Some (p, i, s)) 
@@ -1304,8 +1477,8 @@ Module Uniana.
     upi_prop q' p l l' ltr ltr' ->
     (forall spl x, List.In (spl, x) (splits p) -> upi_prop spl p l l' ltr ltr') ->
     q' =/= q ->
-    exists br x, DivergenceWitness br x k' k tr' tr /\
-                 List.In (br, x) (splits p).
+    exists br x xb, DivergenceWitness br x xb k' k tr' tr /\
+               List.In (br, x) (splits p).
   Proof.
     simpl.
     intros Hpref Hpref' Hupi Hupi' Hspl Hneq.
@@ -1318,23 +1491,23 @@ Module Uniana.
     eapply (upi_prefix Hstep' Hstep) in Hupi'; try eassumption.
     eapply upi_comm in Hupi'.
 
-    cut (exists br x, DivergenceWitness br x (q', j', r') (q, j, r) t' t /\
-                      List.In (br, x) (splits p)); intros.
-    destruct H as [br [x [Hwit Hinbr]]].
+    cut (exists br x xb, DivergenceWitness br x xb (q', j', r') (q, j, r) t' t /\
+                    List.In (br, x) (splits p)); intros.
+    destruct H as [br [x [xb [Hwit Hinbr]]]].
     unfold DivergenceWitness in *.
     destruct Hwit as [m [u [u' [Hneqv [Hin [Hin' Hbr]]]]]].
-    exists br, x. split; [|eassumption].
+    exists br, x, xb. split; [|eassumption].
     exists m, u, u'. repeat split; eauto using in_prefix_in.
 
     destruct (label_tag_in_trace q j (q', j', r') t') eqn:Hin,
              (label_tag_in_trace q' j' (q, j, r) t) eqn:Hin';
       eauto using disjoint_contains.
-    + symmetry in Hneq. edestruct disjoint_contains as [br [x Hcont]]; eauto. 
-      exists br, x. rewrite witness_commutative. eauto.
+    + symmetry in Hneq. edestruct disjoint_contains as [br [x [xb Hcont]]]; eauto. 
+      exists br, x, xb. rewrite witness_commutative. eauto.
     + edestruct not_contains_label_tag_last_common; eauto.
-      - destruct H as [br [x [Hdis [Hinbr Hwit]]]].
+      - destruct H as [br [x [xb [Hdis [Hinbr Hwit]]]]].
         destruct Hinbr as [m' [w' Hinbr]].
-        clear Hupi Hupi'. exists br, x.
+        clear Hupi Hupi'. exists br, x, xb.
         destruct Hdis as [m [w [Hinbr' [Pbrq [Hbr Hdis]]]]]. 
         assert (List.In (br, x) (splits p)). {
           eapply (splits_spec).
@@ -1423,8 +1596,7 @@ Module Uniana.
         eapply in_pred_exists in HIn'; try eassumption.
         destruct HIn as [q [j [r [HIn Hstep]]]].
         destruct HIn' as [q' [j' [r' [HIn' Hstep']]]].
-        assert (List.In q (preds p)) as Hqpred.
-        eapply preds_spec. eauto using step_conf_implies_edge. 
+        assert (List.In q (preds p)) as Hqpred by (eauto using step_conf_implies_edge).
 
         cut (q' = q); intros; subst.
         * cut (j' = j); intros; subst.
@@ -1432,45 +1604,44 @@ Module Uniana.
              ** unfold uni_state_concr. intros.
                 unfold uni_concr in HCuni .
                 eapply (HCuni l l' ltr ltr' Hts Hts' x0 q j); eassumption.
-             ** eapply joinb_true_iff in Hpred; try eassumption.
+             ** eapply join_andb_true_iff in Hpred; try eassumption.
           -- (* unique preceding instances *)
-             eapply joinb_true_iff in Hupi; try eassumption.
+             eapply join_andb_true_iff in Hupi; try eassumption.
              assert (p =/= q) by (symmetry; eauto using step_conf_implies_edge, no_self_loops).
              eapply HCupi; [ eapply Hsem | eapply Hsem' | eassumption | | ].
              all: eauto using precedes_step.
         * (* disjoint paths! *)
           destruct (q == q') as [ Heq | Hneq ]; [ eauto | exfalso ].
-          assert (List.In q' (preds p)) as Hqpred'. {
-            eapply preds_spec. eauto using step_conf_implies_edge. 
-          }
+          assert (List.In q' (preds p)) as Hqpred' by (eauto using step_conf_implies_edge).
           unfold upi_concr in HCupi.
-          eapply (joinb_true_iff _ _ Hupi) in Hqpred'.
-          eapply (joinb_true_iff _ _ Hupi) in Hqpred.
+          eapply (join_andb_true_iff _ _ Hupi) in Hqpred'.
+          eapply (join_andb_true_iff _ _ Hupi) in Hqpred.
           symmetry in Hneq.
           eapply disjoint with (q := q) (step := lstep) in Hneq; eauto.
-          ++ destruct Hneq as [br [y [Hwit Hspl]]].
+          ++ destruct Hneq as [br [y [yb [Hwit Hspl]]]].
              destruct Hwit as [m [u' [u [Hney [Hinbr' [Hinbr _]]]]]].
-             eapply joinb_true_iff in Hsplit; try eapply Hspl. simpl in Hsplit. conv_bool.
+             eapply join_andb_true_iff in Hsplit; try eapply Hspl. simpl in Hsplit. conv_bool.
              destruct Hsplit as [Hsplit _].
              apply Hney.
              cut (u' y = u y); intros. rewrite H. reflexivity.
              eapply HCuni; [ exact Hts' | exact Hts | | | ]; eauto.
           ++ intros.
              eapply HCupi; eauto.
-             eapply (joinb_true_iff _ _ Hsplit) in H.
-             conv_bool. eauto. destruct H as [_ H]. eassumption.
+             eapply (join_andb_true_iff _ _ Hsplit) in H.
+             conv_bool. destruct H as [_ H]. eassumption.
         (* The unch case *)
       - rename Hunch into H.
-        destruct (unch_trans unch p x) as [ u | ] eqn:Hunch; [| inversion H ].
+        eapply join_orb_true_iff in H.
+        destruct H as [u H].
         conv_bool.
-        destruct H as [[Hneq Huni] Hupi].
+        destruct H as [Hneq [[Hneq' Huni] Hupi]].
         specialize (HCunch p i s u x).
         specialize (HCunch' p i s' u x).
         destruct HCunch as [j [r [Hprec Heq]]]; try eassumption.
         destruct HCunch' as [j' [r' [Hprec' Heq']]]; try eassumption.
         rewrite <- Heq. rewrite <- Heq'.
         cut (j' = j); intros.
-        * subst j'. eauto using precedes_step_inv. 
+        * subst j'. eauto using precedes_step_inv.  
         * eapply (HCupi _ _ _ _ Hsem Hsem'); eauto. 
 Qed.
 
