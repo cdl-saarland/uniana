@@ -2,6 +2,22 @@
 Require Import List.
 Require Import Coq.Bool.Bool.
 Require Import Coq.Classes.EquivDec.
+Require Import Coq.Program.Utils.
+
+Lemma list_emp_in : forall {A: Type} l, (forall (a: A), ~ List.In a l) -> l = nil.
+Proof.
+intros.
+induction l.
+- reflexivity.
+- cut (forall a, ~ List.In a l).
+    + intros.
+    apply IHl in H0.
+    subst. specialize (H a).
+    exfalso. simpl in H. auto.
+    + intros. specialize (H a0).
+    simpl in H. auto.
+Qed.
+
 
 Fixpoint list_is_set {A : Type} (l : list A) : Prop := 
   match l with
@@ -32,7 +48,6 @@ Qed.
 Lemma bne_false {A : Type} `{EqDec A} (a b : A) :
   (a <>b b) = false <-> (a === b).
 Proof.
-
   unfold nequiv_decb, equiv_decb. rewrite negb_false_iff. destruct (a == b); firstorder.
 Qed.
 
@@ -46,3 +61,20 @@ Ltac conv_bool := repeat match goal with
                          | [ H: context[_ && _ = true] |- _ ] => rewrite andb_true_iff in H
                          | [ H: context[_ && _ = false] |- _ ] => rewrite andb_false_iff in H
                          end.
+
+Instance : forall A, EqDec A _ -> EqDec (option A) _ :=
+  {
+    equiv_dec x y := match x, y with
+                     | None, None => in_left
+                     | Some a, Some b => if equiv_dec a b then in_left else in_right
+                     | _, _ => in_right
+                     end
+                       
+  }.
++ rewrite e0. reflexivity.
++ intro. eapply c. inversion H. reflexivity.
++ intro. inversion H.
++ intro. inversion H.
++ reflexivity.
+Qed.
+
