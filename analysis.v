@@ -964,32 +964,7 @@ Module Uniana.
         eapply H in Hedge. destruct Hedge as [Hndef Huin].
         edestruct Hconcr as [j' [r' [Hprec Heq]]]; eauto.
         exists j', r'. rewrite Heq. eauto using precedes_succ, no_def_untouched.
-
-        split.
-        * eauto using precedes_succ. admit.
-        * rewrite Heq. eauto using no_def_untouched.
-
-    intros Hin Hunch Hdef.
-    destruct (to == root).
-    - rewrite e in *; clear e.
-      exists i, s.
-      split; [| reflexivity ].
-      rewrite unch_trans_root in Hunch. inversion Hunch. 
-    - assert (Hpred := Hin).
-      eapply in_exists_pred in Hpred; eauto.
-      destruct Hpred as [q [j [r [Hpredin Hpred]]]].
-      assert (Hedge: q --> to) by (eauto using step_conf_implies_edge).
-      eapply unch_trans_lem in Hunch.
-      destruct (Lab_dec' to u) as [ Heq | Hneq ]; subst.
-      + exists i, s. split; [ | reflexivity ]. eapply precedes_self. assumption.
-      + inject Hunch; [ firstorder |].
-        eapply H in Hedge. destruct Hedge as [Hndef Huin].
-        edestruct Hconcr as [j' [r' [Hprec Heq]]]; eauto.
-        exists j', r'. split.
-        * eauto using precedes_succ.
-        * rewrite Heq. eauto using no_def_untouched.
   Qed.
-  *)
 
   Definition lab_tag_matches (l : Lab) (j : Tag) (k : Conf) : bool :=
     match k with
