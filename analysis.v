@@ -1,6 +1,7 @@
 Require Import Coq.Classes.EquivDec.
 Require Import Coq.Classes.RelationClasses.
 Require Import Coq.Bool.Bool.
+Require Import Coq.Logic.Eqdep.
 Require Import Coq.Logic.Eqdep_dec.
 Require Import Coq.Logic.Decidable.
 Require Import Coq.Program.Equality.
@@ -1530,12 +1531,12 @@ Module Uniana.
     intros Hprec Hprefix.
     dependent induction Hprefix; intros l' step'.
     + cut (Some k' = Some l'); intros.
-      - inversion H; subst.
+      - inject H.
         cut (step = step'); intros; subst; try eassumption.
-        clear Hprec H. destruct step'. admit.
+        clear Hprec. destruct step'. apply UIP_refl.
       - rewrite <- step. eassumption.
     + constructor. eapply IHHprefix. eassumption.
-  Admitted.
+  Qed.
 
   Lemma upi_prefix {b p i s s' q j r q' j' r' k k' kp kp' pstep pstep' t t' tr tr'}
         (step : eff (q, j, r) = Some (p, i, s)) 
@@ -1734,7 +1735,25 @@ Module Uniana.
         cut (j' = j); intros.
         * subst j'. eauto using precedes_step_inv.  
         * eapply (HCupi _ _ _ _ Hsem Hsem'); eauto. 
-Qed.
+  Qed.
+
+  Definition paths_add x (paths : forall a b, Path a b -> Prop) :=
+    fun a c => is_def_lab x a \/ exists b (π : Path a b), paths a b π /\ b --> c.
+
+  Definition Join := Lab -> Var -> option Lab.
+
+  Definition join_concr (join : Join) :=
+    fun a c (π : Path a c) => forall x q, join c x = Some q ->
+                                  is_def_lab x a ->
+                                  PathIn q π.
+
+  Definition 
+                              
+
+  Definition join_trans : 
+
+  
+  
 
 End Uniana.
 
