@@ -13,7 +13,7 @@ Module Uniana.
   Parameter Lab : Type.
   Parameter Var : Type.
   Parameter Val : Type.
-  Parameter Tag : Type.
+  Definition Tag := list nat.
 
   Definition State := Var -> Val.
 
@@ -39,7 +39,45 @@ Module Uniana.
 
   Definition UniState := Var -> bool.
 
-  Parameter eff : Conf -> option Conf.
+  
+  Parameter loop_head : Lab -> nat.
+  Parameter loop_exit : Lab -> nat.
+  Parameter is_back_edge : Lab -> Lab -> bool.
+  
+  Fixpoint iter {X : Type} (f : X -> X) (l : X) (n : nat) : X
+    := match n with
+       | O => l
+       | S n => iter f (f l) n
+       end.
+
+  Parameter eff' : Lab * State -> option (Lab * State).
+  
+  Fixpoint eff_tag (k : Conf) : Tag
+    := match k with
+         (p, i, s)
+         => match eff' (p,s) with
+             Some (q , r)
+             => if is_back_edge p q
+               then match i with
+                    | nil => nil
+                    | n :: l => (S n) :: l
+                    end
+               else 
+                    let l' := @iter Tag (@tl nat) i (loop_exit p) in
+                    @iter Tag (@cons nat O) l' (loop_head q)
+                |
+             None => nil
+           end
+       end.
+
+  Definition eff (k : Conf) : option Conf
+    := match k with
+       | (p, i, s) => match eff' (p,s) with
+                  | None => None
+                  | Some (q, r) => Some (q, eff_tag k, r)
+                  end
+       end.
+         
   Parameter abs_uni_eff : UniState -> UniState.
 
   Definition uni_state_concr (uni : UniState) : State -> State -> Prop :=
@@ -194,6 +232,7 @@ Module Uniana.
         split; eauto using In.
   Qed.
 
+
   Parameter ivec_fresh : forall p i s k t, eff k = Some (p, i, s) ->
                                            forall q j r, In k t (q, j, r) ->
                                                          j <> i.
@@ -294,11 +333,11 @@ Module Uniana.
         exists w. symmetry in c. eauto using Precedes.
   Qed.
 
-  Definition unique_preceding q p :=
+(*  Definition unique_preceding q p :=
       forall k k' t t' j j' i r r' s s',
       Precedes k t (q, j, r) (p, i, s) ->
       Precedes k' t' (q, j', r') (p, i, s') ->
-      j' = j.
+      j' = j.*)
 
   Inductive Path : Lab -> Lab -> Type :=
     | PathInit : forall p, Path p p
