@@ -501,7 +501,91 @@ Module Uniana.
         ts k t -> ts k' t' ->
         forall q p, upi q p = true -> upi_prop q p k k' t t'.
 
-  Parameter upi_trans : Upi -> Uni -> Upi.
+  Definition join_andb (l : list bool) := fold_right andb true l.
+
+  Lemma join_andb_true_iff {A : Type} : 
+    forall f (l : list A), (join_andb (map f l) = true) -> (forall x, List.In x l -> f x = true).
+  Proof.
+    intros.
+    unfold join_andb in H.
+    induction l; inversion H0; simpl in H; apply andb_true_iff in H; try subst; destruct H; auto.
+  Qed.
+
+  Definition join_orb (l : list bool) := fold_right orb false l.
+
+  Lemma join_orb_true_iff {A : Type} :
+    forall f (l : list A), (join_orb (map f l) = true) -> (exists x, List.In x l /\ f x = true).
+  Proof.
+    intros.
+    unfold join_orb in H.
+    induction l; simpl in H.
+    - inversion H.
+    - conv_bool.
+      inject H.
+      * exists a. simpl. eauto.
+      * eapply IHl in H0. destruct H0 as [x [Hin Hf]].
+        exists x. simpl. eauto.
+  Qed.
+
+  Parameter has_edge_acyclic : Lab -> Lab -> bool.
+  
+  Notation "p '-a>' q" := (has_edge_acyclic p q = true) (at level 70).
+
+  Parameter has_edge_acyclic_spec : forall p q, p -a> q <-> (p --> q
+                                                      /\ (loop_head q = 0
+                                                         \/ loop_exit p = 0)).
+      
+  Lemma has_edge_acyclic_has_edge : forall p q, p -a> q -> p --> q.
+  Proof.
+    intros. apply has_edge_acyclic_spec in H. firstorder.
+  Qed.
+
+  Inductive AcyPath : Lab -> Lab -> Prop :=
+  | AcyPathInit : forall p : Lab, AcyPath p p
+  | AcyPathStep : forall p q r : Lab, AcyPath p q -> q -a> r -> AcyPath p r.
+
+  Parameter lh_p_le_q : Lab -> Lab -> list (Lab * Var).
+  
+  Parameter lh_p_le_q_spec :
+    forall (p q le : Lab) (x : Var), List.In (le,x) (lh_p_le_q p q)
+                               <-> (exists (lh : Lab),
+                                     le --> lh
+                                     /\ AcyPath lh p
+                                     /\ AcyPath p le
+                                     /\ AcyPath le q
+                                     /\ exists a b, branch le = Some (a, b, x)).
+
+  Parameter loop_splits : Lab -> Lab -> list (Lab * Var).
+
+  Parameter loop_splits_spec :
+    forall (p q s : Lab) (x : Var), List.In (s,x) (loop_splits p q)
+                               <-> (exists (lh le le' : Lab),
+                                     le --> lh
+                                     /\ AcyPath lh p
+                                     /\ AcyPath p le
+                                     /\ AcyPath lh le'
+                                     /\ AcyPath le q
+                                     /\ le =/= le'
+                                     /\ List.In (s,x) (splits le')).
+
+  (*Parameter finite_Lab : 
+    exists (n : nat) (f : Lab -> nat), forall x, f x <= n /\ forall y, f x = f y -> x = y.*)
+
+  Parameter dec_path : forall p q, Path p q + (Path p q -> False).
+
+  Definition precedes (p q : Lab) : bool
+    := if dec_path p q then true else false.
+  
+  Definition upi_trans (upi : Upi) (uni : Uni) : Upi :=
+    fun p
+    => fun q
+      => join_andb (map (fun spl
+                    => match spl with (s,x) => uni s x end)
+                   (filter (fun (spl : Lab * Var)
+                            => let (s,x) := spl in precedes s p) (splits q)
+                           ++ lh_p_le_q p q
+                           ++  loop_splits p q))
+                   && (join_andb (map (upi p) (preds q))).
 
   Parameter upi_correct : forall upi uni t, sem_hyper (upi_concr upi) t -> upi_concr (upi_trans upi uni) t.
   
@@ -789,31 +873,7 @@ Module Uniana.
 
 *)
   
-  Definition join_andb (l : list bool) := fold_right andb true l.
 
-  Lemma join_andb_true_iff {A : Type} : 
-    forall f (l : list A), (join_andb (map f l) = true) -> (forall x, List.In x l -> f x = true).
-  Proof.
-    intros.
-    unfold join_andb in H.
-    induction l; inversion H0; simpl in H; apply andb_true_iff in H; try subst; destruct H; auto.
-  Qed.
-
-  Definition join_orb (l : list bool) := fold_right orb false l.
-
-  Lemma join_orb_true_iff {A : Type} :
-    forall f (l : list A), (join_orb (map f l) = true) -> (exists x, List.In x l /\ f x = true).
-  Proof.
-    intros.
-    unfold join_orb in H.
-    induction l; simpl in H.
-    - inversion H.
-    - conv_bool.
-      inject H.
-      * exists a. simpl. eauto.
-      * eapply IHl in H0. destruct H0 as [x [Hin Hf]].
-        exists x. simpl. eauto.
-  Qed.
 
   Definition uni_trans (uni : Uni) (upi : Upi) (unch : Unch) : Uni :=
     fun p => if p == root then uni root
