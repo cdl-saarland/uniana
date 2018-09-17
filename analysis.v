@@ -299,8 +299,8 @@ Module Uniana.
     inv_tr Hprec.
     - contradiction Hneq; reflexivity.
     - eauto.
-    - exfalso. eapply (ivec_fresh _ _ _ _ _ step0). 
-      eauto using precedes_implies_in_succ. reflexivity.
+    - exfalso. eapply (ivec_fresh _ _ _ _ _ step0); [ |reflexivity].
+      eauto using precedes_implies_in_succ. 
   Qed.
 
   Lemma last_inst_precedes_inv q j r br m w t : 
@@ -1737,23 +1737,6 @@ Module Uniana.
         * eapply (HCupi _ _ _ _ Hsem Hsem'); eauto. 
   Qed.
 
-  Definition paths_add x (paths : forall a b, Path a b -> Prop) :=
-    fun a c => is_def_lab x a \/ exists b (π : Path a b), paths a b π /\ b --> c.
-
-  Definition Join := Lab -> Var -> option Lab.
-
-  Definition join_concr (join : Join) :=
-    fun a c (π : Path a c) => forall x q, join c x = Some q ->
-                                  is_def_lab x a ->
-                                  PathIn q π.
-
-  Definition 
-                              
-
-  Definition join_trans : 
-
-  
-  
 
 End Uniana.
 
