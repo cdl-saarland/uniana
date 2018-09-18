@@ -78,8 +78,33 @@ Instance : forall A, EqDec A _ -> EqDec (option A) _ :=
 + reflexivity.
 Qed.
 
-(** iter *)
+  Definition join_andb (l : list bool) := fold_right andb true l.
 
+  Lemma join_andb_true_iff {A : Type} : 
+    forall f (l : list A), (join_andb (map f l) = true) -> (forall x, List.In x l -> f x = true).
+  Proof.
+    intros.
+    unfold join_andb in H.
+    induction l; inversion H0; simpl in H; apply andb_true_iff in H; try subst; destruct H; auto.
+  Qed.
+
+  Definition join_orb (l : list bool) := fold_right orb false l.
+
+  Lemma join_orb_true_iff {A : Type} :
+    forall f (l : list A), (join_orb (map f l) = true) -> (exists x, List.In x l /\ f x = true).
+  Proof.
+    intros.
+    unfold join_orb in H.
+    induction l; simpl in H.
+    - inversion H.
+    - conv_bool.
+      inject H.
+      * exists a. simpl. eauto.
+      * eapply IHl in H0. destruct H0 as [x [Hin Hf]].
+        exists x. simpl. eauto.
+  Qed.
+
+(** iter *)
 
   Fixpoint iter {X : Type} (f : X -> X) (l : X) (n : nat) : X
     := match n with

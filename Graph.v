@@ -1,7 +1,13 @@
+
+Require Import Coq.Logic.Decidable.
 Require Import Coq.Classes.EquivDec.
 Require Import Coq.Bool.Bool.
 Require Import Lists.ListSet.
 Require Import Coq.Program.Equality.
+Require Import Coq.Program.Utils.
+
+
+Module Graph.
 
   
   Parameter Var : Type.
@@ -100,6 +106,88 @@ Require Import Coq.Program.Equality.
     destruct p; simpl in *; firstorder.
   Qed.
 
+    Lemma path_exists_pred {a b} (p : Path a b) :
+    a <> b -> exists q (p' : Path a q) (e : q --> b),  p = (PathStep a q b p' e).
+  Proof.
+    intros.
+    induction p; [ firstorder |].
+    destruct (from == p).
+    - rewrite e in *. eauto.
+    - eapply IHp in c. eauto. 
+  Qed.
+
+  Lemma path_acyclic_pred {a q} (p : Path a q) b e :
+    acyclic (PathStep a q b p e) -> acyclic p.
+  Proof.
+    intros.
+    dependent induction p; simpl in *; firstorder.
+  Qed.
+
+  Lemma path_acyclic_next {a q p} (π : Path a q) (edge : q --> p) :
+        acyclic π -> acyclic (PathStep a q p π edge) \/ exists (π' : Path a p), acyclic π' /\ forall q, PathIn q π' -> PathIn q π.
+  Proof.
+    intros.
+    simpl.
+    destruct (Path_in_dec p π).
+    - right.
+      clear edge.
+      induction π.
+      + inject p0. exists (PathInit p1). simpl. eauto.
+      + inject p0.
+        * exists (PathStep from p1 to π i). split; try eauto.
+        * eapply path_acyclic_pred in H. destruct (IHπ H H0) as [π' [Hacyc Hin]].
+          exists π'. split; [ assumption |]. intros. simpl. eauto.
+    - left. eauto.
+  Qed.
+  
+  Fixpoint path_concat {a b c} (π : Path a b) (π' : Path b c) : Path a c.
+    refine ((match π' as y in (Path b' c) return
+                  (b' = b -> Path a c) with
+    | PathInit _ => _
+    | PathStep b c c' π' e => _
+    end) (eq_refl b)); intros; subst.
+    - apply π.
+    - eapply (PathStep _ _ _ (path_concat _ _ _ π π') e).
+  Defined.
+  
+  Lemma concat_in1 {a b c} (π : Path a b) (π' : Path b c) :
+    forall q, PathIn q π -> PathIn q (path_concat π π').
+  Proof.
+    intros. induction π'; simpl; eauto.
+  Qed.
+
+  Lemma path_pred {a b} (p : Path a b) :
+    a = b \/ exists pred, pred --> b.
+  Proof.
+    induction p; eauto.
+  Qed.
+
+  Lemma path_nodes_neq {a b} (p : Path a b) r s :
+    PathIn r p ->
+    ~ PathIn s p ->
+    r <> s.
+  Proof.
+    intros Hin Hnin.
+    induction p.
+    - inject Hin. intro. apply Hnin. subst. constructor.
+    - intro. subst. apply Hnin. assumption.
+  Qed.
+
+  (*
+  Definition disjoint {a b c d} (p : Path a b) (p' : Path c d) :=
+    (forall q, PathIn q p -> ~ PathIn q p') /\ (forall q, PathIn q p' -> ~ PathIn q p).
+  *)
+
+  Definition deciabable_PathIn a b (p : Path a b) q :
+    decidable (PathIn q p).
+  Proof.
+    unfold decidable.
+    induction p.
+    + simpl. destruct (q == p); firstorder.
+    + simpl. destruct IHp; firstorder.
+      destruct (q == to); firstorder.
+  Qed.
+
   Parameter has_edge_acyclic : Lab -> Lab -> bool.
   
   Notation "p '-a>' q" := (has_edge_acyclic p q = true) (at level 70).
@@ -120,10 +208,16 @@ Require Import Coq.Program.Equality.
   (*Parameter finite_Lab : 
     exists (n : nat) (f : Lab -> nat), forall x, f x <= n /\ forall y, f x = f y -> x = y.*) 
   
-  Parameter dec_path : forall p q, Path p q + (Path p q -> False).
+  (*Parameter dec_path : forall p q, Path p q + (Path p q -> False).
 
   Definition reaches (p q : Lab) : bool
-    := if dec_path p q then true else false.
+    := if dec_path p q then true else false.*)
+
+  Parameter no_self_loops :
+    forall q p, q --> p -> q =/= p.
+
+  Definition DisjPaths {a b c d} (π : Path a b) (π' : Path c d) :=
+    forall p, (PathIn p π -> ~ PathIn p π') /\ (PathIn p π' -> ~ PathIn p π).
 
 
-
+End Graph.
