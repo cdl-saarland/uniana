@@ -11,26 +11,20 @@ Require Import List.
 Require Import Nat.
 
 Require Import Util.
+Require Import graph.
 
 Module Uniana.
-  Parameter Lab : Type.
-  Parameter Var : Type.
   Parameter Val : Type.
   Definition Tag := list nat.
 
   Definition State := Var -> Val.
 
-  Variable Lab_dec' : forall (l l' : Lab), { l = l' } + { l <> l'}.
-  Variable Lab_dec : EqDec Lab eq.
-  Variable Val_dec : EqDec Var eq.
-  Variable Var_dec : EqDec Val eq.
+  Variable Val_dec : EqDec Val eq.
   Variable Tag_dec : EqDec Tag eq.
   Variable State_dec : EqDec State eq.
 
   Parameter init_uni : Var -> Prop.
   Parameter start_tag : Tag.
-  Parameter all_lab : set Lab.
-  Parameter all_lab_spec : forall l, set_In l all_lab.
 
   Definition States := State -> Prop.
   Definition Coord := prod Lab Tag.
@@ -44,17 +38,6 @@ Module Uniana.
     end.
 
   Definition UniState := Var -> bool.
-
-  
-  Parameter loop_head : Lab -> nat.
-  Parameter loop_exit : Lab -> nat.
-  Parameter is_back_edge : Lab -> Lab -> bool.
-  
-  Fixpoint iter {X : Type} (f : X -> X) (l : X) (n : nat) : X
-    := match n with
-       | O => l
-       | S n => iter f (f l) n
-       end.
 
   Parameter eff' : Lab * State -> option (Lab * State).
   
@@ -95,15 +78,6 @@ Module Uniana.
       eff (p, i, s') = Some (q, j, qs') ->
       uni_state_concr (abs_uni_eff uni) qs qs'.
 
-  Parameter is_def : Var -> Lab -> Lab -> bool.
-  Parameter root : Lab.
-
-  Parameter preds : Lab -> list Lab.
-  Notation "p --> q" := (List.In p (preds q)) (at level 70, right associativity).
-
-  Notation "p -->* q" := (p === q \/ p --> q) (at level 70, right associativity).
-
-  Definition is_def_lab x p := exists q, is_def x q p = true.
 
   Lemma Conf_dec :
     forall (x y : Conf), {x = y} + {x <> y}.
@@ -114,21 +88,11 @@ Module Uniana.
   Qed.
   Instance conf_eq_eqdec : EqDec Conf eq := Conf_dec.
 
-  Lemma Lab_var_dec :
-    forall (x y : (Lab * Var)), { x = y } + { x <> y }.
-  Proof.
-    intros.
-    destruct x as [xa xb], y as [ya yb].
-    destruct ((xa, xb) == (ya, yb)); firstorder.
-  Qed.
-  Program Instance lab_var_eq_eqdec : EqDec (Lab * Var) eq := Lab_var_dec.
 
   Definition start_coord := (root, start_tag) : Coord.
 
   Definition is_effect_on (p q : Lab) :=
     exists i i' s s', eff ((p, i), s) = Some ((q, i'), s').
-
-  Parameter root_no_pred : forall p, ~ p --> root.
 
   Parameter edge_spec :
     forall p q, is_effect_on p q -> p --> q.
@@ -145,8 +109,6 @@ Module Uniana.
     forall p q x, (exists i j s r, eff (p, i, s) = Some (q, j, r) /\ r x <> s x) ->
                   is_def x p q = true.
 
-  Parameter def_edge :
-    forall p q x, is_def x p q = true -> p --> q.
 
   (* TODO *)
   Inductive Tr : Conf -> Type :=
@@ -353,15 +315,6 @@ Module Uniana.
       Precedes k' t' (q, j', r') (p, i, s') ->
       j' = j.*)
 
-  Inductive Path : Lab -> Lab -> Type :=
-    | PathInit : forall p, Path p p
-    | PathStep : forall from p to, Path from p -> (p --> to) -> Path from to.
-
-  Fixpoint PathIn {a b} (q : Lab) (p : Path a b) : Prop :=
-    match p with
-    | PathInit v => q = v
-    | PathStep from mid to p edge => (q = to) \/ PathIn q p
-    end.
 
   Definition step_exists_path {q p} {j i} {r s} (step : eff (q, j, r) = Some (p, i, s)) :=
            (PathStep q q p (PathInit q) (step_conf_implies_edge q p j i r s step)).
@@ -401,51 +354,6 @@ Module Uniana.
     eauto.
   Qed.
 
-  Lemma Path_in_dec {z a} x (p: Path a z) :
-    {PathIn x p} + {~ PathIn x p}.
-  Proof.
-    induction p.
-    + destruct (x == p); firstorder.
-    + simpl in *. destruct (x == to); firstorder.
-  Qed.
-
-  Lemma path_first_in {a} b (p : Path a b) :
-    PathIn a p.
-  Proof.
-    induction p.
-    + constructor.
-    + simpl. eauto.
-  Qed.
-
-  Lemma path_last_in {a} b (p : Path a b) :
-    PathIn b p.
-  Proof.
-    induction p.
-    + constructor.
-    + simpl. left. reflexivity.
-  Qed.
-
-  Fixpoint acyclic {a c} (p : Path a c) : Prop :=
-    match p with
-    | PathInit p => True
-    | PathStep a b c p' e => acyclic p' /\ ~ PathIn c p'
-    end.
-
-  Lemma path_in_single_acyclic {a} (p : Path a a) :
-    acyclic p -> forall q, PathIn q p -> q = a.
-  Proof.
-    intros Hacyc q Hin.
-    dependent induction p; simpl in Hin; [ eauto |].
-    simpl in Hacyc.
-    exfalso. apply Hacyc. eapply path_first_in.
-  Qed.
-
-  Lemma acyclic_prefix {a b c} (p : Path a b) (e : b --> c) :
-    acyclic (PathStep a b c p e) -> acyclic p.
-  Proof.
-    intros.
-    destruct p; simpl in *; firstorder.
-  Qed.
 
   Parameter branch : Lab -> option (Lab * Lab * Var * Var).
 
@@ -527,22 +435,6 @@ Module Uniana.
         exists x. simpl. eauto.
   Qed.
 
-  Parameter has_edge_acyclic : Lab -> Lab -> bool.
-  
-  Notation "p '-a>' q" := (has_edge_acyclic p q = true) (at level 70).
-
-  Parameter has_edge_acyclic_spec : forall p q, p -a> q <-> (p --> q
-                                                      /\ (loop_head q = 0
-                                                         \/ loop_exit p = 0)).
-      
-  Lemma has_edge_acyclic_has_edge : forall p q, p -a> q -> p --> q.
-  Proof.
-    intros. apply has_edge_acyclic_spec in H. firstorder.
-  Qed.
-
-  Inductive AcyPath : Lab -> Lab -> Prop :=
-  | AcyPathInit : forall p : Lab, AcyPath p p
-  | AcyPathStep : forall p q r : Lab, AcyPath p q -> q -a> r -> AcyPath p r.
 
   Parameter lh_p_le_q : Lab -> Lab -> list (Lab * Var).
   
@@ -567,27 +459,21 @@ Module Uniana.
                                      /\ AcyPath le q
                                      /\ le =/= le'
                                      /\ List.In (s,x) (splits le')).
-
-  (*Parameter finite_Lab : 
-    exists (n : nat) (f : Lab -> nat), forall x, f x <= n /\ forall y, f x = f y -> x = y.*)
-
-  Parameter dec_path : forall p q, Path p q + (Path p q -> False).
-
-  Definition precedes (p q : Lab) : bool
-    := if dec_path p q then true else false.
   
   Definition upi_trans (upi : Upi) (uni : Uni) : Upi :=
     fun p
     => fun q
       => join_andb (map (fun spl
                     => match spl with (s,x) => uni s x end)
-                   (filter (fun (spl : Lab * Var)
-                            => let (s,x) := spl in precedes s p) (splits q)
-                           ++ lh_p_le_q p q
+                           (lh_p_le_q p q
                            ++  loop_splits p q))
                    && (join_andb (map (upi p) (preds q))).
 
-  Parameter upi_correct : forall upi uni t, sem_hyper (upi_concr upi) t -> upi_concr (upi_trans upi uni) t.
+  Definition upi_correct :
+    forall upi uni t, sem_hyper (upi_concr upi) t -> upi_concr (upi_trans upi uni) t.
+  Proof.
+    intros.
+  Admitted.    
   
   Definition Unch := Lab -> Var -> set Lab.
 

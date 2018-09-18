@@ -78,3 +78,11 @@ Instance : forall A, EqDec A _ -> EqDec (option A) _ :=
 + reflexivity.
 Qed.
 
+(** iter *)
+
+
+  Fixpoint iter {X : Type} (f : X -> X) (l : X) (n : nat) : X
+    := match n with
+       | O => l
+       | S n => iter f (f l) n
+       end.
