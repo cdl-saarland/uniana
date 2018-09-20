@@ -91,16 +91,33 @@ Module UniquePI.
   Qed.
   
   Lemma upi_correct :
-    forall upi uni t, sem_hyper (upi_concr upi) t -> upi_concr (upi_trans upi uni) t.
+    forall upi uni ts, sem_hyper (upi_concr upi) ts -> upi_concr (upi_trans upi uni) ts.
   Proof.
     intros.
-    unfold sem_hyper in H. destruct H as [ts [Hconcr Htrace]].
-    unfold upi_concr. intros.
-    unfold upi_prop. intros.
-    induction H2; induction H3.
-    Focus 1. Unfocus. Focus 2.
-    apply IHPrecedes. 
-    Unfocus. Focus 3. Unfocus. Focus 5. Unfocus. Focus 6. Unfocus. Focus 9.
+    unfold sem_hyper in H. destruct H as [ts' [Hconcr Htrace]].
+    unfold upi_concr. intros k k' t t' ts_t ts_t' q p upi_trans_true.
+    unfold upi_prop. intros * Hprec1 Hprec2.
+    remember (q,j,r) as q1;
+      remember (q,j',r') as q2;
+      remember (p,i,s) as p1;
+      remember (p,i,s') as p2.
+    revert dependent ts. revert dependent ts'.
+    induction Hprec1; induction Hprec2; intros.
+    - subst k k0. inversion Heqp1; inversion Heqp2. reflexivity.
+    - exfalso. apply H. subst k.
+      inversion Heqp1;
+        inversion Heqp2;
+        inversion Heqq2.
+      rewrite H1. reflexivity.
+    - eapply IHHprec2; eauto.
+      admit.     
+      
+    - exfalso. apply H. subst k.
+      inversion Heqp2;
+        inversion Heqp1;
+        inversion Heqq1.
+      rewrite H1. reflexivity.
+    - admit.
   Admitted.
 
   Lemma upi_prefix {b p i s s' q j r q' j' r' k k' kp kp' pstep pstep' t t' tr tr'}
