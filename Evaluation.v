@@ -95,11 +95,42 @@ Module Evaluation.
     forall p q x, (exists i j s r, eff (p, i, s) = Some (q, j, r) /\ r x <> s x) ->
                   is_def x p q = true.
 
+  Inductive ne_list (A : Type) : Type :=
+  | ne_single : A -> ne_list A
+  | ne_cons : A -> ne_list A -> ne_list A.
 
-  (* TODO *)
-  Inductive Tr : Conf -> Type :=
-    | Init : forall s, Tr (root, start_tag, s)
-    | Step : forall k k', Tr k' -> eff k' = Some k -> Tr k.
+
+  Arguments ne_single {_} _.
+  Arguments ne_cons {_} _ _.
+  
+  Infix ":-:" := ne_cons (at level 70).
+
+  Fixpoint ne_hd {A : Type} (l : ne_list A) : A
+    := match l with
+       | ne_single a => a
+       | ne_cons a _ => a
+       end.
+
+  Fixpoint ne_to_list {A : Type} (l : ne_list A) : list A
+    := match l with
+       | ne_single a => a :: nil
+       | a :-: l => a :: ne_to_list l
+       end.
+
+  Coercion ne_to_list : ne_list >-> list.
+
+  Fixpoint ne_tl {A : Type} (l : ne_list A) : list A
+    := match l with
+       | ne_single _ => nil
+       | _ :-: l => l
+       end.  
+
+  Definition ne_In {A : Type} (a : A) (l : ne_list A) : Prop
+    := a = ne_hd l \/ In a l.
+
+  Inductive Tr : ne_list Conf -> Prop :=
+    | Init : forall s, Tr (ne_single (root, start_tag, s))
+    | Step : forall l k, Tr l -> eff (ne_hd l) = Some k -> Tr (k :-: l).
 
   Ltac inv_dep H Dec := inversion H; subst; 
                         repeat match goal with
@@ -112,36 +143,41 @@ Module Evaluation.
                           | [ H0: @existT Conf _ _ _ = @existT _ _ _ _  |- _ ] => apply inj_pair2_eq_dec in H0; try (apply Conf_dec); subst
                           end.
 
-  Definition Traces := forall k, Tr k -> Prop.
+  Definition trace := {l : ne_list Conf | Tr l}.
+
+  Definition Traces := trace -> Prop.
   Definition Hyper := Traces -> Prop.
 
   (* This is the concrete transformer for sets of traces *)
   Definition sem_trace (ts : Traces) : Traces :=
-    fun k' => fun tr' => exists k tr step, ts k tr /\ tr' = (Step k' k tr step).
+    fun tr => ts tr /\ exists k, Tr (k :-: (` tr)%prg).
 
   (* This is the hypertrace transformer.
      Essentially, it lifts the trace set transformers to set of trace sets *)
   Definition sem_hyper (T : Hyper) : Hyper :=
     fun ts' => exists ts, T ts /\ ts' = sem_trace ts.
 
-   
-  Inductive In : forall k, Tr k -> Conf -> Prop :=
-    | In_At : forall k tr, In k tr k
-    | In_Other : forall l k k' tr' step, In k' tr' l -> In k (Step k k' tr' step) l.
+  Lemma ne_hd_hd {A : Type} (a : A) l : a = ne_hd l -> Some a = hd_error l.
+  Proof.
+    intros H.
+    induction l; cbn in *; subst a; reflexivity.
+  Qed.
 
   Lemma tr_in_dec :
-    forall k' k t, {In k t k'} + {~ In k t k'}.
+    forall (k : Conf) t, {ne_In k t} + {~ ne_In k t}.
   Proof.
-    intros k'.
-    induction t.
-    - destruct (conf_eq_eqdec (start_coord, s) k').
-      + left. rewrite <- e. econstructor.
-      + right. intro. apply c. inv_tr H. reflexivity.
-    - destruct (k == k').
-      + left. rewrite <- e0. constructor.
-      + inversion_clear IHt.
-        * left. econstructor. eassumption.
-        * right. intro. apply H. inv_tr H0; firstorder.
+    intros k t. unfold ne_In.
+    induction t; cbn in *.
+    - destruct (k == a ); [left|right]; eauto.
+      intro H. destruct H as [H | [H | H]]; eauto. apply c. subst a. reflexivity. 
+    - inversion_clear IHt. 
+      + left. destruct H.
+        * right. right. apply ne_hd_hd in H. 
+          induction (ne_to_list t); cbn in *.
+          -- congruence.
+          -- left. inversion H. reflexivity.
+        * tauto.
+      + destruct (k == a); [left|right]; eauto. firstorder.
   Qed.
 
   Lemma in_succ_in k p q t :
@@ -351,10 +387,6 @@ Module Evaluation.
       Precedes k t (q, j, r) (p, i, s) ->
       Precedes k' t' (q, j', r') (p, i, s') ->
       j' = j.*)
-
-
-  Definition step_exists_path {q p} {j i} {r s} (step : eff (q, j, r) = Some (p, i, s)) :=
-           (PathStep q q p (PathInit q) (step_conf_implies_edge q p j i r s step)).
 
   Lemma path_for_trace k tr k' (Hin : In k tr k') :
     { p: Path (lab_of k') (lab_of k) | forall q, PathIn q p -> exists j r, In k tr (q, j, r) }.

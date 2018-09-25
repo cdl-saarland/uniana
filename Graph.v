@@ -3,13 +3,14 @@ Require Import Coq.Logic.Decidable.
 Require Import Coq.Classes.EquivDec.
 Require Import Coq.Bool.Bool.
 Require Import Lists.ListSet.
+Require Import Lists.List.
 Require Import Coq.Program.Equality.
 Require Import Coq.Program.Utils.
 
 
 Module Graph.
 
-  
+    
   Parameter Var : Type.
   Parameter Lab : Type.
 
@@ -49,18 +50,13 @@ Module Graph.
   Program Instance lab_var_eq_eqdec : EqDec (Lab * Var) eq := Lab_var_dec.
 
   (** Paths **)
+
   
-  Inductive Path : Lab -> Lab -> Type :=
-  | PathInit : forall p, Path p p
-  | PathStep : forall from p to, Path from p -> (p --> to) -> Path from to.
+  Inductive Path : list Lab -> Prop :=
+  | PathNil : Path nil
+  | PathCons a b p' : Path (b :: p') -> a --> b -> Path (a :: b :: p').
 
-  Fixpoint PathIn {a b} (q : Lab) (p : Path a b) : Prop :=
-    match p with
-    | PathInit v => q = v
-    | PathStep from mid to p edge => (q = to) \/ PathIn q p
-    end.
-
-    Lemma Path_in_dec {z a} x (p: Path a z) :
+(*  Lemma Path_in_dec {z a} x (p: Path a z) :
     {PathIn x p} + {~ PathIn x p}.
   Proof.
     induction p.
@@ -186,7 +182,7 @@ Module Graph.
     + simpl. destruct (q == p); firstorder.
     + simpl. destruct IHp; firstorder.
       destruct (q == to); firstorder.
-  Qed.
+  Qed.*)
 
   Parameter has_edge_acyclic : Lab -> Lab -> bool.
   
@@ -216,8 +212,8 @@ Module Graph.
   Parameter no_self_loops :
     forall q p, q --> p -> q =/= p.
 
-  Definition DisjPaths {a b c d} (π : Path a b) (π' : Path c d) :=
-    forall p, (PathIn p π -> ~ PathIn p π') /\ (PathIn p π' -> ~ PathIn p π).
+  (*Definition DisjPaths {a b c d} (π : Path a b) (π' : Path c d) :=
+    forall p, (PathIn p π -> ~ PathIn p π') /\ (PathIn p π' -> ~ PathIn p π).*)
 
 
 End Graph.
