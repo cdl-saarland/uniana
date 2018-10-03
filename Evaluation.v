@@ -189,7 +189,7 @@ Module Evaluation.
 
 
   Parameter ivec_fresh : forall p i s k t, eff k = Some (p, i, s) ->
-                                      forall q j r, In k t (q, j, r) ->
+                                      forall j r, In k t (p, j, r) ->
                                                j <> i.
 
   Parameter ivec_det : forall q j r r' p i i' s s',
