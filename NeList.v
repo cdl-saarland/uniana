@@ -64,6 +64,17 @@ Module NeList.
   Inductive Prefix {A : Type} : list A -> list A -> Prop :=
   | PreSame l : Prefix l l
   | PreStep {a l l'} : Prefix l l' -> Prefix l (a :: l').
+
+  Lemma prefix_cons_in {A : Type} `{EqDec A eq} (a : A) l l' : Prefix (a :: l) l' -> In a l'.
+  Proof.
+    intro Q. revert dependent l. induction l'; cbn in *; intros l Q.
+    - inversion Q.
+    - destruct (a == a0).
+      + auto.
+      + inversion Q; subst.
+        * exfalso; apply c; reflexivity.
+        * eauto.
+  Qed.
   
   Inductive Postfix {A : Type} : list A -> list A -> Prop :=
   | PostSame l : Postfix l l
@@ -77,6 +88,25 @@ Module NeList.
   Definition Disjoint {A : Type} (l l' : list A) : Prop :=
     (forall a, In a l -> ~ In a l')
     /\ (forall a, In a l' -> ~ In a l).
+
+  Fixpoint prefix_nincl {A : Type} `{EqDec A eq} (a : A) (l : list A) : list A :=
+    match l with
+    | nil => nil
+    | b :: l => if a == b then l else prefix_nincl a l
+    end.
+
+  Lemma prefix_nincl_prefix {A : Type} `{EqDec A eq} (a : A) l :
+    In a l -> Prefix (a :: prefix_nincl a l) l.
+  Proof.
+    intros Q.
+    induction l; cbn;
+      inversion Q.
+    - subst a0. destruct (a == a); [|exfalso; apply c; reflexivity].
+      econstructor.
+    - destruct (a == a0).
+      + destruct e. econstructor.
+      + econstructor. eauto. 
+  Qed.      
 
   Fixpoint postfix_nincl {A : Type} `{EqDec A eq} (a : A) (l : list A) : list A :=
     match l with

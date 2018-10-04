@@ -7,9 +7,11 @@ Require Import Lists.List.
 Require Import Coq.Program.Equality.
 Require Import Coq.Program.Utils.
 
+Require NeList.
 
 Module Graph.
 
+  Import NeList.NeList.
     
   Parameter Var : Type.
   Parameter Lab : Type.
@@ -28,7 +30,7 @@ Module Graph.
   Parameter preds : Lab -> list Lab.
   Notation "p --> q" := (List.In p (preds q)) (at level 70, right associativity).
 
-  Notation "p -->* q" := (p === q \/ p --> q) (at level 70, right associativity).
+  Notation "p -->? q" := (p === q \/ p --> q) (at level 70, right associativity).
 
   Parameter root : Lab.
   Parameter root_no_pred : forall p, ~ p --> root.
@@ -51,10 +53,16 @@ Module Graph.
 
   (** Paths **)
 
-  
-  Inductive Path : list Lab -> Prop :=
-  | PathNil : Path nil
-  | PathCons a b p' : Path (b :: p') -> a --> b -> Path (a :: b :: p').
+  Inductive Path : Lab -> Lab -> ne_list Lab -> Prop :=
+  | PathSingle a : Path a a (ne_single a)
+  | PathCons {a b c π} : Path a b π -> a --> b -> Path a c (c :<: π).
+
+  Notation "p '-->*' q" := (exists π, Path p q π) (at level 70, right associativity).
+
+(*  Lemma path_last_common r a b π π' :
+    Path r a π -> Path r b π' -> a <> b
+    -> exists s ϕ ϕ', Postfix (ϕ :>: s) π /\ Postfix (ϕ' :>: s) π' /\ Disjoint ϕ ϕ'.
+  Proof.*)
 
 (*  Lemma Path_in_dec {z a} x (p: Path a z) :
     {PathIn x p} + {~ PathIn x p}.
