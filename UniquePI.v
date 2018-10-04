@@ -19,15 +19,21 @@ Module UniquePI.
 
   Definition Uni := Lab -> Var -> bool.
 
-  Definition upi_prop q p k k' t t' :=
+  Definition tag_of (c : Conf) := match c with (_,i,_) => i end.
+
+  Definition upi_prop p q t1 t2 :=
+    forall i j j' r r' q' s s', 
+      Precedes' t1 (q,j,r) (p,i,s) -> Precedes' t2 (q',j',r') (p,i,s') -> j = j'.
+  
+(*  Definition upi_prop q p k k' t t' :=
     forall j j' i r r' s s', Precedes k t (q, j, r) (p, i, s) ->
                              Precedes k' t' (q, j', r') (p, i, s') ->
-                             j' = j.
+                             j' = j.*)
 
   Definition upi_concr (upi : Upi) : Hyper :=
-    fun ts => forall k k' t t',
-        ts k t -> ts k' t' ->
-        forall q p, upi q p = true -> upi_prop q p k k' t t'.
+    fun ts => forall t t',
+        ts t -> ts t' ->
+        forall q p, upi q p = true -> upi_prop q p (`t)%prg (`t')%prg.
 
   Parameter lh_p_le_q : Lab -> Lab -> list (Lab * Var).
   
@@ -62,7 +68,7 @@ Module UniquePI.
                            ++  loop_splits p q))
                   && (join_andb (map (upi p) (preds q))).
 
-    Lemma last_inst_upi_prop {p br m m' w w' q q' i j j' s s' r r' step step' t t'} :
+(*  Lemma last_inst_upi_prop {p br m m' w w' q q' i j j' s s' r r' step step' t t'} :
     let tr := (Step (p, i, s) (q, j, r) t step) in
     let tr' := (Step (p, i, s') (q', j', r') t' step') in
     upi_prop br p (p, i, s) (p, i, s') tr tr' ->
@@ -89,7 +95,7 @@ Module UniquePI.
   Proof.
     unfold upi_prop in *. intros. symmetry. eauto.
   Qed.
-  
+  *)
   Lemma upi_correct :
     forall upi uni ts, sem_hyper (upi_concr upi) ts -> upi_concr (upi_trans upi uni) ts.
   Proof.
@@ -97,6 +103,7 @@ Module UniquePI.
     unfold sem_hyper in H. destruct H as [ts' [Hconcr Htrace]].
     unfold upi_concr. intros k k' t t' ts_t ts_t' q p upi_trans_true.
     unfold upi_prop. intros * Hprec1 Hprec2.
+  Admitted. (*
     remember (q,j,r) as q1;
       remember (q,j',r') as q2;
       remember (p,i,s) as p1;
@@ -118,9 +125,9 @@ Module UniquePI.
         inversion Heqq1.
       rewrite H1. reflexivity.
     - admit.
-  Admitted.
+  Admitted.*)
 
-  Lemma upi_prefix {b p i s s' q j r q' j' r' k k' kp kp' pstep pstep' t t' tr tr'}
+(*  Lemma upi_prefix {b p i s s' q j r q' j' r' k k' kp kp' pstep pstep' t t' tr tr'}
         (step : eff (q, j, r) = Some (p, i, s)) 
         (step' : eff (q', j', r') = Some (p, i, s')) :
     Prefix (q, j, r) tr kp t ->
@@ -132,8 +139,8 @@ Module UniquePI.
     intros Hupi Hprefix Hprefix'.
     repeat split; try assumption; unfold upi_prop in *; intros; eauto using precedes_prefix_inv.
   Qed.
-
-
+*)
+(*
   Lemma disjoint p q q' i j j' s s' r r' l l' k k' tr tr' step step'
         (Hstep : eff (q, j, r) = Some (p, i, s))
         (Hstep' : eff (q', j', r') = Some (p, i, s')) :
@@ -207,5 +214,5 @@ Module UniquePI.
           ++ eauto using Precedes.
           ++ repeat constructor. eassumption.
   Qed.
-  
+  *)
 End UniquePI.

@@ -7,24 +7,15 @@ Require Util Evaluation.
 
 Module Unchanged.
   Import Evaluation.Evaluation Util.
+  Open Scope prg.
 
   Definition Unch := Lab -> Var -> set Lab.
 
   Definition unch_concr (unch : Unch) : Traces :=
-    fun k => fun t => forall to i s u x, In k t (to, i, s) ->
+    fun t => forall to i s u x, In (to, i, s) (`t) ->
                               set_In u (unch to x) ->
-                              exists j r, Precedes k t (u, j, r) (to, i, s) /\
+                              exists j r, Precedes' (`t) (u, j, r) (to, i, s) /\
                                      r x = s x.
-
-  (*
-  Definition unch_concr (unch : Unch) : Traces :=
-    fun k => fun t => forall to i s u x, In k t (to, i, s) ->
-                              set_In u (unch to x) ->
-                              exists d dj dr j r, is_def_lab x d /\
-                                             Precedes k t (d, dj, dr) (u, j, r) -> 
-                                             Precedes k t (u, j, r) (to, i, s) /\
-                                             r x = s x.
-  *)
                            
   Definition unch_join_ptw (d d' : set Lab) := set_inter Lab_dec' d d'. 
 
@@ -47,7 +38,7 @@ Module Unchanged.
   Proof.
     intros.
     cut (preds root = nil); intros.
-    + unfold unch_trans, unch_trans_ptw.
+    + unfold unch_trans, unch_trans_ptw. 
       destruct (Lab_dec' root root); firstorder.
     + cut (forall q, ~ List.In q (preds root)); intros; eauto using list_emp_in, root_no_pred. 
   Qed.
@@ -86,34 +77,63 @@ Module Unchanged.
         destruct (is_def x q to).
         * simpl in Hin. firstorder.
         * eauto using set_add_elim2.
-  Qed. 
+  Qed.
+
+(*  Lemma in_exists_pred p i s k t :
+    forall tr step, proj2_sig tr = Step (`t) k (proj2_sig t) step -> In (p, i, s) tr  ->
+    p <> root ->
+    exists q j r, In (q, j, r) t /\ eff (q, j, r) = Some (p, i, s).
+  Proof.
+    intros k' step H Hneq.
+    dependent induction t; inv_tr H.
+    - exists root, start_tag, s0. split; [ constructor | eauto ].
+    - inv_tr H4. firstorder.
+    - destruct k as [[q j] r]. exists q, j, r.
+      split; [ constructor | eauto ].
+    - eapply IHt in H4; eauto. destruct H4 as [q [j [r [Hin Hstep]]]].
+      exists q, j, r. split; [ constructor |]; eauto.
+  Qed.*)
+
 
   Lemma unch_correct :
-    forall unch k t,
-      sem_trace (unch_concr unch) k t -> unch_concr (unch_trans unch) k t.
+    forall unch t,
+      sem_trace (unch_concr unch) t -> unch_concr (unch_trans unch) t.
   Proof.
-    intros unch k t Hred.
+    intros unch t Hred.
     unfold sem_trace in Hred.
-    destruct Hred as [k' [t' [step [Hconcr H]]]]; subst.
+    destruct Hred as [t' [k' [Hred H]]].
     unfold unch_concr in *.
     intros to i s u x.
     intros Hin Hunch.
     destruct (Lab_dec' to root); subst.
     - unfold unch_trans, unch_trans_ptw in Hunch. destruct (Lab_dec' root root); [ | firstorder ].
-      simpl in Hunch. destruct Hunch; [ | firstorder ]. subst.
-      exists i, s. eauto using precedes_self.
+      simpl in Hunch. destruct Hunch; [ | firstorder ]. subst.      
+      exists i, s. split; eauto. exists nil. split; [|econstructor].
+      apply root_start_tag in Hin as rst. subst i.
+      assert (rp := root_prefix t). destruct rp as [s' rp].
+      apply prefix_cons_in in rp as rp'. eapply tag_inj in rp'; [|apply Hin].
+      subst s'. assumption.
     - assert (Hpred := Hin).
+      rewrite H in Hpred.
       eapply in_exists_pred in Hpred; try eassumption.
-      destruct Hpred as [q [j [r [Hpredin Hpred]]]].
-      assert (Hedge: q --> to) by (eauto using step_conf_implies_edge).
-      eapply unch_trans_lem in Hunch; try eassumption.
-      destruct (Lab_dec' to u) as [ | Hneq ]; subst.
-      + exists i, s. split; [ | reflexivity ].  eauto using precedes_self.
-      + destruct Hunch; [ firstorder |].
-        eapply H in Hedge. destruct Hedge as [Hndef Huin].
-        edestruct Hconcr as [j' [r' [Hprec Heq]]]; eauto.
-        exists j', r'. rewrite Heq. eauto using precedes_succ, no_def_untouched.
+      + destruct Hpred as [q [j [r [Hpredin Hpred]]]].
+        assert (Hedge: q --> to) by (eauto using step_conf_implies_edge).
+        eapply unch_trans_lem in Hunch; try eassumption.
+        destruct (Lab_dec' to u) as [ | Hneq ]; subst.
+        * exists i, s. split; [ | reflexivity ]. eauto using precedes_self.
+        * destruct Hunch; [ firstorder |].
+          eapply H0 in Hedge. destruct Hedge as [Hndef Huin].
+          edestruct Hred as [j' [r' [Hprec Heq]]]; eauto.
+          exists j', r'. rewrite Heq.
+          split; [|eauto using no_def_untouched]. rewrite H. eapply precedes_succ; eauto.        
+      + clear - H. destruct t; cbn in H; inversion t; subst x.
+        * congruence.
+        * inversion H2. subst; eauto.
   Qed.
+  
+
+
+  
 
   (*
   Lemma unch_dom (u : Unch) x l l' :

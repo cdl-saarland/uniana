@@ -7,12 +7,12 @@ Require Import Nat.
 Require Import Bool.Bool.
 Require Import Coq.Logic.Eqdep_dec.
 
-Require Graph.
+Require Graph NeList.
 Require Import Util.
 
 Module Evaluation.
 
-  Export Graph.Graph.
+  Export Graph.Graph NeList.NeList.
 
   Parameter Val : Type.
   Definition Tag := list nat.
@@ -37,7 +37,7 @@ Module Evaluation.
       ((p, i), s) => p
     end.
 
-    Parameter eff' : Lab * State -> option (Lab * State).
+  Parameter eff' : Lab * State -> option (Lab * State).
   
   Fixpoint eff_tag (k : Conf) : Tag
     := match k with
@@ -95,42 +95,9 @@ Module Evaluation.
     forall p q x, (exists i j s r, eff (p, i, s) = Some (q, j, r) /\ r x <> s x) ->
                   is_def x p q = true.
 
-  Inductive ne_list (A : Type) : Type :=
-  | ne_single : A -> ne_list A
-  | ne_cons : A -> ne_list A -> ne_list A.
-
-
-  Arguments ne_single {_} _.
-  Arguments ne_cons {_} _ _.
-  
-  Infix ":-:" := ne_cons (at level 70).
-
-  Fixpoint ne_hd {A : Type} (l : ne_list A) : A
-    := match l with
-       | ne_single a => a
-       | ne_cons a _ => a
-       end.
-
-  Fixpoint ne_to_list {A : Type} (l : ne_list A) : list A
-    := match l with
-       | ne_single a => a :: nil
-       | a :-: l => a :: ne_to_list l
-       end.
-
-  Coercion ne_to_list : ne_list >-> list.
-
-  Fixpoint ne_tl {A : Type} (l : ne_list A) : list A
-    := match l with
-       | ne_single _ => nil
-       | _ :-: l => l
-       end.  
-
-  Definition ne_In {A : Type} (a : A) (l : ne_list A) : Prop
-    := a = ne_hd l \/ In a l.
-
   Inductive Tr : ne_list Conf -> Prop :=
     | Init : forall s, Tr (ne_single (root, start_tag, s))
-    | Step : forall l k, Tr l -> eff (ne_hd l) = Some k -> Tr (k :-: l).
+    | Step : forall l k, Tr l -> eff (ne_front l) = Some k -> Tr (k :<: l).
 
   Ltac inv_dep H Dec := inversion H; subst; 
                         repeat match goal with
@@ -145,30 +112,32 @@ Module Evaluation.
 
   Definition trace := {l : ne_list Conf | Tr l}.
 
+  Open Scope prg.
+
   Definition Traces := trace -> Prop.
   Definition Hyper := Traces -> Prop.
 
   (* This is the concrete transformer for sets of traces *)
   Definition sem_trace (ts : Traces) : Traces :=
-    fun tr => ts tr /\ exists k, Tr (k :-: (` tr)%prg).
+    fun tr' => exists tr k', ts tr /\ `tr' = (k' :<: `tr).
 
   (* This is the hypertrace transformer.
      Essentially, it lifts the trace set transformers to set of trace sets *)
   Definition sem_hyper (T : Hyper) : Hyper :=
     fun ts' => exists ts, T ts /\ ts' = sem_trace ts.
 
-  Lemma ne_hd_hd {A : Type} (a : A) l : a = ne_hd l -> Some a = hd_error l.
+  Lemma ne_hd_hd {A : Type} (a : A) l : a = ne_front l -> Some a = hd_error l.
   Proof.
     intros H.
     induction l; cbn in *; subst a; reflexivity.
   Qed.
 
-  Lemma tr_in_dec :
-    forall (k : Conf) t, {ne_In k t} + {~ ne_In k t}.
+(*  Lemma tr_in_dec :
+    forall (k : Conf) t, {In k t} + {~ In k t}.
   Proof.
-    intros k t. unfold ne_In.
+    intros k t. unfold In.
     induction t; cbn in *.
-    - destruct (k == a ); [left|right]; eauto.
+    - destruct (k == a); [left|right]; eauto.
       intro H. destruct H as [H | [H | H]]; eauto. apply c. subst a. reflexivity. 
     - inversion_clear IHt. 
       + left. destruct H.
@@ -178,9 +147,9 @@ Module Evaluation.
           -- left. inversion H. reflexivity.
         * tauto.
       + destruct (k == a); [left|right]; eauto. firstorder.
-  Qed.
+  Qed.*)
 
-  Lemma in_succ_in k p q t :
+(*  Lemma in_succ_in k p q t :
     In k t p -> p =/= k -> eff p = Some q -> In k t q.
   Proof.
     intros.
@@ -190,9 +159,9 @@ Module Evaluation.
       inv_tr H; firstorder.
       rewrite H1 in step1. injection step1; intros. symmetry in H3. subst. constructor.
     + constructor. eauto.
-  Qed.
+  Qed.*)
 
-  Lemma in_succ_exists p q i j s r t :
+(*  Lemma in_succ_exists p q i j s r t :
     In (p, i, s) t (q, j, r) -> (exists k', eff (q, j, r) = Some k' /\ In (p, i, s) t k') \/ (p, i, s) = (q, j, r).
   Proof.
     intros Hin.
@@ -203,9 +172,9 @@ Module Evaluation.
     destruct IHt; eauto.
     + destruct H as [k' H]. exists k'. split; try constructor; firstorder.
     + injection H; intros; subst. exists (p, i, s). firstorder. constructor.
-  Qed.
+  Qed.*)
 
-  Lemma in_pred_exists p i s k t :
+(*  Lemma in_pred_exists p i s k t :
     forall k' step, In k' (Step k' k t step) (p, i, s) ->
     p =/= root ->
     exists q j r, In k t (q, j, r) /\ eff (q, j, r) = Some (p, i, s).
@@ -222,50 +191,54 @@ Module Evaluation.
         exists q, j, r. 
         split; eauto using In.
   Qed.
+*)
 
-
-  Parameter ivec_fresh : forall p i s k t, eff k = Some (p, i, s) ->
-                                      forall q j r, In k t (q, j, r) ->
-                                               j <> i.
+  Parameter ivec_fresh : forall p i s (t : trace),
+      eff (ne_front (`t)) = Some (p, i, s) -> forall j r, In (p, j, r) (`t) -> j <> i.
 
   Parameter ivec_det : forall q j r r' p i i' s s',
       eff (q, j, r) = Some (p, i, s) ->
       eff (q, j, r') = Some (p, i', s') ->
       i = i'.
+                                                    
+  Inductive Precedes : list Conf -> Conf -> Prop :=
+  | Pr_in : forall k l, Precedes (k :: l) k
+  | Pr_cont : forall c k l, lab_of c <> lab_of k -> Precedes l k -> Precedes (c :: l) k.
 
-  Inductive Precedes : forall k, Tr k -> Conf -> Conf -> Prop :=
+  Definition Precedes' (l : list Conf) (k k' : Conf) : Prop :=
+    exists l', Prefix (k' :: l') l /\ Precedes (k' :: l') k.
+
+(*  Definition PrecedesE (l : list Conf) (k k' : Conf) : Prop :=
+    exists l', Prefix (k' :: l') l /\ Precedes (k' :: l') k.*)
+  
+  
+(*  Inductive Precedes : forall k, Tr k -> Conf -> Conf -> Prop :=
   | Pr_in : forall k t, Precedes k t k k
   | Pr_cont : forall q q' p i j j' r' r s t step, Precedes (q', j', r') t (q, j, r) (q', j', r') -> 
                                                   p =/= q ->
                                                   Precedes (p, i, s) (Step (p, i, s) (q', j', r') t step) (q, j, r) (p, i, s)
   | Pr_other : forall k' k t c c' step, Precedes k t c c' ->
-                                        Precedes k' (Step k' k t step) c c'.
+                                        Precedes k' (Step k' k t step) c c'.*)
 
-
-  Lemma precedes_implies_in_pred k t k' k'' :
-    Precedes k t k' k'' -> In k t k'.
+  Lemma precedes_implies_in_pred k t :
+    Precedes t k -> In k t.
   Proof.
     intros H.
     dependent induction t.
-    - inv_tr H. constructor.
-    - inv_tr H; eauto using In.
+    - inv_tr H. 
+    - inv_tr H; eauto using In; cbn; eauto.
   Qed.
 
-  Lemma precedes_implies_in_succ k t k' k'' :
+(*  Lemma precedes_implies_in_succ k t k' k'' :
     Precedes k t k' k'' -> In k t k''.
   Proof.
     intros H.
     dependent induction t.
     - inv_tr H. constructor.
     - inv_tr H; eauto using In.
-  Qed.
-
-  Inductive Prefix : forall k, Tr k -> forall k', Tr k' -> Prop :=
-  | PrefixSame : forall k t, Prefix k t k t
-  | PrefixStep : forall k'' k' k step t t', Prefix k t k' t' ->
-                                       Prefix k t k'' (Step k'' k' t' step).
+  Qed.*)
     
-  Lemma precedes_prefix k t c c' : 
+(*  Lemma precedes_prefix k t c c' : 
     Precedes k t c c' ->
     exists tr, Prefix c' tr k t /\ Precedes c' tr c c'.
   Proof.
@@ -295,11 +268,12 @@ Module Evaluation.
       - rewrite <- step. eassumption.
     + constructor. eapply IHHprefix. eassumption.
   Qed.
-
-    Lemma in_prefix k t c : 
-    In k t c ->
-    exists pt, Prefix c pt k t /\
-          In c pt c.
+ *)
+  
+  (*Lemma in_prefix {A : Type} t (c : A) : 
+    In c t ->
+    exists pt, Prefix pt t /\
+          In c pt.
   Proof.
     intros.
     dependent induction t.
@@ -316,15 +290,15 @@ Module Evaluation.
     In k' t' c.
   Proof.
     intros Hin Hprefix. dependent induction Hprefix; eauto using In.
-  Qed.
+  Qed.*)
 
-  Fixpoint last_inst_of (l : Lab) (k : Conf) (t : Tr k) : option Tag :=
+(*  Fixpoint last_inst_of (l : Lab) (k : Conf) (t : trace) : option Tag :=
     match t with
     | (Init s) => if l == root then Some start_tag else None
     | (Step (q, j, _) k t _) => if (l == q) then Some j else last_inst_of l k t
-    end.
+    end.*)
 
-  Lemma last_inst_precedes_inv_helper q j r q' j' r' t e br m w :
+(*  Lemma last_inst_precedes_inv_helper q j r q' j' r' t e br m w :
     Precedes (q, j, r) (Step (q, j, r) (q', j', r') t e)
             (br, m, w) (q, j, r) ->
     br =/= q ->
@@ -436,18 +410,28 @@ Module Evaluation.
     exists i, i', s, s'. 
     assumption.
   Qed.
+ *)
 
-  Lemma precedes_self k t :
-    forall c, In k t c -> Precedes k t c c.
+  Lemma precedes_cons (k k' : Conf) l : Precedes' l k' k' -> Precedes' (k :: l) k' k'.
   Proof.
-    intros c H.
-    destruct c as [[p i] s].
-    dependent induction t.
-    + inv_tr H. constructor.
-    + destruct k' as [[q j] r].
-      inv_tr H; eauto using Precedes.
+    intro H. destruct H as [l' [H1 H2]].
+    unfold Precedes'.
+    exists l'. split; econstructor. eauto.
   Qed.
-
+  
+  Lemma precedes_self c t :
+    In c t -> Precedes' t c c.
+  Proof.
+    intros H.
+    destruct c as [[p i] s].
+    induction t.
+    + inv_tr H. 
+    + destruct a as [[q j] r].
+      inv_tr H; eauto using Precedes.
+      * rewrite H0. exists t. split; econstructor.
+      * eapply precedes_cons; eauto. 
+  Qed.
+(*
   Lemma precedes_step_inv :
     forall k k' t step p s, Precedes k' (Step k' k t step) p s ->
                             lab_of p =/= lab_of s ->
@@ -465,28 +449,70 @@ Module Evaluation.
   Proof.
     intros. dependent induction t; inv_tr H; eauto.
   Qed.
-
-  Lemma in_exists_pred p i s k t :
-    forall k' step, In k' (Step k' k t step) (p, i, s) ->
+*)
+  Lemma in_exists_pred p i s k (t : trace) :
+    In (p, i, s) (k :<: `t) ->
+    eff (ne_front (`t)) = Some k ->
     p <> root ->
-    exists q j r, In k t (q, j, r) /\ eff (q, j, r) = Some (p, i, s).
+    exists q j r, In (q, j, r) (`t) /\ eff (q, j, r) = Some (p, i, s).
   Proof.
-    intros k' step H Hneq.
-    dependent induction t; inv_tr H.
-    - exists root, start_tag, s0. split; [ constructor | eauto ].
-    - inv_tr H4. firstorder.
-    - destruct k as [[q j] r]. exists q, j, r.
-      split; [ constructor | eauto ].
-    - eapply IHt in H4; eauto. destruct H4 as [q [j [r [Hin Hstep]]]].
-      exists q, j, r. split; [ constructor |]; eauto.
+    intros H Heff Hneq.
+    destruct t as [l tr]; cbn in H, Heff. unfold "`".
+      (*revert dependent p; revert dependent i; revert dependent s;*)
+    destruct H; [subst k| revert dependent k];
+      dependent induction l; inversion tr; subst; intros. 
+    - exists root, start_tag, s0. split; [ constructor | eauto ]; eauto.
+    - cbn in Heff, H2. destruct a as [[q j] r]. exists q,j,r. firstorder. cbn. left; reflexivity.
+    - exfalso. inversion H; inversion H0. subst p; contradiction.
+    - destruct H.
+      + subst a. remember (ne_front l) as qjr. destruct qjr as [[q j] r].
+        exists q,j,r. split; [econstructor 2 | eauto]. setoid_rewrite Heqqjr.
+        clear; destruct l; cbn; eauto.
+      + eapply IHl in H2; eauto. destruct H2 as [q [j [r [Hin Hstep]]]].
+        exists q, j, r. split; eauto. econstructor 2; eauto.
   Qed.
 
-  Lemma precedes_succ k t :
+  Lemma root_prefix (t : trace) : exists s, Prefix ((root, start_tag, s) :: nil) (`t).
+  Proof.
+    destruct t as [l tr].
+    induction l; inversion tr; subst; cbn in *.
+    - exists s. econstructor.
+    - destruct IHl as [s IHl']; eauto. exists s. econstructor; eauto.
+  Qed.
+  
+  Lemma root_start_tag s i (t : trace) : In (root, i, s) (`t) -> i = start_tag.
+  Proof.
+    intros Hin.
+    revert dependent i.
+    destruct t as [l tr]. induction l; inversion tr; subst; cbn in *; intros i Hin.
+    - destruct Hin as [Hin|Hin]; [inversion Hin; eauto|contradiction].
+    - destruct Hin.
+      + exfalso. destruct (ne_front l) as [[q j] r]. eapply root_no_pred. subst a.
+        apply edge_spec. unfold is_effect_on. exists j,i,r,s. eapply H2.
+      + eapply IHl; eauto.
+  Qed.
+  
+  Lemma tag_inj p i s r (t : trace) : In (p,i,s) (`t) -> In (p,i,r) (`t) -> s = r.
+    intros His Hir.
+    destruct (s == r); [destruct e; reflexivity|].
+    eapply ivec_fresh with (i:=i) in His as His';[contradiction|].    
+  Admitted.
+
+(*  Lemma precedes_succ k t :
     forall q j r q' j' r' p i s k' step, Precedes k t (q', j', r') (q, j, r) ->
                                          eff (q, j, r) = Some (p, i, s) ->
                                          p =/= q' ->
                                          Precedes k' (Step k' k t step) (q', j', r') (p, i, s).
+*)
+  
+  Lemma precedes_succ (t : trace) :
+    forall q j r q' j' r' p i s k', Precedes' (`t) (q', j', r') (q, j, r) ->
+                                    eff (q, j, r) = Some (p, i, s) ->
+                                    p =/= q' ->
+                                    Precedes' (k' :<: (`t)) (q', j', r') (p, i, s).
   Proof.
+  Admitted.
+  (*
     dependent induction t.
     - intros.
       destruct k' as [[p' i'] s'].
@@ -522,7 +548,7 @@ Module Evaluation.
         rewrite <- step. eassumption.
       * eauto using Precedes.
   Qed.
-    
+    *)
   Lemma no_def_untouched :
     forall p q x, is_def x q p = false -> forall i j s r, eff (q, j, r) = Some (p, i, s) -> r x = s x.
   Proof.
@@ -542,7 +568,7 @@ Module Evaluation.
       rewrite H in H1.
       inversion H1.
   Qed.
-
+(*
     
   Definition lab_tag_matches (l : Lab) (j : Tag) (k : Conf) : bool :=
     match k with
@@ -754,7 +780,7 @@ Module Evaluation.
       apply Is_true_eq_true in H0.
       apply label_tag_in_trace_in; assumption.
   Qed.
-
+*)
   Definition lift (tr : Traces) : Hyper :=
     fun ts => ts = tr.
 

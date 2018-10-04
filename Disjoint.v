@@ -35,24 +35,23 @@ Module Disjoint.
   Parameter in_out_spec :
    forall p q q', (exists x, is_branch p x) -> q --> p -> q' --> p -> q = q'.
 
-  Definition DisjointPaths (s : Lab) (x : Var) (t f : Lab) (a : Path s t) (b : Path s f) :=
-    is_branch s x /\
-    (forall p, PathIn p a -> PathIn p b -> p = s).
+  Definition DisjointBranch (s : Lab) (x : Var) (t f : Lab) π ϕ :=
+    Path s t π /\ Path s f ϕ /\ is_branch s x /\ Disjoint π ϕ.
 
   Parameter splits : Lab -> list (Lab * Var).
 
-  Parameter splits_spec : forall conv br x, (exists qt qf a b, qt -->* conv /\
-                                                               qf -->* conv /\
-                                                               DisjointPaths br x qt qf a b) <->
-                                       List.In (br, x) (splits conv).
+  Parameter splits_spec : forall conv br x,
+      (exists qt qf π ϕ, qt -->* conv /\ qf -->* conv /\
+                    DisjointBranch br x qt qf π ϕ) <->
+      List.In (br, x) (splits conv).
   
-  Definition DivergenceWitness br x xb k k' t t' := 
-    (exists l u u', val_true (u x) =/= val_true (u' x) /\
-                    In k t (br, l, u) /\
-                    In k' t' (br, l, u') /\
+  Definition DivergenceWitness (br : Lab) x xb t t' := 
+    (exists (l : Tag) u u', val_true (u x) =/= val_true (u' x) /\
+                    In (br, l, u) t /\
+                    In (br, l, u') t' /\
                     exists tt ff, branch br = Some (tt, ff, x, xb)).
 
-  Lemma different_tgt_is_branch {br : Lab} {i : Tag} {s s' : State} {k k' : Conf} :
+(*  Lemma different_tgt_is_branch {br : Lab} {i : Tag} {s s' : State} {k k' : Conf} :
     eff (br, i, s) = Some k ->
     eff (br, i, s') = Some k' ->
     lab_of k =/= lab_of k' ->
@@ -70,17 +69,17 @@ Module Disjoint.
           subst; firstorder.
       - unfold is_branch. firstorder.
     + specialize (Hspec i i s s' k k' Hstep Hstep'). firstorder.
-  Qed.
+  Qed.*)
 
-  Lemma single_edge_disjoint_path (q a q' : Lab) x (p : Path a q') :
+(*  Lemma single_edge_disjoint_path (q a q' : Lab) x (p : Path a q') :
     is_branch a x ->
     ~ PathIn q p ->
     a --> q -> 
-    exists p', DisjointPaths a x q' q p p'.
+    exists p', DisjointBranch a x q' q p p'.
   Proof.
     intros Hbr Hnin Hedge.
     exists (PathStep a a q (PathInit a) Hedge).
-    unfold DisjointPaths.
+    unfold DisjointBranch.
     split. assumption.
     intros p' H H'.
     simpl in H'.
@@ -92,11 +91,11 @@ Module Disjoint.
         (step : eff (a, l, u) = Some (q, j, r)) (p : Path a q') :
     is_branch a x ->
     ~ PathIn q p ->
-    DisjointPaths a x q' q p (step_exists_path step).
+    DisjointBranch a x q' q p (step_exists_path step).
   Proof.
     simpl.
     intros Hbr Hnin.
-    unfold DisjointPaths.
+    unfold DisjointBranch.
     split; try assumption.
     intros p' H H'.
     simpl in H'.
@@ -109,7 +108,7 @@ Module Disjoint.
     eff (q, j, r) = Some (p, i, s) ->
     eff (q', j', r') = Some (p, i, s') ->
     q =/= q' \/ j =/= j' ->
-    exists x xb, (exists a b, DisjointPaths q x q q' a b) /\
+    exists x xb, (exists a b, DisjointBranch q x q q' a b) /\
             DivergenceWitness q x xb (q, j, r) (q', j', r') t t'.
   Proof.
     intros Hintr Hstep Hstep' Hneq.
@@ -125,7 +124,7 @@ Module Disjoint.
         unfold is_branch in Hbr.
         destruct Hbr as [tt [ff [xb Hbr]]]. exists x, xb.
         split; simpl.
-        - unfold DisjointPaths.
+        - unfold DisjointBranch.
           exists (PathInit q). eexists (proj1_sig (path_for_trace _ _ _ Hinq)).
           split; [ firstorder |].
           intros p' Paq' Paa. simpl in Paa. eauto.
@@ -152,7 +151,7 @@ Module Disjoint.
     label_tag_in_trace q' j' (q, j, r) t = false ->
     (exists br x xb, (exists m w Hinbr Pbrq, 
                       let Pbrq' := proj1_sig (path_for_trace (q', j', r') t' (br, m, w) Hinbr) in
-                      DisjointPaths br x q' q Pbrq' Pbrq) /\
+                      DisjointBranch br x q' q Pbrq' Pbrq) /\
                   (exists m w, In (q, j, r) t (br, m, w)) /\ 
                   (last_inst_of br (q', j', r') t' = last_inst_of br (q, j, r) t ->
                    DivergenceWitness br x xb (q', j', r') (q, j, r) t' t)) \/
@@ -292,6 +291,6 @@ Module Disjoint.
   Proof.
     unfold DivergenceWitness.
     split; intros; destruct H as [l [u [u' [Hneq [Hin [Hin' Hbr]]]]]]; exists l, u', u; firstorder.
-  Qed.
+  Qed.*)
     
 End Disjoint.
