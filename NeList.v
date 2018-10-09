@@ -17,7 +17,7 @@ Module NeList.
   Arguments ne_single {_} _.
   Arguments ne_cons {_} _ _.
   
-  Infix ":<:" := ne_cons (at level 70).
+  Infix ":<:" := ne_cons (at level 70,right associativity).
 
   Fixpoint ne_conc {A : Type} (l l' : ne_list A) : ne_list A :=
     match l with
