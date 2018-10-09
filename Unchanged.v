@@ -125,7 +125,8 @@ Module Unchanged.
           eapply H0 in Hedge. destruct Hedge as [Hndef Huin].
           edestruct Hred as [j' [r' [Hprec Heq]]]; eauto.
           exists j', r'. rewrite Heq.
-          split; [|eauto using no_def_untouched]. rewrite H. eapply precedes_succ; eauto.        
+          split; [|eauto using no_def_untouched]. rewrite H. eapply precedes_succ; eauto.
+          rewrite <-H. destruct t; eauto.
       + clear - H. destruct t; cbn in H; inversion t; subst x.
         * congruence.
         * inversion H2. subst; eauto.

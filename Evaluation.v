@@ -491,45 +491,128 @@ Module Evaluation.
         apply edge_spec. unfold is_effect_on. exists j,i,r,s. eapply H2.
       + eapply IHl; eauto.
   Qed.
+
+  Lemma trace_destr_in_in k k' (t : trace) :
+    In k (`t) -> In k' (`t)
+    -> exists (t': trace), ne_front (`t') = k' /\ In k (`t') \/ ne_front (`t') = k /\ In k' (`t').
+  Proof.
+    intros Hin Hin'.
+    destruct t as [t tr]. cbn in *.
+    induction t; inversion tr; cbn in *.
+    - destruct Hin; [|contradiction]; destruct Hin'; [|contradiction].
+      exists (exist _ (ne_single a) tr). cbn. tauto.
+    - destruct Hin, Hin'; [| | |eapply IHt; eauto]; subst.
+      + exists (exist _ (k' :<: t) tr ). cbn. tauto.
+      + exists (exist _ (k :<: t) tr). cbn. tauto.
+      + exists (exist _ (k' :<: t) tr). cbn. tauto.
+  Qed.
+
+  Ltac trace_proj t :=
+    lazymatch goal with
+    | [ H : Tr t |- _ ] =>
+      replace t with ( ` (exist Tr t H)) in * by (cbn; reflexivity)
+    end.
   
   Lemma tag_inj p i s r (t : trace) : In (p,i,s) (`t) -> In (p,i,r) (`t) -> s = r.
-    intros His Hir.
-    destruct (s == r); [destruct e; reflexivity|].
-    eapply ivec_fresh with (i:=i) in His as His';[contradiction|].    
-  Admitted.
+  Proof.
+    intros His Hir. eapply trace_destr_in_in in His; eauto.
+    destruct His as [[t' tr'] [[Hf Hin]|[Hf Hin]]]; cbn in *.
+    - induction t'; inversion tr'.
+      + cbn in Hin,Hf. destruct Hin; [|contradiction]. subst a. inversion H. reflexivity.
+      + cbn in *. subst. destruct Hin; [inversion H; reflexivity|].
+        trace_proj t'.
+        eapply ivec_fresh in H2; eauto. contradiction.
+    - induction t'; inversion tr'.
+      + cbn in Hin,Hf. destruct Hin; [|contradiction]. subst a. inversion H. reflexivity.
+      + cbn in *. subst a. destruct Hin; [inversion H3; reflexivity|].
+        trace_proj t'. eapply ivec_fresh in H2; eauto. contradiction.
+  Qed.
 
 (*  Lemma precedes_succ k t :
     forall q j r q' j' r' p i s k' step, Precedes k t (q', j', r') (q, j, r) ->
                                          eff (q, j, r) = Some (p, i, s) ->
                                          p =/= q' ->
                                          Precedes k' (Step k' k t step) (q', j', r') (p, i, s).
-*)
-  
-  Lemma precedes_succ (t : trace) :
-    forall q j r q' j' r' p i s k', Precedes' (`t) (q', j', r') (q, j, r) ->
-                                    eff (q, j, r) = Some (p, i, s) ->
-                                    p =/= q' ->
-                                    Precedes' (k' :<: (`t)) (q', j', r') (p, i, s).
+ *)
+
+  Fixpoint nlcons {A : Type} (a : A) l :=
+    match l with
+    | nil => ne_single a
+    | b :: l => a :<: (nlcons b l)
+    end.
+
+  Lemma nlcons_to_list {A : Type} (a : A) l :
+    a :: l = nlcons a l.
   Proof.
-  Admitted.
-  (*
-    dependent induction t.
-    - intros.
-      destruct k' as [[p' i'] s'].
-      inv_tr H. enough (Some (p, i, s0) = Some (p', i', s')).
-      injection H2; intros; subst. eauto using Precedes.
-      rewrite <- H0. eauto.
-    - intros. inv_tr H.
-      * injection H5; intros; subst.
-        enough (Some k'0 = Some (p, i, s)). injection H2; intros; subst.
-        eauto using Precedes.
-        rewrite <- step. eassumption.
-      * enough (Some k'0 = Some (p, i, s)). injection H4; intros; subst.
-        eauto using Precedes.
-        rewrite <- step. eassumption.
-      * eauto using Precedes.
+    revert a. induction l; cbn; eauto. rewrite IHl. reflexivity.
   Qed.
 
+  Lemma nlcons_front {A : Type} (a : A) l :
+    ne_front (nlcons a l) = a.
+  Proof.
+    induction l; cbn; eauto.
+  Qed.
+
+  Lemma ne_to_list_inj {A : Type} (l l' : ne_list A) :
+    ne_to_list l = ne_to_list l' -> l = l'.
+  Proof.
+    Set Printing Coercions.
+    revert l'. induction l; induction l'; intros Heq; inversion Heq; cbn in *.
+    - reflexivity.
+    - exfalso. destruct l'; cbn in H1; congruence.
+    - exfalso. destruct l; cbn in H1; congruence.
+    - apply IHl in H1. subst l. econstructor.
+      Unset Printing Coercions.
+  Qed.
+
+  Lemma prefix_eff_cons_cons k k' l l' l'':
+    eff (ne_front l) = Some k
+    -> l' = ne_to_list l''
+    -> Tr (k' :<: l'')
+    -> Prefix l l'
+    -> Prefix (k :: l) (k' :: l').
+  Proof.
+    intros Heff leq Htr Hpre. 
+    revert dependent k'. revert dependent l''. dependent induction Hpre; intros l'' leq k' Htr.
+    - apply ne_to_list_inj in leq. subst l.
+      inversion Htr. subst. rewrite H2 in Heff. inversion Heff. subst k. econstructor.
+    - econstructor. destruct l'.
+      { inversion Hpre. destruct l; cbn in H1; congruence. }
+      eapply IHHpre; eauto.
+      + apply nlcons_to_list.
+      + enough ((a :<: nlcons c l') = l'') as leqq.
+        { inversion Htr. rewrite leqq. assumption. }
+        clear - leq. destruct l''; [|destruct l'']; destruct l'; cbn in *; inversion leq; subst;eauto.
+        * destruct l''; cbn in H2; congruence.
+        * destruct l''.
+          -- inversion H2. subst. cbn. reflexivity.
+          -- Set Printing Coercions. rewrite nlcons_to_list in H2. apply ne_to_list_inj in H2.
+             rewrite H2. reflexivity. Unset Printing Coercions.
+  Qed.                                              
+  
+  Lemma precedes_succ (t : trace) q j r q' j' r' p i s k' :
+    Precedes' (`t) (q', j', r') (q, j, r) ->
+    eff (q, j, r) = Some (p, i, s) ->
+    p =/= q' ->
+    Tr (k' :<: (`t)) ->
+    Precedes' (k' :<: (`t)) (q', j', r') (p, i, s).
+  Proof.
+    intros Hprec Heff Hneq Htr.
+    destruct Hprec as [t' [Hpre Hprec]].
+    exists (nlcons (q,j,r) t').
+    split.
+    - clear Hprec Hneq. 
+      unfold Conf in Hpre. unfold Coord in Hpre.
+      set (t2 := (q,j,r) :: t') in *.
+      destruct t as [t tr]. cbn.
+      eapply prefix_eff_cons_cons; eauto; unfold "`" in *.
+      + rewrite nlcons_front; eauto.
+      + rewrite <-nlcons_to_list. subst t2; eauto.
+    - econstructor; cbn; eauto.
+      rewrite <-nlcons_to_list. eauto.
+  Qed.
+
+  (*
   Lemma precedes_step k t q j r to i s :
     forall k' step, In k t (q, j, r) ->
                     to =/= q ->
