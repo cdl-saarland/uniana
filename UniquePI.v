@@ -21,7 +21,7 @@ Module UniquePI.
 
   Definition tag_of (c : Conf) := match c with (_,i,_) => i end.
 
-  Definition upi_prop p q t1 t2 :=
+  Definition upi_prop q p t1 t2 :=
     forall i j j' r r' q' s s', 
       Precedes' t1 (q,j,r) (p,i,s) -> Precedes' t2 (q',j',r') (p,i,s') -> j = j'.
   

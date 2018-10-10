@@ -106,7 +106,46 @@ Module NeList.
     - destruct (a == a0).
       + destruct e. econstructor.
       + econstructor. eauto. 
-  Qed.      
+  Qed.
+
+  Require Import Coq.Program.Equality.
+  
+  Lemma prefix_cons {A : Type} (l l' : list A) :
+    forall a, Prefix (a :: l) l' -> Prefix l l'.
+  Proof.
+    intros a H. dependent induction H.
+    - econstructor. econstructor.
+    - econstructor. eapply IHPrefix; eauto.
+  Qed.
+  
+  Lemma prefix_trans {A : Type} (l1 l2 l3 : list A) :
+    Prefix l1 l2 -> Prefix l2 l3 -> Prefix l1 l3.
+  Proof.
+    revert l1 l3. induction l2; intros l1 l3 pre1 pre2; inversion pre1; inversion pre2; subst; eauto.
+    econstructor. eapply IHl2; eauto. eapply prefix_cons; eauto.
+  Qed.
+
+  Lemma prefix_cons_cons {A : Type} (a a' : A) l l' :
+    Prefix (a :: l) (a' :: l') -> Prefix l l'.
+  Proof.
+    intros H. dependent induction H; cbn.
+    - econstructor.
+    - destruct l'.
+      + inversion H.
+      + econstructor. eapply IHPrefix; eauto.
+  Qed.
+
+  Lemma in_prefix_in {A : Type} `{EqDec A eq} (a : A) l l' :
+    In a l -> Prefix l l' -> In a l'.
+  Proof.
+    intros Hin Hpre. induction l. 
+    - inversion Hin.
+    - destruct (a == a0).
+      + destruct e. eapply prefix_cons_in; eauto.
+      + eapply IHl; eauto.
+        * destruct Hin; [exfalso; subst; apply c; reflexivity|assumption].
+        * eapply prefix_cons; eauto.
+  Qed. 
 
   Fixpoint postfix_nincl {A : Type} `{EqDec A eq} (a : A) (l : list A) : list A :=
     match l with
@@ -731,6 +770,30 @@ Module NeList.
                      apply In_rcons. left. reflexivity.
                    }
                    prove_last_common.
-  Qed.      
+  Qed.
+
+  Fixpoint nlcons {A : Type} (a : A) l :=
+    match l with
+    | nil => ne_single a
+    | b :: l => a :<: (nlcons b l)
+    end.
+
+  Lemma nlcons_to_list {A : Type} (a : A) l :
+    a :: l = nlcons a l.
+  Proof.
+    revert a. induction l; cbn; eauto. rewrite IHl. reflexivity.
+  Qed.
+
+  Lemma nlcons_front {A : Type} (a : A) l :
+    ne_front (nlcons a l) = a.
+  Proof.
+    induction l; cbn; eauto.
+  Qed.
+               
+  Lemma nlcons_necons {A : Type} l :
+    forall (a : A), (a :<: l) = nlcons a l.
+  Proof.
+    induction l; cbn; eauto. rewrite IHl. reflexivity.
+  Qed.
 
 End NeList.
