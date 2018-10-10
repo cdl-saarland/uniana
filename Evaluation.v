@@ -149,17 +149,13 @@ Module Evaluation.
       + destruct (k == a); [left|right]; eauto. firstorder.
   Qed.*)
 
-(*  Lemma in_succ_in k p q t :
-    In k t p -> p =/= k -> eff p = Some q -> In k t q.
+  Lemma in_succ_in k p q t :
+    Tr (nlcons k t) -> In p t -> eff p = Some q -> In q (k :: t).
   Proof.
     intros.
-    dependent induction t; inv_tr H; try firstorder.
-    destruct (p == k').
-    + rewrite e0 in *. clear e0.
-      inv_tr H; firstorder.
-      rewrite H1 in step1. injection step1; intros. symmetry in H3. subst. constructor.
-    + constructor. eauto.
-  Qed.*)
+    revert dependent k. dependent induction t; intros k H; inv_tr H; try firstorder.
+    + rewrite nlcons_front in H5. subst a. rewrite H5 in H1. inversion H1. left. reflexivity.
+  Qed.
 
 (*  Lemma in_succ_exists p q i j s r t :
     In (p, i, s) t (q, j, r) -> (exists k', eff (q, j, r) = Some k' /\ In (p, i, s) t k') \/ (p, i, s) = (q, j, r).
@@ -174,24 +170,27 @@ Module Evaluation.
     + injection H; intros; subst. exists (p, i, s). firstorder. constructor.
   Qed.*)
 
-(*  Lemma in_pred_exists p i s k t :
-    forall k' step, In k' (Step k' k t step) (p, i, s) ->
+  Lemma in_pred_exists p i s k t :
+    In (p,i,s) (k :<: t) ->
     p =/= root ->
-    exists q j r, In k t (q, j, r) /\ eff (q, j, r) = Some (p, i, s).
+    Tr (k :<: t) ->
+    exists q j r, In (q, j, r) t /\ eff (q, j, r) = Some (p, i, s).
   Proof.
-    intros k' step Hin Hneq.
-    dependent induction t.
-    - inv_tr Hin.
-      + exists root, start_tag, s0. split; [ constructor | assumption ].
-      + inv_tr H3. firstorder.
-    - inv_tr Hin.
-      + destruct k as [[q j] r].
-        exists q, j, r. split; [ constructor | assumption ].
+    revert k.
+    dependent induction t; intros k Hin Hneq Htr; inversion Htr.
+    - destruct Hin; subst.
+      + destruct a as [[q j] r]. exists q,j,r.
+        split; cbn; eauto.
+      + exfalso. eapply Hneq. inversion H1.
+        destruct a,p0. inversion H0; inversion H3; subst; [inversion H;reflexivity |contradiction]. 
+    - destruct Hin; subst.
+      + destruct a as [[q j] r].
+        exists q, j, r. split; [ constructor | assumption ]. reflexivity.
       + edestruct IHt as [q [j [r [Hinq Hstep]]]]; try eassumption.
         exists q, j, r. 
-        split; eauto using In.
+        split; eauto.
+        cbn. tauto.
   Qed.
-*)
 
   Parameter ivec_fresh : forall p i s (t : trace),
       eff (ne_front (`t)) = Some (p, i, s) -> forall j r, In (p, j, r) (`t) -> j <> i.
@@ -396,7 +395,7 @@ Module Evaluation.
     destruct p as [p Hpin]; simpl in *.
     eauto.
   Qed.
-  
+  *)
   Lemma start_no_tgt :
     forall i' s' k, eff k = Some (root, i', s') -> False.
   Proof.
@@ -410,7 +409,6 @@ Module Evaluation.
     exists i, i', s, s'. 
     assumption.
   Qed.
- *)
 
   Lemma precedes_cons (k k' : Conf) l : Precedes' l k' k' -> Precedes' (k :: l) k' k'.
   Proof.
@@ -431,19 +429,22 @@ Module Evaluation.
       * rewrite H0. exists t. split; econstructor.
       * eapply precedes_cons; eauto. 
   Qed.
-(*
+
   Lemma precedes_step_inv :
-    forall k k' t step p s, Precedes k' (Step k' k t step) p s ->
-                            lab_of p =/= lab_of s ->
-                            In k t p.
+    forall k t p s, Precedes' (nlcons k t) p s ->
+               Tr (nlcons k t) ->
+               lab_of p =/= lab_of s ->
+               In p t.
   Proof.
     intros.
-    inv_tr H.
+    destruct H as [l [Hpre Hprec]].
+    inv_tr Hprec.
     - firstorder.
-    - eapply precedes_implies_in_pred. eauto.
-    - eapply precedes_implies_in_pred. eauto.
+    - eapply precedes_implies_in_pred in H5.
+      rewrite <-nlcons_to_list in Hpre. eapply prefix_cons_cons in Hpre.      
+      eapply in_prefix_in; eauto.
   Qed.
-
+(*
   Lemma precedes_incl k t c c' :
     Precedes k t c c' -> exists t', Precedes c' t' c c'.
   Proof.
@@ -535,24 +536,6 @@ Module Evaluation.
                                          Precedes k' (Step k' k t step) (q', j', r') (p, i, s).
  *)
 
-  Fixpoint nlcons {A : Type} (a : A) l :=
-    match l with
-    | nil => ne_single a
-    | b :: l => a :<: (nlcons b l)
-    end.
-
-  Lemma nlcons_to_list {A : Type} (a : A) l :
-    a :: l = nlcons a l.
-  Proof.
-    revert a. induction l; cbn; eauto. rewrite IHl. reflexivity.
-  Qed.
-
-  Lemma nlcons_front {A : Type} (a : A) l :
-    ne_front (nlcons a l) = a.
-  Proof.
-    induction l; cbn; eauto.
-  Qed.
-
   Lemma ne_to_list_inj {A : Type} (l l' : ne_list A) :
     ne_to_list l = ne_to_list l' -> l = l'.
   Proof.
@@ -612,26 +595,53 @@ Module Evaluation.
       rewrite <-nlcons_to_list. eauto.
   Qed.
 
-  (*
-  Lemma precedes_step k t q j r to i s :
-    forall k' step, In k t (q, j, r) ->
-                    to =/= q ->
-                    eff (q, j, r) = Some (to, i, s) ->
-                    Precedes k' (Step k' k t step) (q, j, r) (to, i, s).
+  
+  Lemma precedes_step l q j r p i s :
+    forall k, In (q, j, r) l ->
+         p =/= q ->
+         eff (q, j, r) = Some (p, i, s) ->
+         Tr (nlcons k l) -> 
+         Precedes' (nlcons k l) (q, j, r) (p, i, s).
   Proof.
-    intros k' step Hin Hneq Hstep.
-    dependent induction t.
-    - inv_tr Hin.
-      enough (Some k' = Some (to, i, s0)).
-      injection H; intros; subst. eauto using Precedes.
-      rewrite <- step. eassumption.
-    - inv_tr Hin.
-      * enough (Some k'0 = Some (to, i, s)).
-        injection H; intros; subst. eauto using Precedes.
-        rewrite <- step. eassumption.
-      * eauto using Precedes.
+    intros k Hin Hneq Heff Htr.
+    assert (In (p,i,s) (nlcons k l)) as Hin'.
+    {
+      revert dependent k.
+      induction l; intros k Htr; cbn in Htr; inversion Htr; inversion Hin; cbn; subst.
+      - left. rewrite nlcons_front in H2. rewrite H2 in Heff. inversion Heff. reflexivity.
+      - right. eauto.
+    }
+    exists (prefix_nincl (p,i,s) (nlcons k l)). split.
+    - eapply prefix_nincl_prefix; eauto.
+    - revert dependent k. induction l; intros k Htr Hin'; inversion Hin; inversion Hin'; subst.
+      + cbn. destruct ((p,i,s) == (p,i,s)); [destruct e|exfalso; eapply c; reflexivity].
+        econstructor; [cbn; eauto|]. destruct l; cbn; econstructor.
+      + exfalso.
+        unfold nlcons in Htr. fold (nlcons (q,j,r) l) in Htr.
+        inversion Htr; subst.
+        eapply ivec_fresh.
+        * rewrite <-Heff. instantiate (1:=exist _ _ H2). unfold "`". rewrite nlcons_front. reflexivity.
+        * cbn. eauto.
+        * reflexivity.
+      + exfalso.
+        unfold nlcons in Htr. fold (nlcons a l) in Htr.
+        inversion Htr; subst. 
+        eapply ivec_fresh.
+        * setoid_rewrite <-H3. instantiate (1:=exist _ _ H2). unfold "`". rewrite nlcons_front.
+          reflexivity.
+        * cbn; rewrite <-nlcons_to_list. eapply in_succ_in in H; eauto. 
+        * reflexivity.
+      + unfold nlcons. fold (nlcons a l). cbn. destruct ((p,i,s) == k).
+        * destruct e. exfalso.
+          inversion Htr; subst.
+          eapply ivec_fresh.
+          -- setoid_rewrite <-H4. instantiate (1:=exist _ _ H3). unfold "`". rewrite nlcons_front.
+             reflexivity.
+          -- cbn. eauto.
+          -- reflexivity.
+        * eapply IHl; eauto. cbn in Htr. inversion Htr; subst; eauto.
   Qed.
-    *)
+
   Lemma no_def_untouched :
     forall p q x, is_def x q p = false -> forall i j s r, eff (q, j, r) = Some (p, i, s) -> r x = s x.
   Proof.
