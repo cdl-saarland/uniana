@@ -170,7 +170,14 @@ Module Uniana.
         destruct HCunch' as [j' [r' [Hprec' Heq']]]; try eassumption.
         rewrite <- Heq. rewrite <- Heq'.
         cut (j' = j); intros.
-        * subst j'. admit. (*eauto using precedes_step_inv.  *)
+        * subst j'. eapply HCuni. eapply Hts1. eapply Hts2. 3: eauto.
+          all: eapply precedes_step_inv.
+          -- rewrite <-nlcons_to_list. setoid_rewrite Hteq1 in Hprec. apply Hprec.
+          -- rewrite <-nlcons_necons, <-Hteq1. destruct t; eauto.
+          -- cbn. eauto.
+          -- rewrite <-nlcons_to_list. setoid_rewrite Hteq2 in Hprec'. apply Hprec'.
+          -- rewrite <-nlcons_necons, <-Hteq2. destruct t'; eauto.
+          -- cbn;eauto.
         * symmetry. eapply (HCupi _ _ Hsem Hsem'); eauto. 
   Qed.
 
