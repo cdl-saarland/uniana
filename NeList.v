@@ -626,13 +626,17 @@ Module NeList.
       + subst a0. exfalso; apply c; reflexivity.
       + assumption.
   Qed.
+
+  Definition last_common {A : Type} `{EqDec A eq} (l1 l2 : ne_list A) (s : A) :=
+    exists l1' l2', Postfix (l1' :r: s) l1 /\ Postfix (l2' :r: s) l2
+                   /\ Disjoint l1' l2'
+                   /\ ~ In s l1' /\ ~ In s l2'.
   
   Lemma ne_last_common {A : Type} `{EqDec A eq} (l1 l2 : ne_list A) :
     ne_back l1 = ne_back l2
-    -> exists s l1' l2', Postfix (l1' :r: s) l1 /\ Postfix (l2' :r: s) l2
-                   /\ Disjoint l1' l2'
-                   /\ ~ In s l1' /\ ~ In s l2'.
+    -> exists s, last_common l1 l2 s.
   Proof.
+    unfold last_common.
     revert l2.
     induction l1; intros l2 beq; induction l2; cbn in *.
     - subst a0. exists a; exists nil; exists nil; cbn.

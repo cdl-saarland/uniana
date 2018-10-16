@@ -33,17 +33,60 @@ Module Disjoint.
                                                         forall b', b =/= b' -> forall p, is_def xb b' p = false.
 
   Parameter in_out_spec :
-   forall p q q', (exists x, is_branch p x) -> q --> p -> q' --> p -> q = q'.
+    forall p q q', (exists x, is_branch p x) -> q --> p -> q' --> p -> q = q'.
 
-  Definition DisjointBranch (s : Lab) (x : Var) (t f : Lab) π ϕ :=
-    Path s t π /\ Path s f ϕ /\ is_branch s x /\ Disjoint π ϕ.
+  Fixpoint nl_rcons {A : Type} l (a : A) : ne_list A :=
+    match l with
+    | nil =>  ne_single a
+    | b :: l => (b :<: (nl_rcons l a))
+    end.
+
+  Definition DisjointBranch (s : Lab) (x : Var) (qt qf : Lab) (π ϕ : list Lab) :=
+    Path s qt (nl_rcons π s) /\ Path s qf (nl_rcons ϕ s) /\ is_branch s x /\ Disjoint π ϕ.
 
   Parameter splits : Lab -> list (Lab * Var).
 
   Parameter splits_spec : forall conv br x,
-      (exists qt qf π ϕ, qt -->* conv /\ qf -->* conv /\
+      (exists qt qf π ϕ, qt --> conv /\ qf --> conv /\ qt =/= qf /\
                     DisjointBranch br x qt qf π ϕ) <->
       List.In (br, x) (splits conv).
+
+  Parameter loop_splits : Lab -> list (Lab * Var).
+
+  Parameter loop_splits_spec : forall p br x,
+      (exists qh qe π ϕ, in_loop p qh /\ In qe (loop_exit qh) /\ DisjointBranch br x qh qe π ϕ)
+                   <-> In (br, x) (loop_splits p).
+
+  Fixpoint ne_map {A B : Type} (f : A -> B) (l : ne_list A) : ne_list B :=
+    match l with
+    | ne_single a => ne_single (f a)
+    | a :<: l => (f a) :<: ne_map f l
+    end.
+  
+  Definition rm_state : ne_list Conf -> ne_list Coord := ne_map fst.
+
+  Lemma split_last_common s x p l1 l2 :
+    Path root p (p :<: l1)
+    -> Path root p (p :<: l2)
+    -> In (s,x) (splits p)
+    -> last_common l1 l2 s.
+  Admitted.
+  
+  Lemma last_common_split s x p l1 l2 :
+    Path root p (p :<: l1)
+    -> Path root p (p :<: l2)
+    -> last_common l1 l2 s
+    -> In (s,x) (splits p).
+  Admitted.
+  
+  Lemma last_common_split_loopsplit s x s' l1 l2 k :
+    Tr (k :<: l1)
+    -> Tr (k :<: l2)
+    -> In (s,x) (splits (lab_of k))
+    -> last_common (rm_state l1) (rm_state l2) s'
+    -> In (fst s') (map fst (loop_splits s)).
+  Admitted.
+  
   
   Definition DivergenceWitness (br : Lab) x xb t t' := 
     (exists (l : Tag) u u', val_true (u x) =/= val_true (u' x) /\
@@ -74,7 +117,8 @@ Module Disjoint.
 (*  Lemma single_edge_disjoint_path (q a q' : Lab) x (p : Path a q') :
     is_branch a x ->
     ~ PathIn q p ->
-    a --> q -> 
+    a --> q -
+> 
     exists p', DisjointBranch a x q' q p p'.
   Proof.
     intros Hbr Hnin Hedge.

@@ -23,14 +23,17 @@ Module Graph.
   Parameter all_lab : set Lab.
   Parameter all_lab_spec : forall l, set_In l all_lab.
 
-  Parameter loop_head : Lab -> nat.
-  Parameter loop_exit : Lab -> nat.
+  Parameter loop_exit : Lab -> list Lab.
   Parameter is_back_edge : Lab -> Lab -> bool.
 
   Parameter preds : Lab -> list Lab.
   Notation "p --> q" := (List.In p (preds q)) (at level 70, right associativity).
-
   Notation "p -->? q" := (p === q \/ p --> q) (at level 70, right associativity).
+  
+  Definition loop_head p : Prop :=
+    exists q, q --> p /\ is_back_edge q p = true.
+
+  Parameter loop_head_dec : forall p, {loop_head p} + {~ loop_head p}.
 
   Parameter root : Lab.
   Parameter root_no_pred : forall p, ~ p --> root.
@@ -55,9 +58,36 @@ Module Graph.
 
   Inductive Path : Lab -> Lab -> ne_list Lab -> Prop :=
   | PathSingle a : Path a a (ne_single a)
-  | PathCons {a b c π} : Path a b π -> a --> b -> Path a c (c :<: π).
+  | PathCons {a b c π} : Path a b π -> b --> c -> Path a c (c :<: π).
 
   Notation "p '-->*' q" := (exists π, Path p q π) (at level 70, right associativity).
+
+  Notation "p '-a>' q" := (In p (preds q) /\ is_back_edge p q = false) (at level 70).
+      
+  Lemma acyclic_edge_has_edge : forall p q, p -a> q -> p --> q.
+  Proof.
+    intros. firstorder. 
+  Qed.
+
+  Inductive AcyPath : Lab -> Lab -> ne_list Lab -> Prop :=
+  | AcyPathSingle : forall p : Lab, AcyPath p p (ne_single p)
+  | AcyPathCons : forall (p q r : Lab) π, AcyPath p q π -> q -a> r -> AcyPath p r (r :<: π).
+
+  Notation "p '-a>*' q" := (exists π, AcyPath p q π) (at level 70).
+  
+  (* Reducibility *)
+  Parameter reach_acy : forall (p : Lab), root -a>* p.
+
+  Definition Dom p q := forall π, Path root q π -> In p π.
+  
+  Parameter loop_head_dom : forall ql qh, is_back_edge ql qh = true -> Dom qh ql.
+
+  Definition in_loop q qh : Prop :=
+    exists p, q -a>* p /\ p --> qh /\ is_back_edge p qh = true.
+  
+  Parameter loop_exit_spec : forall qh qe,
+      In qh (loop_exit qe) <-> exists q, q --> qe /\ in_loop q qh /\ ~ in_loop qe qh.
+
 
 (*  Lemma path_last_common r a b π π' :
     Path r a π -> Path r b π' -> a <> b
@@ -192,22 +222,6 @@ Module Graph.
       destruct (q == to); firstorder.
   Qed.*)
 
-  Parameter has_edge_acyclic : Lab -> Lab -> bool.
-  
-  Notation "p '-a>' q" := (has_edge_acyclic p q = true) (at level 70).
-
-  Parameter has_edge_acyclic_spec : forall p q, p -a> q <-> (p --> q
-                                                      /\ (loop_head q = 0
-                                                         \/ loop_exit p = 0)).
-      
-  Lemma has_edge_acyclic_has_edge : forall p q, p -a> q -> p --> q.
-  Proof.
-    intros. apply has_edge_acyclic_spec in H. firstorder.
-  Qed.
-
-  Inductive AcyPath : Lab -> Lab -> Prop :=
-  | AcyPathInit : forall p : Lab, AcyPath p p
-  | AcyPathStep : forall p q r : Lab, AcyPath p q -> q -a> r -> AcyPath p r.
 
   (*Parameter finite_Lab : 
     exists (n : nat) (f : Lab -> nat), forall x, f x <= n /\ forall y, f x = f y -> x = y.*) 
