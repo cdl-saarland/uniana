@@ -50,8 +50,8 @@ Module Evaluation.
                     | n :: l => (S n) :: l
                     end
                else 
-                    let l' := @iter Tag (@tl nat) i (loop_exit p) in
-                    @iter Tag (@cons nat O) l' (loop_head q)
+                    let l' := @iter Tag (@tl nat) i (length (loop_exit p)) in
+                    if loop_head_dec q then O :: l' else l'
                 |
              None => nil
            end

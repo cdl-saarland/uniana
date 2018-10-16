@@ -35,7 +35,7 @@ Module UniquePI.
         ts t -> ts t' ->
         forall q p, upi q p = true -> upi_prop q p (`t)%prg (`t')%prg.
 
-  Parameter lh_p_le_q : Lab -> Lab -> list (Lab * Var).
+(*  Parameter lh_p_le_q : Lab -> Lab -> list (Lab * Var).
   
   Parameter lh_p_le_q_spec :
     forall (p q le : Lab) (x : Var), List.In (le,x) (lh_p_le_q p q)
@@ -57,16 +57,18 @@ Module UniquePI.
                                      /\ AcyPath lh le'
                                      /\ AcyPath le q
                                      /\ le =/= le'
-                                     /\ List.In (s,x) (splits le')).
-   
-  Definition upi_trans (upi : Upi) (uni : Uni) : Upi :=
+                                     /\ List.In (s,x) (splits le')).*)
+
+  Parameter upi_trans : Upi -> Uni -> Upi.
+  
+(*  Definition upi_trans (upi : Upi) (uni : Uni) : Upi :=
     fun p
     => fun q
       => join_andb (map (fun spl
                     => match spl with (s,x) => uni s x end)
                            (lh_p_le_q p q
                            ++  loop_splits p q))
-                  && (join_andb (map (upi p) (preds q))).
+                  && (join_andb (map (upi p) (preds q))). *)
 
 (*  Lemma last_inst_upi_prop {p br m m' w w' q q' i j j' s s' r r' step step' t t'} :
     let tr := (Step (p, i, s) (q, j, r) t step) in
