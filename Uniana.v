@@ -74,11 +74,25 @@ Module Uniana.
     end.
 
   
-  Lemma branch_eff_eq br s1 s2 x i :
+  Lemma branch_eff_eq br s1 s2 x i k k':
     is_branch br x
     -> s1 x = s2 x
-    -> eff (br,i,s1) = eff (br,i,s2).
-  Admitted.
+    -> eff (br,i,s1) = Some k
+    -> eff (br,i,s2) = Some k'
+    -> fst k = fst k'.
+  Proof.
+    intros Hbr Heq Heff1 Heff2. unfold is_branch in Hbr. specialize (branch_spec br) as Hb.
+    destruct Hbr as [tt [ff [xb Hbr]]].
+    rewrite Hbr in Hb.
+    destruct k as [[q j] r]. destruct k' as [[q' j'] r'].
+    cbn.
+    enough (q = q' /\ j = j') as [qeq jeq].
+    {subst q j. reflexivity. }
+    destruct Hb as [_ Hb]. apply Hb in Heff1 as Heff1'; apply Hb in Heff2 as Heff2'.
+    cbn in Heff1',Heff2'. rewrite Heq in Heff1'. rewrite <-Heff2' in Heff1'. split;[assumption|].
+    destruct Heff1'. clear Heff2'.
+    eapply ivec_det; eauto.
+  Qed.
 
   Lemma eff_eq_trace_eq p1 p2 q i1 i2 j s1 s2 r1 r2 l1 l2:
     eff (q,j,r1) = eff (q,j,r2)
@@ -117,7 +131,7 @@ Module Uniana.
 
   Definition option_fst {A B : Type} (ab : option (A*B)) : option A :=
     match ab with
-    | Some (a,_) => Some a
+    | Some ab => Some (fst ab)
     | _ => None
     end.
     
@@ -215,19 +229,22 @@ Module Uniana.
   Qed.
 
   Lemma loop_splits_is_branch :
-                     forall (br : Lab) (x : Var) (p : Lab), In (br, x) (loop_splits p) -> is_branch br x.
-                   Proof.
-                     intros. eapply loop_splits_spec in H. firstorder.
-                   Qed.
+    forall (br : Lab) (x : Var) (p : Lab), In (br, x) (loop_splits p) -> is_branch br x.
+  Proof.
+    intros. eapply loop_splits_spec in H. firstorder.
+  Qed.
 
   Parameter inh_state : inhabited State.
 
   Lemma front_eff_ex_succ l k1 k2 k :
-    let l' := nl_rcons l k in
-    Tr l'
-    -> ne_front l' = k1
+    Tr l
+    -> In k l
+    -> ne_front l = k1
     -> eff k1 = Some k2
     -> exists k', eff k = Some k'.
+  Proof.
+    intros l' Htr Hfront Heff.
+    induction l'.
   Admitted.
 
   Lemma last_common_lab_splits q1 j1 r1 q2 j2 r2 br p i s1 s2 l1 l2 :
@@ -238,6 +255,81 @@ Module Uniana.
     -> Tr ((p,i,s1) :<: l1')
     -> Tr ((p,i,s2) :<: l2')
     -> exists x, In (br,x) (splits p).
+  Admitted.
+
+  Lemma postfix_path l p q q' l' :
+    Path q' q l'
+    -> Postfix (l :r: p) l'
+    -> Path p q (nl_rcons l p).
+  Admitted.
+  Lemma trace_path l :
+    Tr l -> Path root (fst (fst (ne_front l))) (ne_map fst (ne_map fst l)).
+  Admitted.
+  Lemma postfix_map {A B : Type} (f : A -> B) :
+    forall l l', Postfix l l' -> Postfix (map f l) (map f l').
+  Admitted.
+  Lemma map_rcons {A B : Type} (f : A -> B) :
+    forall a l, map f (l :r: a) = map f l :r: (f a).
+  Admitted.
+  Lemma to_list_ne_map {A B : Type} (f : A -> B) (l : ne_list A) :
+    map f l = ne_map f l.
+  Admitted.
+  
+  Definition Tr' (l : ne_list Conf) :=
+    exists l', Tr l' /\ Postfix l l'.
+
+  Definition innermost_loop p qh :=
+    in_loop p qh /\ forall qh', in_loop p qh -> in_loop qh qh'.
+
+  Lemma tag_eq_ex_innermost_lh q q' j r r' l l' p i :
+    Tr' ((q',j,r') :<: nl_rcons l (q,j,r))
+    -> In (p,i) l'
+    -> l' = map fst l
+    -> i = j \/ exists lh, innermost_loop p lh /\ In lh (map fst (map fst l)).
+  Admitted.
+  
+  Lemma disj_no_loopheads p i s1 s2 q r1 r2 l1 l2 qh :
+    Tr' ((p,i,s1) :<: nl_rcons l1 (q,i,r1))
+    -> Tr' ((p,i,s2) :<: nl_rcons l2 (q,i,r2))
+    -> Disjoint (map fst l1) (map fst l2)
+    -> loop_head qh
+    -> In qh (map fst (map fst l1))
+    -> ~ In qh (map fst (map fst l2)).
+  Admitted.
+
+  Lemma loop_head_tag_cases l q i r qh j :
+    Tr' (nl_rcons l (q,i,r))
+    -> loop_head qh
+    -> In (qh,j) (map fst l)
+    -> j = O :: i
+      \/ match i with
+        | nil => False
+        | m :: i' => j = S m :: i'
+        end.
+  Admitted.
+
+  Local Ltac last_common_splits_path_rcons l :=
+    let H := fresh "H" in
+    let Q := fresh "Q" in
+    let H':= fresh "H" in
+    lazymatch goal with
+    | [ H : Postfix (?l1 :r: (?br,?i)) (ne_to_list (ne_map fst l)),
+            Q : Tr l |- Path ?br ?q _ ]
+      => apply id in H as H';
+        eapply postfix_map with (f:=fst) in H;
+        rewrite map_rcons in H;
+        eapply trace_path in Q;
+        eapply postfix_path in Q;[|rewrite <-to_list_ne_map;eauto];
+        cbn in H;
+        let P := fresh "P" in
+        enough (fst (fst (ne_front l)) = q) as P;
+        [setoid_rewrite P in Q; eassumption|];
+        subst l; clear; rewrite nlcons_front; cbn; eauto
+    end.
+  
+  Lemma in_fst {A B : Type} a (l : list (A * B)) :
+    In a (map fst l)
+    -> exists b, In (a,b) l.
   Admitted.
                    
   Lemma last_common_splits q j r q' j' r' l l' p i s s' br :
@@ -256,27 +348,52 @@ Module Uniana.
     assert (Hbr := branch_spec br).
     unfold DisjointBranch. unfold is_branch.
     destruct (branch br);[destruct p0,p0,p0|]. all: cycle 1.
-    ** exfalso.
-       apply id in Hpost1 as Hpost1'. apply id in Hpost2 as Hpost2'.
-       apply postfix_rm_state_ex_state in Hpost1' as [l01 [s1' [Hpost1' Hposteq1]]].
-       apply postfix_rm_state_ex_state in Hpost2' as [l02 [s2' [Hpost2' Hposteq2]]].
-       2,3: apply inh_state.
-       subst l1' l2'.
-       eapply not_same_step_disj_post with (q:=q); eauto.
-
-       eapply front_eff_ex_succ in Hstep as [k Hk]; [|admit|admit].
-       eapply front_eff_ex_succ in Hstep' as [k' Hk'];[|admit|admit].
-       Unshelve. Focus 4. exact (br,i,s1'). Focus 4. exact (br,i,s2'). 2,3: shelve.
-       specialize (Hbr _ _ _ _ _ _ Hk Hk'). rewrite Hk,Hk'.
-       destruct k as [[pp ii] ss]. destruct k' as [[qq jj] rr].
-       cbn in Hbr. subst pp.
-       eapply ivec_det with (i:=ii) (i':=jj) in Hk; eauto. subst ii.
-       cbn. reflexivity.
-    ** exists v0, q, q', ((map fst l1')), ((map fst l2')).
-       split_conj; eauto using step_conf_implies_edge.
-       --- admit. (* easy style *)
-       --- admit. (* easy style *)
-       --- admit. (* because of same tag *)
+    - exfalso.
+      apply id in Hpost1 as Hpost1'. apply id in Hpost2 as Hpost2'.
+      apply postfix_rm_state_ex_state in Hpost1' as [l01 [s1' [Hpost1' Hposteq1]]].
+      apply postfix_rm_state_ex_state in Hpost2' as [l02 [s2' [Hpost2' Hposteq2]]].
+      2,3: apply inh_state.
+      subst l1' l2'.
+      eapply not_same_step_disj_post with (q:=q); eauto.
+      eapply front_eff_ex_succ in Hstep as [k Hk]; [|apply Htr1| |].
+      2: eapply postfix_incl; [apply Hpost1'|apply In_rcons;left;eauto].
+      2: subst l1; rewrite nlcons_front; reflexivity.
+      eapply front_eff_ex_succ in Hstep' as [k' Hk'];[|apply Htr2| |].
+      2: eapply postfix_incl; [apply Hpost2'|apply In_rcons;left;eauto].
+      2: subst l2; rewrite nlcons_front; reflexivity.
+      specialize (Hbr _ _ _ _ _ _ Hk Hk'). rewrite Hk,Hk'.
+      destruct k as [[pp ii] ss]. destruct k' as [[qq jj] rr].
+      cbn in Hbr. subst pp.
+      eapply ivec_det with (i:=ii) (i':=jj) in Hk; eauto. subst ii.
+      cbn. reflexivity.
+    - exists v0, q, q', ((map fst l1')), ((map fst l2')).
+      split_conj; eauto using step_conf_implies_edge.
+      + last_common_splits_path_rcons l1.
+      + last_common_splits_path_rcons l2.
+      + split.
+        * intros a Hina.
+          apply in_fst in Hina. destruct Hina as [b Hina1].
+          intro N. apply in_fst in N. destruct N as [b' Hina2].
+          eapply id in Hina1 as Hina1'. eapply id in Hina2 as Hina2'.
+          eapply tag_eq_ex_innermost_lh with (j:=i) in Hina1.
+          eapply tag_eq_ex_innermost_lh with (j:=i) in Hina2.
+          destruct Hina1; destruct Hina2. 
+          -- subst b b'. eapply Hdisj; eauto.
+          -- (* tag in one trace is the same, but in the other there it is in a inner loop C! *)
+            admit.
+          -- (* tag in one trace is the same, but in the other there it is in a inner loop C! *)
+            admit.
+          -- (* in both traces a is in an inner loop -> the loop header is in both traces C! *)
+            admit.
+          -- (* technical goal: Tr' ((p, i, s) :<: nl_rcons ?l (br, i, ?r0)) *)
+            admit.
+          -- (* technical goal: l2' = map fst ?l *)
+            admit.
+          -- (* technical goal: Tr' ((p, i, s') :<: nl_rcons ?l (br, i, ?r0)) *)
+            admit.
+          -- (* technical goal: l1' = map fst ?l0 *)
+            admit.
+        * admit. (* analogous to the previous case *)
   Admitted.
 
   Lemma ne_back_trace t :
@@ -435,10 +552,14 @@ Module Uniana.
                    --- subst tq2. rewrite <-nlcons_to_list. eapply prefix_nincl_prefix; eauto.
                    --- left. reflexivity.
                 ** eapply splits_is_branch in HSsplit as HSbranch.
+                   assert (exists k, eff (S', i, s1') = Some k) as [k Hk] by admit.
+                   (* because Tr ((p,i,s) ... (S',i,s')) *)
+                   assert (exists k', eff (S', i, s2') = Some k') as [k' Hk'] by admit.
                    eapply branch_eff_eq in Hsplit; eauto.
                    subst l1' l2'.
                    eapply not_same_step_disj_post with (q:=q); eauto.
-                   rewrite Hsplit. reflexivity.
+                   rewrite Hk, Hk'. cbn. 
+                   unfold option_fst. rewrite Hsplit. reflexivity.
           -- eapply last_common_lab_splits with (p:=p) in LC_l; eauto;
                [|admit|admit]. (* easy Tr goals *)
              destruct LC_l as [X HSsplit].
@@ -467,22 +588,13 @@ Module Uniana.
                    --- subst tq2. rewrite <-nlcons_to_list. eapply prefix_nincl_prefix; eauto.
                    --- left. reflexivity.
                 ** eapply loop_splits_is_branch in HSsplit' as HSbranch.
+                   assert (exists k, eff (S', I', s1') = Some k) as [k Hk] by admit.
+                   (* because Tr ((p,i,s) ... (S',I',s')) *)
+                   assert (exists k', eff (S', I', s2') = Some k') as [k' Hk'] by admit.
                    eapply branch_eff_eq in Hsplit; eauto.
                    subst l1' l2'.
                    eapply not_same_step_disj_post with (q:=q); eauto. 
-                   rewrite Hsplit. reflexivity. (*
-          eapply disjoint with (q := q) (step := lstep) in Hneq; eauto.
-          ++ destruct Hneq as [br [y [yb [Hwit Hspl]]]].
-             destruct Hwit as [m [u' [u [Hney [Hinbr' [Hinbr _]]]]]].
-             eapply join_andb_true_iff in Hsplit; try eapply Hspl. simpl in Hsplit. conv_bool.
-             destruct Hsplit as [Hsplit _].
-             apply Hney.
-             cut (u' y = u y); intros. rewrite H. reflexivity.
-             eapply HCuni; [ exact Hts' | exact Hts | | | ]; eauto.
-          ++ intros.
-             eapply HCupi; eauto.
-             eapply (join_andb_true_iff _ _ Hsplit) in H.
-             conv_bool. destruct H as [_ H]. eassumption. *)
+                   rewrite Hk,Hk'. cbn. rewrite Hsplit. reflexivity.
         (* The unch case *)
       + rename Hunch into H.
         eapply join_orb_true_iff in H.
