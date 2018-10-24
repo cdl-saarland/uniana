@@ -1,4 +1,6 @@
 
+Require Import Coq.Classes.RelationClasses.
+Require Import Coq.Classes.Morphisms.
 Require Import Coq.Logic.Decidable.
 Require Import Coq.Classes.EquivDec.
 Require Import Coq.Bool.Bool.
@@ -7,36 +9,128 @@ Require Import Lists.List.
 Require Import Coq.Program.Equality.
 Require Import Coq.Program.Utils.
 
+Require Import Util.
 Require NeList.
 
 Module Graph.
 
-  Import NeList.NeList.
-    
-  Parameter Var : Type.
+  Export NeList.NeList.
+
+  (** Graph **)
+  Class Graph (L : Type) (root : L) (edge : L -> L -> Prop) : Type :=
+    {
+      L_dec : EqDec L eq;
+      edge_dec : forall p q, {edge p q} + {~ edge p q};
+      root_no_pred : forall p:L, ~ edge p root
+    }.
+
+  Inductive Path `{Graph} : L -> L -> ne_list L -> Prop :=
+  | PathSingle a : Path a a (ne_single a)
+  | PathCons {a b c π} : Path a b π -> edge b c -> Path a c (c :<: π).
+
+  Generalizable Variable L root edge.
+
+  Definition Dom `{Graph} p q := forall π, Path root q π -> In p π.
+
+  Program Instance union_Graph
+          {L : Type} {root : L} {edge1 edge2 : L -> L -> Prop}
+          (G1 : Graph L root edge1) (G2 : Graph L root edge2)
+    : Graph L root (fun p q => edge1 p q \/ edge2 p q).
+  Next Obligation. apply L_dec. Qed.
+  Next Obligation.
+    destruct (@edge_dec _ _ edge1 _ p q), (@edge_dec _ _ edge2 _ p q); tauto.
+  Qed.
+  Next Obligation.
+    intro H. destruct H; apply root_no_pred in H; contradiction.
+  Qed.
+
+  Program Instance minus_Graph
+          {L : Type} {root : L} {edge1 edge2 : L -> L -> Prop}
+          (G1 : Graph L root edge1) (G2 : Graph L root edge2)
+    : Graph L root (fun p q => edge1 p q /\ ~ edge2 p q).
+  Next Obligation. apply L_dec. Qed.
+  Next Obligation.
+    destruct (@edge_dec _ _ edge1 _ p q), (@edge_dec _ _ edge2 _ p q); tauto.
+  Qed.
+  Next Obligation.
+    intro H. destruct H; apply root_no_pred in H; contradiction.
+  Qed.
+
+  Lemma path_front `{Graph} p q π :
+    Path p q π -> ne_front π = q.
+  Admitted.
+  
+  Lemma path_back `{Graph} p q π :
+    Path p q π -> ne_front π = p.
+  Admitted.
+
+End Graph.
+(*+ CFG +*)
+
+Module CFG.
+
+  Export Graph.
+
+  (** basic parameters **)
   Parameter Lab : Type.
-
-  Parameter Var_dec : EqDec Var eq.
-  Parameter Lab_dec' : forall (l l' : Lab), { l = l' } + { l <> l'}.
   Parameter Lab_dec : EqDec Lab eq.
+  Parameter preds : Lab -> list Lab.
+  Notation "p --> q" := (List.In p (preds q)) (at level 55, right associativity).
+  Parameter root : Lab.
+  Parameter root_no_pred' : forall p, ~ p --> root.
+  Definition cfg_edge p q := In p (preds q).
+  (*  Parameter Lab_fin : exists l:list Lab, forall p:Lab, In p l. *)
+  
+  Program Instance CFG : Graph Lab root cfg_edge.
+  Next Obligation.
+    unfold cfg_edge. remember (preds q) as l.
+    apply eq_incl in Heql.
+    revert p q Heql. induction l; intros p q Heql; cbn;[tauto|].
+    decide' (Lab_dec a p).
+    - left;left. reflexivity.
+    - apply incl_cons in Heql.
+      destruct (IHl p q Heql).
+      + tauto.
+      + right. firstorder.
+  Qed.
+  Next Obligation.
+    apply root_no_pred'.
+  Qed.
 
+  (** more parameters **)
   Parameter all_lab : set Lab.
   Parameter all_lab_spec : forall l, set_In l all_lab.
-
-  Parameter loop_exit : Lab -> list Lab.
-  Parameter is_back_edge : Lab -> Lab -> bool.
-
-  Parameter preds : Lab -> list Lab.
-  Notation "p --> q" := (List.In p (preds q)) (at level 70, right associativity).
   Notation "p -->? q" := (p === q \/ p --> q) (at level 70, right associativity).
+  Parameter Var : Type.
+  Parameter Var_dec : EqDec Var eq.
+  Parameter loop_exit : Lab -> list Lab.
+  Parameter back_edge : Lab -> Lab -> Prop.
+  Parameter back_edge_dec : forall p q, {back_edge p q} + {~ back_edge p q}.
+  Parameter back_edge_incl : forall p q, back_edge p q -> p --> q.
+  
+  Lemma Lab_dec' : forall (l l' : Lab), { l = l' } + { l <> l'}.
+  Proof.
+    apply Lab_dec.
+  Qed.
+
+  Definition is_back_edge (p q : Lab) :=
+    match (back_edge_dec p q) with | left _ => true | right _ => false end.
+  
+  Notation "p '-->*' q" := (exists π, Path p q π) (at level 70, right associativity).
+
+  Notation "p '-a>' q" := (In p (preds q) /\ ~ back_edge p q) (at level 70).
+  
+
+  Program Instance back_edge_CFG : Graph Lab root back_edge.
+  Next Obligation. apply back_edge_dec. Qed.
+  Next Obligation. intro H. eapply root_no_pred'. eapply back_edge_incl; eauto. Qed.
+
+  Definition acyclic_CFG := minus_Graph CFG back_edge_CFG.
   
   Definition loop_head p : Prop :=
-    exists q, q --> p /\ is_back_edge q p = true.
-
+    exists q, q --> p /\ back_edge q p.
+  
   Parameter loop_head_dec : forall p, {loop_head p} + {~ loop_head p}.
-
-  Parameter root : Lab.
-  Parameter root_no_pred : forall p, ~ p --> root.
 
   Parameter is_def : Var -> Lab -> Lab -> bool.
 
@@ -55,30 +149,20 @@ Module Graph.
   Program Instance lab_var_eq_eqdec : EqDec (Lab * Var) eq := Lab_var_dec.
 
   (** Paths **)
-
-  Inductive Path : Lab -> Lab -> ne_list Lab -> Prop :=
-  | PathSingle a : Path a a (ne_single a)
-  | PathCons {a b c π} : Path a b π -> b --> c -> Path a c (c :<: π).
-
-  Notation "p '-->*' q" := (exists π, Path p q π) (at level 70, right associativity).
-
-  Notation "p '-a>' q" := (In p (preds q) /\ is_back_edge p q = false) (at level 70).
       
   Lemma acyclic_edge_has_edge : forall p q, p -a> q -> p --> q.
   Proof.
     intros. firstorder. 
   Qed.
 
-  Inductive AcyPath : Lab -> Lab -> ne_list Lab -> Prop :=
-  | AcyPathSingle : forall p : Lab, AcyPath p p (ne_single p)
-  | AcyPathCons : forall (p q r : Lab) π, AcyPath p q π -> q -a> r -> AcyPath p r (r :<: π).
+  Definition acyclic_edge := (fun p q : Lab => cfg_edge p q /\ ~ back_edge p q).
+
+  Definition AcyPath : Lab -> Lab -> ne_list Lab -> Prop := @Path _ _ acyclic_edge _. 
 
   Notation "p '-a>*' q" := (exists π, AcyPath p q π) (at level 70).
   
-  (* Reducibility *)
+  (** Reducibility **)
   Parameter reach_acy : forall (p : Lab), root -a>* p.
-
-  Definition Dom p q := forall π, Path root q π -> In p π.
   
   Parameter loop_head_dom : forall ql qh, is_back_edge ql qh = true -> Dom qh ql.
 
@@ -88,154 +172,77 @@ Module Graph.
   Parameter loop_exit_spec : forall qh qe,
       In qh (loop_exit qe) <-> exists q, q --> qe /\ in_loop q qh /\ ~ in_loop qe qh.
 
-
-(*  Lemma path_last_common r a b π π' :
-    Path r a π -> Path r b π' -> a <> b
-    -> exists s ϕ ϕ', Postfix (ϕ :>: s) π /\ Postfix (ϕ' :>: s) π' /\ Disjoint ϕ ϕ'.
-  Proof.*)
-
-(*  Lemma Path_in_dec {z a} x (p: Path a z) :
-    {PathIn x p} + {~ PathIn x p}.
-  Proof.
-    induction p.
-    + destruct (x == p); firstorder.
-    + simpl in *. destruct (x == to); firstorder.
-  Qed. 
-
-  Lemma path_first_in {a} b (p : Path a b) :
-    PathIn a p.
-  Proof.
-    induction p.
-    + constructor.
-    + simpl. eauto.
-  Qed.
-
-  Lemma path_last_in {a} b (p : Path a b) :
-    PathIn b p.
-  Proof.
-    induction p.
-    + constructor.
-    + simpl. left. reflexivity.
-  Qed.
-
-  Fixpoint acyclic {a c} (p : Path a c) : Prop :=
-    match p with
-    | PathInit p => True
-    | PathStep a b c p' e => acyclic p' /\ ~ PathIn c p'
-    end.
-
-  Lemma path_in_single_acyclic {a} (p : Path a a) :
-    acyclic p -> forall q, PathIn q p -> q = a.
-  Proof.
-    intros Hacyc q Hin.
-    dependent induction p; simpl in Hin; [ eauto |].
-    simpl in Hacyc.
-    exfalso. apply Hacyc. eapply path_first_in.
-  Qed.
-
-  Lemma acyclic_prefix {a b c} (p : Path a b) (e : b --> c) :
-    acyclic (PathStep a b c p e) -> acyclic p.
-  Proof.
-    intros.
-    destruct p; simpl in *; firstorder.
-  Qed.
-
-    Lemma path_exists_pred {a b} (p : Path a b) :
-    a <> b -> exists q (p' : Path a q) (e : q --> b),  p = (PathStep a q b p' e).
-  Proof.
-    intros.
-    induction p; [ firstorder |].
-    destruct (from == p).
-    - rewrite e in *. eauto.
-    - eapply IHp in c. eauto. 
-  Qed.
-
-  Lemma path_acyclic_pred {a q} (p : Path a q) b e :
-    acyclic (PathStep a q b p e) -> acyclic p.
-  Proof.
-    intros.
-    dependent induction p; simpl in *; firstorder.
-  Qed.
-
-  Lemma path_acyclic_next {a q p} (π : Path a q) (edge : q --> p) :
-        acyclic π -> acyclic (PathStep a q p π edge) \/ exists (π' : Path a p), acyclic π' /\ forall q, PathIn q π' -> PathIn q π.
-  Proof.
-    intros.
-    simpl.
-    destruct (Path_in_dec p π).
-    - right.
-      clear edge.
-      induction π.
-      + inject p0. exists (PathInit p1). simpl. eauto.
-      + inject p0.
-        * exists (PathStep from p1 to π i). split; try eauto.
-        * eapply path_acyclic_pred in H. destruct (IHπ H H0) as [π' [Hacyc Hin]].
-          exists π'. split; [ assumption |]. intros. simpl. eauto.
-    - left. eauto.
-  Qed.
-  
-  Fixpoint path_concat {a b c} (π : Path a b) (π' : Path b c) : Path a c.
-    refine ((match π' as y in (Path b' c) return
-                  (b' = b -> Path a c) with
-    | PathInit _ => _
-    | PathStep b c c' π' e => _
-    end) (eq_refl b)); intros; subst.
-    - apply π.
-    - eapply (PathStep _ _ _ (path_concat _ _ _ π π') e).
-  Defined.
-  
-  Lemma concat_in1 {a b c} (π : Path a b) (π' : Path b c) :
-    forall q, PathIn q π -> PathIn q (path_concat π π').
-  Proof.
-    intros. induction π'; simpl; eauto.
-  Qed.
-
-  Lemma path_pred {a b} (p : Path a b) :
-    a = b \/ exists pred, pred --> b.
-  Proof.
-    induction p; eauto.
-  Qed.
-
-  Lemma path_nodes_neq {a b} (p : Path a b) r s :
-    PathIn r p ->
-    ~ PathIn s p ->
-    r <> s.
-  Proof.
-    intros Hin Hnin.
-    induction p.
-    - inject Hin. intro. apply Hnin. subst. constructor.
-    - intro. subst. apply Hnin. assumption.
-  Qed.
-
-  (*
-  Definition disjoint {a b c d} (p : Path a b) (p' : Path c d) :=
-    (forall q, PathIn q p -> ~ PathIn q p') /\ (forall q, PathIn q p' -> ~ PathIn q p).
-  *)
-
-  Definition deciabable_PathIn a b (p : Path a b) q :
-    decidable (PathIn q p).
-  Proof.
-    unfold decidable.
-    induction p.
-    + simpl. destruct (q == p); firstorder.
-    + simpl. destruct IHp; firstorder.
-      destruct (q == to); firstorder.
-  Qed.*)
-
-
-  (*Parameter finite_Lab : 
-    exists (n : nat) (f : Lab -> nat), forall x, f x <= n /\ forall y, f x = f y -> x = y.*) 
-  
-  (*Parameter dec_path : forall p q, Path p q + (Path p q -> False).
-
-  Definition reaches (p q : Lab) : bool
-    := if dec_path p q then true else false.*)
-
   Parameter no_self_loops :
     forall q p, q --> p -> q =/= p.
 
-  (*Definition DisjPaths {a b c d} (π : Path a b) (π' : Path c d) :=
-    forall p, (PathIn p π -> ~ PathIn p π') /\ (PathIn p π' -> ~ PathIn p π).*)
+  Definition CPath := @Path _ _ _ CFG.
 
 
-End Graph.
+End CFG.
+
+Module TCFG.
+
+  Import CFG.
+
+  Generalizable Variable edge.
+
+  Definition Tag := list nat.
+
+  Lemma Tag_dec : EqDec Tag eq.
+  Proof.
+    apply list_eqdec, nat_eq_eqdec.
+  Qed.
+  
+  Parameter start_tag : Tag.
+  Definition Coord : Type := (Lab * Tag).
+  Definition start_coord := (root, start_tag) : Coord.
+  
+  Hint Unfold Coord.
+
+  Ltac destr_let :=
+    match goal with
+    | [ |- context[let (_,_) := fst ?a in _]] => destruct a;unfold fst 
+    | [ |- context[let (_,_) := snd ?a in _]] => destruct a;unfold snd
+    | [ |- context[let (_,_) := ?a in _]] => destruct a
+    end.
+
+  Program Instance TCFG (tag : Lab -> Lab -> Tag -> Tag) :
+    Graph Coord start_coord (fun c c'
+                             => let (p,i) := c  in
+                               let (q,j) := c' in
+                               cfg_edge p q /\ tag p q i = j
+                            ).
+  Next Obligation.
+    repeat destr_let. edestruct (@edge_dec _ _ _ CFG l l0); decide' (Tag_dec (tag l l0 t) t0);
+                        firstorder.
+  Qed.
+  Next Obligation.
+    repeat destr_let. intros [H H']. apply root_no_pred' in H. eauto.
+  Qed.
+
+  Fixpoint eff_tag p q i : Tag
+    := if is_back_edge p q
+       then match i with
+            | nil => nil
+            | n :: l => (S n) :: l
+            end
+       else 
+         let l' := @iter Tag (@tl nat) i (length (loop_exit p)) in
+         if loop_head_dec q then O :: l' else l'.
+
+  Definition TPath := @Path _ _ _ (TCFG eff_tag).
+
+  Lemma TPath_CPath c c' π :
+    TPath c c' π -> CPath (fst c) (fst c') (ne_map fst π).
+  Proof.
+    intros H. dependent induction H; [|destruct b,c]; econstructor; cbn in *.
+    - apply IHPath.
+    - apply H0.
+  Qed.            
+  
+End TCFG.
+
+  
+    
+    
+          

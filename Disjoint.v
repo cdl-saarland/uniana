@@ -54,16 +54,8 @@ Module Disjoint.
   Parameter loop_splits : Lab -> list (Lab * Var).
 
   Parameter loop_splits_spec : forall p br x,
-      (exists qh qe π ϕ, in_loop p qh /\ In qe (loop_exit qh) /\ DisjointBranch br x qh qe π ϕ)
-                   <-> In (br, x) (loop_splits p).
-
-  Fixpoint ne_map {A B : Type} (f : A -> B) (l : ne_list A) : ne_list B :=
-    match l with
-    | ne_single a => ne_single (f a)
-    | a :<: l => (f a) :<: ne_map f l
-    end.
-  
-  Definition rm_state : ne_list Conf -> ne_list Coord := ne_map fst.
+      (exists qh π ϕ, qh <> p /\ DisjointBranch br x qh p π ϕ)
+      <-> In (br, x) (loop_splits p).
 
   Lemma split_last_common s x p l1 l2 :
     Path root p (p :<: l1)
@@ -83,7 +75,7 @@ Module Disjoint.
     Tr (k :<: l1)
     -> Tr (k :<: l2)
     -> In (s,x) (splits (lab_of k))
-    -> last_common (rm_state l1) (rm_state l2) s'
+    -> last_common (ne_map fst l1) (ne_map fst l2) s'
     -> In (fst s') (map fst (loop_splits s)).
   Admitted.
   

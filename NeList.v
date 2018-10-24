@@ -800,4 +800,10 @@ Module NeList.
     induction l; cbn; eauto. rewrite IHl. reflexivity.
   Qed.
 
+  Fixpoint ne_map {A B : Type} (f : A -> B) (l : ne_list A) : ne_list B :=
+    match l with
+    | ne_single a => ne_single (f a)
+    | a :<: l => (f a) :<: ne_map f l
+    end.
+
 End NeList.

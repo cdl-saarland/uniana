@@ -111,3 +111,29 @@ Qed.
        | O => l
        | S n => iter f (f l) n
        end.
+
+  
+  Lemma incl_cons {A : Type} (l l' : list A) (a : A) :
+    incl (a :: l) l' -> incl l l'.
+  Proof.
+    unfold incl. cbn. firstorder.
+  Qed.
+
+  Lemma eq_incl {A : Type} (l l':list A) :
+    l = l' -> incl l l'.
+  Proof.
+    intros Heql; rewrite Heql;unfold incl; tauto.
+  Qed.
+
+
+  
+  Ltac decide' X :=
+    let e := fresh "e" in
+    let c := fresh "c" in
+    lazymatch X with
+    | ?a == ?b => destruct X as [e|c]; [destruct e|]
+    | _ => lazymatch type of X with
+          | ?a == ?b => destruct X as [e|c]; [destruct e|]
+          | {_ === _} + {_ =/= _} => destruct X as [e|c]; [destruct e|]
+          end
+    end.

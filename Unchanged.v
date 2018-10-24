@@ -40,7 +40,7 @@ Module Unchanged.
     cut (preds root = nil); intros.
     + unfold unch_trans, unch_trans_ptw. 
       destruct (Lab_dec' root root); firstorder.
-    + cut (forall q, ~ List.In q (preds root)); intros; eauto using list_emp_in, root_no_pred. 
+    + cut (forall q, ~ List.In q (preds root)); intros; eauto using list_emp_in, root_no_pred'. 
   Qed.
 
   Inductive Front (u : Unch) : Var -> Lab -> Prop :=

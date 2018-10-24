@@ -42,14 +42,8 @@ Module Uniana.
       else fun x => ((join_andb (map (fun spl
                                    => match spl with
                                        (s, x) => uni s x
-                                                    && join_andb (map (fun spl
-                                                                       => match spl with
-                                                                           (s,x) => uni s x
-                                                                         end)
-                                                                      (loop_splits s))
-                                                          (*&& upi_trans upi uni s p*)
-                                           end)
-                                  (splits p)))
+                                     end)
+                                  (splits p ++ loop_splits p)))
                     && (join_andb (map (fun q => abs_uni_eff (uni q) x) (preds p)))
                     && (join_andb (map (fun q => upi_trans upi uni q p) (preds p)))
                  )
@@ -65,13 +59,6 @@ Module Uniana.
     reflexivity.
     exfalso. apply c. reflexivity.
   Qed.
-
-  Ltac decide' X :=
-    let e := fresh "e" in
-    let c := fresh "c" in
-    lazymatch X with
-    | ?a == ?b => destruct X as [e|c]; [destruct e|]
-    end.
 
   
   Lemma branch_eff_eq br s1 s2 x i k k':
@@ -94,17 +81,46 @@ Module Uniana.
     eapply ivec_det; eauto.
   Qed.
 
+  Ltac solve_pair_eq :=
+    repeat lazymatch goal with
+           | [ H : ?a = (?b,?c) |- _ ] => destruct a; inversion H; clear H
+           | _  => subst; eauto
+           end.
+
+  Ltac simpl_nl :=
+    repeat lazymatch goal with
+           | [ |- context[ne_front (nlcons ?a ?l)]] => rewrite nlcons_front
+           | [ |- context[ne_to_list (_ :<: _)]] => rewrite nlcons_necons
+           | [ |- context[ne_to_list (nlcons _ _)]] => rewrite <-nlcons_to_list
+           end.
+
+  Ltac simpl_nl' H := 
+    repeat lazymatch type of H with
+           | context[ne_front (nlcons ?a ?l)] => rewrite nlcons_front in H
+           | context[ne_to_list (_ :<: _)] => rewrite nlcons_necons in H
+           | context[ne_to_list (nlcons _ _)] => rewrite <-nlcons_to_list in H
+           end.
+        
+
+(*  Hint Rewrite nlcons_front nlcons_necons nlcons_to_list : nl_ne.*)
+
   Lemma eff_eq_trace_eq p1 p2 q i1 i2 j s1 s2 r1 r2 l1 l2:
     eff (q,j,r1) = eff (q,j,r2)
     -> Tr ((p1,i1,s1) :<: nlcons (q,j,r1) l1)
     -> Tr ((p2,i2,s2) :<: nlcons (q,j,r2) l2)
     -> p1 = p2 /\ i1 = i2.
-  Admitted.
+  Proof.
+    intros.
+    split; inversion H0; inversion H1;
+    solve_pair_eq; simpl_nl' H5; simpl_nl' H9; rewrite H in H5; rewrite H5 in H9;
+      inversion H9;eauto.
+  Qed.
 
   Lemma postfix_rcons_trace_eff l k k' l' :
     Tr l'
     -> Postfix ((l :r: k) :r: k') l'
     -> eff k' = Some k.
+  Proof.
   Admitted.
 
   Lemma disjoint_map_fst {A B : Type} (l1 l2 : list (A*B)) (l1' l2' : list A) :
@@ -113,7 +129,6 @@ Module Uniana.
     -> Disjoint l1' l2'
     -> Disjoint l1 l2.
   Admitted.
-
   
   Lemma postfix_rm_state_ex_state {A B : Type} l l' (a:A) :
     inhabited B
@@ -157,8 +172,7 @@ Module Uniana.
       assert (Hcr := cons_rcons p0 l02).      
       destruct Hcr as [p0' [l02' Hcr]].
       eapply ivec_fresh;[| |reflexivity].
-      +++ instantiate (4:=(exist _ (nlcons (q',j',r') l2) _ )). cbn.
-          rewrite nlcons_front. eauto.
+      +++ instantiate (4:=(exist _ (nlcons (q',j',r') l2) _ )). cbn. simpl_nl. eauto.
       +++ cbn. 
           rewrite Hcr in Hpost2.
           instantiate (1:= snd p0').
@@ -257,7 +271,7 @@ Module Uniana.
     -> exists x, In (br,x) (splits p).
   Admitted.
 
-  Lemma postfix_path l p q q' l' :
+  Lemma postfix_path `{Graph} l p q q' l' :
     Path q' q l'
     -> Postfix (l :r: p) l'
     -> Path p q (nl_rcons l p).
@@ -331,6 +345,9 @@ Module Uniana.
     In a (map fst l)
     -> exists b, In (a,b) l.
   Admitted.
+
+  Infix "∈" := In (at level 50).
+  Notation "a '∉' l" := (~ a ∈ l) (at level 50).
                    
   Lemma last_common_splits q j r q' j' r' l l' p i s s' br :
     let l1 := nlcons ( q, j, r) l  in
@@ -360,7 +377,7 @@ Module Uniana.
       2: subst l1; rewrite nlcons_front; reflexivity.
       eapply front_eff_ex_succ in Hstep' as [k' Hk'];[|apply Htr2| |].
       2: eapply postfix_incl; [apply Hpost2'|apply In_rcons;left;eauto].
-      2: subst l2; rewrite nlcons_front; reflexivity.
+      2: subst l2; simpl_nl; reflexivity.
       specialize (Hbr _ _ _ _ _ _ Hk Hk'). rewrite Hk,Hk'.
       destruct k as [[pp ii] ss]. destruct k' as [[qq jj] rr].
       cbn in Hbr. subst pp.
@@ -379,9 +396,29 @@ Module Uniana.
           eapply tag_eq_ex_innermost_lh with (j:=i) in Hina2.
           destruct Hina1; destruct Hina2. 
           -- subst b b'. eapply Hdisj; eauto.
-          -- (* tag in one trace is the same, but in the other there it is in a inner loop C! *)
+          -- (* tag in one trace is the same, but in the other there it is in an inner loop C! *)
+            Lemma lab_tag_same_length p i j l l' :
+              Tr l
+              -> Tr l'
+              -> (p,i) ∈ (map fst l)
+              -> (p,j) ∈ (map fst l')
+              -> length i = length j.
+            Admitted.
+
+            Lemma tag_length_inbetween p i s l q r q' j :
+              Tr' ((p,i,s) :<: nl_rcons l (q,i,r))
+              -> (q',j) ∈ (map fst l)
+              -> length i <= length j.
+              (* because if we would exit a loop, we could never achieve to get the same tag again *)
+            Admitted.
+
+            (*Inductive Tc : ne_list Coord -> Prop :=
+            | TcInit : Tc (ne_single (root,start_tag))
+            | TcStep : Tc l -> p --> q -> Tc ((p,i) :<: l)*)
+              
+            
             admit.
-          -- (* tag in one trace is the same, but in the other there it is in a inner loop C! *)
+          -- (* tag in one trace is the same, but in the other there it is in an inner loop C! *)
             admit.
           -- (* in both traces a is in an inner loop -> the loop header is in both traces C! *)
             admit.
@@ -533,8 +570,8 @@ Module Uniana.
              destruct LC_lt as [l1' [l2' [Hpost1 [Hpost2 [Hdisj [Hnin1 Hnin2]]]]]].
              eapply last_common_splits in LC_lt'; eauto.
              destruct LC_lt' as [x' HSsplit].
-             ++ eapply join_andb_true_iff in Hsplit; eauto. cbn in Hsplit.
-                conv_bool. destruct Hsplit as [Hsplit _].
+             ++ eapply join_andb_true_iff in Hsplit; eauto; [|apply in_or_app;left;eauto].
+                cbn in Hsplit. conv_bool. 
                 apply postfix_rm_state_ex_state in Hpost1 as [l01 [s1' [Hpost1 Hposteq1]]].
                 apply postfix_rm_state_ex_state in Hpost2 as [l02 [s2' [Hpost2 Hposteq2]]].
                 2,3: apply inh_state.
@@ -567,10 +604,8 @@ Module Uniana.
              eapply lc_loop_split_of_split in LC_lt; eauto; [|admit|admit]. (* easy Tr goals *)
              destruct LC_lt as [X' HSsplit'].
              destruct LC_lt' as [l1' [l2' [Hpost1 [Hpost2 [Hdisj [Hnin1 Hnin2]]]]]].
-             ++ eapply join_andb_true_iff in Hsplit; eauto. cbn in Hsplit.
-                conv_bool. destruct Hsplit as [_ Hsplit].
-                eapply join_andb_true_iff in Hsplit; eauto. cbn in Hsplit.
-                
+             ++ eapply join_andb_true_iff in Hsplit; [|apply in_or_app;right; eauto]. cbn in Hsplit.
+                conv_bool.                 
                 eapply postfix_rm_state_ex_state in Hpost1 as [l01 [s1' [Hpost1 Hposteq1]]].
                 apply postfix_rm_state_ex_state in Hpost2 as [l02 [s2' [Hpost2 Hposteq2]]].
                 2-5: eauto using inh_state, start_tag.
