@@ -806,4 +806,32 @@ Module NeList.
     | a :<: l => (f a) :<: ne_map f l
     end.
 
+  Lemma ne_map_nlcons {A B : Type} (f : A -> B) (a : A) l :
+    ne_map f (nlcons a l) = nlcons (f a) (map f l).
+  Admitted.
+
+  Fixpoint nl_rcons {A : Type} l (a : A) : ne_list A :=
+    match l with
+    | nil =>  ne_single a
+    | b :: l => (b :<: (nl_rcons l a))
+    end.
+  
+  Lemma postfix_map {A B : Type} (f : A -> B) :
+    forall l l', Postfix l l' -> Postfix (map f l) (map f l').
+  Admitted.
+  
+  Lemma map_rcons {A B : Type} (f : A -> B) :
+    forall a l, map f (l :r: a) = map f l :r: (f a).
+  Admitted.
+  
+  Lemma to_list_ne_map {A B : Type} (f : A -> B) (l : ne_list A) :
+    map f l = ne_map f l.
+  Admitted.
+
+  Lemma ne_back_map {A B : Type} (f : A -> B) l :
+    ne_back (ne_map f l) = f (ne_back l).
+  Proof.
+    induction l; firstorder.
+  Qed.
+
 End NeList.

@@ -261,33 +261,15 @@ Module Uniana.
     induction l'.
   Admitted.
 
-  Lemma last_common_lab_splits q1 j1 r1 q2 j2 r2 br p i s1 s2 l1 l2 :
-    let l1' := nlcons (q1,j1,r1) l1 in
-    let l2' := nlcons (q2,j2,r2) l2 in
-    last_common (ne_map fst (ne_map fst l1')) (ne_map fst (ne_map fst l2')) br
-    -> q1 =/= q2
-    -> Tr ((p,i,s1) :<: l1')
-    -> Tr ((p,i,s2) :<: l2')
-    -> exists x, In (br,x) (splits p).
-  Admitted.
-
-  Lemma postfix_path `{Graph} l p q q' l' :
-    Path q' q l'
-    -> Postfix (l :r: p) l'
-    -> Path p q (nl_rcons l p).
-  Admitted.
-  Lemma trace_path l :
-    Tr l -> Path root (fst (fst (ne_front l))) (ne_map fst (ne_map fst l)).
-  Admitted.
-  Lemma postfix_map {A B : Type} (f : A -> B) :
-    forall l l', Postfix l l' -> Postfix (map f l) (map f l').
-  Admitted.
-  Lemma map_rcons {A B : Type} (f : A -> B) :
-    forall a l, map f (l :r: a) = map f l :r: (f a).
-  Admitted.
-  Lemma to_list_ne_map {A B : Type} (f : A -> B) (l : ne_list A) :
-    map f l = ne_map f l.
-  Admitted.
+  Hint Unfold CPath.
+  
+  Lemma Tr_CPath l :
+    Tr l -> CPath root (fst (fst (ne_front l))) (ne_map fst (ne_map fst l)).
+  Proof.
+    intro H. eapply Tr_EPath in H;[| repeat rewrite <-surjective_pairing; reflexivity].
+    destruct H as [s0 H]. cbn. 
+    eapply EPath_TPath in H. cbn in H. eapply TPath_CPath in H. eauto.
+  Qed.
   
   Definition Tr' (l : ne_list Conf) :=
     exists l', Tr l' /\ Postfix l l'.
@@ -295,32 +277,38 @@ Module Uniana.
   Definition innermost_loop p qh :=
     in_loop p qh /\ forall qh', in_loop p qh -> in_loop qh qh'.
 
-  Lemma tag_eq_ex_innermost_lh q q' j r r' l l' p i :
-    Tr' ((q',j,r') :<: nl_rcons l (q,j,r))
-    -> In (p,i) l'
-    -> l' = map fst l
-    -> i = j \/ exists lh, innermost_loop p lh /\ In lh (map fst (map fst l)).
+  Definition Path' `{Graph} π := Path (ne_front π) (ne_back π) π.
+  Definition CPath' `{Graph} π := CPath (ne_front π) (ne_back π) π.
+  Definition TPath' `{Graph} π := TPath (ne_front π) (ne_back π) π.
+  Definition EPath' `{Graph} π := EPath (ne_front π) (ne_back π) π.
+  
+  Lemma tag_eq_ex_innermost_lh q q' j l p i :
+    TPath' ((q',j) :<: nl_rcons l (q,j))
+    -> In (p,i) l
+    -> i = j \/ exists lh, innermost_loop p lh /\ In lh (map fst l).
   Admitted.
   
-  Lemma disj_no_loopheads p i s1 s2 q r1 r2 l1 l2 qh :
-    Tr' ((p,i,s1) :<: nl_rcons l1 (q,i,r1))
-    -> Tr' ((p,i,s2) :<: nl_rcons l2 (q,i,r2))
-    -> Disjoint (map fst l1) (map fst l2)
+  Lemma disj_loopheads p i q l1 l2 qh :
+    TPath' ((p,i) :<: nl_rcons l1 (q,i))
+    -> TPath' ((p,i) :<: nl_rcons l2 (q,i))
+    -> Disjoint l1 l2
     -> loop_head qh
-    -> In qh (map fst (map fst l1))
-    -> ~ In qh (map fst (map fst l2)).
+    -> In qh (map fst l1)
+    -> ~ In qh (map fst l2).
   Admitted.
 
-  Lemma loop_head_tag_cases l q i r qh j :
-    Tr' (nl_rcons l (q,i,r))
+  (* This is wrong! This holds only for the FIRST header.
+  Lemma loop_head_tag_cases l q i qh j :
+    TPath' (nl_rcons l (q,i))
     -> loop_head qh
-    -> In (qh,j) (map fst l)
+    -> In (qh,j) l
     -> j = O :: i
       \/ match i with
         | nil => False
         | m :: i' => j = S m :: i'
         end.
   Admitted.
+  *)
 
   Local Ltac last_common_splits_path_rcons l :=
     let H := fresh "H" in
@@ -328,27 +316,34 @@ Module Uniana.
     let H':= fresh "H" in
     lazymatch goal with
     | [ H : Postfix (?l1 :r: (?br,?i)) (ne_to_list (ne_map fst l)),
-            Q : Tr l |- Path ?br ?q _ ]
+            Q : Tr l |- CPath ?br ?q _ ]
       => apply id in H as H';
         eapply postfix_map with (f:=fst) in H;
         rewrite map_rcons in H;
-        eapply trace_path in Q;
+        eapply Tr_CPath in Q;
         eapply postfix_path in Q;[|rewrite <-to_list_ne_map;eauto];
         cbn in H;
         let P := fresh "P" in
         enough (fst (fst (ne_front l)) = q) as P;
-        [setoid_rewrite P in Q; eassumption|];
+        [setoid_rewrite P in Q;cbn in Q; eassumption|];
         subst l; clear; rewrite nlcons_front; cbn; eauto
     end.
-  
-  Lemma in_fst {A B : Type} a (l : list (A * B)) :
-    In a (map fst l)
-    -> exists b, In (a,b) l.
+
+  Lemma lab_tag_same_length c0 c c' p i j l l' :
+    TPath c0 c l (* the paths need to have the same origin *)
+    -> TPath c0 c' l'
+    -> (p,i) ∈ l
+    -> (p,j) ∈ l'
+    -> length i = length j.
   Admitted.
 
-  Infix "∈" := In (at level 50).
-  Notation "a '∉' l" := (~ a ∈ l) (at level 50).
-                   
+  Lemma tag_length_inbetween p i l q q' j :
+    TPath' ((p,i) :<: nl_rcons l (q,i))
+    -> (q',j) ∈ l
+    -> length i <= length j.
+    (* because if we would exit a loop, we could never achieve to get the same tag again *)
+  Admitted.
+  
   Lemma last_common_splits q j r q' j' r' l l' p i s s' br :
     let l1 := nlcons ( q, j, r) l  in
     let l2 := nlcons (q',j',r') l' in
@@ -397,26 +392,6 @@ Module Uniana.
           destruct Hina1; destruct Hina2. 
           -- subst b b'. eapply Hdisj; eauto.
           -- (* tag in one trace is the same, but in the other there it is in an inner loop C! *)
-            Lemma lab_tag_same_length p i j l l' :
-              Tr l
-              -> Tr l'
-              -> (p,i) ∈ (map fst l)
-              -> (p,j) ∈ (map fst l')
-              -> length i = length j.
-            Admitted.
-
-            Lemma tag_length_inbetween p i s l q r q' j :
-              Tr' ((p,i,s) :<: nl_rcons l (q,i,r))
-              -> (q',j) ∈ (map fst l)
-              -> length i <= length j.
-              (* because if we would exit a loop, we could never achieve to get the same tag again *)
-            Admitted.
-
-            (*Inductive Tc : ne_list Coord -> Prop :=
-            | TcInit : Tc (ne_single (root,start_tag))
-            | TcStep : Tc l -> p --> q -> Tc ((p,i) :<: l)*)
-              
-            
             admit.
           -- (* tag in one trace is the same, but in the other there it is in an inner loop C! *)
             admit.
@@ -424,11 +399,7 @@ Module Uniana.
             admit.
           -- (* technical goal: Tr' ((p, i, s) :<: nl_rcons ?l (br, i, ?r0)) *)
             admit.
-          -- (* technical goal: l2' = map fst ?l *)
-            admit.
           -- (* technical goal: Tr' ((p, i, s') :<: nl_rcons ?l (br, i, ?r0)) *)
-            admit.
-          -- (* technical goal: l1' = map fst ?l0 *)
             admit.
         * admit. (* analogous to the previous case *)
   Admitted.
@@ -440,22 +411,15 @@ Module Uniana.
     induction Htr; firstorder. exists s. cbn; reflexivity.
   Qed.
 
-  Lemma ne_back_map {A B : Type} (f : A -> B) l :
-    ne_back (ne_map f l) = f (ne_back l).
-  Proof.
-    induction l; firstorder.
-  Qed.
-
-  Lemma lc_loop_split_of_split p s1 s2 q1 q2 j1 j2 r1 r2 br br' i i' x l1 l2 :
-    let l1' := nlcons (q1,j1,r1) l1 in
-    let l2' := nlcons (q2,j2,r2) l2 in
-    In (br,x) (splits p)
-    -> Tr ((p,i,s1) :<: l1')
-    -> Tr ((p,i,s2) :<: l2')
+  Lemma lc_loop_split p p0 p0' i0 i0' q1 q2 j1 j2 br' i i' l1 l2 l1' l2' :
+    l1' = nlcons (q1,j1) l1
+    -> l2' = nlcons (q2,j2) l2
+    -> TPath (p0,i0) (p,i) ((p,i) :<: l1')
+    -> TPath (p0',i0') (p,i) ((p,i) :<: l2')
     -> q1 =/= q2
     -> i =/= i'
-    -> last_common (ne_map fst l1') (ne_map fst l2') (br',i')
-    -> exists x', In (br',x') (loop_splits br).
+    -> last_common l1' l2' (br',i')
+    -> exists x', In (br',x') (loop_splits p).
   Admitted.
   
   Lemma uni_correct :
@@ -561,11 +525,11 @@ Module Uniana.
             eapply ne_back_trace in Htr1 as [s1 Htr1].
             eapply ne_back_trace in Htr2 as [s2 Htr2].
             setoid_rewrite Htr1. setoid_rewrite Htr2. cbn;eauto.
-          }
-          assert (exists s, last_common (ne_map fst (ne_map fst tq1))
+         } 
+          (*assert (exists s, last_common (ne_map fst (ne_map fst tq1))
                                       (ne_map fst (ne_map fst tq2)) s) as [S LC_l].
-             { eapply ne_last_common. admit. (* common root *) }
-          decide' (i == I').
+             { eapply ne_last_common. admit. (* common root *) }*)
+          decide' (i == I'). (* if the tag is the same there is a splitpoint *)
           -- apply id in LC_lt as LC_lt'.
              destruct LC_lt as [l1' [l2' [Hpost1 [Hpost2 [Hdisj [Hnin1 Hnin2]]]]]].
              eapply last_common_splits in LC_lt'; eauto.
@@ -597,14 +561,22 @@ Module Uniana.
                    eapply not_same_step_disj_post with (q:=q); eauto.
                    rewrite Hk, Hk'. cbn. 
                    unfold option_fst. rewrite Hsplit. reflexivity.
-          -- eapply last_common_lab_splits with (p:=p) in LC_l; eauto;
-               [|admit|admit]. (* easy Tr goals *)
-             destruct LC_l as [X HSsplit].
-             apply id in LC_lt as LC_lt'.
-             eapply lc_loop_split_of_split in LC_lt; eauto; [|admit|admit]. (* easy Tr goals *)
-             destruct LC_lt as [X' HSsplit'].
-             destruct LC_lt' as [l1' [l2' [Hpost1 [Hpost2 [Hdisj [Hnin1 Hnin2]]]]]].
-             ++ eapply join_andb_true_iff in Hsplit; [|apply in_or_app;right; eauto]. cbn in Hsplit.
+          -- apply id in LC_lt as LC_lt'.
+             eapply lc_loop_split with (i:=i) in LC_lt; cycle 1; eauto.
+             ++ subst tq1.
+                rewrite ne_map_nlcons. cbn. reflexivity.
+             ++ subst tq2;rewrite ne_map_nlcons; cbn; reflexivity.
+             ++ eapply Tr_EPath in Htr1 as [s0 Htr1]. eapply EPath_TPath in Htr1.
+                cbn in Htr1. econstructor; eauto. cbn. split; [apply Hqpred|].
+                eapply eff_eff_tag; eauto.                
+                subst tq1. simpl_nl. reflexivity.
+             ++ eapply Tr_EPath in Htr2 as [s0 Htr2]. eapply EPath_TPath in Htr2.
+                cbn in Htr2. econstructor; eauto. cbn. split; [apply Hqpred'|eauto].
+                eapply eff_eff_tag; eauto.
+                subst tq2. simpl_nl. reflexivity.
+             ++ destruct LC_lt as [X' HSsplit'].
+                destruct LC_lt' as [l1' [l2' [Hpost1 [Hpost2 [Hdisj [Hnin1 Hnin2]]]]]].
+                eapply join_andb_true_iff in Hsplit; [|apply in_or_app;right; eauto]. cbn in Hsplit.
                 conv_bool.                 
                 eapply postfix_rm_state_ex_state in Hpost1 as [l01 [s1' [Hpost1 Hposteq1]]].
                 apply postfix_rm_state_ex_state in Hpost2 as [l02 [s2' [Hpost2 Hposteq2]]].

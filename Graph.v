@@ -64,6 +64,12 @@ Module Graph.
     Path p q π -> ne_front π = p.
   Admitted.
 
+  Lemma postfix_path `{Graph} l p q q' l' :
+    Path q' q l'
+    -> Postfix (l :r: p) l'
+    -> Path p q (nl_rcons l p).
+  Admitted.
+
 End Graph.
 (*+ CFG +*)
 

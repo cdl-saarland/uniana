@@ -18,6 +18,13 @@ induction l.
     simpl in H. auto.
 Qed.
 
+Lemma in_fst {A B : Type} a (l : list (A * B)) :
+  In a (map fst l)
+  -> exists b, In (a,b) l.
+Admitted.
+
+Infix "∈" := In (at level 50).
+Notation "a '∉' l" := (~ a ∈ l) (at level 50).
 
 Fixpoint list_is_set {A : Type} (l : list A) : Prop := 
   match l with

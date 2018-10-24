@@ -35,14 +35,8 @@ Module Disjoint.
   Parameter in_out_spec :
     forall p q q', (exists x, is_branch p x) -> q --> p -> q' --> p -> q = q'.
 
-  Fixpoint nl_rcons {A : Type} l (a : A) : ne_list A :=
-    match l with
-    | nil =>  ne_single a
-    | b :: l => (b :<: (nl_rcons l a))
-    end.
-
   Definition DisjointBranch (s : Lab) (x : Var) (qt qf : Lab) (π ϕ : list Lab) :=
-    Path s qt (nl_rcons π s) /\ Path s qf (nl_rcons ϕ s) /\ is_branch s x /\ Disjoint π ϕ.
+    CPath s qt (nl_rcons π s) /\ CPath s qf (nl_rcons ϕ s) /\ is_branch s x /\ Disjoint π ϕ.
 
   Parameter splits : Lab -> list (Lab * Var).
 
@@ -54,7 +48,7 @@ Module Disjoint.
   Parameter loop_splits : Lab -> list (Lab * Var).
 
   Parameter loop_splits_spec : forall p br x,
-      (exists qh π ϕ, qh <> p /\ DisjointBranch br x qh p π ϕ)
+      (exists qh π ϕ, in_loop br qh /\ qh <> p /\ DisjointBranch br x qh p π ϕ)
       <-> In (br, x) (loop_splits p).
 
   Lemma split_last_common s x p l1 l2 :

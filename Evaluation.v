@@ -67,6 +67,11 @@ Module Evaluation.
     eapply edge_spec. 
     unfold is_effect_on. eauto.
   Qed.
+
+  Lemma eff_eff_tag q j r p i s :
+    eff (q,j,r) = Some (p,i,s)
+    -> eff_tag q p j = i.
+  Admitted.
   
   Program Instance EvalGraph : Graph Conf (start_coord,zero)
                                      (fun k k' => match eff k return Prop with
@@ -114,9 +119,9 @@ Module Evaluation.
   Qed.
 
   Lemma Tr_EPath p i s π :
-    (Tr π /\ ne_front π = (p,i,s)) -> exists s0, Path (root,start_tag,s0) (p,i,s) π.
+    Tr π ->  ne_front π = (p,i,s) -> exists s0, Path (root,start_tag,s0) (p,i,s) π.
   Proof.
-    intros [HTr Hfront]. exists (snd (ne_back π)).
+    intros HTr Hfront. exists (snd (ne_back π)).
     revert p i s Hfront. dependent induction HTr; cbn; intros p i s' Hfront.
     - cbn in *. rewrite <-Hfront; econstructor.
     - rewrite <-Hfront.
