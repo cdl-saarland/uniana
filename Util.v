@@ -131,8 +131,6 @@ Qed.
   Proof.
     intros Heql; rewrite Heql;unfold incl; tauto.
   Qed.
-
-
   
   Ltac decide' X :=
     let e := fresh "e" in
@@ -144,3 +142,20 @@ Qed.
           | {_ === _} + {_ =/= _} => destruct X as [e|c]; [destruct e|]
           end
     end.
+
+  
+  Ltac solve_pair_eq :=
+    repeat lazymatch goal with
+           | [ H : ?a = (?b,?c) |- _ ] => destruct a; inversion H; clear H
+           | _  => subst; eauto
+           end.
+
+  
+  Ltac exploit' H :=
+    let p := fresh "Q" in
+           lazymatch type of H with
+           | ?P -> ?Q => assert P as p; [eauto|specialize (H p); clear p]
+           | forall (x : ?P), ?Q => assert P as p; [eauto|specialize (H p)]
+           end.
+
+  Ltac exploit H := repeat (exploit' H).

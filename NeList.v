@@ -833,5 +833,37 @@ Module NeList.
   Proof.
     induction l; firstorder.
   Qed.
+  
+  Lemma ne_to_list_inj {A : Type} (l l' : ne_list A) :
+    ne_to_list l = ne_to_list l' -> l = l'.
+  Proof.
+    Set Printing Coercions.
+    revert l'. induction l; induction l'; intros Heq; inversion Heq; cbn in *.
+    - reflexivity.
+    - exfalso. destruct l'; cbn in H1; congruence.
+    - exfalso. destruct l; cbn in H1; congruence.
+    - apply IHl in H1. subst l. econstructor.
+      Unset Printing Coercions.
+  Qed.
+  
+  Lemma postfix_ex_unmapped_postfix {A B : Type} l l' (a:A) :
+    inhabited B
+    -> Postfix (l :r: a) (ne_map fst l')
+    -> exists l0 (b:B), Postfix (l0 :r: (a,b)) l' /\ l = map fst l0.
+  Admitted.
+  
+  Ltac simpl_nl :=
+    repeat lazymatch goal with
+           | [ |- context[ne_front (nlcons ?a ?l)]] => rewrite nlcons_front
+           | [ |- context[ne_to_list (_ :<: _)]] => rewrite nlcons_necons
+           | [ |- context[ne_to_list (nlcons _ _)]] => rewrite <-nlcons_to_list
+           end.
+
+  Ltac simpl_nl' H := 
+    repeat lazymatch type of H with
+           | context[ne_front (nlcons ?a ?l)] => rewrite nlcons_front in H
+           | context[ne_to_list (_ :<: _)] => rewrite nlcons_necons in H
+           | context[ne_to_list (nlcons _ _)] => rewrite <-nlcons_to_list in H
+           end.
 
 End NeList.

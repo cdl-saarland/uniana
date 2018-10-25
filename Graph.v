@@ -70,6 +70,44 @@ Module Graph.
     -> Path p q (nl_rcons l p).
   Admitted.
 
+  Definition Path' `{Graph} π := Path (ne_back π) (ne_front π) π.
+
+
+  Lemma ne_to_list_not_nil {A:Type} (l : ne_list A) :
+    nil <> l.
+  Proof.
+    intro N. induction l; cbn in *; congruence.
+  Qed.
+  
+  Lemma postfix_nl_rcons {A : Type} l (a:A) :
+    l :r: a = nl_rcons l a.
+  Proof.
+    induction l; eauto. rewrite cons_rcons_assoc. rewrite IHl. cbn. reflexivity.
+  Qed.
+  
+  Lemma postfix_front {A : Type} (l l' : ne_list A) :
+    Postfix l l'
+    -> ne_front l = ne_front l'.
+  Proof.
+    intros H. dependent induction H.
+    - apply ne_to_list_inj in x; rewrite x; eauto.
+    - rewrite postfix_nl_rcons in x. apply ne_to_list_inj in x. 
+      rewrite <-x. destruct l'0.
+      + exfalso. inversion H; [eapply ne_to_list_not_nil|eapply rcons_not_nil]; eauto.
+      + cbn. erewrite IHPostfix; eauto; [|rewrite nlcons_to_list; reflexivity]. simpl_nl; reflexivity.
+  Qed.
+  
+  Lemma path_postfix_path `{Graph} (l l' : ne_list L) :
+    Path' l
+    -> Postfix l' l
+    -> Path' l'.
+  Proof.
+  Admitted. (*
+    intros Hpath Hpost. dependent induction Hpost.
+    - apply ne_to_list_inj in x. setoid_rewrite x; eauto.
+    - unfold Path'. specialize (IHHpost H). erewrite postfix_front; eauto.
+  Qed.*)
+
 End Graph.
 (*+ CFG +*)
 
@@ -183,7 +221,8 @@ Module CFG.
 
   Definition CPath := @Path _ _ _ CFG.
 
-
+  Definition CPath' `{Graph} π := CPath (ne_front π) (ne_back π) π.
+  
 End CFG.
 
 Module TCFG.
@@ -245,6 +284,8 @@ Module TCFG.
     - apply IHPath.
     - apply H0.
   Qed.            
+  
+  Definition TPath' `{Graph} π := TPath (ne_front π) (ne_back π) π.
   
 End TCFG.
 

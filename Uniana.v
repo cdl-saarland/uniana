@@ -10,10 +10,11 @@ Require Import Lists.ListSet.
 Require Import List.
 Require Import Nat. 
 
-Require Util Graph Evaluation Unchanged Disjoint UniquePI.
+Require Util Graph Evaluation Unchanged Disjoint UniquePI LoopSplits Splits.
 
 Module Uniana.
-  Import Util Evaluation.Evaluation Disjoint.Disjoint Unchanged.Unchanged UniquePI.UniquePI.
+  Import Util Evaluation.Evaluation Disjoint.Disjoint Unchanged.Unchanged.
+  Import UniquePI.UniquePI Splits.Splits LoopSplits.LoopSplits.
   
   Parameter init_uni : Var -> Prop.
 
@@ -59,7 +60,6 @@ Module Uniana.
     reflexivity.
     exfalso. apply c. reflexivity.
   Qed.
-
   
   Lemma branch_eff_eq br s1 s2 x i k k':
     is_branch br x
@@ -80,161 +80,7 @@ Module Uniana.
     destruct Heff1'. clear Heff2'.
     eapply ivec_det; eauto.
   Qed.
-
-  Ltac solve_pair_eq :=
-    repeat lazymatch goal with
-           | [ H : ?a = (?b,?c) |- _ ] => destruct a; inversion H; clear H
-           | _  => subst; eauto
-           end.
-
-  Ltac simpl_nl :=
-    repeat lazymatch goal with
-           | [ |- context[ne_front (nlcons ?a ?l)]] => rewrite nlcons_front
-           | [ |- context[ne_to_list (_ :<: _)]] => rewrite nlcons_necons
-           | [ |- context[ne_to_list (nlcons _ _)]] => rewrite <-nlcons_to_list
-           end.
-
-  Ltac simpl_nl' H := 
-    repeat lazymatch type of H with
-           | context[ne_front (nlcons ?a ?l)] => rewrite nlcons_front in H
-           | context[ne_to_list (_ :<: _)] => rewrite nlcons_necons in H
-           | context[ne_to_list (nlcons _ _)] => rewrite <-nlcons_to_list in H
-           end.
         
-
-(*  Hint Rewrite nlcons_front nlcons_necons nlcons_to_list : nl_ne.*)
-
-  Lemma eff_eq_trace_eq p1 p2 q i1 i2 j s1 s2 r1 r2 l1 l2:
-    eff (q,j,r1) = eff (q,j,r2)
-    -> Tr ((p1,i1,s1) :<: nlcons (q,j,r1) l1)
-    -> Tr ((p2,i2,s2) :<: nlcons (q,j,r2) l2)
-    -> p1 = p2 /\ i1 = i2.
-  Proof.
-    intros.
-    split; inversion H0; inversion H1;
-    solve_pair_eq; simpl_nl' H5; simpl_nl' H9; rewrite H in H5; rewrite H5 in H9;
-      inversion H9;eauto.
-  Qed.
-
-  Lemma postfix_rcons_trace_eff l k k' l' :
-    Tr l'
-    -> Postfix ((l :r: k) :r: k') l'
-    -> eff k' = Some k.
-  Proof.
-  Admitted.
-
-  Lemma disjoint_map_fst {A B : Type} (l1 l2 : list (A*B)) (l1' l2' : list A) :
-    l1' = map fst l1
-    -> l2' = map fst l2
-    -> Disjoint l1' l2'
-    -> Disjoint l1 l2.
-  Admitted.
-  
-  Lemma postfix_rm_state_ex_state {A B : Type} l l' (a:A) :
-    inhabited B
-    -> Postfix (l :r: a) (ne_map fst l')
-    -> exists l0 (b:B), Postfix (l0 :r: (a,b)) l' /\ l = map fst l0.
-  Admitted.
-
-  Lemma prefix_trace (l l' : ne_list Conf) :
-    Prefix l l' -> Tr l' -> Tr l.
-  Admitted.
-
-  Lemma prefix_incl {A : Type} :
-    forall l l' : list A, Prefix l l' -> incl l l'.
-  Admitted.
-
-  Definition option_fst {A B : Type} (ab : option (A*B)) : option A :=
-    match ab with
-    | Some ab => Some (fst ab)
-    | _ => None
-    end.
-    
-  Lemma not_same_step_disj_post q j r p i i' s q' j' r' s' l1 l2 l01 l02 S' s1' s2'
-        (Hstep : eff (q, j, r) = Some (p, i, s))
-        (Hstep' : eff (q', j', r') = Some (p, i, s'))
-        (Hneq : q =/= q')
-        (Htr1 : Tr (nlcons (q,j,r) l1))
-        (Htr2 : Tr (nlcons (q',j',r') l2))
-        (Hpost1 : Postfix (l01 :r: (S', i', s1')) (nlcons (q,j,r) l1))
-        (Hpost2 : Postfix (l02 :r: (S', i', s2')) (nlcons (q',j',r') l2))
-        (Hdisj : Disjoint (map fst l01) (map fst l02))
-        (Hsplit : option_fst (eff (S', i', s1')) = option_fst (eff (S', i', s2'))) : False.
-  Proof.  
-    destruct l01, l02.
-    --- (* Show q = S' = q' contradiction! *)
-      cbn in Hpost1,Hpost2. rewrite <-nlcons_to_list in Hpost1,Hpost2.
-      eapply postfix_hd_eq in Hpost1.
-      eapply postfix_hd_eq in Hpost2.
-      apply Hneq. clear - Hpost1 Hpost2. inversion Hpost1. inversion Hpost2. subst q q'.
-      reflexivity.
-    --- (* Show pi ∈ l02 contradiction *)
-      assert (Hcr := cons_rcons p0 l02).      
-      destruct Hcr as [p0' [l02' Hcr]].
-      eapply ivec_fresh;[| |reflexivity].
-      +++ instantiate (4:=(exist _ (nlcons (q',j',r') l2) _ )). cbn. simpl_nl. eauto.
-      +++ cbn. 
-          rewrite Hcr in Hpost2.
-          instantiate (1:= snd p0').
-          enough (p0' = (p,i,snd p0')).
-          {  
-            rewrite H in *. eapply postfix_incl. apply Hpost2.
-            eapply In_rcons. right. apply In_rcons. left. reflexivity.
-          }
-          eapply postfix_rcons_trace_eff in Hpost2; eauto.
-          setoid_rewrite Hpost2 in Hsplit.
-          cbn in Hpost1. rewrite <-nlcons_to_list in Hpost1.
-          eapply postfix_hd_eq in Hpost1 as Hpost1'. setoid_rewrite Hpost1' in Hsplit.
-          rewrite Hstep in Hsplit. clear - Hsplit. inversion Hsplit. destruct p0',p0. inversion H0.
-          subst. cbn. reflexivity.
-    --- (* Show pi ∈ l01 contradiction! *)
-      assert (Hcr := cons_rcons p0 l01).
-      destruct Hcr as [p0' [l01' Hcr]].
-      eapply ivec_fresh;[| |reflexivity].
-      +++ instantiate (4:=(exist _ (nlcons (q,j,r) l1) _ )). cbn.
-          rewrite nlcons_front. eauto.
-      +++ cbn. 
-          rewrite Hcr in Hpost1.
-          instantiate (1:= snd p0').
-          enough (p0' = (p,i,snd p0')).
-          {  
-            rewrite H in *. eapply postfix_incl. apply Hpost1.
-            eapply In_rcons. right. apply In_rcons. left. reflexivity.
-          }
-          eapply postfix_rcons_trace_eff in Hpost1; eauto.
-          setoid_rewrite Hpost1 in Hsplit.
-          cbn in Hpost2. rewrite <-nlcons_to_list in Hpost2.
-          eapply postfix_hd_eq in Hpost2 as Hpost2'. setoid_rewrite Hpost2' in Hsplit.
-          rewrite Hstep' in Hsplit. clear - Hsplit. inversion Hsplit.
-          destruct p0',p0. inversion H0. subst.
-          cbn. reflexivity.
-    --- (* exists qq ∈ l01 ∩ l02 contradiction! *)
-      cbn.
-      assert (Hcr1 := cons_rcons p0 l01).
-      destruct Hcr1 as [p0' [l01' Hcr1]].
-      assert (Hcr2 := cons_rcons p1 l02).
-      destruct Hcr2 as [p1' [l02' Hcr2]].
-      rewrite Hcr1 in Hpost1.
-      rewrite Hcr2 in Hpost2.
-      destruct p0',p1'.
-      enough (p2 = p3).
-      {
-        rewrite Hcr1 in Hdisj. rewrite Hcr2 in Hdisj.
-        clear - Hdisj H. subst p2.
-        eapply Hdisj; unfold rcons in *; rewrite map_app in *; cbn in *.
-        1: fold (rcons (map fst l02') p3).
-        2: fold (rcons (map fst l01') p3).
-        all: eapply In_rcons; left; eauto.
-      }
-      eapply postfix_rcons_trace_eff in Hpost1; eauto.
-      eapply postfix_rcons_trace_eff in Hpost2; eauto.
-      setoid_rewrite Hpost1 in Hsplit.
-      setoid_rewrite Hpost2 in Hsplit.
-      cbn in Hsplit. 
-      inversion Hsplit; eauto.
-      Unshelve. all: cbn; eauto.
-  Qed.
-
   Lemma splits_is_branch br x p :
     In (br,x) (splits p) -> is_branch br x.
   Proof.
@@ -248,179 +94,6 @@ Module Uniana.
     intros. eapply loop_splits_spec in H. firstorder.
   Qed.
 
-  Parameter inh_state : inhabited State.
-
-  Lemma front_eff_ex_succ l k1 k2 k :
-    Tr l
-    -> In k l
-    -> ne_front l = k1
-    -> eff k1 = Some k2
-    -> exists k', eff k = Some k'.
-  Proof.
-    intros l' Htr Hfront Heff.
-    induction l'.
-  Admitted.
-
-  Hint Unfold CPath.
-  
-  Lemma Tr_CPath l :
-    Tr l -> CPath root (fst (fst (ne_front l))) (ne_map fst (ne_map fst l)).
-  Proof.
-    intro H. eapply Tr_EPath in H;[| repeat rewrite <-surjective_pairing; reflexivity].
-    destruct H as [s0 H]. cbn. 
-    eapply EPath_TPath in H. cbn in H. eapply TPath_CPath in H. eauto.
-  Qed.
-  
-  Definition Tr' (l : ne_list Conf) :=
-    exists l', Tr l' /\ Postfix l l'.
-
-  Definition innermost_loop p qh :=
-    in_loop p qh /\ forall qh', in_loop p qh -> in_loop qh qh'.
-
-  Definition Path' `{Graph} π := Path (ne_front π) (ne_back π) π.
-  Definition CPath' `{Graph} π := CPath (ne_front π) (ne_back π) π.
-  Definition TPath' `{Graph} π := TPath (ne_front π) (ne_back π) π.
-  Definition EPath' `{Graph} π := EPath (ne_front π) (ne_back π) π.
-  
-  Lemma tag_eq_ex_innermost_lh q q' j l p i :
-    TPath' ((q',j) :<: nl_rcons l (q,j))
-    -> In (p,i) l
-    -> i = j \/ exists lh, innermost_loop p lh /\ In lh (map fst l).
-  Admitted.
-  
-  Lemma disj_loopheads p i q l1 l2 qh :
-    TPath' ((p,i) :<: nl_rcons l1 (q,i))
-    -> TPath' ((p,i) :<: nl_rcons l2 (q,i))
-    -> Disjoint l1 l2
-    -> loop_head qh
-    -> In qh (map fst l1)
-    -> ~ In qh (map fst l2).
-  Admitted.
-
-  (* This is wrong! This holds only for the FIRST header.
-  Lemma loop_head_tag_cases l q i qh j :
-    TPath' (nl_rcons l (q,i))
-    -> loop_head qh
-    -> In (qh,j) l
-    -> j = O :: i
-      \/ match i with
-        | nil => False
-        | m :: i' => j = S m :: i'
-        end.
-  Admitted.
-  *)
-
-  Local Ltac last_common_splits_path_rcons l :=
-    let H := fresh "H" in
-    let Q := fresh "Q" in
-    let H':= fresh "H" in
-    lazymatch goal with
-    | [ H : Postfix (?l1 :r: (?br,?i)) (ne_to_list (ne_map fst l)),
-            Q : Tr l |- CPath ?br ?q _ ]
-      => apply id in H as H';
-        eapply postfix_map with (f:=fst) in H;
-        rewrite map_rcons in H;
-        eapply Tr_CPath in Q;
-        eapply postfix_path in Q;[|rewrite <-to_list_ne_map;eauto];
-        cbn in H;
-        let P := fresh "P" in
-        enough (fst (fst (ne_front l)) = q) as P;
-        [setoid_rewrite P in Q;cbn in Q; eassumption|];
-        subst l; clear; rewrite nlcons_front; cbn; eauto
-    end.
-
-  Lemma lab_tag_same_length c0 c c' p i j l l' :
-    TPath c0 c l (* the paths need to have the same origin *)
-    -> TPath c0 c' l'
-    -> (p,i) ∈ l
-    -> (p,j) ∈ l'
-    -> length i = length j.
-  Admitted.
-
-  Lemma tag_length_inbetween p i l q q' j :
-    TPath' ((p,i) :<: nl_rcons l (q,i))
-    -> (q',j) ∈ l
-    -> length i <= length j.
-    (* because if we would exit a loop, we could never achieve to get the same tag again *)
-  Admitted.
-  
-  Lemma last_common_splits q j r q' j' r' l l' p i s s' br :
-    let l1 := nlcons ( q, j, r) l  in
-    let l2 := nlcons (q',j',r') l' in
-    last_common (ne_map fst l1) (ne_map fst l2) (br,i)
-    -> q =/= q'
-    -> Tr l1
-    -> Tr l2
-    -> eff (q,j,r)    = Some (p,i,s)
-    -> eff (q',j',r') = Some (p,i,s')
-    -> exists x, In (br,x) (splits p).
-  Proof.
-    intros l1 l2 [l1' [l2' [Hpost1 [Hpost2 [Hdisj [Hnin1 Hnin2]]]]]] Hneq Htr1 Htr2 Hstep Hstep'.
-    setoid_rewrite <-splits_spec.
-    assert (Hbr := branch_spec br).
-    unfold DisjointBranch. unfold is_branch.
-    destruct (branch br);[destruct p0,p0,p0|]. all: cycle 1.
-    - exfalso.
-      apply id in Hpost1 as Hpost1'. apply id in Hpost2 as Hpost2'.
-      apply postfix_rm_state_ex_state in Hpost1' as [l01 [s1' [Hpost1' Hposteq1]]].
-      apply postfix_rm_state_ex_state in Hpost2' as [l02 [s2' [Hpost2' Hposteq2]]].
-      2,3: apply inh_state.
-      subst l1' l2'.
-      eapply not_same_step_disj_post with (q:=q); eauto.
-      eapply front_eff_ex_succ in Hstep as [k Hk]; [|apply Htr1| |].
-      2: eapply postfix_incl; [apply Hpost1'|apply In_rcons;left;eauto].
-      2: subst l1; rewrite nlcons_front; reflexivity.
-      eapply front_eff_ex_succ in Hstep' as [k' Hk'];[|apply Htr2| |].
-      2: eapply postfix_incl; [apply Hpost2'|apply In_rcons;left;eauto].
-      2: subst l2; simpl_nl; reflexivity.
-      specialize (Hbr _ _ _ _ _ _ Hk Hk'). rewrite Hk,Hk'.
-      destruct k as [[pp ii] ss]. destruct k' as [[qq jj] rr].
-      cbn in Hbr. subst pp.
-      eapply ivec_det with (i:=ii) (i':=jj) in Hk; eauto. subst ii.
-      cbn. reflexivity.
-    - exists v0, q, q', ((map fst l1')), ((map fst l2')).
-      split_conj; eauto using step_conf_implies_edge.
-      + last_common_splits_path_rcons l1.
-      + last_common_splits_path_rcons l2.
-      + split.
-        * intros a Hina.
-          apply in_fst in Hina. destruct Hina as [b Hina1].
-          intro N. apply in_fst in N. destruct N as [b' Hina2].
-          eapply id in Hina1 as Hina1'. eapply id in Hina2 as Hina2'.
-          eapply tag_eq_ex_innermost_lh with (j:=i) in Hina1.
-          eapply tag_eq_ex_innermost_lh with (j:=i) in Hina2.
-          destruct Hina1; destruct Hina2. 
-          -- subst b b'. eapply Hdisj; eauto.
-          -- (* tag in one trace is the same, but in the other there it is in an inner loop C! *)
-            admit.
-          -- (* tag in one trace is the same, but in the other there it is in an inner loop C! *)
-            admit.
-          -- (* in both traces a is in an inner loop -> the loop header is in both traces C! *)
-            admit.
-          -- (* technical goal: Tr' ((p, i, s) :<: nl_rcons ?l (br, i, ?r0)) *)
-            admit.
-          -- (* technical goal: Tr' ((p, i, s') :<: nl_rcons ?l (br, i, ?r0)) *)
-            admit.
-        * admit. (* analogous to the previous case *)
-  Admitted.
-
-  Lemma ne_back_trace t :
-    Tr t -> exists s, ne_back t = (root,start_tag,s).
-  Proof.
-    intro Htr.
-    induction Htr; firstorder. exists s. cbn; reflexivity.
-  Qed.
-
-  Lemma lc_loop_split p p0 p0' i0 i0' q1 q2 j1 j2 br' i i' l1 l2 l1' l2' :
-    l1' = nlcons (q1,j1) l1
-    -> l2' = nlcons (q2,j2) l2
-    -> TPath (p0,i0) (p,i) ((p,i) :<: l1')
-    -> TPath (p0',i0') (p,i) ((p,i) :<: l2')
-    -> q1 =/= q2
-    -> i =/= i'
-    -> last_common l1' l2' (br',i')
-    -> exists x', In (br',x') (loop_splits p).
-  Admitted.
   
   Lemma uni_correct :
     forall uni upi unch ts,
@@ -536,9 +209,9 @@ Module Uniana.
              destruct LC_lt' as [x' HSsplit].
              ++ eapply join_andb_true_iff in Hsplit; eauto; [|apply in_or_app;left;eauto].
                 cbn in Hsplit. conv_bool. 
-                apply postfix_rm_state_ex_state in Hpost1 as [l01 [s1' [Hpost1 Hposteq1]]].
-                apply postfix_rm_state_ex_state in Hpost2 as [l02 [s2' [Hpost2 Hposteq2]]].
-                2,3: apply inh_state.
+                apply postfix_ex_unmapped_postfix in Hpost1 as [l01 [s1' [Hpost1 Hposteq1]]].
+                apply postfix_ex_unmapped_postfix in Hpost2 as [l02 [s2' [Hpost2 Hposteq2]]].
+                2,3: econstructor; apply zero.
                 eapply HCuni in Hsplit. all: cycle 1.
                 ** exact Hts1.
                 ** exact Hts2.
@@ -553,7 +226,11 @@ Module Uniana.
                    --- subst tq2. rewrite <-nlcons_to_list. eapply prefix_nincl_prefix; eauto.
                    --- left. reflexivity.
                 ** eapply splits_is_branch in HSsplit as HSbranch.
-                   assert (exists k, eff (S', i, s1') = Some k) as [k Hk] by admit.
+                   assert (exists k, eff (S', i, s1') = Some k) as [k Hk].
+                   {
+                     admit.
+                     (*eapply path_postfix_path in Hpost1. eapply front_eff_ex_succ.*)
+                   }
                    (* because Tr ((p,i,s) ... (S',i,s')) *)
                    assert (exists k', eff (S', i, s2') = Some k') as [k' Hk'] by admit.
                    eapply branch_eff_eq in Hsplit; eauto.
@@ -578,9 +255,9 @@ Module Uniana.
                 destruct LC_lt' as [l1' [l2' [Hpost1 [Hpost2 [Hdisj [Hnin1 Hnin2]]]]]].
                 eapply join_andb_true_iff in Hsplit; [|apply in_or_app;right; eauto]. cbn in Hsplit.
                 conv_bool.                 
-                eapply postfix_rm_state_ex_state in Hpost1 as [l01 [s1' [Hpost1 Hposteq1]]].
-                apply postfix_rm_state_ex_state in Hpost2 as [l02 [s2' [Hpost2 Hposteq2]]].
-                2-5: eauto using inh_state, start_tag.
+                eapply postfix_ex_unmapped_postfix in Hpost1 as [l01 [s1' [Hpost1 Hposteq1]]].
+                apply postfix_ex_unmapped_postfix in Hpost2 as [l02 [s2' [Hpost2 Hposteq2]]].
+                2-5: eauto using zero, start_tag.
                 eapply HCuni in Hsplit. all: cycle 1.
                 ** exact Hts1.
                 ** exact Hts2.

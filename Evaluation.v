@@ -94,15 +94,6 @@ Module Evaluation.
   | Step : forall l k, Tr l -> eff (ne_front l) = Some k -> Tr (k :<: l).
 
   Definition EPath := @Path _ _ _ EvalGraph.
-
-  Ltac exploit' H :=
-    let p := fresh "Q" in
-           lazymatch type of H with
-           | ?P -> ?Q => assert P as p; [eauto|specialize (H p); clear p]
-           | forall (x : ?P), ?Q => assert P as p; [eauto|specialize (H p)]
-           end.
-
-  Ltac exploit H := repeat (exploit' H).
   
   Goal forall (V X Y Z : Type) (x:X) (y:Y) (P : V -> Prop), (X -> Y -> V) -> (forall v:V, P v -> X -> Y -> Z) -> (forall v, P v) -> Z.
     intros V X Y Z x y P Hxy Hv HP. 
@@ -357,18 +348,6 @@ Module Evaluation.
         trace_proj t'. eapply ivec_fresh in H2; eauto. contradiction.
   Qed.
 
-  Lemma ne_to_list_inj {A : Type} (l l' : ne_list A) :
-    ne_to_list l = ne_to_list l' -> l = l'.
-  Proof.
-    Set Printing Coercions.
-    revert l'. induction l; induction l'; intros Heq; inversion Heq; cbn in *.
-    - reflexivity.
-    - exfalso. destruct l'; cbn in H1; congruence.
-    - exfalso. destruct l; cbn in H1; congruence.
-    - apply IHl in H1. subst l. econstructor.
-      Unset Printing Coercions.
-  Qed.
-
   Lemma prefix_eff_cons_cons k k' l l' l'':
     eff (ne_front l) = Some k
     -> l' = ne_to_list l''
@@ -487,5 +466,42 @@ Module Evaluation.
 
   Definition red_prod (h h' : Hyper) : Hyper :=
     fun ts => h ts /\ h' ts.
+
+  Lemma postfix_rcons_trace_eff l k k' l' :
+    Tr l'
+    -> Postfix ((l :r: k) :r: k') l'
+    -> eff k' = Some k.
+  Proof.
+  Admitted.
+  
+  Lemma prefix_trace (l l' : ne_list Conf) :
+    Prefix l l' -> Tr l' -> Tr l.
+  Admitted.
+
+  Lemma prefix_incl {A : Type} :
+    forall l l' : list A, Prefix l l' -> incl l l'.
+  Admitted.
+    
+  Lemma Tr_CPath l :
+    Tr l -> CPath root (fst (fst (ne_front l))) (ne_map fst (ne_map fst l)).
+  Proof.
+    intro H. eapply Tr_EPath in H;[| repeat rewrite <-surjective_pairing; reflexivity].
+    destruct H as [s0 H]. cbn. 
+    eapply EPath_TPath in H. cbn in H. eapply TPath_CPath in H. eauto.
+  Qed.
+
+  Definition Tr' (l : ne_list Conf) :=
+    exists l', Tr l' /\ Postfix l l'.
+
+ 
+  Definition EPath' `{Graph} π := EPath (ne_front π) (ne_back π) π.
+
+  
+  Lemma ne_back_trace t :
+    Tr t -> exists s, ne_back t = (root,start_tag,s).
+  Proof.
+    intro Htr.
+    induction Htr; firstorder. exists s. cbn; reflexivity.
+  Qed.
   
 End Evaluation.
