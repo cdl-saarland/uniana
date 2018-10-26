@@ -1,6 +1,7 @@
 Require Import Coq.Classes.EquivDec.
 Require Import Lists.List.
 Require Import Omega.
+Require Import Coq.Program.Equality.
 
 Require Import Coq.Classes.Morphisms Relation_Definitions.
 
@@ -107,8 +108,6 @@ Module NeList.
       + destruct e. econstructor.
       + econstructor. eauto. 
   Qed.
-
-  Require Import Coq.Program.Equality.
   
   Lemma prefix_cons {A : Type} (l l' : list A) :
     forall a, Prefix (a :: l) l' -> Prefix l l'.
@@ -852,11 +851,18 @@ Module NeList.
     -> exists l0 (b:B), Postfix (l0 :r: (a,b)) l' /\ l = map fst l0.
   Admitted.
   
+  Lemma rcons_nl_rcons {A : Type} l (a:A) :
+    l :r: a = nl_rcons l a.
+  Proof.
+    induction l; eauto. rewrite cons_rcons_assoc. rewrite IHl. cbn. reflexivity.
+  Qed.
+  
   Ltac simpl_nl :=
     repeat lazymatch goal with
            | [ |- context[ne_front (nlcons ?a ?l)]] => rewrite nlcons_front
            | [ |- context[ne_to_list (_ :<: _)]] => rewrite nlcons_necons
            | [ |- context[ne_to_list (nlcons _ _)]] => rewrite <-nlcons_to_list
+           | [ |- context[ne_to_list (nl_rcons _ _)]] => rewrite <-rcons_nl_rcons
            end.
 
   Ltac simpl_nl' H := 
@@ -864,6 +870,7 @@ Module NeList.
            | context[ne_front (nlcons ?a ?l)] => rewrite nlcons_front in H
            | context[ne_to_list (_ :<: _)] => rewrite nlcons_necons in H
            | context[ne_to_list (nlcons _ _)] => rewrite <-nlcons_to_list in H
+           | context[ne_to_list (nl_rcons _ _)] => rewrite <-rcons_nl_rcons in H
            end.
 
 End NeList.

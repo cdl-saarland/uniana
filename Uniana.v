@@ -93,7 +93,20 @@ Module Uniana.
   Proof.
     intros. eapply loop_splits_spec in H. firstorder.
   Qed.
-
+  
+  Ltac eff_some_k :=
+    lazymatch goal with
+    | [Htr : Tr ?tq,
+             Hpost : Postfix (?l :r: ?K) (ne_to_list ?tq)
+       |- exists k, eff ?K = Some k]                      
+      => eapply postfix_incl in Hpost as Hpost_incl;
+        eapply Tr_EPath in Htr as Htr';
+        [destruct Htr' as [s0 Htr']|subst tq;simpl_nl;reflexivity];
+        xeapply path_postfix_path Hpost; eauto;
+        eapply front_eff_ex_succ;[eapply Htr| | |];
+        eauto; [|subst tq; simpl_nl;eauto];
+        eapply Hpost_incl,In_rcons; tauto
+    end.
   
   Lemma uni_correct :
     forall uni upi unch ts,
@@ -199,9 +212,7 @@ Module Uniana.
             eapply ne_back_trace in Htr2 as [s2 Htr2].
             setoid_rewrite Htr1. setoid_rewrite Htr2. cbn;eauto.
          } 
-          (*assert (exists s, last_common (ne_map fst (ne_map fst tq1))
-                                      (ne_map fst (ne_map fst tq2)) s) as [S LC_l].
-             { eapply ne_last_common. admit. (* common root *) }*)
+          (**)
           decide' (i == I'). (* if the tag is the same there is a splitpoint *)
           -- apply id in LC_lt as LC_lt'.
              destruct LC_lt as [l1' [l2' [Hpost1 [Hpost2 [Hdisj [Hnin1 Hnin2]]]]]].
@@ -226,13 +237,8 @@ Module Uniana.
                    --- subst tq2. rewrite <-nlcons_to_list. eapply prefix_nincl_prefix; eauto.
                    --- left. reflexivity.
                 ** eapply splits_is_branch in HSsplit as HSbranch.
-                   assert (exists k, eff (S', i, s1') = Some k) as [k Hk].
-                   {
-                     admit.
-                     (*eapply path_postfix_path in Hpost1. eapply front_eff_ex_succ.*)
-                   }
-                   (* because Tr ((p,i,s) ... (S',i,s')) *)
-                   assert (exists k', eff (S', i, s2') = Some k') as [k' Hk'] by admit.
+                   assert (exists k, eff (S', i, s1') = Some k) as [k Hk] by eff_some_k.
+                   assert (exists k', eff (S', i, s2') = Some k') as [k' Hk'] by eff_some_k.
                    eapply branch_eff_eq in Hsplit; eauto.
                    subst l1' l2'.
                    eapply not_same_step_disj_post with (q:=q); eauto.
@@ -272,9 +278,9 @@ Module Uniana.
                    --- subst tq2. rewrite <-nlcons_to_list. eapply prefix_nincl_prefix; eauto.
                    --- left. reflexivity.
                 ** eapply loop_splits_is_branch in HSsplit' as HSbranch.
-                   assert (exists k, eff (S', I', s1') = Some k) as [k Hk] by admit.
+                   assert (exists k, eff (S', I', s1') = Some k) as [k Hk] by eff_some_k.
                    (* because Tr ((p,i,s) ... (S',I',s')) *)
-                   assert (exists k', eff (S', I', s2') = Some k') as [k' Hk'] by admit.
+                   assert (exists k', eff (S', I', s2') = Some k') as [k' Hk'] by eff_some_k.
                    eapply branch_eff_eq in Hsplit; eauto.
                    subst l1' l2'.
                    eapply not_same_step_disj_post with (q:=q); eauto. 
@@ -299,7 +305,8 @@ Module Uniana.
           -- rewrite <-nlcons_to_list. setoid_rewrite Hteq2 in Hprec'. apply Hprec'.
           -- rewrite <-nlcons_necons, <-Hteq2. destruct t'; eauto.
           -- cbn;eauto.
-        * symmetry. eapply (HCupi _ _ Hsem Hsem'); eauto. 
+        * symmetry. eapply (HCupi _ _ Hsem Hsem'); eauto.
+          Unshelve. all: exact (root,start_tag,zero).
   Qed.
 
 
