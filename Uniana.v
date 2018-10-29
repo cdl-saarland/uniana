@@ -220,8 +220,8 @@ Module Uniana.
              destruct LC_lt' as [x' HSsplit].
              ++ eapply join_andb_true_iff in Hsplit; eauto; [|apply in_or_app;left;eauto].
                 cbn in Hsplit. conv_bool. 
-                apply postfix_ex_unmapped_postfix in Hpost1 as [l01 [s1' [Hpost1 Hposteq1]]].
-                apply postfix_ex_unmapped_postfix in Hpost2 as [l02 [s2' [Hpost2 Hposteq2]]].
+                apply postfix_ex_unmapped_postfix' in Hpost1 as [l01 [s1' [Hpost1 Hposteq1]]].
+                apply postfix_ex_unmapped_postfix' in Hpost2 as [l02 [s2' [Hpost2 Hposteq2]]].
                 2,3: econstructor; apply zero.
                 eapply HCuni in Hsplit. all: cycle 1.
                 ** exact Hts1.
@@ -261,8 +261,8 @@ Module Uniana.
                 destruct LC_lt' as [l1' [l2' [Hpost1 [Hpost2 [Hdisj [Hnin1 Hnin2]]]]]].
                 eapply join_andb_true_iff in Hsplit; [|apply in_or_app;right; eauto]. cbn in Hsplit.
                 conv_bool.                 
-                eapply postfix_ex_unmapped_postfix in Hpost1 as [l01 [s1' [Hpost1 Hposteq1]]].
-                apply postfix_ex_unmapped_postfix in Hpost2 as [l02 [s2' [Hpost2 Hposteq2]]].
+                eapply postfix_ex_unmapped_postfix' in Hpost1 as [l01 [s1' [Hpost1 Hposteq1]]].
+                apply postfix_ex_unmapped_postfix' in Hpost2 as [l02 [s2' [Hpost2 Hposteq2]]].
                 2-5: eauto using zero, start_tag.
                 eapply HCuni in Hsplit. all: cycle 1.
                 ** exact Hts1.

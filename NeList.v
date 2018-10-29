@@ -847,6 +847,12 @@ Module NeList.
   
   Lemma postfix_ex_unmapped_postfix {A B : Type} l l' (a:A) :
     inhabited B
+    -> Postfix (l :r: a) l'
+    -> exists l0 l0' (b:B), Postfix (l0 :r: (a,b)) l0' /\ l = map fst l0 /\ l' = map fst l0'.
+  Admitted.
+
+  Lemma postfix_ex_unmapped_postfix' {A B : Type} l l' (a:A) :
+    inhabited B
     -> Postfix (l :r: a) (ne_map fst l')
     -> exists l0 (b:B), Postfix (l0 :r: (a,b)) l' /\ l = map fst l0.
   Admitted.
@@ -863,6 +869,7 @@ Module NeList.
            | [ |- context[ne_to_list (_ :<: _)]] => rewrite nlcons_necons
            | [ |- context[ne_to_list (nlcons _ _)]] => rewrite <-nlcons_to_list
            | [ |- context[ne_to_list (nl_rcons _ _)]] => rewrite <-rcons_nl_rcons
+           | [ |- context[ne_to_list _ = ne_to_list _]] => eapply ne_to_list_inj
            end.
 
   Ltac simpl_nl' H := 
@@ -871,6 +878,13 @@ Module NeList.
            | context[ne_to_list (_ :<: _)] => rewrite nlcons_necons in H
            | context[ne_to_list (nlcons _ _)] => rewrite <-nlcons_to_list in H
            | context[ne_to_list (nl_rcons _ _)] => rewrite <-rcons_nl_rcons in H
+           | context[ne_to_list _ = ne_to_list _] => eapply ne_to_list_inj in H
            end.
+  
+  Ltac xeapply X Y :=
+    tryif eapply X in Y then idtac
+    else lazymatch type of Y with
+           context [_ :r: _] => rewrite rcons_nl_rcons in Y
+         end; eapply X in Y.
 
 End NeList.

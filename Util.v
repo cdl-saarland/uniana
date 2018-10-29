@@ -159,9 +159,3 @@ Qed.
            end.
 
   Ltac exploit H := repeat (exploit' H).
-
-  Ltac xeapply X Y :=
-    tryif eapply X in Y then idtac
-    else lazymatch type of Y with
-           context [_ :r: _] => rewrite rcons_nl_rcons in Y
-         end; eapply X in Y.

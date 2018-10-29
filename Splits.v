@@ -36,16 +36,35 @@ Module Splits.
     -> eff k1 = Some k2
     -> exists k', eff k = Some k'.
   Proof.
-    intros l' Htr Hfront Heff.
-    induction l'.
-  Admitted.
+    intros Htr Hin Hfront Heff.
+    assert (exists l', Prefix (nlcons k l') l) as [l' Hpre].
+    {
+      clear - Hin. induction l.
+      - destruct Hin;[subst|contradiction]. exists nil; cbn. econstructor.
+      - destruct Hin;[subst;exists l; simpl_nl;econstructor|].
+        eapply IHl in H. destruct H as [l' H]. exists l'. cbn; econstructor; assumption.
+    }
+    clear Hin.
+    dependent induction Hpre.
+    - eapply ne_to_list_inj in x. rewrite <-x in Heff. simpl_nl' Heff. eauto.
+    - clear IHHpre Heff. 
+      rewrite nlcons_to_list in x. eapply ne_to_list_inj in x. rewrite <-x in Htr.
+      clear x.
+      dependent induction Htr.
+      + exfalso. destruct l'0; cbn in x;[|congruence].
+        inversion Hpre;destruct l';cbn in H1; congruence.
+      + inversion Hpre; subst; simpl_nl' x; cbn in x; inversion x; subst.
+        * simpl_nl' H. eexists; exact H.
+        * eapply IHHtr; eauto.
+  Qed.
 
   Definition option_fst {A B : Type} (ab : option (A*B)) : option A :=
     match ab with
     | Some ab => Some (fst ab)
     | _ => None
     end.
-    
+
+  
   Lemma not_same_step_disj_post q j r p i i' s q' j' r' s' l1 l2 l01 l02 S' s1' s2'
         (Hstep : eff (q, j, r) = Some (p, i, s))
         (Hstep' : eff (q', j', r') = Some (p, i, s'))
@@ -199,6 +218,7 @@ Module Splits.
           destruct Hina1; destruct Hina2. 
           -- subst b b'. eapply Hdisj; eauto.
           -- (* tag in one trace is the same, but in the other there it is in an inner loop C! *)
+            (* or we are re-entering a loop. but then we would get a tag different from i C! *)
             admit.
           -- (* tag in one trace is the same, but in the other there it is in an inner loop C! *)
             admit.
