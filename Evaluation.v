@@ -198,13 +198,27 @@ Module Evaluation.
         cbn. tauto.
   Qed.
 
-  Parameter ivec_fresh : forall p i s (t : trace),
+  Lemma ivec_fresh : forall p i s (t : trace),
       eff (ne_front (`t)) = Some (p, i, s) -> forall j r, In (p, j, r) (`t) -> j <> i.
-
-  Parameter ivec_det : forall q j r r' p i i' s s',
+  Proof.
+    intros.
+    destruct t; cbn in *.
+    remember (ne_front x) as c. destruct c,c. 
+    eapply eff_tag_fresh.
+    - eapply Tr_EPath in t;eauto. destruct t as [s1 t].
+      eapply EPath_TPath in t; eauto.
+    - eapply eff_eff_tag; eauto.
+    - eapply ne_map_in with (f:=fst) in H0. eauto.
+  Qed.
+  
+  Lemma ivec_det : forall q j r r' p i i' s s',
       eff (q, j, r) = Some (p, i, s) ->
       eff (q, j, r') = Some (p, i', s') ->
       i = i'.
+  Proof.
+    intros.
+    eapply eff_tag_det;eapply eff_eff_tag; eauto.
+  Qed.
                                                     
   Inductive Precedes : list Conf -> Conf -> Prop :=
   | Pr_in : forall k l, Precedes (k :: l) k

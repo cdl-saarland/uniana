@@ -27,7 +27,6 @@ Module Splits.
     solve_pair_eq; simpl_nl' H5; simpl_nl' H9; rewrite H in H5; rewrite H5 in H9;
       inversion H9;eauto.
   Qed.
-
   
   Lemma front_eff_ex_succ l k1 k2 k :
     Tr l
@@ -37,23 +36,17 @@ Module Splits.
     -> exists k', eff k = Some k'.
   Proof.
     intros Htr Hin Hfront Heff.
-    assert (exists l', Prefix (nlcons k l') l) as [l' Hpre].
-    {
-      clear - Hin. induction l.
-      - destruct Hin;[subst|contradiction]. exists nil; cbn. econstructor.
-      - destruct Hin;[subst;exists l; simpl_nl;econstructor|].
-        eapply IHl in H. destruct H as [l' H]. exists l'. cbn; econstructor; assumption.
-    }
-    clear Hin.
-    dependent induction Hpre.
+    eapply prefix_in_list in Hin as [l' Hin].
+    rewrite nlcons_to_list in Hin.
+    dependent induction Hin.
     - eapply ne_to_list_inj in x. rewrite <-x in Heff. simpl_nl' Heff. eauto.
-    - clear IHHpre Heff. 
+    - clear IHHin Heff. 
       rewrite nlcons_to_list in x. eapply ne_to_list_inj in x. rewrite <-x in Htr.
       clear x.
       dependent induction Htr.
       + exfalso. destruct l'0; cbn in x;[|congruence].
-        inversion Hpre;destruct l';cbn in H1; congruence.
-      + inversion Hpre; subst; simpl_nl' x; cbn in x; inversion x; subst.
+        inversion Hin;destruct l';cbn in H1; congruence.
+      + inversion Hin; subst; simpl_nl' x; cbn in x; inversion x; subst.
         * simpl_nl' H. eexists; exact H.
         * eapply IHHtr; eauto.
   Qed.
@@ -188,8 +181,8 @@ Module Splits.
     destruct (branch br);[destruct p0,p0,p0|]. all: cycle 1.
     - exfalso.
       apply id in Hpost1 as Hpost1'. apply id in Hpost2 as Hpost2'.
-      apply postfix_ex_unmapped_postfix in Hpost1' as [l01 [s1' [Hpost1' Hposteq1]]].
-      apply postfix_ex_unmapped_postfix in Hpost2' as [l02 [s2' [Hpost2' Hposteq2]]].
+      apply postfix_ex_unmapped_postfix' in Hpost1' as [l01 [s1' [Hpost1' Hposteq1]]].
+      apply postfix_ex_unmapped_postfix' in Hpost2' as [l02 [s2' [Hpost2' Hposteq2]]].
       2,3: econstructor; apply zero.
       subst l1' l2'.
       eapply not_same_step_disj_post with (q:=q); eauto.

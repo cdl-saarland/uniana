@@ -281,6 +281,14 @@ Module TCFG.
   
   Definition TPath' `{Graph} π := TPath (ne_front π) (ne_back π) π.
   
+  Parameter eff_tag_fresh : forall p q q0 i j j0 l,
+      TPath (q0,j0) (q,j) l -> eff_tag q p j = i -> forall i', In (p, i') l -> i' <> i.
+
+  Parameter eff_tag_det : forall q j p i i',
+      eff_tag q p j = i ->
+      eff_tag q p j = i' ->
+      i = i'.
+  
 End TCFG.
 
   

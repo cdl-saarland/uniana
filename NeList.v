@@ -856,6 +856,16 @@ Module NeList.
     -> Postfix (l :r: a) (ne_map fst l')
     -> exists l0 (b:B), Postfix (l0 :r: (a,b)) l' /\ l = map fst l0.
   Admitted.
+
+  Lemma ne_map_in {A B : Type} (f:A->B) a (l:ne_list A) :
+    In a l -> In (f a) (ne_map f l).
+  Proof.
+    intro Hin. induction l;cbn.
+    - inversion Hin;[subst;tauto|contradiction].
+    - cbn in Hin. destruct Hin;subst.
+      + left. reflexivity.
+      + right. eauto.
+  Qed.
   
   Lemma rcons_nl_rcons {A : Type} l (a:A) :
     l :r: a = nl_rcons l a.
@@ -880,6 +890,17 @@ Module NeList.
            | context[ne_to_list (nl_rcons _ _)] => rewrite <-rcons_nl_rcons in H
            | context[ne_to_list _ = ne_to_list _] => eapply ne_to_list_inj in H
            end.
+
+  Lemma prefix_in_list {A : Type} l (a:A) :
+    In a l
+    -> exists l', Prefix (a :: l') l.
+  Proof.
+    intro Hin.
+    induction l.
+    - inversion Hin. 
+    - destruct Hin;[subst;exists l; simpl_nl;econstructor|].
+      eapply IHl in H. destruct H as [l' H]. exists l'. cbn; econstructor; assumption.
+  Qed.
   
   Ltac xeapply X Y :=
     tryif eapply X in Y then idtac
