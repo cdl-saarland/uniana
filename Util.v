@@ -159,3 +159,26 @@ Qed.
            end.
 
   Ltac exploit H := repeat (exploit' H).
+
+  Goal forall (V X Y Z : Type) (x:X) (y:Y) (P : V -> Prop), (X -> Y -> V) -> (forall v:V, P v -> X -> Y -> Z) -> (forall v, P v) -> Z.
+    intros V X Y Z x y P Hxy Hv HP. 
+    exploit Hxy. exploit Hv. exact Hv.
+  Qed.
+  
+  Definition option_fst {A B : Type} (ab : option (A*B)) : option A :=
+    match ab with
+    | Some ab => Some (fst ab)
+    | _ => None
+    end.
+  
+  Definition option_prod {A B : Type} (a : option A) (b : option B) : option (A*B) :=
+    match a,b with
+    | Some a, Some b => Some (a,b)
+    | _,_ => None
+    end.
+
+  Infix "⊆" := incl (at level 50).
+  
+  Definition set_eq {A : Type} (a b : list A) := a ⊆ b /\ b ⊆ a.
+  
+  Infix "='" := (set_eq) (at level 50).

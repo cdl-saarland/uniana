@@ -14,7 +14,7 @@ Require Util Graph Evaluation Unchanged Disjoint.
 
 Module LoopSplits.
   Import Util Evaluation.Evaluation Disjoint.Disjoint.
-
+(*
   Lemma lc_loop_split p p0 p0' i0 i0' q1 q2 j1 j2 br' i i' l1 l2 l1' l2' :
     l1' = nlcons (q1,j1) l1
     -> l2' = nlcons (q2,j2) l2
@@ -24,6 +24,6 @@ Module LoopSplits.
     -> i =/= i'
     -> last_common l1' l2' (br',i')
     -> exists x', In (br',x') (loop_splits p).
-  Admitted.
+  Admitted.*)
   
 End LoopSplits.

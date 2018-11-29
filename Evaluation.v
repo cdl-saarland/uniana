@@ -14,6 +14,24 @@ Module Evaluation.
 
   Export Graph.TCFG Graph.CFG NeList.NeList. 
 
+  Parameter Var : Type.
+  Parameter Var_dec : EqDec Var eq.
+  Parameter is_def : Var -> Lab -> Lab -> bool.
+
+  Parameter def_edge :
+    forall p q x, is_def x p q = true -> p --> q.
+
+  Definition is_def_lab x p := exists q, is_def x q p = true.
+
+  Lemma Lab_var_dec :
+    forall (x y : (Lab * Var)), { x = y } + { x <> y }.
+  Proof.
+    intros.
+    destruct x as [xa xb], y as [ya yb].
+    destruct ((xa, xb) == (ya, yb)); firstorder.
+  Qed.
+  Program Instance lab_var_eq_eqdec : EqDec (Lab * Var) eq := Lab_var_dec.
+  
   Parameter Val : Type.
 
   Definition State := Var -> Val.
@@ -95,11 +113,6 @@ Module Evaluation.
 
   Definition EPath := @Path _ _ _ EvalGraph.
   
-  Goal forall (V X Y Z : Type) (x:X) (y:Y) (P : V -> Prop), (X -> Y -> V) -> (forall v:V, P v -> X -> Y -> Z) -> (forall v, P v) -> Z.
-    intros V X Y Z x y P Hxy Hv HP. 
-    exploit Hxy. exploit Hv. exact Hv.
-  Qed.
-  
   Lemma EPath_Tr s0 p i s π :
     Path (root,start_tag,s0) (p,i,s) π -> Tr π.
   Proof.
@@ -133,6 +146,13 @@ Module Evaluation.
       + unfold eff in E. destruct (eff' _) eqn:E'; [|congruence]. destruct p. destruct c,c.
         inversion E. inversion H0. subst. reflexivity.
   Qed.
+
+  Lemma EPath_TPath' k k' c c' π ϕ :
+    EPath k k' π -> c = fst k -> c' = fst k' -> ϕ = ne_map fst π -> TPath c c' ϕ.
+  Proof.
+    intros. eapply EPath_TPath in H;subst; eauto.
+  Qed.
+        
 
   Ltac inv_dep H Dec := inversion H; subst; 
                         repeat match goal with

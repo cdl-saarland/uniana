@@ -17,44 +17,62 @@ Module Graph.
   Export NeList.NeList.
 
   (** Graph **)
-  Class Graph (L : Type) (root : L) (edge : L -> L -> Prop) : Type :=
+
+  Class Graph (L : Type) (edge : L -> L -> Prop) : Type :=
     {
-      L_dec : EqDec L eq;
-      edge_dec : forall p q, {edge p q} + {~ edge p q};
-      root_no_pred : forall p:L, ~ edge p root
+      L_dec : EqDec L eq where "p --> q" := (edge p q);
+      edge_dec : forall p q, {p --> q} + {~ p --> q}(*;
+      root_no_pred : forall p:L, ~ edge p root*)
     }.
 
+  Generalizable Variables L root edge.
+
+  Notation "p --> q" := ((fun (L : Type) (edge : L -> L -> Prop) (_ : Graph L edge) => edge) _ _ _ p q)
+                          (at level 55, right associativity).
+
+(*  Infix "-->" := edge (at level 55, right associativity).*)
+
+  Definition in_graph `{Graph} (p : L) := exists q, p --> q \/ q --> p.
+  
   Inductive Path `{Graph} : L -> L -> ne_list L -> Prop :=
   | PathSingle a : Path a a (ne_single a)
-  | PathCons {a b c π} : Path a b π -> edge b c -> Path a c (c :<: π).
+  | PathCons {a b c π} : Path a b π -> b --> c -> Path a c (c :<: π).
 
-  Generalizable Variable L root edge.
+  Definition Dom `{Graph} r p q := forall π, Path r q π -> In p π.
 
-  Definition Dom `{Graph} p q := forall π, Path root q π -> In p π.
-
-  Program Instance union_Graph
-          {L : Type} {root : L} {edge1 edge2 : L -> L -> Prop}
-          (G1 : Graph L root edge1) (G2 : Graph L root edge2)
-    : Graph L root (fun p q => edge1 p q \/ edge2 p q).
+  Program Instance sub_Graph `{G : Graph} (l : list L)
+    : Graph L (fun p q => (p ∈ l /\ q ∈ l /\ edge p q)).
   Next Obligation. apply L_dec. Qed.
   Next Obligation.
-    destruct (@edge_dec _ _ edge1 _ p q), (@edge_dec _ _ edge2 _ p q); tauto.
+    destruct (edge_dec p q).
+    destruct (in_dec L_dec p l).
+    destruct (in_dec L_dec q l).
+    1: left; firstorder. all: right; firstorder.
   Qed.
+  
+  Program Instance union_Graph
+          {L : Type} {edge1 edge2 : L -> L -> Prop}
+          (G1 : Graph L edge1) (G2 : Graph L edge2)
+    : Graph L (fun p q => edge1 p q \/ edge2 p q).
+  Next Obligation. apply L_dec. Qed.
   Next Obligation.
-    intro H. destruct H; apply root_no_pred in H; contradiction.
+    destruct (@edge_dec _ edge1 _ p q), (@edge_dec _ edge2 _ p q); tauto.
   Qed.
+  (*Next Obligation.
+    intro H. destruct H; apply root_no_pred in H; contradiction.
+  Qed.*)
 
   Program Instance minus_Graph
-          {L : Type} {root : L} {edge1 edge2 : L -> L -> Prop}
-          (G1 : Graph L root edge1) (G2 : Graph L root edge2)
-    : Graph L root (fun p q => edge1 p q /\ ~ edge2 p q).
+          {L : Type} {edge1 edge2 : L -> L -> Prop}
+          (G1 : Graph L edge1) (G2 : Graph L edge2)
+    : Graph L (fun p q => edge1 p q /\ ~ edge2 p q).
   Next Obligation. apply L_dec. Qed.
   Next Obligation.
-    destruct (@edge_dec _ _ edge1 _ p q), (@edge_dec _ _ edge2 _ p q); tauto.
-  Qed.
+    destruct (@edge_dec _ edge1 _ p q), (@edge_dec _ edge2 _ p q); tauto.
+  Qed. (*
   Next Obligation.
     intro H. destruct H; apply root_no_pred in H; contradiction.
-  Qed.
+  Qed.*)
 
   Lemma path_front `{Graph} p q π :
     Path p q π -> ne_front π = q.
@@ -108,40 +126,122 @@ End Graph.
 Module CFG.
 
   Export Graph.
-
-  (** basic parameters **)
-  Parameter Lab : Type.
-  Parameter Lab_dec : EqDec Lab eq.
-  Parameter preds : Lab -> list Lab.
-  Notation "p --> q" := (List.In p (preds q)) (at level 55, right associativity).
-  Parameter root : Lab.
-  Parameter root_no_pred' : forall p, ~ p --> root.
-  Definition cfg_edge p q := In p (preds q).
-  (*  Parameter Lab_fin : exists l:list Lab, forall p:Lab, In p l. *)
   
-  Program Instance CFG : Graph Lab root cfg_edge.
-  Next Obligation.
-    unfold cfg_edge. remember (preds q) as l.
-    apply eq_incl in Heql.
-    revert p q Heql. induction l; intros p q Heql; cbn;[tauto|].
-    decide' (Lab_dec a p).
-    - left;left. reflexivity.
-    - apply incl_cons in Heql.
-      destruct (IHl p q Heql).
-      + tauto.
-      + right. firstorder.
-  Qed.
-  Next Obligation.
-    apply root_no_pred'.
-  Qed.
+  (** basic parameters **)
+  Parameter Lab : Type.  
+  Parameter all_lab : list Lab.
+  Parameter all_lab_spec : forall l, l ∈ all_lab.
+  Parameter Lab_dec : EqDec Lab eq.
+     
+  Program Instance Lab_Graph
+          (rel : Lab -> Lab -> Prop)
+          (rel_dec : forall a b, {rel a b} + {~ rel a b})
+    : Graph Lab rel.
 
+  Notation "p '-->*' q" := (exists π, Path p q π) (at level 55, right associativity).
+
+  Reserved Notation "p -a> q" (at level 55).
+  Reserved Notation "p -a>* q" (at level 55).
+
+  Definition decidableT (a : Prop) := {a} + {~ a}.
+
+  Definition minus_edge (rel_sub rel_min : Lab -> Lab -> Prop) : Lab -> Lab -> Prop :=
+    (fun p q : Lab => rel_sub p q /\ ~ rel_min p q).
+
+  Lemma minus_dec (rel_sub rel_min : Lab -> Lab -> Prop) :
+    (forall p q, decidableT (rel_sub p q))
+    -> (forall p q, decidableT (rel_min p q))
+    -> (forall p q, decidableT (minus_edge rel_sub rel_min p q)).
+  Proof.
+    unfold decidableT, minus_edge. intros sdec mdec.
+    intros. specialize (sdec p q). specialize (mdec p q). destruct sdec, mdec; firstorder.
+  Qed.
+  
+  Class redCFG (edge : Lab -> Lab -> Prop) (G : Graph Lab edge) (root : Lab)
+        {acyclic_edge : Lab -> Lab -> Prop}
+        (acyclic_fragment : Graph Lab acyclic_edge) :=
+    {
+      loop_head_dom : forall ql qh, minus_edge edge acyclic_edge ql qh -> @Dom _ _ G root qh ql
+                   where "p -a> q" := (acyclic_edge p q);
+      acyclic_edge_incl : forall p q, p -a> q -> p --> q 
+                   where "p '-a>*' q" := (exists π, @Path _ acyclic_edge acyclic_fragment p q π);
+      (*reach_acy : forall (p : Lab), root -a>* p; this is too much, we want to allow incomplete graphs*)
+      acyclic : forall (p q : Lab), p -a> q -> ~ q -a>* p;
+    }.
+
+  Notation "p '-a>' q" := ((fun (acyclic_edge : Lab -> Lab -> Prop)
+                              (acyclic_fragment : Graph Lab acyclic_edge)
+                              (_ : redCFG _ _ acyclic_fragment) => acyclic_edge) _ _ _ p q)
+                            (at level 55).
+  
+  Definition AcyPath `{redCFG} : Lab -> Lab -> ne_list Lab -> Prop :=
+    @Path _ _ acyclic_fragment.
+
+  Notation "p '-a>*' q" := (exists π, AcyPath p q π) (at level 55).
+
+  Generalizable Variables G root acyclic_edge acyclic_fragment edge.
+
+  Definition back_edge {edge acyclic_edge : Lab -> Lab -> Prop}
+             {acyclic_fragment : Graph Lab acyclic_edge}
+             {G : Graph Lab edge} {root : Lab}
+             {_ : @redCFG edge _ root _ acyclic_fragment} := minus_edge edge acyclic_edge.
+
+  Infix "↪" := back_edge (at level 55).
+  
+  Definition loop_head `{H : redCFG} p : Prop :=
+    exists q, q ↪ p.
+
+  Lemma loop_head_dec `{H : redCFG} p : decidableT (loop_head p).
+  Admitted.
+  
+  Definition loop_contains `{redCFG} qh q : Prop :=
+    exists p, Dom root qh q /\ q -a>* p /\ p --> qh /\ back_edge p qh.
+
+  Lemma loop_contains_dec `{redCFG} qh q : {loop_contains qh q} + {~ loop_contains qh q}.
+  Admitted.
+
+  Definition loop_contains_b `{redCFG} qh q :=
+    if loop_contains_dec qh q then true else false.
+
+  Definition exit_edge `{redCFG} (h p q : Lab) : Prop :=
+    loop_contains h p /\ ~ loop_contains h q /\ p --> q.
+
+  Definition exiting `{redCFG} (h p : Lab) : Prop :=
+    exists q, exit_edge h p q.
+
+  Definition exited `{redCFG} (h q : Lab) : Prop :=
+    exists p, exit_edge h p q.
+
+  Fixpoint preds' `{redCFG} (l : list Lab) (p : Lab) : list Lab :=
+    match l with
+    | nil => nil
+    | q :: l => if (edge_dec p q) then q :: (preds' l p) else preds' l p
+    end.
+
+  Definition preds `{redCFG} : Lab -> list Lab := preds' all_lab.
+
+  Program Instance loop_CFG `(G : redCFG) (h : Lab) (H : loop_head h) 
+    : @redCFG _ (sub_Graph (filter (loop_contains_b h) all_lab)) h.
+  Next Obligation.
+   Unset Printing Notations. 
+
+  Fixpoint implode' (G : redCFG) (l : list Lab) {struct l} : redCFG * (Lab -> option redCFG)
+    := .
+    
+   loop_depth, loop_head
+
+  Parameter root_no_pred0 : forall p, p ∉ preds0 root.
+                 
+  Parameter root : Lab.
+  
+  Notation "p --> q" := (p ∈ preds0 q) (at level 55, right associativity).
+  
+  
   (** more parameters **)
   Parameter all_lab : set Lab.
   Parameter all_lab_spec : forall l, set_In l all_lab.
   Notation "p -->? q" := (p === q \/ p --> q) (at level 70, right associativity).
-  Parameter Var : Type.
-  Parameter Var_dec : EqDec Var eq.
-  Parameter loop_exit : Lab -> list Lab.
+  Parameter loop_exit : forall `{Graph Lab}, Lab -> list Lab.
   Parameter back_edge : Lab -> Lab -> Prop.
   Parameter back_edge_dec : forall p q, {back_edge p q} + {~ back_edge p q}.
   Parameter back_edge_incl : forall p q, back_edge p q -> p --> q.
@@ -165,26 +265,8 @@ Module CFG.
 
   Definition acyclic_CFG := minus_Graph CFG back_edge_CFG.
   
-  Definition loop_head p : Prop :=
-    exists q, q --> p /\ back_edge q p.
   
   Parameter loop_head_dec : forall p, {loop_head p} + {~ loop_head p}.
-
-  Parameter is_def : Var -> Lab -> Lab -> bool.
-
-  Parameter def_edge :
-    forall p q x, is_def x p q = true -> p --> q.
-
-  Definition is_def_lab x p := exists q, is_def x q p = true.
-
-  Lemma Lab_var_dec :
-    forall (x y : (Lab * Var)), { x = y } + { x <> y }.
-  Proof.
-    intros.
-    destruct x as [xa xb], y as [ya yb].
-    destruct ((xa, xb) == (ya, yb)); firstorder.
-  Qed.
-  Program Instance lab_var_eq_eqdec : EqDec (Lab * Var) eq := Lab_var_dec.
 
   (** Paths **)
       
@@ -204,8 +286,6 @@ Module CFG.
   
   Parameter loop_head_dom : forall ql qh, is_back_edge ql qh = true -> Dom qh ql.
 
-  Definition in_loop q qh : Prop :=
-    exists p, q -a>* p /\ p --> qh /\ is_back_edge p qh = true.
   
   Parameter loop_exit_spec : forall qh qe,
       In qh (loop_exit qe) <-> exists q, q --> qe /\ in_loop q qh /\ ~ in_loop qe qh.
@@ -216,8 +296,20 @@ Module CFG.
   Definition CPath := @Path _ _ _ CFG.
 
   Definition CPath' `{Graph} π := CPath (ne_front π) (ne_back π) π.
+
+  (** collapsed CFG **)
+
+  Parameter depth : Lab -> nat.
+  Parameter depth_spec : True. (* TODO *)
+
+(*  Definition collapse_head (qh : Lab) := forall qe, qh ∈ exit qe -> 
+
+  Program Instance collapsed_CFG (col_dep : nat) : Graph Lab root (fun p q : Lab => if )*)
   
 End CFG.
+
+Import CFG.
+
 
 Module TCFG.
 

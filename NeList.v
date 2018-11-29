@@ -781,6 +781,8 @@ Module NeList.
     | b :: l => a :<: (nlcons b l)
     end.
 
+  Infix ":<" := nlcons (at level 50).
+  
   Lemma nlcons_to_list {A : Type} (a : A) l :
     a :: l = nlcons a l.
   Proof.
@@ -814,6 +816,8 @@ Module NeList.
     | nil =>  ne_single a
     | b :: l => (b :<: (nl_rcons l a))
     end.
+
+  Infix ">:" := nl_rcons (at level 50).
   
   Lemma postfix_map {A B : Type} (f : A -> B) :
     forall l l', Postfix l l' -> Postfix (map f l) (map f l').
@@ -880,6 +884,7 @@ Module NeList.
            | [ |- context[ne_to_list (nlcons _ _)]] => rewrite <-nlcons_to_list
            | [ |- context[ne_to_list (nl_rcons _ _)]] => rewrite <-rcons_nl_rcons
            | [ |- context[ne_to_list _ = ne_to_list _]] => eapply ne_to_list_inj
+           | [ |- context[ne_map ?f (_ :< _)]] => rewrite ne_map_nlcons
            end.
 
   Ltac simpl_nl' H := 
@@ -889,6 +894,7 @@ Module NeList.
            | context[ne_to_list (nlcons _ _)] => rewrite <-nlcons_to_list in H
            | context[ne_to_list (nl_rcons _ _)] => rewrite <-rcons_nl_rcons in H
            | context[ne_to_list _ = ne_to_list _] => eapply ne_to_list_inj in H
+           | context[ne_map ?f (_ :< _)] => rewrite ne_map_nlcons in H
            end.
 
   Lemma prefix_in_list {A : Type} l (a:A) :
@@ -900,6 +906,18 @@ Module NeList.
     - inversion Hin. 
     - destruct Hin;[subst;exists l; simpl_nl;econstructor|].
       eapply IHl in H. destruct H as [l' H]. exists l'. cbn; econstructor; assumption.
+  Qed.
+
+  Lemma prefix_nil {A : Type} (l : list A) : Prefix nil l.
+  Proof.
+    induction l; econstructor; firstorder.
+  Qed.
+  
+  Lemma prefix_nlcons: forall (A : Type) (l l' : list A) (a : A),
+      Prefix (a :< l) l' -> Prefix l l'.
+  Proof.
+    destruct l;[intros;eapply prefix_nil|
+                cbn;intros;eapply prefix_cons;setoid_rewrite nlcons_to_list at 2;eauto].
   Qed.
   
   Ltac xeapply X Y :=

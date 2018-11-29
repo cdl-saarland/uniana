@@ -51,11 +51,6 @@ Module Splits.
         * eapply IHHtr; eauto.
   Qed.
 
-  Definition option_fst {A B : Type} (ab : option (A*B)) : option A :=
-    match ab with
-    | Some ab => Some (fst ab)
-    | _ => None
-    end.
 
   
   Lemma not_same_step_disj_post q j r p i i' s q' j' r' s' l1 l2 l01 l02 S' s1' s2'
@@ -163,21 +158,21 @@ Module Splits.
     end.
 
 
-  Lemma last_common_splits q j r q' j' r' l l' p i s s' br :
-    let l1 := nlcons ( q, j, r) l  in
-    let l2 := nlcons (q',j',r') l' in
-    last_common (ne_map fst l1) (ne_map fst l2) (br,i)
+  Lemma last_common_splits q j r q' j' r' l l' p q1 q2 i s s' br :
+    let l1 := ( q, j, r) :< l  in
+    let l2 := (q',j',r') :< l' in
+    last_common (ne_map fst l1) (ne_map fst l2) (br,i) (* i = i ! *)
     -> q =/= q'
     -> Tr l1
     -> Tr l2
     -> eff (q,j,r)    = Some (p,i,s)
     -> eff (q',j',r') = Some (p,i,s')
-    -> exists x, In (br,x) (splits p).
-  Proof.
+    -> exists x, In (br,q1,q2,x) (path_splits p).
+  Proof. (* this lemma should hold, but it is probably useless *)
     intros l1 l2 [l1' [l2' [Hpost1 [Hpost2 [Hdisj [Hnin1 Hnin2]]]]]] Hneq Htr1 Htr2 Hstep Hstep'.
-    setoid_rewrite <-splits_spec.
+    setoid_rewrite <-path_splits_spec.
     assert (Hbr := branch_spec br).
-    unfold DisjointBranch. unfold is_branch.
+    unfold DisjointBranch. unfold is_branch. Admitted. (*
     destruct (branch br);[destruct p0,p0,p0|]. all: cycle 1.
     - exfalso.
       apply id in Hpost1 as Hpost1'. apply id in Hpost2 as Hpost2'.
@@ -222,6 +217,6 @@ Module Splits.
           -- (* technical goal: Tr' ((p, i, s') :<: nl_rcons ?l (br, i, ?r0)) *)
             admit.
         * admit. (* analogous to the previous case *)
-  Admitted.
+  Admitted. *)
   
 End Splits.
