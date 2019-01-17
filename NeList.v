@@ -782,6 +782,14 @@ Module NeList.
     end.
 
   Infix ":<" := nlcons (at level 50).
+
+  Definition nl_conc {A : Type} (l : ne_list A) (ll : list A) : ne_list A :=
+    match ll with
+    | nil => l
+    | a :: ll => l :+: (a :< ll)
+    end.
+  
+  Infix ":+" := nl_conc (at level 50).
   
   Lemma nlcons_to_list {A : Type} (a : A) l :
     a :: l = nlcons a l.
@@ -793,7 +801,7 @@ Module NeList.
     ne_front (nlcons a l) = a.
   Proof.
     induction l; cbn; eauto.
-  Qed.
+  Qed.    
                
   Lemma nlcons_necons {A : Type} l :
     forall (a : A), (a :<: l) = nlcons a l.
@@ -819,6 +827,12 @@ Module NeList.
 
   Infix ">:" := nl_rcons (at level 50).
   
+  Lemma nl_rcons_back {A : Type} (a : A) l :
+    ne_back (l >: a) = a.
+  Proof.
+    induction l; cbn; eauto.
+  Qed.
+    
   Lemma postfix_map {A B : Type} (f : A -> B) :
     forall l l', Postfix l l' -> Postfix (map f l) (map f l').
   Admitted.
@@ -880,21 +894,25 @@ Module NeList.
   Ltac simpl_nl :=
     repeat lazymatch goal with
            | [ |- context[ne_front (nlcons ?a ?l)]] => rewrite nlcons_front
+           | [ |- context[ne_back (?l >: ?a)]] => rewrite nl_rcons_back
            | [ |- context[ne_to_list (_ :<: _)]] => rewrite nlcons_necons
            | [ |- context[ne_to_list (nlcons _ _)]] => rewrite <-nlcons_to_list
            | [ |- context[ne_to_list (nl_rcons _ _)]] => rewrite <-rcons_nl_rcons
            | [ |- context[ne_to_list _ = ne_to_list _]] => eapply ne_to_list_inj
            | [ |- context[ne_map ?f (_ :< _)]] => rewrite ne_map_nlcons
+           | [ |- context[_ :< (ne_to_list _)]] => rewrite <-nlcons_necons
            end.
 
   Ltac simpl_nl' H := 
     repeat lazymatch type of H with
            | context[ne_front (nlcons ?a ?l)] => rewrite nlcons_front in H
+           | context[ne_back (?l >: ?a)] => rewrite nl_rcons_back in H
            | context[ne_to_list (_ :<: _)] => rewrite nlcons_necons in H
            | context[ne_to_list (nlcons _ _)] => rewrite <-nlcons_to_list in H
            | context[ne_to_list (nl_rcons _ _)] => rewrite <-rcons_nl_rcons in H
            | context[ne_to_list _ = ne_to_list _] => eapply ne_to_list_inj in H
            | context[ne_map ?f (_ :< _)] => rewrite ne_map_nlcons in H
+           | context[_ :<: (ne_to_list _)] => rewrite <-nlcons_necons in H
            end.
 
   Lemma prefix_in_list {A : Type} l (a:A) :

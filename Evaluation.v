@@ -12,7 +12,13 @@ Require Import Util.
 
 Module Evaluation.
 
-  Export Graph.TCFG Graph.CFG NeList.NeList. 
+  Export Graph.TCFG Graph.CFG NeList.NeList.
+
+  Section eval.
+
+    Variable (edge a_edge : Lab -> Lab -> bool) (root : Lab) (C : redCFG edge root a_edge).
+    
+    Variable root_no_pred' : forall p, p --> root -> False.
 
   Parameter Var : Type.
   Parameter Var_dec : EqDec Var eq.
@@ -36,9 +42,9 @@ Module Evaluation.
 
   Definition State := Var -> Val.
 
-  Variable Val_dec : EqDec Val eq.
-  Variable Tag_dec : EqDec Tag eq.
-  Variable State_dec : EqDec State eq.
+  Parameter Val_dec : EqDec Val eq.
+  Parameter Tag_dec : EqDec Tag eq.
+  Parameter State_dec : EqDec State eq.
 
   
   Parameter start_tag : Tag.
@@ -90,19 +96,13 @@ Module Evaluation.
     eff (q,j,r) = Some (p,i,s)
     -> eff_tag q p j = i.
   Admitted.
-  
-  Program Instance EvalGraph : Graph Conf (start_coord,zero)
-                                     (fun k k' => match eff k return Prop with
-                                                 Some k => k = k' | None => False end).
-  Next Obligation.
-    destruct (eff p); [apply conf_eq_eqdec|tauto].
-  Qed.
-  Next Obligation.
-    intro N. destruct (eff p) eqn:E.
-    - subst c. destruct p,c. apply step_conf_implies_edge in E. apply root_no_pred' in E. assumption.
-    - contradiction.
-  Qed.
 
+  Definition eval_edge := (fun k k' : Conf
+                           => match eff k with
+                             | Some k => k ==b k'
+                             | None => false
+                             end).
+  
   Parameter def_spec :
     forall p q x, (exists i j s r, eff (p, i, s) = Some (q, j, r) /\ r x <> s x) ->
                   is_def x p q = true.
@@ -111,19 +111,25 @@ Module Evaluation.
   | Init : forall s, Tr (ne_single (root, start_tag, s))
   | Step : forall l k, Tr l -> eff (ne_front l) = Some k -> Tr (k :<: l).
 
-  Definition EPath := @Path _ _ _ EvalGraph.
+  Definition EPath := Path eval_edge.
+
+  Hint Unfold Conf Coord.
   
   Lemma EPath_Tr s0 p i s π :
-    Path (root,start_tag,s0) (p,i,s) π -> Tr π.
+    EPath (root,start_tag,s0) (p,i,s) π -> Tr π.
   Proof.
-    intro H. 
-    dependent induction H; [|destruct b,p0]; econstructor.
+    intro H. remember (root, start_tag, s0) as start_c.
+    remember (p,i,s) as pis_c. revert p i s Heqpis_c.
+    induction H; intros p i s Heqpis_c; [rewrite Heqstart_c|];econstructor;destruct b as [[b1 b2] b3].
     - eapply IHPath; eauto.
-    - erewrite path_front; eauto. destruct (eff (l,t,s1)); [subst c; eauto|contradiction].
+    - erewrite path_front; eauto. unfold eval_edge in H0.
+      unfold Conf,Coord in *.
+      destruct (eff (b1,b2,b3)); [subst c; eauto|congruence].
+      conv_bool. rewrite H0. reflexivity. 
   Qed.
 
   Lemma Tr_EPath p i s π :
-    Tr π ->  ne_front π = (p,i,s) -> exists s0, Path (root,start_tag,s0) (p,i,s) π.
+    Tr π ->  ne_front π = (p,i,s) -> exists s0, EPath (root,start_tag,s0) (p,i,s) π.
   Proof.
     intros HTr Hfront. exists (snd (ne_back π)).
     revert p i s Hfront. dependent induction HTr; cbn; intros p i s' Hfront.
@@ -131,9 +137,8 @@ Module Evaluation.
     - rewrite <-Hfront.
       econstructor; [eapply IHHTr; eauto|].
       + repeat rewrite <-surjective_pairing. reflexivity.
-      + replace (eff (_,_,_)) with (eff (ne_front l));
-          [|f_equal; repeat rewrite <-surjective_pairing; reflexivity].
-        destruct (eff _); inversion H; reflexivity.
+      + unfold eval_edge. do 2 erewrite <-surjective_pairing.
+        destruct (eff _); inversion H. apply beq_true. reflexivity.
   Qed.
 
   Lemma EPath_TPath k k' π :
@@ -141,8 +146,9 @@ Module Evaluation.
   Proof.
     intros H. dependent induction H; [|destruct c]; econstructor.
     - apply IHPath.
-    - repeat destr_let. destruct (eff _) eqn:E; [|contradiction]. split.
-      + subst c; eapply step_conf_implies_edge; eauto.
+    - unfold eval_edge in H0. unfold tcfg_edge. repeat destr_let.
+      destruct (eff _) eqn:E; conv_bool; [|congruence]. split.
+      + rewrite H0 in E. eapply step_conf_implies_edge; eauto.
       + unfold eff in E. destruct (eff' _) eqn:E'; [|congruence]. destruct p. destruct c,c.
         inversion E. inversion H0. subst. reflexivity.
   Qed.
@@ -191,9 +197,12 @@ Module Evaluation.
   Lemma in_succ_in k p q t :
     Tr (nlcons k t) -> In p t -> eff p = Some q -> In q (k :: t).
   Proof.
-    intros.
-    revert dependent k. dependent induction t; intros k H; inv_tr H; try firstorder.
-    + rewrite nlcons_front in H5. subst a. rewrite H5 in H1. inversion H1. left. reflexivity.
+    intros. 
+    revert dependent k. 
+    dependent induction t; intros k H; inv_tr H; [firstorder|].
+    + rewrite nlcons_front in H5. destruct H0;[subst a|].
+      * rewrite H5 in H1. inversion H1. left. reflexivity.
+      * right. eapply IHt;eauto.
   Qed.
 
   Lemma in_pred_exists p i s k t :
@@ -208,7 +217,8 @@ Module Evaluation.
       + destruct a as [[q j] r]. exists q,j,r.
         split; cbn; eauto.
       + exfalso. eapply Hneq. inversion H1.
-        destruct a,p0. inversion H0; inversion H3; subst; [inversion H;reflexivity |contradiction]. 
+        destruct a,p0. cbn in H3. destruct H3;[|contradiction].
+        inversion H0; inversion H; reflexivity.
     - destruct Hin; subst.
       + destruct a as [[q j] r].
         exists q, j, r. split; [ constructor | assumption ]. reflexivity.
@@ -256,6 +266,7 @@ Module Evaluation.
     - inv_tr H; eauto using In; cbn; eauto.
   Qed.
 
+  (*
   Lemma start_no_tgt :
     forall i' s' k, eff k = Some (root, i', s') -> False.
   Proof.
@@ -269,6 +280,7 @@ Module Evaluation.
     exists i, i', s, s'. 
     assumption.
   Qed.
+*)
 
   Lemma precedes_cons (k k' : Conf) l : Precedes' l k' k' -> Precedes' (k :: l) k' k'.
   Proof.
@@ -341,7 +353,8 @@ Module Evaluation.
     destruct t as [l tr]. induction l; inversion tr; subst; cbn in *; intros i Hin.
     - destruct Hin as [Hin|Hin]; [inversion Hin; eauto|contradiction].
     - destruct Hin.
-      + exfalso. destruct (ne_front l) as [[q j] r]. eapply root_no_pred'. subst a.
+      + exfalso. destruct (ne_front l) as [[q j] r].
+        eapply root_no_pred'. subst a.
         apply edge_spec. unfold is_effect_on. exists j,i,r,s. eapply H2.
       + eapply IHl; eauto.
   Qed.
@@ -382,30 +395,70 @@ Module Evaluation.
         trace_proj t'. eapply ivec_fresh in H2; eauto. contradiction.
   Qed.
 
-  Lemma prefix_eff_cons_cons k k' l l' l'':
-    eff (ne_front l) = Some k
+  Lemma prefix_trace (l l' : ne_list Conf) :
+    Prefix l l' -> Tr l' -> Tr l.
+  Admitted.
+
+  Notation "a ≻ b" := (eval_edge a b = true) (at level 50).
+
+  Lemma eval_det c0 c c' : c0 ≻ c -> c0 ≻ c' -> c = c'.
+  Proof.
+    intros Hcc Hcc'. unfold eval_edge in *. destruct (eff c0); conv_bool;[|congruence].
+    rewrite <-Hcc, <-Hcc'. reflexivity.
+  Qed.
+
+  Lemma necons_nlcons_inv {A : Type} (a a' : A) l l' :
+    (a :<: l) = a' :< l' -> a = a' /\ ne_to_list l = l'.
+  Proof.
+    intro H. split.
+    all:destruct l'; cbn in *; [congruence|].
+    1:revert a a' a0 l' H; induction l; intros b b' b0 l' H; cbn in *.
+    1,2: inversion H; split;eauto.
+    revert a a' a0 l' H; induction l; intros b b' b0 l' H; cbn in *.
+    - destruct l'; cbn in *;congruence.
+    - f_equal.
+      + inversion H. destruct l';inversion H2. reflexivity.
+      + destruct l'; cbn in *; inversion H; subst. eapply IHl.
+        reflexivity. Unshelve. eauto.
+  Qed.
+
+  Lemma tr_succ_eq (l : list Conf) (k k' : Conf) :
+    ne_back (k :< l) = ne_back (k' :< l) -> Tr (k :< l) -> Tr (k' :< l) -> k = k'.
+  Proof.
+    intros Hback Htr Htr'.
+    inversion Htr; inversion Htr'; subst.
+    1,2: destruct l;cbn in H0,H1;[|congruence].
+    3: destruct l;cbn in H3;[|congruence].
+    all: cbn in Hback;eauto.
+    eapply necons_nlcons_inv in H2 as [H21 H22];eapply necons_nlcons_inv in H as [H01 H02].
+    subst k0 k1. destruct l;[exfalso;eapply ne_to_list_not_nil;eauto|].
+    rewrite nlcons_to_list in H22. rewrite nlcons_to_list in H02.
+    apply ne_to_list_inj in H22. apply ne_to_list_inj in H02. rewrite H22 in H4. rewrite H02 in H1.
+    simpl_nl' H1. simpl_nl' H4.
+    eapply eval_det; unfold eval_edge; [rewrite H1|rewrite H4]; conv_bool; reflexivity.
+  Qed.
+    
+  Lemma prefix_eff_cons_cons k k' l l' :
+(*    eff (ne_front l) = Some k
     -> l' = ne_to_list l''
     -> Tr (k' :<: l'')
     -> Prefix l l'
     -> Prefix (k :: l) (k' :: l').
+ *)
+    l <> nil
+      -> Tr (k :< l)
+      -> Tr (k' :< l')
+      -> Prefix l l'
+      -> Prefix (k :: l) (k' :: l').
   Proof.
-    intros Heff leq Htr Hpre. 
-    revert dependent k'. revert dependent l''. dependent induction Hpre; intros l'' leq k' Htr.
-    - apply ne_to_list_inj in leq. subst l.
-      inversion Htr. subst. rewrite H2 in Heff. inversion Heff. subst k. econstructor.
-    - econstructor. destruct l'.
-      { inversion Hpre. destruct l; cbn in H1; congruence. }
-      eapply IHHpre; eauto.
-      + apply nlcons_to_list.
-      + enough ((a :<: nlcons c l') = l'') as leqq.
-        { inversion Htr. rewrite leqq. assumption. }
-        clear - leq. destruct l''; [|destruct l'']; destruct l'; cbn in *; inversion leq; subst;eauto.
-        * destruct l''; cbn in H2; congruence.
-        * destruct l''.
-          -- inversion H2. subst. cbn. reflexivity.
-          -- Set Printing Coercions. rewrite nlcons_to_list in H2. apply ne_to_list_inj in H2.
-             rewrite H2. reflexivity. Unset Printing Coercions.
-  Qed.                                              
+    intros Hemp Htr Htr' Hpre.
+    revert dependent k'.
+    induction Hpre; intros k' Htr'.
+    - enough (k = k').
+      + subst k'. econstructor.
+      + eapply tr_succ_eq; eauto. destruct l; cbn; eauto; contradiction.
+    - econstructor. eapply IHHpre; eauto. inversion Htr'; eauto.
+  Qed.
   
   Lemma precedes_succ (t : trace) q j r q' j' r' p i s k' :
     Precedes' (`t) (q', j', r') (q, j, r) ->
@@ -421,10 +474,14 @@ Module Evaluation.
     - clear Hprec Hneq. 
       unfold Conf in Hpre. unfold Coord in Hpre.
       set (t2 := (q,j,r) :: t') in *.
-      destruct t as [t tr]. cbn.
-      eapply prefix_eff_cons_cons; eauto; unfold "`" in *.
-      + rewrite nlcons_front; eauto.
-      + rewrite <-nlcons_to_list. subst t2; eauto.
+      destruct t as [t tr]. unfold "`" in *. cbn. subst t2.
+      simpl_nl.
+      eapply prefix_eff_cons_cons; eauto;[congruence| |simpl_nl;eauto].
+      cbn. econstructor.
+      + eapply prefix_trace.
+        * simpl_nl;eauto.
+        * inversion Htr; eauto.
+      + simpl_nl; eauto.
     - econstructor; cbn; eauto.
       rewrite <-nlcons_to_list. eauto.
   Qed.
@@ -507,10 +564,6 @@ Module Evaluation.
     -> eff k' = Some k.
   Proof.
   Admitted.
-  
-  Lemma prefix_trace (l l' : ne_list Conf) :
-    Prefix l l' -> Tr l' -> Tr l.
-  Admitted.
 
   Lemma prefix_incl {A : Type} :
     forall l l' : list A, Prefix l l' -> incl l l'.
@@ -528,7 +581,7 @@ Module Evaluation.
     exists l', Tr l' /\ Postfix l l'.
 
  
-  Definition EPath' `{Graph} π := EPath (ne_front π) (ne_back π) π.
+  Definition EPath' π := EPath (ne_front π) (ne_back π) π.
 
   
   Lemma ne_back_trace t :
@@ -537,5 +590,7 @@ Module Evaluation.
     intro Htr.
     induction Htr; firstorder. exists s. cbn; reflexivity.
   Qed.
+
+  End eval.
   
 End Evaluation.

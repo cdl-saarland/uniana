@@ -9,7 +9,13 @@ Module Unchanged.
   Import Evaluation.Evaluation Util.
   Open Scope prg.
 
+  Variable (edge a_edge : Lab -> Lab -> bool) (root : Lab) (C : redCFG edge root a_edge).
+    
+  Variable root_no_pred' : forall p, p --> root -> False.
+
   Definition Unch := Lab -> Var -> set Lab.
+
+  Arguments Traces {_} {_} {_} {_}.
 
   Definition unch_concr (unch : Unch) : Traces :=
     fun t => forall to i s u x, In (to, i, s) (`t) ->
@@ -33,6 +39,15 @@ Module Unchanged.
       
   Definition unch_trans (unch : Unch) : Unch :=
     fun l x => unch_trans_ptw unch l x.
+  
+  Lemma in_preds p q : q ∈ preds p <-> q --> p.
+  Proof.
+    split.
+    - unfold preds. induction all_lab; cbn; [contradiction|].
+      destruct (edge a p) eqn:E;eauto.
+      + intro H. destruct H; subst;eauto.
+    - admit.
+  Admitted.
 
   Lemma unch_trans_root : forall unch x, unch_trans unch root x = set_add Lab_dec' root (empty_set Lab).
   Proof.
@@ -40,7 +55,8 @@ Module Unchanged.
     cut (preds root = nil); intros.
     + unfold unch_trans, unch_trans_ptw. 
       destruct (Lab_dec' root root); firstorder.
-    + cut (forall q, ~ List.In q (preds root)); intros; eauto using list_emp_in, root_no_pred'. 
+    + cut (forall q, ~ List.In q (preds root)); intros; eauto using list_emp_in, root_no_pred'.
+      rewrite in_preds. intros H. eapply root_no_pred'; eauto.
   Qed.
 
   Inductive Front (u : Unch) : Var -> Lab -> Prop :=
@@ -94,6 +110,7 @@ Module Unchanged.
       exists q, j, r. split; [ constructor |]; eauto.
   Qed.*)
 
+  Arguments sem_trace {_ _ _ _}.
 
   Lemma unch_correct :
     forall unch t,
@@ -110,9 +127,9 @@ Module Unchanged.
       simpl in Hunch. destruct Hunch; [ | firstorder ]. subst.      
       exists i, s. split; eauto. exists nil. split; [|econstructor].
       apply root_start_tag in Hin as rst. subst i.
-      assert (rp := root_prefix t). destruct rp as [s' rp].
-      apply prefix_cons_in in rp as rp'. eapply tag_inj in rp'; [|apply Hin].
-      subst s'. assumption.
+      assert (rp := root_prefix _ _ _ _ t). destruct rp as [s' rp].
+      apply prefix_cons_in in rp as rp'. eapply tag_inj with (s:=s) in rp'. 
+      subst s'. 1,3:assumption. all: eapply root_no_pred'.
     - assert (Hpred := Hin).
       rewrite H in Hpred.
       eapply in_exists_pred in Hpred; try eassumption.
@@ -122,10 +139,12 @@ Module Unchanged.
         destruct (Lab_dec' to u) as [ | Hneq ]; subst.
         * exists i, s. split; [ | reflexivity ]. eauto using precedes_self.
         * destruct Hunch; [ firstorder |].
+          setoid_rewrite in_preds in H0.
           eapply H0 in Hedge. destruct Hedge as [Hndef Huin].
           edestruct Hred as [j' [r' [Hprec Heq]]]; eauto.
           exists j', r'. rewrite Heq.
           split; [|eauto using no_def_untouched]. rewrite H. eapply precedes_succ; eauto.
+          eapply root_no_pred'.
           rewrite <-H. destruct t; eauto.
       + clear - H. destruct t; cbn in H; inversion t; subst x.
         * congruence.

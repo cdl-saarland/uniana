@@ -19,117 +19,57 @@ Module Disjoint.
   Parameter val_true : Val -> bool.
 
   Parameter branch_spec :
-    forall b, exists (d : list Var -> Lab), forall s, match (eff' (b, s)) with
-                                      | Some (q,_) => q = d (branch b)
+    forall b, exists (d : list Val -> Lab), forall s, match (eff' (b, s)) with
+                                      | Some (q,_) => q = d (map s (branch b))
                                       | None => True
                                       end.
-
-(*  Parameter in_out_spec :
-    forall p q q', (exists x, is_branch p x) -> q --> p -> q' --> p -> q = q'.*)
-
   
-  Definition DisjointBranch (s : Lab) (xl : list Var) (qt qf : Lab) (π ϕ : list Lab) :=
+  Definition DisjointBranch `{redCFG} (s : Lab) (xl : list Var) (qt qf : Lab) (π ϕ : list Lab) :=
     CPath s qt (π >: s) /\ CPath s qf (ϕ >: s) /\ branch s =' xl /\ Disjoint π ϕ.
 
-  Parameter path_splits : Lab -> list (Lab * Lab * Lab * list Var).
+  Parameter path_splits : forall `{redCFG}, Lab -> list (Lab * Lab * Lab * list Var).
 
-  Parameter loop_splits : Lab -> Lab -> list (Lab * Lab * Lab * list Var).
+  Parameter loop_splits : forall `{redCFG}, Lab -> Lab -> list (Lab * Lab * Lab * list Var).
 
-  Definition pl_split `{Graph Lab} (qh qe q1 q2 br : Lab) (xl : list Var) :=
-      (exists π ϕ, Path br qh (π >: q1 :>: br)
-              /\ Path br qe (ϕ >: q2 :>: br)
+  Definition pl_split `{redCFG} (qh qe q1 q2 br : Lab) (xl : list Var) :=
+      (exists π ϕ, CPath br qh (π >: q1 :>: br)
+              /\ CPath br qe (ϕ >: q2 :>: br)
               /\ Disjoint (tl π :r: q1) (tl ϕ :r: q2)
               /\ branch br =' xl).
 
-  Set Printing All.
-
-  Parameter path_splits_spec : forall `{Graph Lab} p q1 q2 br xl,
+  Parameter path_splits_spec : forall `{redCFG} p q1 q2 br xl,
       pl_split p p q1 q2 br xl <->
       (br, q1, q2, xl) ∈ path_splits p.
   
-  Parameter loop_splits_spec : forall `{Graph Lab} qh qe q1 q2 br xl,
-      in_loop br qh /\ (* otherwise some splits would be considered as loop splits *)
+  Parameter loop_splits_spec : forall `{redCFG} qh qe q1 q2 br xl,
+      loop_contains qh br /\ (* otherwise some splits would be considered as loop splits *)
       pl_split qh qe q1 q2 br xl <->
-      (br, q1, q2, xl) ∈ loop_splits qh qe.
-  
-(*  Parameter preceding_loops : Lab -> Lab -> list (Lab * Lab).
+      (br, q1, q2, xl) ∈ loop_splits qh qe.  
 
-  Parameter preceding_loops_spec : forall s p qh qe, (qh, qe) ∈ preceding_loops p s
-                                              <-> loop_head qh
-                                                /\ qh ∈ loop_exit qe
-                                                /\ in_loop s qh
-                                                /\ ~ in_loop p qh
-                                                /\ qe --> p.*)
-  
-  Lemma last_common_split s x p q1 q2 l1 l2 :
-    Path root p (p :<: l1)
-    -> Path root p (p :<: l2)
-    -> last_common l1 l2 s
-    -> In (s,q1,q2,x) (path_splits p).
-  Admitted.
-  
-(*  Lemma last_common_split_loopsplit s x s' l1 l2 k :
-    Tr (k :<: l1)
-    -> Tr (k :<: l2)
-    -> In (s,x) (splits (lab_of k))
-    -> last_common (ne_map fst l1) (ne_map fst l2) s'
-    -> In (fst s') (map fst (loop_splits s)).
-  Admitted.*)
-  
-  Lemma disjoint_map_fst {A B : Type} (l1 l2 : list (A*B)) (l1' l2' : list A) :
-    l1' = map fst l1
-    -> l2' = map fst l2
-    -> Disjoint l1' l2'
-    -> Disjoint l1 l2.
-  Admitted.
+  Parameter splits' : forall `{redCFG}, Lab -> Lab -> list (Lab * Lab * Lab * list Var).
+  Parameter splits  : forall `{redCFG}, Lab -> list (Lab * Lab * Lab * list Var).
 
-  Definition innermost_loop p qh :=
-    in_loop p qh /\ forall qh', in_loop p qh' -> in_loop qh qh'.
-  
-  Lemma tag_eq_ex_innermost_lh q q' j l p i :
-    TPath' ((q',j) :<: nl_rcons l (q,j))
-    -> In (p,i) l
-    -> i = j \/ exists lh, innermost_loop p lh /\ In lh (map fst l).
-  Admitted.
+  Definition path_splits__imp `{C : redCFG} := @path_splits _ _ _ (implode_CFG C).
+  Definition loop_splits__imp `{C : redCFG} := @loop_splits _ _ _ (implode_CFG C).
 
-  
-  Hint Unfold CPath.
-    
-  Lemma disj_loopheads p i q l1 l2 qh :
-    TPath' ((p,i) :<: nl_rcons l1 (q,i))
-    -> TPath' ((p,i) :<: nl_rcons l2 (q,i))
-    -> Disjoint l1 l2
-    -> loop_head qh
-    -> In qh (map fst l1)
-    -> ~ In qh (map fst l2).
-  Admitted.
+  Definition splits'_spec `{redCFG} := forall h e sp, sp ∈ splits' h e
+                                                 <-> sp ∈ loop_splits__imp h e
+                                                   \/ exists br q q' xl, (br,q,q',xl) ∈ loop_splits__imp h e
+                                                                   /\ (sp ∈ splits' br q
+                                                                      \/ sp ∈ splits' br q').
 
-  (* This is wrong! This holds only for the FIRST header.
-  Lemma loop_head_tag_cases l q i qh j :
-    TPath' (nl_rcons l (q,i))
-    -> loop_head qh
-    -> In (qh,j) l
-    -> j = O :: i
-      \/ match i with
-        | nil => False
-        | m :: i' => j = S m :: i'
-        end.
-  Admitted.
-  *)
+  Definition splits_spec `{redCFG} := forall p sp, sp ∈ splits p
+                                              <-> sp ∈ path_splits__imp p
+                                                \/ exists br q q' xl, (br,q,q',xl) ∈ path_splits__imp p
+                                                                /\ (sp ∈ splits' br q
+                                                                   \/ sp ∈ splits' br q').
 
-  Lemma lab_tag_same_length c0 c c' p i j l l' :
-    TPath c0 c l (* the paths need to have the same origin *)
-    -> TPath c0 c' l'
-    -> (p,i) ∈ l
-    -> (p,j) ∈ l'
-    -> length i = length j.
-  Admitted.
-
-  Lemma tag_length_inbetween p i l q q' j :
-    TPath' ((p,i) :<: nl_rcons l (q,i))
-    -> (q',j) ∈ l
-    -> length i <= length j.
-    (* because if we would exit a loop, we could never achieve to get the same tag again *)
+  Lemma lc_join_split `{redCFG} t1 t2 (p q1 q2 s qq qq' : Lab) (i j1 j2 k : Tag) xl
+        (Hlc : last_common t1 t2 (s,k))
+        (Hneq : q1 <> q2 \/ j1 <> j2)
+        (Hpath1 : TPath' ((p,i) :<: (q1,j1) :< t1))
+        (Hpath2 : TPath' ((p,i) :<: (q2,j2) :< t2))
+    : (s,qq,qq',xl) ∈ splits p.
   Admitted.
   
 End Disjoint.
