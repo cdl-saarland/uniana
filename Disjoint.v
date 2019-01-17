@@ -63,13 +63,64 @@ Module Disjoint.
                                                 \/ exists br q q' xl, (br,q,q',xl) ∈ path_splits__imp p
                                                                 /\ (sp ∈ splits' br q
                                                                    \/ sp ∈ splits' br q').
+  
+  Lemma lc_join_path_split `{redCFG} t1 t2 (p q1 q2 s : Lab) (i j1 j2 : Tag)
+        (Hlc : last_common t1 t2 (s,i))
+        (Hneq : q1 <> q2 \/ j1 <> j2)
+        (Hpath1 : TPath' ((p,i) :<: (q1,j1) :< t1))
+        (Hpath2 : TPath' ((p,i) :<: (q2,j2) :< t2))
+    : exists qq qq' xl, (s,qq,qq',xl) ∈ path_splits p.
+  Admitted.
 
-  Lemma lc_join_split `{redCFG} t1 t2 (p q1 q2 s qq qq' : Lab) (i j1 j2 k : Tag) xl
+  Definition lc_disj_exit_lsplits_def 
+    := forall `{redCFG} (s e q h : Lab) (i1 i2 j k : Tag) t1 t2 (n : nat)
+         (Hlc : last_common t1 t2 (s,k))
+         (Hhead : loop_head h)
+         (Hqeq : ne_front t1 = (q, n :: j))
+         (Hloop : loop_contains h q)
+         (Hexit : exited h e)
+         (Hpath1 : TPath (ne_back t1) (e,i1) ((e,i1) :<: t1))
+         (Hpath2 : TPath (ne_back t2) (e,i2) ((e,i2) :<: t2)),
+      exists (qq qq' : Lab) (xl : list Var), (s,qq,qq',xl) ∈ loop_splits h e.
+
+  Definition lc_disj_exits_lsplits_def
+    := forall `{redCFG} (s e1 e2 q1 q2 h : Lab) (i1 i2 j k : Tag) t1 t2 (n m : nat)
+         (Hlc : last_common t1 t2 (s,k))
+         (Hhead : loop_head h)
+         (Hqeq1 : ne_front t1 = (q1, n :: j))
+         (Hqeq2 : ne_front t2 = (q2, m :: j))
+         (Hloop1 : loop_contains h q1)
+         (Hloop2 : loop_contains h q2)
+         (Hexit1 : exited h e1)
+         (Hexit2 : exited h e2)
+         (Hpath1 : TPath (ne_back t1) (e1,i1) ((e1,i1) :<: t1))
+         (Hpath2 : TPath (ne_back t2) (e2,i2) ((e2,i2) :<: t2)),
+      exists (qq qq' : Lab) (xl : list Var), (s,qq,qq',xl) ∈ (loop_splits h e1 ++ loop_splits h e2).
+
+  Lemma lc_disj_exit_to_exits_lsplits : lc_disj_exit_lsplits_def -> lc_disj_exits_lsplits_def.
+  Proof.
+    unfold lc_disj_exit_lsplits_def, lc_disj_exits_lsplits_def. intro Hlc_disj. intros.
+  Admitted.
+
+  Lemma lc_disj_exit_lsplits : lc_disj_exit_lsplits_def.
+  Proof.
+    unfold lc_disj_exit_lsplits_def;intros.
+    
+    
+  Admitted.
+
+  Lemma lc_disj_exits_lsplits : lc_disj_exits_lsplits_def.
+  Proof.
+    eapply lc_disj_exit_to_exits_lsplits,lc_disj_exit_lsplits.
+  Qed.      
+  
+  Lemma lc_join_split `{redCFG} t1 t2 (p q1 q2 s : Lab) (i j1 j2 k : Tag)
         (Hlc : last_common t1 t2 (s,k))
         (Hneq : q1 <> q2 \/ j1 <> j2)
         (Hpath1 : TPath' ((p,i) :<: (q1,j1) :< t1))
         (Hpath2 : TPath' ((p,i) :<: (q2,j2) :< t2))
-    : (s,qq,qq',xl) ∈ splits p.
+    : exists qq qq' xl, (s,qq,qq',xl) ∈ splits p.
   Admitted.
+
   
 End Disjoint.

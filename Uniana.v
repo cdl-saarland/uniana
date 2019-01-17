@@ -10,11 +10,10 @@ Require Import Lists.ListSet.
 Require Import List.
 Require Import Nat. 
 
-Require Util Graph Evaluation Unchanged Disjoint UniquePI LoopSplits Splits.
+Require Util Graph Evaluation Unchanged Disjoint.
 
 Module Uniana.
   Import Util Evaluation.Evaluation Disjoint.Disjoint Unchanged.Unchanged.
-  Import UniquePI.UniquePI Splits.Splits LoopSplits.LoopSplits.
   
   Parameter init_uni : Var -> Prop.
 
