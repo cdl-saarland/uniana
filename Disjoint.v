@@ -34,7 +34,7 @@ Module Disjoint.
   Definition pl_split `{redCFG} (qh qe q1 q2 br : Lab) (xl : list Var) :=
       (exists π ϕ, CPath br qh (π >: q1 :>: br)
               /\ CPath br qe (ϕ >: q2 :>: br)
-              /\ Disjoint (tl π :r: q1) (tl ϕ :r: q2)
+              /\ Disjoint (tl π :r: q1) (tl ϕ :r: q2) 
               /\ branch br =' xl).
 
   Parameter path_splits_spec : forall `{redCFG} p q1 q2 br xl,
@@ -72,8 +72,9 @@ Module Disjoint.
     : exists qq qq' xl, (s,qq,qq',xl) ∈ path_splits p.
   Admitted.
 
-  Definition lc_disj_exit_lsplits_def 
+  Definition lc_disj_exit_lsplits_def (d : nat)
     := forall `{redCFG} (s e q h : Lab) (i1 i2 j k : Tag) t1 t2 (n : nat)
+         (Hdep : d >= depth s - depth e)
          (Hlc : last_common t1 t2 (s,k))
          (Hhead : loop_head h)
          (Hqeq : ne_front t1 = (q, n :: j))
@@ -83,8 +84,10 @@ Module Disjoint.
          (Hpath2 : TPath (ne_back t2) (e,i2) ((e,i2) :<: t2)),
       exists (qq qq' : Lab) (xl : list Var), (s,qq,qq',xl) ∈ loop_splits h e.
 
-  Definition lc_disj_exits_lsplits_def
+  Definition lc_disj_exits_lsplits_def (d : nat)
     := forall `{redCFG} (s e1 e2 q1 q2 h : Lab) (i1 i2 j k : Tag) t1 t2 (n m : nat)
+         (Hdep : d >= depth s - depth e1)
+         (Hdep : d >= depth s - depth e2)
          (Hlc : last_common t1 t2 (s,k))
          (Hhead : loop_head h)
          (Hqeq1 : ne_front t1 = (q1, n :: j))
@@ -97,21 +100,21 @@ Module Disjoint.
          (Hpath2 : TPath (ne_back t2) (e2,i2) ((e2,i2) :<: t2)),
       exists (qq qq' : Lab) (xl : list Var), (s,qq,qq',xl) ∈ (loop_splits h e1 ++ loop_splits h e2).
 
-  Lemma lc_disj_exit_to_exits_lsplits : lc_disj_exit_lsplits_def -> lc_disj_exits_lsplits_def.
+  Lemma lc_disj_exit_to_exits_lsplits d : lc_disj_exit_lsplits_def d -> lc_disj_exits_lsplits_def d.
   Proof.
     unfold lc_disj_exit_lsplits_def, lc_disj_exits_lsplits_def. intro Hlc_disj. intros.
   Admitted.
 
-  Lemma lc_disj_exit_lsplits : lc_disj_exit_lsplits_def.
+  Lemma lc_disj_exit_lsplits d : lc_disj_exit_lsplits_def d.
   Proof.
     unfold lc_disj_exit_lsplits_def;intros.
     
     
   Admitted.
 
-  Lemma lc_disj_exits_lsplits : lc_disj_exits_lsplits_def.
+  Lemma lc_disj_exits_lsplits d : lc_disj_exits_lsplits_def d.
   Proof.
-    eapply lc_disj_exit_to_exits_lsplits,lc_disj_exit_lsplits.
+    apply lc_disj_exit_to_exits_lsplits,lc_disj_exit_lsplits.
   Qed.      
   
   Lemma lc_join_split `{redCFG} t1 t2 (p q1 q2 s : Lab) (i j1 j2 k : Tag)

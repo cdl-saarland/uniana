@@ -538,6 +538,8 @@ Module CFG.
 
   Parameter exit_edge_num : forall `{redCFG}, Lab -> Lab -> nat.
 
+  Definition depth `{redCFG} p := length (filter (fun q => loop_contains_b q p) all_lab).
+
   Definition exiting `{redCFG} (h p : Lab) : Prop :=
     exists q, exit_edge h p q.
 
