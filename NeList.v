@@ -890,27 +890,41 @@ Module NeList.
   Proof.
     induction l; eauto. rewrite cons_rcons_assoc. rewrite IHl. cbn. reflexivity.
   Qed.
+
+  Lemma ne_to_list_not_nil {A:Type} (l : ne_list A) :
+    nil <> l.
+  Proof.
+    intro N. induction l; cbn in *; congruence.
+  Qed.
   
   Ltac simpl_nl :=
     repeat lazymatch goal with
+           | [ |- ne_to_list _ = ne_to_list _] => eapply ne_to_list_inj
+           | [ |- ne_to_list ?l = ?a :: nil] => rewrite nlcons_to_list; apply ne_to_list_inj
+           | [ |- ?a :: nil = ne_to_list ?l] => rewrite nlcons_to_list; apply ne_to_list_inj
+           | [ |- ne_to_list ?l = nil] => symmetry; apply ne_to_list_not_nil
+           | [ |- nil = ne_to_list ?l] => apply ne_to_list_not_nil
            | [ |- context[ne_front (nlcons ?a ?l)]] => rewrite nlcons_front
            | [ |- context[ne_back (?l >: ?a)]] => rewrite nl_rcons_back
            | [ |- context[ne_to_list (_ :<: _)]] => rewrite nlcons_necons
            | [ |- context[ne_to_list (nlcons _ _)]] => rewrite <-nlcons_to_list
            | [ |- context[ne_to_list (nl_rcons _ _)]] => rewrite <-rcons_nl_rcons
-           | [ |- context[ne_to_list _ = ne_to_list _]] => eapply ne_to_list_inj
            | [ |- context[ne_map ?f (_ :< _)]] => rewrite ne_map_nlcons
            | [ |- context[_ :< (ne_to_list _)]] => rewrite <-nlcons_necons
            end.
 
   Ltac simpl_nl' H := 
     repeat lazymatch type of H with
+           | ne_to_list _ = ne_to_list _ => eapply ne_to_list_inj in H
+           | ne_to_list ?l = ?a :: nil => rewrite nlcons_to_list in H; apply ne_to_list_inj in H
+           | ?a :: nil = ne_to_list ?l => rewrite nlcons_to_list in H; apply ne_to_list_inj in H
+           | ne_to_list ?l = nil => symmetry in H; apply ne_to_list_not_nil in H
+           | nil = ne_to_list ?l => apply ne_to_list_not_nil in H
            | context[ne_front (nlcons ?a ?l)] => rewrite nlcons_front in H
            | context[ne_back (?l >: ?a)] => rewrite nl_rcons_back in H
            | context[ne_to_list (_ :<: _)] => rewrite nlcons_necons in H
            | context[ne_to_list (nlcons _ _)] => rewrite <-nlcons_to_list in H
            | context[ne_to_list (nl_rcons _ _)] => rewrite <-rcons_nl_rcons in H
-           | context[ne_to_list _ = ne_to_list _] => eapply ne_to_list_inj in H
            | context[ne_map ?f (_ :< _)] => rewrite ne_map_nlcons in H
            | context[_ :<: (ne_to_list _)] => rewrite <-nlcons_necons in H
            end.

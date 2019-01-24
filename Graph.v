@@ -319,12 +319,6 @@ contra:
 
     Definition Path' π := Path (ne_back π) (ne_front π) π.
 
-
-    Lemma ne_to_list_not_nil {A:Type} (l : ne_list A) :
-      nil <> l.
-    Proof.
-      intro N. induction l; cbn in *; congruence.
-    Qed.
     
     Lemma postfix_front {A : Type} (l l' : ne_list A) :
       Postfix l l'
@@ -511,6 +505,9 @@ Module CFG.
     Lemma loop_head_dec p : decidableT (loop_head p).
     Admitted.
 
+    Parameter loop_head_b : Lab -> bool.
+    Parameter loop_head_spec : forall p : Lab, loop_head_b p = true <-> loop_head p.
+
     Definition loop_contains (qh q : Lab) : Prop :=
       (*qh -->* q /\ *) exists p π, p ↪ qh /\ CPath q p π /\ (qh ∉ π \/ q = qh).
     (* exists p, Dom edge root qh q /\ q -a>* p /\ p ↪ qh. (old def) *)  
@@ -534,6 +531,24 @@ Module CFG.
 
     Definition deq_loop_b h p
       := to_bool (deq_loop_dec h p).
+
+    Parameter deq_loop_spec : forall h p, deq_loop_b h p = true <-> deq_loop h p.
+    
+    Lemma deq_loop_refl l :
+      deq_loop l l.
+    Proof.
+      unfold deq_loop;firstorder.
+    Qed.
+
+    Definition innermost_loop h p : Prop := loop_head h /\ deq_loop h p /\ loop_contains h p.
+
+    Lemma ex_innermost_loop p
+      : p ∈ all_lab -> ~ deq_loop root p -> exists h, innermost_loop h p.
+    Proof.
+      intros Hin N. unfold innermost_loop,deq_loop in *.
+      eapply reachability in Hin as [π Hπ].
+      (* pick last header, but not if it has an exit, in Hπ, exists because of N *)
+    Admitted.
 
     Definition exit_edge (h p q : Lab) : Prop :=
       loop_contains h p /\ ~ loop_contains h q /\ p --> q.
@@ -775,6 +790,7 @@ Module CFG.
     Admitted.
 
     Program Instance loop_CFG
+            `(C : redCFG)
             (h : Lab)
             (H : loop_head h)
       : redCFG (filter (fun p => loop_contains_b h p) all_lab)
@@ -856,7 +872,7 @@ Module CFG.
   Parameter head_exits_edge_spec :
     forall `{redCFG} h q, head_exits_edge h q = true <-> exists p, exit_edge h p q.
 
-  Program Instance head_exits_CFG `{redCFG}
+  Program Instance head_exits_CFG `(redCFG)
     : redCFG all_lab (edge ∪ head_exits_edge) root (a_edge ∪ head_exits_edge).
   Next Obligation.
     unfold union_edge in H0. conv_bool. destruct H0;[eapply edge_incl1|];eauto.
@@ -915,12 +931,29 @@ Module CFG.
     unfold sub_graph,union_edge. firstorder.
   Qed.
 
+
+  Definition head_exits_property `(C : redCFG) := forall h p q, exit_edge h p q -> h --> q.
+  
+  Arguments exit_edge {_ _ _ _} (_).
+  
+  Lemma head_exits_property_satisfied `(C : redCFG) : head_exits_property (head_exits_CFG C).
+  Proof.
+    unfold head_exits_property. 
+    intros h p q Hexit. unfold union_edge. conv_bool.
+    unfold exit_edge in Hexit. destructH. unfold union_edge in Hexit3. conv_bool.
+    destruct Hexit3.
+    - right. eapply head_exits_edge_spec. exists p. admit. (* loop_contains <-> loop_contains *)
+    - eapply head_exits_edge_spec in H. destructH.
+  Admitted.
+    
+  Arguments exit_edge {_ _ _ _ _}.
+
   Definition implode_edge `{redCFG} := (fun p q => deq_loop_b root p && deq_loop_b root q).
   
   Parameter implode_edge_spec :
     forall `{redCFG} p q, implode_edge p q = true <-> deq_loop root p /\ deq_loop root q.
   
-  Program Instance implode_CFG `{redCFG} (Hhe : forall h p q, exit_edge h p q -> h --> q)
+  Program Instance implode_CFG `(H : redCFG) (Hhe : head_exits_property H)
     : redCFG (filter (fun p => deq_loop_b root p) all_lab)
              (edge ∩ implode_edge)
              root
@@ -948,26 +981,58 @@ Module CFG.
       - eapply intersection_subgraph1.
       - eapply a_edge_acyclic.
     Qed.
+
+    Lemma prefix_induction {A : Type} {P : list A -> Prop}
+      : P nil
+        -> (forall (a : A) (l : list A) (l' : list A), P l' -> Prefix (a :: l') l -> P l)
+        -> forall l : list A, P l.
+    Proof.
+      intros Hbase Hstep l. induction l;eauto.
+      eapply Hstep;eauto. econstructor.
+    Qed.
+
+    Lemma prefix_ne_induction {A : Type} l (P : ne_list A -> Prop) 
+      : (forall (l : ne_list A), (forall (a : A) (l' : ne_list A), Prefix (a :<: l') l -> P l') -> P l)
+        -> P l.
+    Proof.
+      intros Hstep. induction l.
+      - eapply Hstep. intros b ? Hpre. inversion Hpre;subst;[simpl_nl' H2;contradiction|inversion H1].
+      - admit.
+    Admitted.
+    
     Next Obligation.
       eapply filter_In in H0. destructH. eapply reachability in H1. destruct H1 as [π Hπ].
-      revert Hπ H2.
-      enough (forall ϕ q', 
-                 Path edge root q' ϕ
-                 -> Prefix ϕ π
-                 -> deq_loop_b root q' = true
-                 -> exists π0, Path (edge ∩ implode_edge) root q π0).
-      { specialize (H0 π q). intros;eauto. eapply H0;eauto. econstructor. }
-      dependent induction ϕ; intros q' Hϕ Hpre Hdeq.
-      - admit. (* eexists;econstructor. *)
-      - admit. (* destruct (deq_loop_b a b) eqn:E.
-        + edestruct IHπ;eauto. exists (c :<: x). econstructor;eauto.
-          unfold intersection_edge, implode_edge. conv_bool. split;eauto.
-        +  *)
-    Admitted. (* EDIT *)
-      
+      rewrite deq_loop_spec in H2.
+      revert q Hπ H2.
+      eapply (prefix_ne_induction π).
+      clear π. intros π IH q Hπ Hdeq.
+      destruct π as [|b π].
+      - inversion Hπ;subst. eexists;econstructor.
+      - replace b with q in *; [|inversion Hπ;reflexivity]. clear b.
+        destruct π as [|b π].
+        * clear - Hdeq Hπ. inversion Hπ;subst. inversion H1;subst. exists (q :<: ne_single l).
+          econstructor;[econstructor|]. unfold intersection_edge;conv_bool. split;eauto.
+          unfold implode_edge;conv_bool. split;eapply deq_loop_spec;eauto. eapply deq_loop_refl.
+        * destruct (deq_loop_b root b) eqn:E.
+          -- eapply deq_loop_spec in E. specialize (IH q (b :<: π)). edestruct IH;eauto.
+             ++ econstructor.
+             ++ inversion Hπ;subst;inversion H1;subst. apply H1.
+             ++ exists (q :<: x). econstructor;eauto.
+                unfold intersection_edge;conv_bool;split.
+                ** inversion Hπ;subst;inversion H2;subst;eauto.
+                ** unfold implode_edge;conv_bool;split;eapply deq_loop_spec;eauto.
+          -- eapply not_true_iff_false in E. rewrite deq_loop_spec in E.
+             eapply ex_innermost_loop in E; cycle 1.
+             {
+               inversion Hπ;subst;inversion H1;subst. eapply path_in_alllab2;eauto.
+               contradict E. subst;eapply deq_loop_refl.
+             } 
+             unfold innermost_loop in E. destructH. 
+          
 
-  Definition local_impl_CFG `(C : redCFG) (h : Lab) (H : loop_head h) :=
-    implode_CFG (head_exits_CFG (loop_CFG C h H)).
+    Definition local_impl_CFG `(C : redCFG) (h : Lab) (H : loop_head h) :=
+      let D := loop_CFG C h H in
+      implode_CFG (head_exits_CFG D) (head_exits_property_satisfied D).
 
 (*  Parameter root_no_pred0 : forall p, p ∉ preds0 root.*)
                  
