@@ -16,7 +16,7 @@ Module Evaluation.
 
   Section eval.
 
-    Variable (edge a_edge : Lab -> Lab -> bool) (root : Lab) (C : redCFG edge root a_edge).
+    Context `(C : redCFG).
     
     Variable root_no_pred' : forall p, p --> root -> False.
 
@@ -218,7 +218,7 @@ Module Evaluation.
         split; cbn; eauto.
       + exfalso. eapply Hneq. inversion H1.
         destruct a,p0. cbn in H3. destruct H3;[|contradiction].
-        inversion H0; inversion H; reflexivity.
+        inversion H0;inversion H;subst;reflexivity.
     - destruct Hin; subst.
       + destruct a as [[q j] r].
         exists q, j, r. split; [ constructor | assumption ]. reflexivity.
@@ -581,7 +581,7 @@ Module Evaluation.
     exists l', Tr l' /\ Postfix l l'.
 
  
-  Definition EPath' π := EPath (ne_front π) (ne_back π) π.
+  Definition EPath' π := EPath (ne_back π) (ne_front π) π.
 
   
   Lemma ne_back_trace t :

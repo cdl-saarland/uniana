@@ -16,23 +16,7 @@ Module Graph.
 
   Export NeList.NeList.
 
-  (** Graph **)
-
-  (* bool or prop ?
-
-pro bool:
--eine Funktion repräsentiert den Graph
--Beweise in Richtung bool -> Prop trivial
--in andere Richtung Entscheidbarkeitsbeweise notwendig (benutze library) 
-  (^ geht das ? nicht alles endl.)
-
-contra: 
--kann in logischen Ausdrücken nicht direkt verwendet werden
--Graphen können einfacher formuliert werden
-(-stauts quo)
-
-   *)
-  
+  (** Graph **)  
 
   Ltac destructH' H :=
     lazymatch type of H with
@@ -464,9 +448,12 @@ Module CFG.
         a_edge_incl : sub_graph a_edge edge
         where "p '-a>*' q" := (exists π, Path a_edge p q π);
         a_edge_acyclic : acyclic a_edge;
-        reachability : forall q, q ∈ all_lab -> (exists π, Path edge root q π)
-                                            (* TODO : only single_exits *)
-                                            (* TODO : no exit-to-heads *)
+        reachability : forall q, q ∈ all_lab -> (exists π, Path edge root q π);
+        loop_contains qh q := exists p π, back_edge p qh /\ Path edge q p π /\ (qh ∉ π \/ q = qh);
+        exit_edge h p q := loop_contains h p /\ ~ loop_contains h q /\ p --> q;
+        single_exit : forall h p q, exit_edge h p q -> forall h', exit_edge h' p q -> h = h';
+        loop_head h := exists p, back_edge p h;
+        no_exit_head : forall h p q, exit_edge h p q -> ~ loop_head q
       }. 
   
   Notation "p '-a>b' q" := ((fun (a_edge : Lab -> Lab -> bool)
@@ -498,21 +485,13 @@ Module CFG.
 
     Context `{C : redCFG}.
 
-    Definition CPath' π := CPath (ne_front π) (ne_back π) π.
-
-    
-    Definition loop_head p : Prop :=
-      exists q, q ↪ p.
+    Definition CPath' π := CPath (ne_back π) (ne_front π) π.
     
     Lemma loop_head_dec p : decidableT (loop_head p).
     Admitted.
 
     Parameter loop_head_b : Lab -> bool.
     Parameter loop_head_spec : forall p : Lab, loop_head_b p = true <-> loop_head p.
-
-    Definition loop_contains (qh q : Lab) : Prop :=
-      (*qh -->* q /\ *) exists p π, p ↪ qh /\ CPath q p π /\ (qh ∉ π \/ q = qh).
-    (* exists p, Dom edge root qh q /\ q -a>* p /\ p ↪ qh. (old def) *)  
 
     Lemma loop_contains_dec qh q : {loop_contains qh q} + {~ loop_contains qh q}.
     Admitted.
@@ -552,8 +531,7 @@ Module CFG.
       (* pick last header, but not if it has an exit, in Hπ, exists because of N *)
     Admitted.
 
-    Definition exit_edge (h p q : Lab) : Prop :=
-      loop_contains h p /\ ~ loop_contains h q /\ p --> q.
+    Parameter get_innermost_loop : Lab -> Lab.
 
     Parameter exit_edge_b : forall `{redCFG}, Lab -> Lab -> Lab -> bool.
     Parameter exit_edge_b_spec : forall h p q, exit_edge_b h p q = true <-> exit_edge h p q.
@@ -768,9 +746,9 @@ Module CFG.
         eapply dom_loop_contains in N; eauto; cycle 1.
         eapply postfix_incl in Hp1 as Hp1'; eauto.
         dependent induction Hp1.
-        + subst l. eapply ne_to_list_inj in x. subst ϕ.
+        + simpl_nl' x. subst ϕ. 
           eapply Hph. eapply path_back in Hp0; eapply path_back in Hπ. rewrite <-Hp0. eauto.
-        + clear IHHp1. unfold Dom in N. subst l.
+        + clear IHHp1. unfold Dom in N.
           eapply postfix_incl in Hp1. eapply Hp1 in N; eauto.
           rewrite rcons_nl_rcons in x. eapply ne_to_list_inj in x. rewrite <-x in Hnd.
           eapply f_equal with (f:=ne_back) in x. simpl_nl' x. eapply path_back in Hπ. rewrite Hπ in x.
@@ -778,7 +756,8 @@ Module CFG.
           eapply NoDup_nin_rcons; eauto. rewrite rcons_nl_rcons. assumption.
     Qed.
 
-    Definition loop_edge h := (fun q _ : Lab => loop_contains_b h q) ∩ (fun _ q : Lab => loop_contains_b h q).
+    Definition loop_edge h := (fun q _ : Lab => loop_contains_b h q)
+                                ∩ (fun _ q : Lab => loop_contains_b h q).
 
     Lemma path_loop_edge h q π
       : CPath h q π -> (forall p, p ∈ π (* /\ p=q *) -> loop_contains h p)
@@ -792,36 +771,36 @@ Module CFG.
     Admitted.
 
     Program Instance loop_CFG
-            `(C : redCFG)
             (h : Lab)
-            (H : loop_head h)
       : redCFG (filter (fun p => loop_contains_b h p) all_lab)
                (edge ∩ loop_edge h)
                h
                (a_edge ∩ loop_edge h).
     Next Obligation.
       eapply filter_In.
-      split; [eapply intersection_subgraph1 in H0|eapply intersection_subgraph2 in H0].
+      split; [eapply intersection_subgraph1 in H|eapply intersection_subgraph2 in H].
       - eapply edge_incl1;eauto.
-      - unfold loop_edge in H0. eapply intersection_subgraph1 in H0. eapply H0.
+      - unfold loop_edge in H. eapply intersection_subgraph1 in H. eapply H.
     Qed.
     Next Obligation.
       eapply filter_In.
-      split; [eapply intersection_subgraph1 in H0|eapply intersection_subgraph2 in H0].
+      split; [eapply intersection_subgraph1 in H|eapply intersection_subgraph2 in H].
       - eapply edge_incl2;eauto.
-      - unfold loop_edge in H0. eapply intersection_subgraph2 in H0. eapply H0.
+      - unfold loop_edge in H. eapply intersection_subgraph2 in H. eapply H.
     Qed.
     Next Obligation.
+      destruct (loop_head_dec h) as [H0|H0];[|admit].
       eapply dom_intersection.
       eapply dom_trans ; eauto.
-      - eapply reachability. eapply loop_head_in_graph in H; eapply H.
+      - eapply reachability. eapply loop_head_in_graph;eauto. 
       - eapply dom_loop;eauto. 
         eapply loop_contains_ledge_head.
-        + eapply minus_subgraph in H0. eapply intersection_subgraph2 in H0.
-          unfold loop_edge in H0. eapply intersection_subgraph1 in H0; eapply loop_contains_spec;eauto.
+        + eapply minus_subgraph in H. eapply intersection_subgraph2 in H.
+          unfold loop_edge in H.
+          eapply intersection_subgraph1 in H; eapply loop_contains_spec;eauto.
         + eapply minus_back_edge;eauto. 
       - eapply loop_head_dom. eapply minus_back_edge; eauto.
-    Qed.
+    Admitted.
     Next Obligation.
       eapply intersection2_subgraph; apply a_edge_incl.
     Qed.
@@ -853,17 +832,27 @@ Module CFG.
     Qed.
     
     Next Obligation.
-      eapply filter_In in H0. destructH.
+      eapply filter_In in H. destructH.
+      destruct (loop_head_dec h) as [H|H];[|admit].
       eapply loop_edge_reach_help;eauto;eapply loop_contains_spec;eauto.
-    Qed.
+    Admitted.
+    Next Obligation.
+      (* since the original has single exits intersecting doesn't change anything *)
+    Admitted.
+    Next Obligation.
+    (* there are neither new heads nor new edges -> property follows *)
+    Admitted.
+    
 
     Definition top_level `{redCFG} q := forall h, loop_contains h q -> (h = root \/ h = q).
-
+    
 
     Parameter exit_edge_dec : forall `{redCFG} h q p, 
         {exit_edge h p q} + {~ exit_edge h p q}.
 
   End red_cfg.
+
+  Arguments loop_CFG {_ _ _ _} (_).
   
   Definition head_exits_edge `{redCFG} :=
     (fun h q
@@ -932,6 +921,12 @@ Module CFG.
     eapply reachability in H0. eapply subgraph_path in H0;eauto.
     unfold sub_graph,union_edge. firstorder.
   Qed.
+  Next Obligation.
+  (* new exits don't have new targets, and the source has the same depth *)
+  Admitted.
+  Next Obligation.
+  (* new exits don't have new targets *)
+  Admitted.
 
 
   Definition head_exits_property `(C : redCFG) := forall h p q, exit_edge h p q -> h --> q.
@@ -1043,11 +1038,17 @@ Module CFG.
            unfold innermost_loop in E. destructH.
            admit.
   Admitted.
-           
+  Next Obligation.
+  (* as in loop_edge_CFG *)
+  Admitted.
+  Next Obligation.
+  (* as in loop_edge_CFG *)
+  Admitted.
 
-  Definition local_impl_CFG `(C : redCFG) (h : Lab) (H : loop_head h) :=
-    let D := loop_CFG C h H in
+  Definition local_impl_CFG `(C : redCFG) (h : Lab) :=
+    let D := (loop_CFG C h) in 
     implode_CFG (head_exits_CFG D) (head_exits_property_satisfied D).
+
 
   (*  Parameter root_no_pred0 : forall p, p ∉ preds0 root.*)
   
@@ -1085,6 +1086,15 @@ Module TCFG.
   Parameter start_tag : Tag.
   Definition Coord : Type := (Lab * Tag).
   Definition start_coord := (root, start_tag) : Coord.
+
+  Hint Resolve Tag_dec.
+  
+  Lemma Coord_dec : EqDec Coord eq.
+  Proof.
+    eapply prod_eqdec;eauto.
+  Qed.
+
+  Hint Resolve Coord_dec.
   
   Hint Unfold Coord.
 
@@ -1120,7 +1130,7 @@ Module TCFG.
     - conv_bool. firstorder. 
   Qed.            
   
-  Definition TPath' `{redCFG} π := TPath (ne_front π) (ne_back π) π.
+  Definition TPath' `{redCFG} π := TPath (ne_back π) (ne_front π) π.
   
   Parameter eff_tag_fresh : forall `{redCFG} p q q0 i j j0 l,
       TPath (q0,j0) (q,j) l -> eff_tag q p j = i -> forall i', In (p, i') l -> i' <> i.
