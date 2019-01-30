@@ -35,7 +35,7 @@ Module Disjoint.
   Definition pl_split `{redCFG} (qh qe q1 q2 br : Lab) :=
       (exists π ϕ, CPath br qh (π >: q1 :>: br)
               /\ CPath br qe (ϕ >: q2 :>: br)
-              /\ Disjoint (tl π :r: q1) (tl ϕ :r: q2)).
+              /\ Disjoint (tl (π :r: q1)) (tl (ϕ :r: q2))).
 
   Parameter path_splits_spec : forall `{redCFG} p q1 q2 br,
       pl_split p p q1 q2 br <->
@@ -67,18 +67,16 @@ Module Disjoint.
                                                                 /\ (sp ∈ splits' br q
                                                                    \/ sp ∈ splits' br q').
 
-  Ltac path_simpl' H :=
-    lazymatch type of H with
-    | Path ?edge ?x ?y (?z :<: ?π) => let Q := fresh "Q" in
-                                     eapply path_front in H as Q;
-                                     cbn in Q; subst z
-    | Path ?edge ?x ?y (?π :>: ?z) => let Q := fresh "Q" in
-                                     eapply path_back in H as Q;
-                                     cbn in Q; subst z
-    end.
+
+  Lemma lc_join_path_split_help1 (L : Type) (edge : L -> L -> bool) (x y : L) (l : list L)
+    : @Path L edge x y (y :<: l >: x)
+      -> exists z l', Path edge x y ((l' >: z) :>: x)
+                /\ (tl (l' :r: z)) ⊆ l.
+  Proof.
+  Admitted.
   
   Theorem lc_join_path_split `{redCFG} t1 t2 (p q1 q2 s : Lab) (i : Tag)
-        (Hlc : last_common t1 t2 (s,i))
+        (Hlc : last_common ((q1,i) :<: t1) ((q2,i) :<: t2) (s,i))
         (Hneq : q1 <> q2)
         (Hpath1 : TPath' ((p,i) :<: (q1,i) :<: t1))
         (Hpath2 : TPath' ((p,i) :<: (q2,i) :<: t2))
@@ -86,35 +84,37 @@ Module Disjoint.
   Proof.
     setoid_rewrite <-path_splits_spec. unfold pl_split.
     unfold TPath' in *;cbn in *. unfold last_common in Hlc; destructH.
-    eapply postfix_path in Hpath1;eauto.
-    2: eapply postfix_cons in Hlc0; eapply postfix_cons in Hlc0;
-      do 2 rewrite <-cons_rcons_assoc in Hlc0; simpl_nl; eassumption.
+    eapply postfix_path in Hpath1;eauto. 
+    2: eapply postfix_cons in Hlc0;
+      rewrite <-cons_rcons_assoc in Hlc0; simpl_nl; eassumption.
     eapply postfix_path in Hpath2;eauto.
-    2: eapply postfix_cons in Hlc2; eapply postfix_cons in Hlc2;
-      do 2 rewrite <-cons_rcons_assoc in Hlc2; simpl_nl; eassumption.
-    assert (forall L ed x y z l, @Path L ed x y (y :<: z :<: l >: x)
-                            -> exists w l', Path ed x y ((l' >: w) :>: x)
-                                      /\ (w :: tl l') ⊆ (z :: l)) as Hppath.
-    {
-      clear. intros. revert dependent y. revert z.
-      induction l; intros z y H;cbn in *.
-      - exists z, (y :: nil). cbn. split;[eassumption|]. firstorder.
-      - inversion H;subst. path_simpl' H1.
-        edestruct IHl as [w [l' IHl']];eauto.
-        exists w, (y :: l'). cbn. unfold ne_rcons in IHl'. split;destructH;[econstructor;eauto|].
-        admit.
-    }
+    2: eapply postfix_cons in Hlc2;
+      rewrite <-cons_rcons_assoc in Hlc2; simpl_nl; eassumption.
+    cbn in Hpath1,Hpath2.                                  
     eapply TPath_CPath in Hpath1. eapply TPath_CPath in Hpath2. cbn in Hpath2,Hpath1.
-    Lemma ne_map_nl_rcons {A B : Type} (l : list A) a (f : A -> B)
-      : ne_map f (l >: a) = (map f l) >: (f a).
-    Admitted.
     rewrite ne_map_nl_rcons in Hpath1, Hpath2. cbn in *.
-    eapply Hppath in Hpath1;eauto. eapply Hppath in Hpath2;eauto.
+    let help := lc_join_path_split_help1 in eapply help in Hpath1;eauto; eapply help in Hpath2;eauto.
     destructH. destructH.
-    exists w, w0, l', l'0.
+    exists z0, z, l'0, l'.
     split_conj;eauto.
-    (* open : what about q1 ∈ l2' & q2 ∈ l1' ? *)
-    (* /\ move the q1/q2 into the last_common *)
+    eapply disjoint_subset;eauto.
+
+    Lemma disjoint2 {A : Type} `{EqDec A} (l1 l2 : list A)
+      : Disjoint l1 l2 <-> forall x y, x ∈ l1 -> y ∈ l2 -> x <> y.
+    Proof.
+      split;unfold Disjoint;intros.
+      - intro N. subst x. firstorder.
+      - split;intros;intro N;eapply H0;eauto.
+    Qed.
+
+    eapply disjoint2.
+      
+
+(*    Lemma lc_join_path_split_help2 `{redCFG} t1 t2
+          (Hlc1 : Disjoint l1' l2')
+      : Disjoint (map fst l1') (map fst l2')*)
+    
+      (* show that all have the same tags *)
   Admitted.
 
   Definition lc_disj_exit_lsplits_def (d : nat)

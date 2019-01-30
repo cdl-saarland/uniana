@@ -4,9 +4,12 @@ Require Import Omega.
 Require Import Coq.Program.Equality.
 
 Require Import Coq.Classes.Morphisms Relation_Definitions.
+Require Util.
 
 Module NeList.
 
+  Import Util.
+  
   Import EquivDec.
   
   Import Decidable.
@@ -883,6 +886,17 @@ Module NeList.
     - cbn in Hin. destruct Hin;subst.
       + left. reflexivity.
       + right. eauto.
+  Qed.
+
+  Lemma ne_map_nl_rcons {A B : Type} (l : list A) a (f : A -> B)
+    : ne_map f (l >: a) = (map f l) >: (f a).
+  Admitted.
+  
+  Lemma disjoint_subset {A : Type} (l1 l1' l2 l2' : list A)
+    : l1 ⊆ l1' -> l2 ⊆ l2' -> Disjoint l1' l2' -> Disjoint l1 l2.
+  Proof.
+    intros Hsub1 Hsub2 Hdisj.
+    unfold Disjoint in *. destructH. split;firstorder.
   Qed.
   
   Lemma rcons_nl_rcons {A : Type} l (a:A) :

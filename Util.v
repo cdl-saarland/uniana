@@ -206,3 +206,22 @@ Qed.
   Definition set_eq {A : Type} (a b : list A) := a ⊆ b /\ b ⊆ a.
   
   Infix "='" := (set_eq) (at level 50).
+
+  Ltac destructH' H :=
+    lazymatch type of H with
+    | ?P /\ ?Q => let H1 := fresh H in
+                let H2 := fresh H in
+                destruct H as [H1 H2]; destructH' H1; destructH' H2
+    | exists x, ?P => let x0 := fresh x in
+                destruct H as [x0 H]; destructH' H
+    | _ => idtac
+    end.
+
+  Ltac destructH :=
+    match goal with
+    | [H : ?P /\ ?Q |- _ ] => let H1 := fresh H in
+                           let H2 := fresh H in
+                           destruct H as [H1 H2]; destructH' H1; destructH' H2
+    | [H : exists x, ?P |- _ ] => let x0 := fresh x in
+                           destruct H as [x0 H]; destructH' H
+    end.
