@@ -74,16 +74,69 @@ Module Disjoint.
                 /\ (tl (l' :r: z)) ⊆ l.
   Proof.
   Admitted.
+
+  Lemma disjoint2 {A : Type} `{EqDec A} (l1 l2 : list A)
+    : Disjoint l1 l2 <-> forall x y, x ∈ l1 -> y ∈ l2 -> x <> y.
+  Proof.
+    split;unfold Disjoint;intros.
+    - intro N. subst x. firstorder.
+    - split;intros;intro N;eapply H0;eauto.
+  Qed.
+
+  Definition impl_list `{redCFG} (n : nat) :=
+    filter (fun qj : Coord => let (q,_) := qj in (depth q ==b n) || (depth q ==b S n) && loop_head_b q).
+
+  Definition TPath'' `{redCFG} l := match l with nil => True | (a :: l) => TPath' (a :< l) end.
+
+  Lemma impl_disj_disj `{redCFG} l1 l2 p i
+        (Hpath1 : TPath' ((p,i) :< l1))
+        (Hpath2 : TPath' ((p,i) :< l2))
+        (Hdisj : Disjoint (impl_list (depth p) l1) (impl_list (depth p) l2))
+    : Disjoint (map fst l1) (map fst l2).
+  Proof.
+  Admitted.
+
+  Lemma filter_incl `{A : Type} (l : list A) (f : A -> bool) : filter f l ⊆ l.
+  Proof.
+    induction l;cbn;unfold "⊆";eauto.
+    intros. destruct (f a);unfold In in *;firstorder.
+  Qed.             
   
-  Theorem lc_join_path_split `{redCFG} t1 t2 (p q1 q2 s : Lab) (i : Tag)
-        (Hlc : last_common ((q1,i) :<: t1) ((q2,i) :<: t2) (s,i))
-        (Hneq : q1 <> q2)
+  Lemma lc_join_path_split_help2 `{redCFG} (p s q1 q2 : Lab) (t1 t2 : ne_list Coord) l1 l2 i
+        (Hpost1 : Postfix (l1 :r: (s, i)) ((q1, i) :: t1))
+        (Hpost2 : Postfix (l2 :r: (s, i)) ((q2, i) :: t2))
         (Hpath1 : TPath' ((p,i) :<: (q1,i) :<: t1))
         (Hpath2 : TPath' ((p,i) :<: (q2,i) :<: t2))
+        (Hdisj : Disjoint l1 l2)
+    : Disjoint (map fst l1) (map fst l2).
+  Proof.
+    eapply impl_disj_disj. 
+    1,2: admit.
+    eapply disjoint_subset;unfold impl_list;eauto using filter_incl.
+    Unshelve. exact p. exact i.
+
+(*    Lemma impl_list_spec1 `{redCFG} p q i j l
+          (Hpath : TPath' ((p,i) :< l))
+          (Hin1 : (q,j) ∈ l)impl_list (depth p) (map fst l))
+          (Hnloop : ~ loop_head q)
+      : j = i.*)
+    
+    (*disjoint2. rewrite disjoint2 in Hdisj. intros r1 r2 Hr1 Hr2 Hreq. subst r2.
+    eapply in_fst in Hr1 as [j1 Hr1]. eapply in_fst in Hr2 as [j2 Hr2].
+    eapply Hdisj; eauto. enough (j1 = j2) by (subst j1;reflexivity).*)
+    (* implode list *)
+  Admitted.
+  
+  Theorem lc_join_path_split `{redCFG} t1 t2 (p q1 q2 s : Lab) (i : Tag)
+          (Hlc : last_common ((q1,i) :<: t1) ((q2,i) :<: t2) (s,i))
+          (Hneq : q1 <> q2)
+          (Hpath1 : TPath' ((p,i) :<: (q1,i) :<: t1))
+          (Hpath2 : TPath' ((p,i) :<: (q2,i) :<: t2))
     : exists qq qq', (s,qq,qq') ∈ path_splits p.
   Proof.
     setoid_rewrite <-path_splits_spec. unfold pl_split.
     unfold TPath' in *;cbn in *. unfold last_common in Hlc; destructH.
+    eapply id in Hpath1 as Hpath1'; eapply id in Hpath2 as Hpath2'.
     eapply postfix_path in Hpath1;eauto. 
     2: eapply postfix_cons in Hlc0;
       rewrite <-cons_rcons_assoc in Hlc0; simpl_nl; eassumption.
@@ -98,24 +151,8 @@ Module Disjoint.
     exists z0, z, l'0, l'.
     split_conj;eauto.
     eapply disjoint_subset;eauto.
-
-    Lemma disjoint2 {A : Type} `{EqDec A} (l1 l2 : list A)
-      : Disjoint l1 l2 <-> forall x y, x ∈ l1 -> y ∈ l2 -> x <> y.
-    Proof.
-      split;unfold Disjoint;intros.
-      - intro N. subst x. firstorder.
-      - split;intros;intro N;eapply H0;eauto.
-    Qed.
-
-    eapply disjoint2.
-      
-
-(*    Lemma lc_join_path_split_help2 `{redCFG} t1 t2
-          (Hlc1 : Disjoint l1' l2')
-      : Disjoint (map fst l1') (map fst l2')*)
-    
-      (* show that all have the same tags *)
-  Admitted.
+    eapply lc_join_path_split_help2;eauto.
+  Qed.
 
   Definition lc_disj_exit_lsplits_def (d : nat)
     := forall `{redCFG} (s e q h : Lab) (i1 i2 j k : Tag) t1 t2 (n : nat)
