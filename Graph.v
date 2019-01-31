@@ -297,7 +297,6 @@ Module Graph.
         + cbn. erewrite IHPostfix; eauto; [|rewrite nlcons_to_list; reflexivity].
           simpl_nl; reflexivity.
     Qed.
-
     
     Ltac path_simpl' H :=
       lazymatch type of H with

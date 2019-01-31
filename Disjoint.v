@@ -83,19 +83,47 @@ Module Disjoint.
     - split;intros;intro N;eapply H0;eauto.
   Qed.
 
+  (* TODO: this implementation of impl_list doesn't output a TPath given a TPath,
+   * because the tags are the old ones. This has the advantage that it remains a subset
+   * of the input on the other hand. I might want to change this. 
+   * This change would simplify impl_disj_coord_impl_disj_lab but complicate 
+   * impl_disj_lab_disj_lab and the helper2 lemma. *)
   Definition impl_list `{redCFG} (n : nat) :=
-    filter (fun qj : Coord => let (q,_) := qj in (depth q ==b n) || (depth q ==b S n) && loop_head_b q).
+    filter (fun qj : Coord => let (q,j) := qj in (depth q ==b n)
+                                              || (depth q ==b S n)
+                                                  && loop_head_b q
+                                                  && match j with nil => false
+                                                             | a :: j => (0 ==b a)
+                                                     end).
 
   Definition TPath'' `{redCFG} l := match l with nil => True | (a :: l) => TPath' (a :< l) end.
 
-  Lemma impl_disj_disj `{redCFG} l1 l2 p i
-        (Hpath1 : TPath' ((p,i) :< l1))
-        (Hpath2 : TPath' ((p,i) :< l2))
-        (Hdisj : Disjoint (impl_list (depth p) l1) (impl_list (depth p) l2))
-    : Disjoint (map fst l1) (map fst l2).
+  Definition impl_list' `{redCFG} p := impl_list (depth p).
+
+  Lemma impl_disj_coord_impl_disj_lab `{redCFG} l1 l2 s p i
+        (Hpath1 : TPath' ((p,i) :< l1 :>: (s,i)))
+        (Hpath2 : TPath' ((p,i) :< l2 :>: (s,i)))
+        (Hdisj : Disjoint (impl_list' p l1) (impl_list' p l2))
+    : Disjoint (map fst (impl_list' p l1)) (map fst (impl_list' p l2)).
   Proof.
+    (* divide the labs in three classes: tophead, notheads or otherheads.
+     * - if there is a tophead it has to be s and s is not in l1/l2
+     * - all notheads have tag i
+     * - all otherheads have tag 0::i 
+     * then inside both class they are disjoint, because of same tag
+     * and since they are pairwise different labs they are all disjoint *)
   Admitted.
 
+  Lemma impl_disj_lab_disj_lab `{redCFG} l1 l2 s p i 
+        (Hpath1 : TPath' ((p,i) :< l1 :>: (s,i)))
+        (Hpath2 : TPath' ((p,i) :< l2 :>: (s,i)))
+        (Hdisj : Disjoint (map fst (impl_list' p l1)) (map fst (impl_list' p l2)))
+    : Disjoint (map fst l1) (map fst l2).
+  Proof.
+    (* all new members of "map fst l" are hidden in loop-headers - which are disjoint *)
+    (* this requires also another lemma about the absence of labs outside of p's or s's head*)
+  Admitted.
+  
   Lemma filter_incl `{A : Type} (l : list A) (f : A -> bool) : filter f l ⊆ l.
   Proof.
     induction l;cbn;unfold "⊆";eauto.
@@ -103,17 +131,15 @@ Module Disjoint.
   Qed.             
   
   Lemma lc_join_path_split_help2 `{redCFG} (p s q1 q2 : Lab) (t1 t2 : ne_list Coord) l1 l2 i
-        (Hpost1 : Postfix (l1 :r: (s, i)) ((q1, i) :: t1))
-        (Hpost2 : Postfix (l2 :r: (s, i)) ((q2, i) :: t2))
-        (Hpath1 : TPath' ((p,i) :<: (q1,i) :<: t1))
-        (Hpath2 : TPath' ((p,i) :<: (q2,i) :<: t2))
+        (Hpath1 : TPath' ((p,i) :< l1 :>: (s,i)))
+        (Hpath2 : TPath' ((p,i) :< l2 :>: (s,i)))
         (Hdisj : Disjoint l1 l2)
     : Disjoint (map fst l1) (map fst l2).
   Proof.
-    eapply impl_disj_disj. 
-    1,2: admit.
+    eapply impl_disj_lab_disj_lab;eauto.
+    eapply impl_disj_coord_impl_disj_lab;eauto.
     eapply disjoint_subset;unfold impl_list;eauto using filter_incl.
-    Unshelve. exact p. exact i.
+  Qed.
 
 (*    Lemma impl_list_spec1 `{redCFG} p q i j l
           (Hpath : TPath' ((p,i) :< l))
@@ -125,7 +151,7 @@ Module Disjoint.
     eapply in_fst in Hr1 as [j1 Hr1]. eapply in_fst in Hr2 as [j2 Hr2].
     eapply Hdisj; eauto. enough (j1 = j2) by (subst j1;reflexivity).*)
     (* implode list *)
-  Admitted.
+  
   
   Theorem lc_join_path_split `{redCFG} t1 t2 (p q1 q2 s : Lab) (i : Tag)
           (Hlc : last_common ((q1,i) :<: t1) ((q2,i) :<: t2) (s,i))
@@ -152,7 +178,7 @@ Module Disjoint.
     split_conj;eauto.
     eapply disjoint_subset;eauto.
     eapply lc_join_path_split_help2;eauto.
-  Qed.
+  Admitted.
 
   Definition lc_disj_exit_lsplits_def (d : nat)
     := forall `{redCFG} (s e q h : Lab) (i1 i2 j k : Tag) t1 t2 (n : nat)
