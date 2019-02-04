@@ -83,45 +83,52 @@ Module Disjoint.
     - split;intros;intro N;eapply H0;eauto.
   Qed.
 
-  (* TODO: this implementation of impl_list doesn't output a TPath given a TPath,
-   * because the tags are the old ones. This has the advantage that it remains a subset
-   * of the input on the other hand. I might want to change this. 
-   * This change would simplify impl_disj_coord_impl_disj_lab but complicate 
-   * impl_disj_lab_disj_lab and the helper2 lemma. *)
-  Definition impl_list `{redCFG} (n : nat) :=
-    filter (fun qj : Coord => let (q,j) := qj in (depth q ==b n)
-                                              || (depth q ==b S n)
-                                                  && loop_head_b q
-                                                  && match j with nil => false
-                                                             | a :: j => (0 ==b a)
-                                                     end).
+  Definition impl_list `{redCFG} (h : Lab) :=
+    filter (fun q : Lab => (loop_contains_b h q)
+                          && ((depth q ==b depth h)
+                              || (depth q ==b S (depth h))
+                                  && loop_head_b q
+                             )
+           ).
 
-  Definition TPath'' `{redCFG} l := match l with nil => True | (a :: l) => TPath' (a :< l) end.
+  Definition impl_list' `{redCFG} (p : Lab) (i : Tag) (l : list Coord):=
+    map (fun q => (q,i)) (impl_list (get_innermost_loop p) (map fst l)).
 
-  Definition impl_list' `{redCFG} p := impl_list (depth p).
+  
+  Lemma impl_list_cfg_tpath `{C : redCFG} l p i
+        (Hin : forall q, q ∈ map fst l -> loop_contains (get_innermost_loop p) q)
+        (Hpath : TPath' ((p,i) :< l))
+        (D := local_impl_CFG C (get_innermost_loop p))
+    : TPath' ((p,i) :< impl_list' p i l).
+  Proof.
+  Admitted.
 
   Lemma impl_disj_coord_impl_disj_lab `{redCFG} l1 l2 s p i
         (Hpath1 : TPath' ((p,i) :< l1 :>: (s,i)))
         (Hpath2 : TPath' ((p,i) :< l2 :>: (s,i)))
-        (Hdisj : Disjoint (impl_list' p l1) (impl_list' p l2))
-    : Disjoint (map fst (impl_list' p l1)) (map fst (impl_list' p l2)).
+        (Hdisj : Disjoint (impl_list' p i l1) (impl_list' p i l2))
+    : Disjoint (impl_list (get_innermost_loop p) (map fst l1))
+               (impl_list (get_innermost_loop p) (map fst l2)).
   Proof.
-    (* divide the labs in three classes: tophead, notheads or otherheads.
-     * - if there is a tophead it has to be s and s is not in l1/l2
-     * - all notheads have tag i
-     * - all otherheads have tag 0::i 
-     * then inside both class they are disjoint, because of same tag
-     * and since they are pairwise different labs they are all disjoint *)
+    (* everything has tag i
+     * thus they are disjoint, because of same tag *)
   Admitted.
 
   Lemma impl_disj_lab_disj_lab `{redCFG} l1 l2 s p i 
         (Hpath1 : TPath' ((p,i) :< l1 :>: (s,i)))
         (Hpath2 : TPath' ((p,i) :< l2 :>: (s,i)))
-        (Hdisj : Disjoint (map fst (impl_list' p l1)) (map fst (impl_list' p l2)))
+        (Hdisj : Disjoint (impl_list (get_innermost_loop p) (map fst l1))
+                          (impl_list (get_innermost_loop p) (map fst l2)))
     : Disjoint (map fst l1) (map fst l2).
   Proof.
     (* all new members of "map fst l" are hidden in loop-headers - which are disjoint *)
-    (* this requires also another lemma about the absence of labs outside of p's or s's head*)
+  Admitted.
+  
+  Lemma coord_disj_impl_coord `{redCFG} l1 l2 s p i 
+        (Hpath1 : TPath' ((p,i) :< l1 :>: (s,i)))
+        (Hpath2 : TPath' ((p,i) :< l2 :>: (s,i)))
+        (Hdisj : Disjoint l1 l2)
+    : Disjoint (impl_list' p i l1) (impl_list' p i l2).
   Admitted.
   
   Lemma filter_incl `{A : Type} (l : list A) (f : A -> bool) : filter f l ⊆ l.
@@ -138,7 +145,7 @@ Module Disjoint.
   Proof.
     eapply impl_disj_lab_disj_lab;eauto.
     eapply impl_disj_coord_impl_disj_lab;eauto.
-    eapply disjoint_subset;unfold impl_list;eauto using filter_incl.
+    eapply coord_disj_impl_coord;eauto.
   Qed.
 
 (*    Lemma impl_list_spec1 `{redCFG} p q i j l
@@ -208,24 +215,24 @@ Module Disjoint.
          (Hpath2 : TPath (ne_back t2) (e2,i2) ((e2,i2) :<: t2)),
       exists (qq qq' : Lab), (s,qq,qq') ∈ (loop_splits h e1 ++ loop_splits h e2).
 
-  Lemma lc_disj_exit_to_exits_lsplits d : lc_disj_exit_lsplits_def d -> lc_disj_exits_lsplits_def d.
+  Theorem lc_disj_exit_to_exits_lsplits d : lc_disj_exit_lsplits_def d -> lc_disj_exits_lsplits_def d.
   Proof.
     unfold lc_disj_exit_lsplits_def, lc_disj_exits_lsplits_def. intro Hlc_disj. intros.
   Admitted.
 
-  Lemma lc_disj_exit_lsplits d : lc_disj_exit_lsplits_def d.
+  Theorem lc_disj_exit_lsplits d : lc_disj_exit_lsplits_def d.
   Proof.
     unfold lc_disj_exit_lsplits_def;intros.
     
     
   Admitted.
 
-  Lemma lc_disj_exits_lsplits d : lc_disj_exits_lsplits_def d.
+  Theorem lc_disj_exits_lsplits d : lc_disj_exits_lsplits_def d.
   Proof.
     apply lc_disj_exit_to_exits_lsplits,lc_disj_exit_lsplits.
   Qed.      
   
-  Lemma lc_join_split `{redCFG} t1 t2 (p q1 q2 s : Lab) (i j1 j2 k : Tag)
+  Theorem lc_join_split `{redCFG} t1 t2 (p q1 q2 s : Lab) (i j1 j2 k : Tag)
         (Hlc : last_common t1 t2 (s,k))
         (Hneq : q1 <> q2 \/ j1 <> j2)
         (Hpath1 : TPath' ((p,i) :<: (q1,j1) :< t1))

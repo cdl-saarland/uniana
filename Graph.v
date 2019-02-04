@@ -444,8 +444,9 @@ Module CFG.
         exit_edge h p q := loop_contains h p /\ ~ loop_contains h q /\ p --> q;
         single_exit : forall h p q, exit_edge h p q -> forall h', exit_edge h' p q -> h = h';
         loop_head h := exists p, back_edge p h;
-        no_exit_head : forall h p q, exit_edge h p q -> ~ loop_head q
-      }. 
+        no_exit_head : forall h p q, exit_edge h p q -> ~ loop_head q;
+        (*no_head_split : forall h p q, loop_head h -> h --> p -> h --> q -> p = q*)
+      }.
   
   Notation "p '-a>b' q" := ((fun (a_edge : Lab -> Lab -> bool)
                                (_ : redCFG _ _ _ a_edge) => a_edge) _ _ p q)
@@ -1069,8 +1070,8 @@ Module TCFG.
 
   Definition Tag := list nat.
 
-  Lemma Tag_dec : EqDec Tag eq.
-  Proof.
+  Program Instance Tag_dec : EqDec Tag eq.
+  Next Obligation.
     apply list_eqdec, nat_eq_eqdec.
   Qed.
   
@@ -1080,8 +1081,8 @@ Module TCFG.
 
   Hint Resolve Tag_dec.
   
-  Lemma Coord_dec : EqDec Coord eq.
-  Proof.
+  Program Instance Coord_dec : EqDec Coord eq.
+  Next Obligation.
     eapply prod_eqdec;eauto.
   Qed.
 
@@ -1099,7 +1100,7 @@ Module TCFG.
   Definition tcfg_edge (edge : Lab -> Lab -> bool) (tag : Lab -> Lab -> Tag -> Tag) :=
     (fun c c' : Coord => let (p,i) := c  in
               let (q,j) := c' in
-              edge p q && (to_bool (Tag_dec (tag p q i) j))).
+              edge p q && ( (tag p q i) ==b j)).
 
   Fixpoint eff_tag `{redCFG} p q i : Tag
     := if back_edge_b p q
