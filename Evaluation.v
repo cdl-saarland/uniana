@@ -16,7 +16,7 @@ Module Evaluation.
 
   Section eval.
 
-    Context `(C : redCFG).
+    Context `{C : redCFG}.
     
     Variable root_no_pred' : forall p, p --> root -> False.
 

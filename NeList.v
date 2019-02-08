@@ -629,7 +629,7 @@ Module NeList.
       + assumption.
   Qed.
 
-  Definition last_common {A : Type} `{EqDec A eq} (l1 l2 : ne_list A) (s : A) :=
+  Definition last_common {A : Type} `{EqDec A eq} (l1 l2 : list A) (s : A) :=
     exists l1' l2', Postfix (l1' :r: s) l1 /\ Postfix (l2' :r: s) l2
                    /\ Disjoint l1' l2'
                    /\ ~ In s l1' /\ ~ In s l2'.

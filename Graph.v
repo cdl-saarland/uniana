@@ -1112,6 +1112,17 @@ Module TCFG.
          let l' := @iter Tag (@tl nat) i (exit_edge_num p q) in
          if loop_head_dec q then O :: l' else l'.
 
+  Notation "pi -t> qj" := ((fun `(redCFG) => tcfg_edge edge eff_tag pi qj = true) _ _ _ _ _)
+                            (at level 50).
+  
+  Lemma tag_eq_loop_exit `{redCFG} h p q i j j'
+        (Htag : (q,j ) -t> (p,i))
+        (Htag': (q,j') -t> (p,i))
+        (Hneq : j <> j')
+    : exit_edge h q p.
+  Admitted.
+  
+
   Definition TPath `{redCFG} := Path (tcfg_edge edge eff_tag).
 
   Lemma TPath_CPath `{redCFG} c c' π :
