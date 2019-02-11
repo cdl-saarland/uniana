@@ -35,18 +35,26 @@ Module Disjoint.
 
   Parameter splits' : forall `{redCFG}, Lab -> Lab -> list (Lab * Lab * Lab).
   Parameter splits  : forall `{redCFG}, Lab -> list (Lab * Lab * Lab).
+  Parameter rel_splits : forall `{redCFG}, Lab -> Lab -> list (Lab * Lab * Lab).
 
   Definition path_splits__imp `{C : redCFG} p
     := @path_splits _ _ _ _ (local_impl_CFG C (get_innermost_loop p)) p.
   Definition loop_splits__imp `{C : redCFG} h
     := @loop_splits _ _ _ _ (local_impl_CFG C h) h.
 
-  Definition splits'_spec `{redCFG} {h': Lab} {H : loop_head h'}
+  Definition splits'_spec `{redCFG}
     := forall h e sp, sp ∈ splits' h e
                  <-> sp ∈ loop_splits__imp h e
                    \/ exists br q q', (br,q,q') ∈ loop_splits__imp h e
                                    /\ (sp ∈ splits' br q
                                       \/ sp ∈ splits' br q').
+
+  Definition rel_splits_spec `{redCFG} := forall p q sp, sp ∈ rel_splits p q
+                                                    <-> exists h e, exited h e
+                                                             /\ e -->* p
+                                                             /\ loop_contains h q
+                                                             /\ ~ loop_contains h p
+                                                             /\ sp ∈ splits' h e.
 
   Definition splits_spec `{redCFG} := forall p sp, sp ∈ splits p
                                               <-> sp ∈ path_splits__imp p (* usual split *)
@@ -56,8 +64,7 @@ Module Disjoint.
                                                 \/ exists br q q',(br,q,q') ∈ path_splits__imp p
                                                             (* loop_split of splitting heads *)
                                                             /\ (sp ∈ splits' br q
-                                                               \/ sp ∈ splits' br q')
-  .
+                                                               \/ sp ∈ splits' br q').
 
 
   Lemma lc_join_path_split_help1 (L : Type) (edge : L -> L -> bool) (x y : L) (l : list L)
@@ -181,16 +188,17 @@ Module Disjoint.
   Admitted.
 
   Definition lc_disj_exit_lsplits_def (d : nat)
-    := forall `{redCFG} (s e q h : Lab) (i1 i2 j k : Tag) (t1 t2 : ne_list Coord) (n : nat)
+    := forall `{redCFG} (s e q h : Lab) (i1 i2 j k : Tag) (t1 t2 : ne_list Coord) (n m : nat)
          (Hdep : d >= depth s - depth e)
          (Hlc : last_common t1 t2 (s,k))
          (Hhead : loop_head h)
-         (Hqeq : ne_front t1 = (q, n :: j))
+         (Hqeq1 : ne_front t1 = (q, n :: j))
+         (Hqeq2 : ne_front t2 = (q, m :: j))
          (Hloop : loop_contains h q)
          (Hexit : exited h e)
          (Hpath1 : TPath (ne_back t1) (e,i1) ((e,i1) :<: t1))
          (Hpath2 : TPath (ne_back t2) (e,i2) ((e,i2) :<: t2)),
-      exists (qq qq' : Lab) (xl : list Var), (s,qq,qq') ∈ loop_splits h e.
+      exists (qq qq' : Lab), (s,qq,qq') ∈ loop_splits h e.
 
   Definition lc_disj_exits_lsplits_def (d : nat)
     := forall `{redCFG} (s e1 e2 q1 q2 h : Lab) (i1 i2 j k : Tag) (t1 t2 : ne_list Coord) (n m : nat)

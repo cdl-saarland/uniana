@@ -59,26 +59,25 @@ Module Uniana.
                                  In (p, i, s') (`t') ->
                                  u p x = true -> s x = s' x.
 
+  Definition uni_branch (uni : Uni) :=
+    (fun spq : Lab * Lab * Lab
+     => let s := fst (fst spq) in
+       match (branch s) with
+       | Some x => uni s x
+       | None => false
+       end
+    ).  
   
   Definition uni_trans (uni : Uni) (unch : Unch) : Uni :=
     fun p
     => if p == root then uni root
-      else fun x => ((join_andb
-                     (map (fun spq : Lab * Lab * Lab
-                           => let s := fst (fst spq) in
-                             match (branch s) with
-                             | Some x => uni s x
-                             | None => false
-                             end
-                          )
-                          (splits p)
-                     )
-                  ) (* the predecessor is only included in split set if p is an exit *)
-                 )
+      else fun x => (join_andb (map (uni_branch uni) (splits p)))
+                 (* the predecessor is only included in split set if p is an exit *)
                    && (join_andb (map (fun q => abs_uni_eff (uni q) x) (preds p)))
-                 || join_orb (map (fun q => (q <>b p) && uni q x (*&& upi_trans upi uni q p*))
+                 || join_orb (map (fun q => (q <>b p)
+                                          && uni q x
+                                          && join_andb (map (uni_branch uni) (rel_splits p q)))
                                  (unch_trans unch p x)).
-  (* unch should be alright now, upi is included in uni *)
 
   Lemma uni_trans_root_inv :
     forall uni unch x, uni_trans uni unch root x = uni root x.
@@ -154,23 +153,26 @@ Module Uniana.
     (exists x, (br,x) ∈ splits p) \/ exists s x x', (s,x) ∈ splits p /\ (br,x') ∈ preceding_loop_splits p s.
   Admitted.
    *)
+  Definition sub_traces (ts ts' : Traces) : Prop := forall t, ts t -> exists t', ts' t' /\ Prefix (`t) (`t').
+
+  Lemma uni_concr_sub_traces ts ts' uni
+        (Hsub : sub_traces ts ts')
+        (Huni : uni_concr uni ts')
+    : uni_concr uni ts.
+  Proof.
+    unfold uni_concr in *. unfold sub_traces in Hsub.
+    intros. specialize (Hsub t H) as Hsub1. specialize (Hsub t' H0) as Hsub2. destructH. destructH.
+    eapply (Huni t'1 t'0); eauto.
+    - eapply in_prefix_in;eauto.
+    - eapply in_prefix_in;eauto.
+  Qed.    
   
   Lemma uni_same_tag p q i j1 j2 s1 s2 r1 r2 (t1 t2 : trace) uni ts l1 l2
         (Htr1 : Tr ((p,i,s1) :<: (q,j1,r1) :< l1))
         (Htr2 : Tr ((p,i,s2) :<: (q,j2,r2) :< l2))
         (Hpre1 : Prefix ((q,j1,r1) :: l1) (`t1))
         (Hpre2 : Prefix ((q,j2,r2) :: l2) (`t2))
-        (Hsplit : (join_andb
-                    (map (fun spq : Lab * Lab * Lab
-                            => let s := fst (fst spq) in
-                             match (branch s) with
-                             | Some x => uni s x
-                             | None => false
-                             end
-                           )
-                           (splits p)
-                    )
-                  ) = true)
+        (Hsplit : (join_andb (map (uni_branch uni) (splits p))) = true)
         (HCuni : uni_concr uni ts)
         (Hsem1 : ts t1)
         (Hsem2 : ts t2)
@@ -179,22 +181,25 @@ Module Uniana.
     (* use tag_eq_loop_exit *)
   Admitted.
 
+  Lemma unch_same_tag p u j1 j2 r1 r2 ts l1 l2 (t1 t2 : trace) x uni unch
+        (Hunibr : join_andb (map (uni_branch uni) (rel_splits p u)) = true)
+        (Hunch : u ∈ unch_trans unch p x)
+        (Hpre1 : Prefix l1 (`t1))
+        (Hpre2 : Prefix l2 (`t2))
+        (Hprec1 : Precedes l1 (u, j1, r1))
+        (Hprec2 : Precedes l2 (u, j2, r2))
+        (HCuni : uni_concr uni ts)
+        (Hts1 : ts t1)
+        (Hts2 : ts t2)
+    : j1 = j2.
+  Admitted.
+
   Lemma uni_same_lab p q1 q2 i j1 j2 s1 s2 r1 r2 (t1 t2 : trace) uni ts l1 l2
         (Htr1 : Tr ((p,i,s1) :<: (q1,j1,r1) :< l1))
         (Htr2 : Tr ((p,i,s2) :<: (q2,j2,r2) :< l2))
         (Hpre1 : Prefix ((q1,j1,r1) :: l1) (`t1))
         (Hpre2 : Prefix ((q2,j2,r2) :: l2) (`t2))
-        (Hsplit : (join_andb
-                    (map (fun spq : Lab * Lab * Lab
-                            => let s := fst (fst spq) in
-                             match (branch s) with
-                             | Some x => uni s x
-                             | None => false
-                             end
-                           )
-                           (splits p)
-                    )
-                  ) = true)
+        (Hsplit : (join_andb (map (uni_branch uni) (splits p))) = true)
         (HCuni : uni_concr uni ts)
         (Hsem1 : ts t1)
         (Hsem2 : ts t2)
@@ -295,14 +300,14 @@ Module Uniana.
             by (eapply in_preds;eauto using step_conf_implies_edge,root_no_pred').
 
         eapply prefix_in_list in HIn as Hpre1. destruct Hpre1 as [l1 Hpre1].
-          eapply prefix_in_list in HIn' as Hpre2. destruct Hpre2 as  [l2 Hpre2].
-          
-          rewrite nlcons_to_list in Hpre1.
-          eapply prefix_trace in Hpre1 as Htr1 ; [|eapply root_no_pred'|destruct t1; eauto].
+        eapply prefix_in_list in HIn' as Hpre2. destruct Hpre2 as  [l2 Hpre2].
+        
+        rewrite nlcons_to_list in Hpre1.
+        eapply prefix_trace in Hpre1 as Htr1 ; [|eapply root_no_pred'|destruct t1; eauto].
 
-          rewrite nlcons_to_list in Hpre2.
-          eapply prefix_trace in Hpre2 as Htr2; [|eapply root_no_pred'|destruct t2;eauto].
-          simpl_nl' Hpre1. simpl_nl' Hpre2.
+        rewrite nlcons_to_list in Hpre2.
+        eapply prefix_trace in Hpre2 as Htr2; [|eapply root_no_pred'|destruct t2;eauto].
+        simpl_nl' Hpre1. simpl_nl' Hpre2.
         cut (q' = q); intros; subst.
         * cut (j' = j); intros; subst.
           -- eapply (local_uni_corr (uni q) q j p i r r' s s'); try eassumption.
@@ -320,13 +325,13 @@ Module Uniana.
         eapply join_orb_true_iff in H.
         destruct H as [u H].
         conv_bool.
-        destruct H as [Hunch [Hneq' Huni]].
+        destruct H as [Hunch [[Hneq' Huni] Hunibr]].
         specialize (HCunch p i s u x HIn Hunch).
         specialize (HCunch' p i s' u x HIn' Hunch).
         destruct HCunch as [j [r [Hprec Heq]]]; try eassumption.
         destruct HCunch' as [j' [r' [Hprec' Heq']]]; try eassumption.
         rewrite <- Heq. rewrite <- Heq'.
-        cut (j' = j); intros.
+        cut (j = j'); intros.
         * subst j'. eapply HCuni. eapply Hts1. eapply Hts2. 3: eauto.
           all: eapply precedes_step_inv.
           -- rewrite <-nlcons_to_list. setoid_rewrite Hteq1 in Hprec. apply Hprec.
@@ -335,9 +340,16 @@ Module Uniana.
           -- rewrite <-nlcons_to_list. setoid_rewrite Hteq2 in Hprec'. apply Hprec'.
           -- rewrite <-nlcons_necons, <-Hteq2. destruct t'; eauto.
           -- cbn;eauto.
-        * symmetry. admit. 
-          (* eapply (HCupi _ _ Hsem Hsem'); eauto.*)
-  Admitted.
+        * unfold Precedes' in Hprec,Hprec'. destructH' Hprec. destructH' Hprec'.
+          rewrite nlcons_to_list in Hprec0.
+          eapply prefix_trace in Hprec0 as Htr1 ; [|eapply root_no_pred'|destruct t; eauto].
+          rewrite nlcons_to_list in Hprec'0.
+          eapply prefix_trace in Hprec'0 as Htr2; [|eapply root_no_pred'|destruct t';eauto].
+          rewrite Hteq1 in Hprec0. simpl_nl' Hprec0. eapply prefix_cons_cons in Hprec0.
+          rewrite Hteq2 in Hprec'0. simpl_nl' Hprec'0. eapply prefix_cons_cons in Hprec'0.
+          eapply unch_same_tag with (l1:=l') ;eauto;[inversion Hprec1|inversion Hprec'1].
+          all:subst;eauto;congruence.
+  Qed.
   End uniana.
 
 End Uniana.
