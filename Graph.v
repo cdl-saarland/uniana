@@ -1040,13 +1040,6 @@ Module CFG.
   Definition local_impl_CFG `(C : redCFG) (h : Lab) :=
     let D := (loop_CFG C h) in 
     implode_CFG (head_exits_CFG D) (head_exits_property_satisfied D).
-
-
-  (*  Parameter root_no_pred0 : forall p, p ∉ preds0 root.*)
-  
-  Parameter root : Lab.
-  
-  (*  Notation "p --> q" := (p ∈ preds0 q) (at level 55, right associativity).*)
   
   
   (** more parameters **)
@@ -1077,7 +1070,6 @@ Module TCFG.
   
   Parameter start_tag : Tag.
   Definition Coord : Type := (Lab * Tag).
-  Definition start_coord := (root, start_tag) : Coord.
 
   Hint Resolve Tag_dec.
   
@@ -1115,11 +1107,11 @@ Module TCFG.
   Notation "pi -t> qj" := ((fun `(redCFG) => tcfg_edge edge eff_tag pi qj = true) _ _ _ _ _)
                             (at level 50).
   
-  Lemma tag_eq_loop_exit `{redCFG} h p q i j j'
+  Lemma tag_eq_loop_exit `{redCFG} p q i j j'
         (Htag : (q,j ) -t> (p,i))
         (Htag': (q,j') -t> (p,i))
         (Hneq : j <> j')
-    : exit_edge h q p.
+    : exit_edge (get_innermost_loop q) q p.
   Admitted.
   
 

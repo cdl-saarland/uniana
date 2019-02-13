@@ -218,7 +218,7 @@ Module Evaluation.
         split; cbn; eauto.
       + exfalso. eapply Hneq. inversion H1.
         destruct a,p0. cbn in H3. destruct H3;[|contradiction].
-        inversion H0;inversion H;subst;reflexivity.
+        inversion H0;inversion H. reflexivity.
     - destruct Hin; subst.
       + destruct a as [[q j] r].
         exists q, j, r. split; [ constructor | assumption ]. reflexivity.
@@ -250,15 +250,15 @@ Module Evaluation.
     eapply eff_tag_det;eapply eff_eff_tag; eauto.
   Qed.
                                                     
-  Inductive Precedes : list Conf -> Conf -> Prop :=
-  | Pr_in : forall k l, Precedes (k :: l) k
-  | Pr_cont : forall c k l, lab_of c <> lab_of k -> Precedes l k -> Precedes (c :: l) k.
+  Inductive Precedes {A B : Type} (f : A -> B) : list A -> A -> Prop :=
+  | Pr_in : forall (k : A) (l : list A), Precedes f (k :: l) k
+  | Pr_cont : forall c k l, f c <> f k -> Precedes f l k -> Precedes f (c :: l) k.
 
   Definition Precedes' (l : list Conf) (k k' : Conf) : Prop :=
-    exists l', Prefix (k' :: l') l /\ Precedes (k' :: l') k.
+    exists l', Prefix (k' :: l') l /\ Precedes lab_of (k' :: l') k.
 
-  Lemma precedes_implies_in_pred k t :
-    Precedes t k -> In k t.
+  Lemma precedes_implies_in_pred {A B : Type} k t (f : A -> B) :
+    Precedes f t k -> In k t.
   Proof.
     intros H.
     dependent induction t.

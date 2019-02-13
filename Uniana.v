@@ -8,7 +8,8 @@ Require Import Coq.Program.Equality.
 Require Import Coq.Program.Utils.
 Require Import Lists.ListSet.
 Require Import List.
-Require Import Nat. 
+Require Import Nat.
+Require Import Omega.
 
 Require Util Graph Evaluation Unchanged Disjoint.
 
@@ -66,7 +67,7 @@ Module Uniana.
        | Some x => uni s x
        | None => false
        end
-    ).  
+    ).
   
   Definition uni_trans (uni : Uni) (unch : Unch) : Uni :=
     fun p
@@ -144,15 +145,6 @@ Module Uniana.
     end.
    *)
   
-  (*
-  Lemma is_split_loop_split p0 p q1 q2 br i0 i j1 j2 k l1 l2
-    (Hpath1 : TPath (p0,i0) (p,i) ((p, i) :<: (q1, j1) :< l1))
-    (Hpath2 : TPath (p0,i0) (p,i) ((p, i) :<: (q2, j2) :< l2))
-    (Hneq : q2 =/= q1)
-    (LC_lt : last_common ((q1, j1) :< l1) ((q2, j2) :< l2) (br, k)) :
-    (exists x, (br,x) ∈ splits p) \/ exists s x x', (s,x) ∈ splits p /\ (br,x') ∈ preceding_loop_splits p s.
-  Admitted.
-   *)
   Definition sub_traces (ts ts' : Traces) : Prop := forall t, ts t -> exists t', ts' t' /\ Prefix (`t) (`t').
 
   Lemma uni_concr_sub_traces ts ts' uni
@@ -165,7 +157,43 @@ Module Uniana.
     eapply (Huni t'1 t'0); eauto.
     - eapply in_prefix_in;eauto.
     - eapply in_prefix_in;eauto.
-  Qed.    
+  Qed.
+
+  
+
+  Lemma tr_lc_lt' p i s1 s2 l1 l2
+        (Htr1 : Tr ((p, i, s1) :<: l1))
+        (Htr2 : Tr ((p, i, s2) :<: l2))
+    : exists brk,
+      last_common (ne_map fst l1) (ne_map fst l2) (brk).
+  Proof.
+    eapply ne_last_common. repeat rewrite ne_back_map.
+    eapply ne_back_trace in Htr1 as [s1' Htr1]. cbn in Htr1.
+    eapply ne_back_trace in Htr2 as [s2' Htr2]. cbn in Htr2.
+    setoid_rewrite Htr1. setoid_rewrite Htr2. cbn;eauto.
+  Qed.
+
+  Lemma tr_lc_lt p i s1 s2 q1 q2 j1 j2 r1 r2 l1 l2
+        (Htr1 : Tr ((p, i, s1) :<: (q1, j1, r1) :< l1))
+        (Htr2 : Tr ((p, i, s2) :<: (q2, j2, r2) :< l2))
+    : exists br k,
+      last_common ((q1, j1) :: map fst l1) ((q2, j2) :: map fst l2) (br,k).
+  Proof.
+    enough (exists brk,
+               last_common (ne_map fst ((q1, j1, r1) :< l1)) (ne_map fst ((q2, j2, r2) :< l2)) brk).
+    { (simpl_nl' H;cbn in H;destruct H as [[br k] H];eauto). }
+    eapply tr_lc_lt';eauto.
+  Qed.
+
+  Lemma tr_tpath p i s q j r l
+        (Htr : Tr ((p,i,s) :<: (q,j,r) :< l))
+    : TPath' ((p, i) :<: (q, j) :< map fst l).
+  Proof.
+    eapply Tr_EPath in Htr as Htr; cbn;eauto. destruct Htr as [s01 Htr].
+    eapply EPath_TPath in Htr.
+    cbn in *. unfold TPath'. simpl_nl' Htr. cbn in *.
+    eapply path_back in Htr as Hback. cbn in Hback. unfold Coord in *. rewrite Hback;eauto.
+  Qed.
   
   Lemma uni_same_tag p q i j1 j2 s1 s2 r1 r2 (t1 t2 : trace) uni ts l1 l2
         (Htr1 : Tr ((p,i,s1) :<: (q,j1,r1) :< l1))
@@ -178,20 +206,161 @@ Module Uniana.
         (Hsem2 : ts t2)
     : j2 = j1.
   Proof.
-    (* use tag_eq_loop_exit *)
+    decide' (j1 == j2);[reflexivity|exfalso].
+    assert (forall s j r l (Htr : Tr ((p, i, s) :<: (q, j, r) :< l)),
+                 tcfg_edge edge eff_tag (q, j) (p, i) = true) as Htcfg.
+    {
+      clear. intros. 
+      eapply Tr_EPath in Htr;[|cbn;eauto]. destructH. eapply EPath_TPath in Htr. cbn in Htr.
+      inversion Htr. cbn in H.
+      inversion H0;subst; [simpl_nl' H7;destruct l;cbn in H7;[|congruence]|].
+      + inversion H7;subst;eauto.
+      + simpl_nl' H4; cbn in H4. destruct l; cbn in H4;[congruence|]. inversion H4;subst;eauto.
+    }
+    eapply (tag_eq_loop_exit p q i) in c. 2,3: eapply Htcfg;eauto. clear Htcfg.
+    eapply tr_lc_lt with (j1:=j1) (j2:=j2) in Htr1 as Hlc;eauto;destructH' Hlc.
+    eapply lc_disj_exit_lsplits in c as Hsplits;[|reflexivity|];eauto.
+    exploit' Hsplits. exploit' Hsplits;[|exploit' Hsplits].
+    - eapply tr_tpath;eauto. 
+    - eapply tr_tpath;eauto.
+    - destructH.
+      destruct l1,l2.
+      + (* same *) admit.
+      + (* as *) admit. 
+      + (* in *) admit.
+      + (* uni_same_lab *) admit.
   Admitted.
 
-  Lemma unch_same_tag p u j1 j2 r1 r2 ts l1 l2 (t1 t2 : trace) x uni unch
+  Lemma destruct_deq_loop (p q : Lab)
+    : (deq_loop p q) \/ (exists h, loop_contains h q /\ ~ loop_contains h p).
+  Proof.
+  Admitted.
+  
+  Lemma unch_dom u p x unch
+        (Hunch : u ∈ unch_trans unch p x)
+    : Dom edge root u p.
+    unfold unch_trans,unch_trans_ptw in Hunch. unfold unch_trans_local in Hunch.
+  Admitted.
+
+
+  Lemma prec_lab_prec_fst p i s l
+        (Hprec : Precedes lab_of l (p,i,s))
+    : Precedes fst (map fst l) (p,i).
+  Proof.
+    induction l; inversion Hprec;subst;cbn in *.
+    - econstructor.
+    - econstructor;eauto.
+      destruct a as [[a1 a2] a]; cbn in *;eauto.
+  Qed.
+
+  Lemma prec_tr_tr p i q j l
+        (Htr : TPath (root,start_tag) (p,i) ((p, i) :< l))
+        (Hprec : Precedes fst l (q, j))
+    : exists l', TPath (root,start_tag) (q,j) ((q,j) :< l').
+  Proof.
+  Admitted.
+  
+  Lemma top_level_tag_nil p i t
+        (Hdep : depth p = 0)
+        (Htr : TPath (root,start_tag) (p,i) ((p,i) :< t))
+    : i = nil.
+  Admitted.
+
+  Lemma get_innermost_loop_is_head p
+        (Hdep : 0 < depth p)
+    : loop_head (get_innermost_loop p).
+  Admitted.
+
+  Lemma dom_prec_tag h p q i j l
+        (Hloop : loop_contains h q)
+        (Hdeq : deq_loop p q)
+        (Hdom : Dom edge h q p)
+        (Hpath : TPath (root,start_tag) (p,i) l)
+        (Hprec : Precedes fst l (q,j))
+    : exists j', i = j' ++ j.
+  Admitted.
+  
+  Lemma loop_contains_get_innermost p
+        (Hdep : 0 < depth p)
+    : loop_contains (get_innermost_loop p) p.
+  Admitted.
+  
+  Lemma app_eq_length_eq_eq2 {A : Type} (l1 l2 l1' l2' : list A)
+        (Hlen : length l2 = length l2')
+        (Heq : l1 ++ l2 = l1' ++ l2')
+    : l2 = l2'.
+  Admitted.
+
+  Lemma tpath_tag_len_eq p j1 j2 l1 l2
+        (Hpath1 : TPath (root, start_tag) (p, j1) l1)
+        (Hpath2 : TPath (root, start_tag) (p, j2) l2)
+    : length j1 = length j2.
+  Admitted.
+  
+  Hint Unfold Coord.
+  
+  Lemma unch_same_tag p u i s1 s2 j1 j2 r1 r2 ts l1 l2 (t1 t2 : trace) x uni unch
         (Hunibr : join_andb (map (uni_branch uni) (rel_splits p u)) = true)
         (Hunch : u ∈ unch_trans unch p x)
         (Hpre1 : Prefix l1 (`t1))
         (Hpre2 : Prefix l2 (`t2))
-        (Hprec1 : Precedes l1 (u, j1, r1))
-        (Hprec2 : Precedes l2 (u, j2, r2))
+        (Hprec1 : Precedes lab_of l1 (u, j1, r1))
+        (Hprec2 : Precedes lab_of l2 (u, j2, r2))
         (HCuni : uni_concr uni ts)
+        (Htr1 : Tr ((p, i, s1) :< l1))
+        (Htr2 : Tr ((p, i, s2) :< l2))
         (Hts1 : ts t1)
         (Hts2 : ts t2)
     : j1 = j2.
+  Proof.
+    assert (p <> u) as Hneq by admit.
+    assert (forall p i s l (Htr : Tr ((p, i, s) :< l)),
+               TPath (root, start_tag) (p, i) ((p, i) :< map fst l)) as Htr_path.
+    {
+      clear;intros.
+      eapply Tr_EPath in Htr;[|simpl_nl;reflexivity]. destructH.
+      eapply EPath_TPath' in Htr;simpl_nl;cbn. 2-4: reflexivity. assumption.
+    }
+    destruct (destruct_deq_loop p u).
+    - (* if p is in the innermost loop of u, u must have been visited (because of dominance)
+       * in the same iteration where p is visited, thus the tag of the last ocurrence of u 
+       * is a suffix of i. Since tags at the same lab have equal length, j1 = j2 *)
+      eapply prec_lab_prec_fst in Hprec1;eapply prec_lab_prec_fst in Hprec2.
+      eapply id in Hprec1 as Hprec1';eapply id in Hprec2 as Hprec2'.
+      eapply prec_tr_tr in Hprec1. 2: eapply Htr_path;eauto.
+      eapply prec_tr_tr in Hprec2. 2: eapply Htr_path;eauto.
+      do 2 destructH.
+      destruct (depth u) eqn:E.
+      + (* if p and u are top-level all the tags are nil, thus j1 = j2 *)
+        eapply top_level_tag_nil in Hprec1;eauto.
+        eapply top_level_tag_nil in Hprec2;eauto. subst j1 j2;eauto.
+      + eapply unch_dom in Hunch.
+        assert (loop_head (get_innermost_loop u)) as Hhead.
+        (eapply get_innermost_loop_is_head;clear - E;omega).
+        assert (Hcon := loop_contains_get_innermost u). exploit' Hcon;[omega|].
+        eapply dom_loop in Hcon as Hcon'.
+        eapply dom_trans in Hunch;eauto;cycle 1.
+        {
+          eapply TPath_CPath in Hprec1;simpl_nl' Hprec1;cbn in Hprec1.
+          eapply path_to_elem in Hprec1;eauto. destructH. eauto.
+        }
+        eapply Htr_path in Htr1; eapply Htr_path in Htr2.
+        eapply dom_prec_tag in Htr1;eauto. 2:simpl_nl; econstructor;cbn;eauto.
+        eapply dom_prec_tag in Htr2;eauto. 2:simpl_nl; econstructor;cbn;eauto.
+        destructH. destructH.
+        eapply app_eq_length_eq_eq2;[|subst i;eauto].
+        eapply tpath_tag_len_eq;eauto.
+    - 
+
+
+      destruct l1;[inversion Hprec1|];destruct l2;[inversion Hprec2|].
+      rewrite nlcons_to_list in Htr1,Htr2,Hpre1,Hpre2,Hprec1,Hprec2.
+      set (l1':=c:<l1) in *. set (l2':=c0:<l2) in *.
+      (*cbn in Htr1,Htr2. destruct c as [[qq1 jj1] ss1]. destruct c0 as [[qq2 jj2] ss2].*)
+      rewrite <-nlcons_necons in Htr1,Htr2.
+      eapply tr_lc_lt' with (l1:=l1') (l2:=l2') in Htr1 as Hlc;eauto;destructH.
+
+        
   Admitted.
 
   Lemma uni_same_lab p q1 q2 i j1 j2 s1 s2 r1 r2 (t1 t2 : trace) uni ts l1 l2
@@ -204,17 +373,8 @@ Module Uniana.
         (Hsem1 : ts t1)
         (Hsem2 : ts t2)
     : q2 = q1.
-  Proof.  
-  assert (exists (si : Lab * Tag),
-             last_common (ne_map fst ((q1,j1,r1) :< l1))
-                         (ne_map fst ((q2,j2,r2) :< l2)) si) as [[br k] LC_lt].
-  {
-    eapply ne_last_common. repeat rewrite ne_back_map.
-    eapply ne_back_trace in Htr1 as [s1' Htr1]. cbn in Htr1.
-    eapply ne_back_trace in Htr2 as [s2' Htr2]. cbn in Htr2.
-    setoid_rewrite Htr1. setoid_rewrite Htr2. cbn;eauto.
-  }
-  simpl_nl' LC_lt; cbn in LC_lt.
+  Proof.
+    eapply tr_lc_lt in Htr1 as LC_lt;eauto. destructH' LC_lt.
   destruct (q2 == q1) as [ Heq | Hneq ]; [ eauto | exfalso ].
   symmetry in Hneq.
   eapply lc_join_split in LC_lt as LC_join;eauto.
@@ -228,9 +388,8 @@ Module Uniana.
          (p,i) ∈ l1, thus double occurence of the same instance in t1 --> contradiction *) admit. 
     + (* successor of br is the same because of uniformity and in l1' & l2', 
          thus l1' & l2' are not disjoint --> contradiction *) admit.
-  - eapply Tr_EPath in Htr1; cbn;eauto. destruct Htr1 as [s01 Htr1]. eapply EPath_TPath in Htr1.
-    cbn in *. unfold TPath'. simpl_nl' Htr1. cbn in *. (* follows from Htr1 *) admit.
-  - (* follows from Htr2, if LC_join is adapted *) admit.
+  - eapply tr_tpath;eauto. 
+  - eapply tr_tpath;eauto.
   Admitted.   
   
   Lemma uni_correct :
@@ -350,6 +509,7 @@ Module Uniana.
           eapply unch_same_tag with (l1:=l') ;eauto;[inversion Hprec1|inversion Hprec'1].
           all:subst;eauto;congruence.
   Qed.
+  
   End uniana.
 
 End Uniana.

@@ -188,32 +188,24 @@ Module Disjoint.
   Admitted.
 
   Definition lc_disj_exit_lsplits_def (d : nat)
-    := forall `{redCFG} (s e q h : Lab) (i1 i2 j k : Tag) (t1 t2 : ne_list Coord) (n m : nat)
-         (Hdep : d >= depth s - depth e)
-         (Hlc : last_common t1 t2 (s,k))
-         (Hhead : loop_head h)
-         (Hqeq1 : ne_front t1 = (q, n :: j))
-         (Hqeq2 : ne_front t2 = (q, m :: j))
-         (Hloop : loop_contains h q)
-         (Hexit : exited h e)
-         (Hpath1 : TPath (ne_back t1) (e,i1) ((e,i1) :<: t1))
-         (Hpath2 : TPath (ne_back t2) (e,i2) ((e,i2) :<: t2)),
+    := forall `{redCFG} (s e q1 q2 h : Lab) (i j1 j2 k : Tag) (t1 t2 : list Coord)
+         (Hdep : d = depth s - depth e)
+         (Hlc : last_common ((q1,j1) :: t1) ((q2,j2) :: t2) (s,k))
+         (Hexit1 : exit_edge h q1 e)
+         (Hexit2 : exit_edge h q2 e)
+         (Hpath1 : TPath' ((e,i) :<: (q1, j1) :< t1))
+         (Hpath2 : TPath' ((e,i) :<: (q2, j2) :< t2)),
       exists (qq qq' : Lab), (s,qq,qq') ∈ loop_splits h e.
 
   Definition lc_disj_exits_lsplits_def (d : nat)
-    := forall `{redCFG} (s e1 e2 q1 q2 h : Lab) (i1 i2 j k : Tag) (t1 t2 : ne_list Coord) (n m : nat)
+    := forall `{redCFG} (s e1 e2 q1 q2 h : Lab) (i j1 j2 k : Tag) (t1 t2 : ne_list Coord)
          (Hdep : d >= depth s - depth e1)
          (Hdep : d >= depth s - depth e2)
-         (Hlc : last_common t1 t2 (s,k))
-         (Hhead : loop_head h)
-         (Hqeq1 : ne_front t1 = (q1, n :: j))
-         (Hqeq2 : ne_front t2 = (q2, m :: j))
-         (Hloop1 : loop_contains h q1)
-         (Hloop2 : loop_contains h q2)
-         (Hexit1 : exited h e1)
-         (Hexit2 : exited h e2)
-         (Hpath1 : TPath (ne_back t1) (e1,i1) ((e1,i1) :<: t1))
-         (Hpath2 : TPath (ne_back t2) (e2,i2) ((e2,i2) :<: t2)),
+         (Hlc : last_common ((q1,j1) :: t1) ((q2,j2) :: t2) (s,k))
+         (Hexit1 : exit_edge h q1 e1)
+         (Hexit2 : exit_edge h q2 e2)
+         (Hpath1 : TPath' ((e1,i) :<: (q1,j1) :< t1))
+         (Hpath2 : TPath' ((e2,i) :<: (q2,j2) :< t2)),
       exists (qq qq' : Lab), (s,qq,qq') ∈ (loop_splits h e1 ++ loop_splits h e2).
 
   Theorem lc_disj_exit_to_exits_lsplits d : lc_disj_exit_lsplits_def d -> lc_disj_exits_lsplits_def d.
@@ -224,8 +216,6 @@ Module Disjoint.
   Theorem lc_disj_exit_lsplits d : lc_disj_exit_lsplits_def d.
   Proof.
     unfold lc_disj_exit_lsplits_def;intros.
-    
-    
   Admitted.
 
   Theorem lc_disj_exits_lsplits d : lc_disj_exits_lsplits_def d.
