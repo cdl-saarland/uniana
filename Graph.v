@@ -58,6 +58,17 @@ Module Graph.
       intro H. induction H; cbn; eauto.
     Qed.
 
+    
+    Ltac path_simpl' H :=
+      lazymatch type of H with
+      | Path ?edge ?x ?y (?z :<: ?π) => let Q := fresh "Q" in
+                                       eapply path_front in H as Q;
+                                       cbn in Q; subst z
+      | Path ?edge ?x ?y (?π :>: ?z) => let Q := fresh "Q" in
+                                       eapply path_back in H as Q;
+                                       cbn in Q; subst z
+      end.
+
     Lemma path_dec p q π :
       {Path p q π} + {~ Path p q π}.
     Proof.
@@ -72,12 +83,20 @@ Module Graph.
         all: eapply path_front in H0 as H0'; subst b. 1:contradiction.
         rewrite <-not_true_iff_false in E. contradiction.
     Qed.
-
-    Lemma path_app π ϕ p q r : Path p q π -> Path q r ϕ -> Path p r (ϕ :+ tl π).
-    Admitted.
-
+    
     Lemma path_app_conc π ϕ p q q' r : Path p q π -> q --> q' -> Path q' r ϕ -> Path p r (ϕ :+: π).
-    Admitted.
+    Proof.
+      intros Hπ Hedge Hϕ.
+      induction Hϕ;cbn;econstructor;eauto.
+    Qed.
+    
+    Lemma path_app π ϕ p q r : Path p q π -> Path q r ϕ -> Path p r (ϕ :+ tl π).
+    Proof.
+      intros Hpath1 Hpath2.
+      destruct π;cbn;inversion Hpath1;subst;eauto. 
+      rewrite <-nlconc_neconc.
+      eapply path_app_conc;eauto.
+    Qed.
 
     (* this is not used : { *)
     Inductive uniqueIn {A : Type} (a : A) : list A -> Prop := 
@@ -143,10 +162,42 @@ Module Graph.
           * instantiate (1:= ne_front π). inversion Hpq; subst. erewrite path_front; eauto.
           * reflexivity.
     Qed.
+
+    Lemma path_rcons p q r π
+          (Hπ : Path p q π)
+          (Hedge : r --> p)
+      : Path r q (π :>: r).
+    Proof.
+      eapply path_app_conc;eauto. econstructor.
+    Qed.
+
+    Lemma path_rcons_inv q r π
+          (Hπ : Path r q (π :>: r))
+      : exists p, Path p q π.
+    Proof.
+      revert dependent q. induction π; intros q Hπ.
+      - exists a. inversion Hπ;subst;econstructor.
+      - cbn in Hπ. eapply path_front in Hπ as Hfront. cbn in Hfront. subst a.
+        inversion Hπ;subst. unfold ne_rcons in IHπ.
+        specialize (IHπ b H0). destructH.
+        eexists. econstructor;eauto.
+    Qed.
+
     
     Lemma path_postfix_path p q (π ϕ : ne_list L) : Path p q π -> Postfix ϕ π -> Path (ne_back ϕ) q ϕ.
     Proof.
-    Admitted.
+      intros Hπ Hϕ.
+      revert dependent p. dependent induction Hϕ; intros p Hπ.
+      - simpl_nl' x. subst ϕ. eapply path_back in Hπ as Hπ'. subst;eauto.
+      - inversion Hπ; subst;destruct l'. 2: repeat (destruct l';cbn in x;try congruence). 
+        1,2: exfalso;eapply ne_to_list_not_nil;eauto; symmetry; eapply postfix_nil_nil;eauto.
+        rewrite rcons_nl_rcons in x. simpl_nl' x. rewrite <-x in Hπ.
+        rewrite nlcons_to_list in Hπ.
+        rewrite <-nercons_nlrcons in Hπ. eapply path_back in Hπ as Hback;simpl_nl' Hback; subst.
+        eapply path_rcons_inv in Hπ. destructH.
+        specialize (IHHϕ (l :< l') ϕ). eapply IHHϕ;eauto.
+        simpl_nl;reflexivity.
+    Qed.
 
     Definition prefix_incl : forall (A : Type) (l l' : list A), Prefix l l' -> l ⊆ l'
       := fun (A : Type) (l l' : list A) (post : Prefix l l') =>
@@ -276,15 +327,6 @@ Module Graph.
       eapply path_app_conc;eauto.
     Qed.
 
-    Lemma postfix_path l p q q' l' :
-      Path q' q l'
-      -> Postfix (l :r: p) l'
-      -> Path p q (nl_rcons l p).
-    Admitted.
-
-    Definition Path' π := Path (ne_back π) (ne_front π) π.
-
-    
     Lemma postfix_front {A : Type} (l l' : ne_list A) :
       Postfix l l'
       -> ne_front l = ne_front l'.
@@ -296,17 +338,26 @@ Module Graph.
         + exfalso. inversion H; [eapply ne_to_list_not_nil|eapply rcons_not_nil]; eauto.
         + cbn. erewrite IHPostfix; eauto; [|rewrite nlcons_to_list; reflexivity].
           simpl_nl; reflexivity.
+    Qed.      
+
+    Lemma postfix_path l p q q' l' :
+      Path q' q l'
+      -> Postfix (l :r: p) l'
+      -> Path p q (l >: p).
+    Proof.
+      revert q q' l'. induction l; intros q q' l' Hl Hpost;cbn in *.
+      - enough (ne_front l' = p) by (eapply path_front in Hl;subst;econstructor).
+        destruct l';cbn in *;symmetry;eapply postfix_hd_eq;eauto.
+      - rewrite nlcons_to_list in Hpost.
+        eapply path_postfix_path in Hl as Hl'';eauto.
+        replace (a :< (l ++ p :: nil)) with (a :<: l >: p) in Hl''.
+        + cbn in Hl''. destruct l; simpl_nl' Hl'';cbn in Hl'';eauto.
+        + clear. revert a. induction l; intros b; simpl_nl; cbn; eauto. rewrite <-IHl. reflexivity.
     Qed.
+
+    Definition Path' π := Path (ne_back π) (ne_front π) π.
+
     
-    Ltac path_simpl' H :=
-      lazymatch type of H with
-      | Path ?edge ?x ?y (?z :<: ?π) => let Q := fresh "Q" in
-                                       eapply path_front in H as Q;
-                                       cbn in Q; subst z
-      | Path ?edge ?x ?y (?π :>: ?z) => let Q := fresh "Q" in
-                                       eapply path_back in H as Q;
-                                       cbn in Q; subst z
-      end.
 
   (*
     Lemma path_postfix_path p q q' (l l' : ne_list L) :
@@ -1070,7 +1121,6 @@ Module TCFG.
   
   Parameter start_tag : Tag.
   Definition Coord : Type := (Lab * Tag).
-
   Hint Resolve Tag_dec.
   
   Program Instance Coord_dec : EqDec Coord eq.

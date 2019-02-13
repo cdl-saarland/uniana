@@ -193,8 +193,7 @@ Module NeList.
   Qed.
     
 (*  Lemma rcons_cons {A : Type} (a : A) l : exists a' l', (l :r: a) = (a' :: l').
-    remember (@cons_rcons A) as H.
-  Admitted.*)
+    remember (@cons_rcons A) as H.*)
 
   Ltac rem_cons_rcons a l H :=
     let a' := fresh a in
@@ -208,8 +207,7 @@ Module NeList.
     - congruence.
   Qed.
 
-(*  Lemma rev_inj {A : Type} (l l': list A) : rev l = rev l' -> l = l'.
-  Admitted.*)
+(*  Lemma rev_inj {A : Type} (l l': list A) : rev l = rev l' -> l = l'.*)
 
   Lemma rcons_destruct {A : Type} (l : list A) : l = nil \/ exists a l', l = l' :r: a.
   Proof.
@@ -309,8 +307,7 @@ Module NeList.
       + right. intro N. inversion N. eapply rcons_not_nil; eauto.
     - intros. destruct H0.
       + left. econstructor; eauto.
-      + admit. 
-  Admitted.*)
+      + admit. *)
 
   Lemma postfix_nincl_postfix {A : Type} `{EqDec A eq} a l : Postfix (postfix_nincl a l) l.
   Proof.
@@ -812,6 +809,12 @@ Module NeList.
     induction l; cbn; eauto. rewrite IHl. reflexivity.
   Qed.
 
+  Lemma nlconc_neconc {A : Type} (l : ne_list A) l' :
+    (l :+: l') = l :+ l'.
+  Proof.
+    intros. destruct l';cbn;eauto. rewrite nlcons_necons. reflexivity.
+  Qed.
+
   Fixpoint ne_map {A B : Type} (f : A -> B) (l : ne_list A) : ne_list B :=
     match l with
     | ne_single a => ne_single (f a)
@@ -820,7 +823,10 @@ Module NeList.
 
   Lemma ne_map_nlcons {A B : Type} (f : A -> B) (a : A) l :
     ne_map f (nlcons a l) = nlcons (f a) (map f l).
-  Admitted.
+  Proof.
+    revert a. induction l;intros b;cbn;firstorder.
+    f_equal. eauto.
+  Qed.
 
   Fixpoint nl_rcons {A : Type} l (a : A) : ne_list A :=
     match l with
@@ -835,18 +841,31 @@ Module NeList.
   Proof.
     induction l; cbn; eauto.
   Qed.
+
+  Lemma ne_rcons_back {A : Type} (a : A) l :
+    ne_back (l :>: a) = a.
+  Proof.
+    induction l; cbn; eauto.
+  Qed.
+
+  Lemma map_rcons {A B : Type} (f : A -> B) :
+    forall a l, map f (l :r: a) = map f l :r: f a.
+  Proof.
+    intros. induction l;cbn;eauto. unfold rcons in IHl. rewrite IHl. reflexivity.
+  Qed.
     
   Lemma postfix_map {A B : Type} (f : A -> B) :
     forall l l', Postfix l l' -> Postfix (map f l) (map f l').
-  Admitted.
-  
-  Lemma map_rcons {A B : Type} (f : A -> B) :
-    forall a l, map f (l :r: a) = map f l :r: (f a).
-  Admitted.
+  Proof.
+    intros ? ? Hpost.
+    induction Hpost;[econstructor|rewrite map_rcons;econstructor;assumption].
+  Qed.
   
   Lemma to_list_ne_map {A B : Type} (f : A -> B) (l : ne_list A) :
     map f l = ne_map f l.
-  Admitted.
+  Proof.
+    intros. induction l;cbn;eauto. rewrite IHl. reflexivity.
+  Qed.
 
   Lemma ne_back_map {A B : Type} (f : A -> B) l :
     ne_back (ne_map f l) = f (ne_back l).
@@ -865,18 +884,18 @@ Module NeList.
     - apply IHl in H1. subst l. econstructor.
       Unset Printing Coercions.
   Qed.
-  
+
+  (*
   Lemma postfix_ex_unmapped_postfix {A B : Type} l l' (a:A) :
     inhabited B
     -> Postfix (l :r: a) l'
     -> exists l0 l0' (b:B), Postfix (l0 :r: (a,b)) l0' /\ l = map fst l0 /\ l' = map fst l0'.
-  Admitted.
 
   Lemma postfix_ex_unmapped_postfix' {A B : Type} l l' (a:A) :
     inhabited B
     -> Postfix (l :r: a) (ne_map fst l')
     -> exists l0 (b:B), Postfix (l0 :r: (a,b)) l' /\ l = map fst l0.
-  Admitted.
+   *)
 
   Lemma ne_map_in {A B : Type} (f:A->B) a (l:ne_list A) :
     In a l -> In (f a) (ne_map f l).
@@ -890,7 +909,9 @@ Module NeList.
 
   Lemma ne_map_nl_rcons {A B : Type} (l : list A) a (f : A -> B)
     : ne_map f (l >: a) = (map f l) >: (f a).
-  Admitted.
+  Proof.
+    induction l;cbn;eauto. rewrite IHl. reflexivity.
+  Qed.
   
   Lemma disjoint_subset {A : Type} (l1 l1' l2 l2' : list A)
     : l1 ⊆ l1' -> l2 ⊆ l2' -> Disjoint l1' l2' -> Disjoint l1 l2.
@@ -911,6 +932,12 @@ Module NeList.
     intro N. induction l; cbn in *; congruence.
   Qed.
   
+  Lemma nercons_nlrcons {A : Type} l (a : A)
+    : l :>: a = l >: a.
+  Proof.
+    induction l;cbn;eauto. rewrite <-IHl. destruct l;eauto.
+  Qed.
+    
   Ltac simpl_nl :=
     repeat lazymatch goal with
            | [ |- ne_to_list _ = ne_to_list _] => eapply ne_to_list_inj
@@ -920,11 +947,12 @@ Module NeList.
            | [ |- nil = ne_to_list ?l] => apply ne_to_list_not_nil
            | [ |- context[ne_front (nlcons ?a ?l)]] => rewrite nlcons_front
            | [ |- context[ne_back (?l >: ?a)]] => rewrite nl_rcons_back
-           | [ |- context[ne_to_list (_ :<: _)]] => rewrite nlcons_necons
+           | [ |- context[ne_back (?l :>: ?a)]] => rewrite ne_rcons_back
+           | [ |- context[(_ :< ne_to_list _)]] => rewrite <-nlcons_necons
+           | [ |- context[(ne_to_list _ >: _)]] => rewrite <-nercons_nlrcons
            | [ |- context[ne_to_list (nlcons _ _)]] => rewrite <-nlcons_to_list
            | [ |- context[ne_to_list (nl_rcons _ _)]] => rewrite <-rcons_nl_rcons
            | [ |- context[ne_map ?f (_ :< _)]] => rewrite ne_map_nlcons
-           | [ |- context[_ :< (ne_to_list _)]] => rewrite <-nlcons_necons
            end.
 
   Ltac simpl_nl' H := 
@@ -936,11 +964,12 @@ Module NeList.
            | nil = ne_to_list ?l => apply ne_to_list_not_nil in H
            | context[ne_front (nlcons ?a ?l)] => rewrite nlcons_front in H
            | context[ne_back (?l >: ?a)] => rewrite nl_rcons_back in H
-           | context[ne_to_list (_ :<: _)] => rewrite nlcons_necons in H
+           | context[ne_back (?l :>: ?a)] => rewrite ne_rcons_back in H
+           | context[(_ :< ne_to_list _)] => rewrite <-nlcons_necons in H
+           | context[(ne_to_list _ >:  _)] => rewrite <-nercons_nlrcons in H
            | context[ne_to_list (nlcons _ _)] => rewrite <-nlcons_to_list in H
            | context[ne_to_list (nl_rcons _ _)] => rewrite <-rcons_nl_rcons in H
            | context[ne_map ?f (_ :< _)] => rewrite ne_map_nlcons in H
-           | context[_ :<: (ne_to_list _)] => rewrite <-nlcons_necons in H
            end.
 
   Lemma prefix_in_list {A : Type} l (a:A) :

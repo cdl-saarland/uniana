@@ -21,7 +21,13 @@ Qed.
 Lemma in_fst {A B : Type} a (l : list (A * B)) :
   In a (map fst l)
   -> exists b, In (a,b) l.
-Admitted.
+Proof.
+  intros.
+  induction l;cbn in *;[contradiction|].
+  destruct H.
+  - exists (snd a0). left. rewrite <-H. eapply surjective_pairing.
+  - eapply IHl in H. destruct H. exists x; right;eauto.
+Qed.
 
 Infix "∈" := In (at level 50).
 Notation "a '∉' l" := (~ a ∈ l) (at level 50).
