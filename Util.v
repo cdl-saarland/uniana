@@ -183,16 +183,29 @@ Qed.
   
   Ltac exploit' H :=
     let p := fresh "Q" in
-           lazymatch type of H with
-           | ?P -> ?Q => assert P as p; [eauto|specialize (H p); clear p]
-           | forall (x : ?P), ?Q => assert P as p; [eauto|specialize (H p)]
-           end.
+    lazymatch type of H with
+    | ?P -> ?Q => assert P as p; [eauto|specialize (H p); clear p]
+    | forall (x : ?P), ?Q => lazymatch goal with
+                       | [ p : P |- _ ] => specialize (H p)
+                       end
+    end.
 
-  Ltac exploit H := repeat (exploit' H).
+  Ltac exploit H :=
+    let p := fresh "Q" in
+    lazymatch type of H with
+    | ?P -> ?Q => assert P as p; [eauto|specialize (H p); clear p;try exploit H]
+    | forall (x : ?P), ?Q => lazymatch goal with
+                       | [ p : P |- _ ] => specialize (H p);try exploit H
+                       end
+    end.
 
   Goal forall (V X Y Z : Type) (x:X) (y:Y) (P : V -> Prop), (X -> Y -> V) -> (forall v:V, P v -> X -> Y -> Z) -> (forall v, P v) -> Z.
     intros V X Y Z x y P Hxy Hv HP. 
     exploit Hxy. exploit Hv. exact Hv.
+  Qed.
+
+  Goal forall (X : Type) (P : X -> Prop) (x:X), (forall x, P x) -> True.
+    intros. exploit H. exact I.
   Qed.
   
   Definition option_fst {A B : Type} (ab : option (A*B)) : option A :=

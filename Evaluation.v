@@ -146,7 +146,7 @@ Module Evaluation.
   Proof.
     intros H. dependent induction H; [|destruct c]; econstructor.
     - apply IHPath.
-    - unfold eval_edge in H0. unfold tcfg_edge. repeat destr_let.
+    - unfold eval_edge in H0. unfold tcfg_edge,tcfg_edge'. repeat destr_let.
       destruct (eff _) eqn:E; conv_bool; [|congruence]. split.
       + rewrite H0 in E. eapply step_conf_implies_edge; eauto.
       + unfold eff in E. destruct (eff' _) eqn:E'; [|congruence]. destruct p. destruct c,c.

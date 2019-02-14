@@ -208,7 +208,7 @@ Module Uniana.
   Proof.
     decide' (j1 == j2);[reflexivity|exfalso].
     assert (forall s j r l (Htr : Tr ((p, i, s) :<: (q, j, r) :< l)),
-                 tcfg_edge edge eff_tag (q, j) (p, i) = true) as Htcfg.
+                 tcfg_edge (q, j) (p, i) = true) as Htcfg.
     {
       clear. intros. 
       eapply Tr_EPath in Htr;[|cbn;eauto]. destructH. eapply EPath_TPath in Htr. cbn in Htr.
@@ -321,10 +321,12 @@ Module Uniana.
       eapply Tr_EPath in Htr;[|simpl_nl;reflexivity]. destructH.
       eapply EPath_TPath' in Htr;simpl_nl;cbn. 2-4: reflexivity. assumption.
     }
+    eapply unch_dom in Hunch.
     destruct (destruct_deq_loop p u).
     - (* if p is in the innermost loop of u, u must have been visited (because of dominance)
        * in the same iteration where p is visited, thus the tag of the last ocurrence of u 
        * is a suffix of i. Since tags at the same lab have equal length, j1 = j2 *)
+      clear - Hprec1 Hprec2 Htr1 Htr2 Htr_path Hunch Hneq H.
       eapply prec_lab_prec_fst in Hprec1;eapply prec_lab_prec_fst in Hprec2.
       eapply id in Hprec1 as Hprec1';eapply id in Hprec2 as Hprec2'.
       eapply prec_tr_tr in Hprec1. 2: eapply Htr_path;eauto.
@@ -334,8 +336,7 @@ Module Uniana.
       + (* if p and u are top-level all the tags are nil, thus j1 = j2 *)
         eapply top_level_tag_nil in Hprec1;eauto.
         eapply top_level_tag_nil in Hprec2;eauto. subst j1 j2;eauto.
-      + eapply unch_dom in Hunch.
-        assert (loop_head (get_innermost_loop u)) as Hhead.
+      + assert (loop_head (get_innermost_loop u)) as Hhead.
         (eapply get_innermost_loop_is_head;clear - E;omega).
         assert (Hcon := loop_contains_get_innermost u). exploit' Hcon;[omega|].
         eapply dom_loop in Hcon as Hcon'.
@@ -350,7 +351,35 @@ Module Uniana.
         destructH. destructH.
         eapply app_eq_length_eq_eq2;[|subst i;eauto].
         eapply tpath_tag_len_eq;eauto.
-    - 
+    - decide' (j1==j2);[reflexivity|exfalso].
+      eapply first_sync_exit with (l3:=(p,i) :< map fst l1) in c as Hexit;eauto.
+      2,3: simpl_nl;econstructor;cbn;eauto;eapply prec_lab_prec_fst;eauto.
+      simpl_nl' Hexit. destructH.
+
+      Lemma sub_prec_prec_path r0 p qe e i0 i k j l 
+            (Hsub : sub_list ((e, j) :: (qe, k) :: nil) ((p, i) :: l))
+            (Hprec_qe : Precedes fst ((p, i) :: l) (qe, k))
+            (Hprec_e  : Precedes fst ((p, i) :: l) ( e, j))
+            (Hpath : TPath (r0, i0) (p, i) ((p, i) :< l))
+        : exists l', TPath (r0,i0) (e,j) ((e,j) :<: (qe,k) :< l').
+      Admitted.
+
+      eapply sub_prec_prec_path in Hexit4;eauto. eapply sub_prec_prec_path in Hexit5;eauto.
+      do 2 destructH.
+      (* apply last common on the exit determined by first_exit_sync, 
+       * then apply lc_disj_exits_lsplits on that,
+       * then show that the lc-instance is in rel_splits
+       * and derive a contradiction from the fact that rel_splits are uniform.*)
+      
+      
+(*      eapply lc_disj_exits_lsplits in Hexit1. exploit Hexit1.
+      1,2,4,5: admit.
+      2: do 2 rewrite nlcons_to_list. eapply ne_last_common.
+      + 
+      eapply  in Hexit1;eauto. exploit' Hexit1;eauto.
+      
+        
+                                                             
 
 
       destruct l1;[inversion Hprec1|];destruct l2;[inversion Hprec2|].
@@ -358,7 +387,7 @@ Module Uniana.
       set (l1':=c:<l1) in *. set (l2':=c0:<l2) in *.
       (*cbn in Htr1,Htr2. destruct c as [[qq1 jj1] ss1]. destruct c0 as [[qq2 jj2] ss2].*)
       rewrite <-nlcons_necons in Htr1,Htr2.
-      eapply tr_lc_lt' with (l1:=l1') (l2:=l2') in Htr1 as Hlc;eauto;destructH.
+      eapply tr_lc_lt' with (l1:=l1') (l2:=l2') in Htr1 as Hlc;eauto;destructH.*)
 
         
   Admitted.

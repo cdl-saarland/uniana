@@ -49,12 +49,13 @@ Module Disjoint.
                                    /\ (sp ∈ splits' br q
                                       \/ sp ∈ splits' br q').
 
-  Definition rel_splits_spec `{redCFG} := forall p q sp, sp ∈ rel_splits p q
-                                                    <-> exists h e, exited h e
-                                                             /\ e -->* p
-                                                             /\ loop_contains h q
-                                                             /\ ~ loop_contains h p
-                                                             /\ sp ∈ splits' h e.
+  Definition rel_splits_spec `{redCFG}
+    := forall p q sp, sp ∈ rel_splits p q
+                 <-> exists h e, exited h e
+                          /\ e -a>* p (* acyclic, bc. otw. path could use back_edge of outer loop *)
+                          /\ loop_contains h q
+                          /\ ~ loop_contains h p
+                          /\ sp ∈ splits' h e.
 
   Definition splits_spec `{redCFG} := forall p sp, sp ∈ splits p
                                               <-> sp ∈ path_splits__imp p (* usual split *)
@@ -231,6 +232,77 @@ Module Disjoint.
         (Hpath2 : TPath' ((p,i) :<: (q2,j2) :< t2))
     : exists qq qq', (s,qq,qq') ∈ splits p.
   Proof.
+  Admitted.
+
+
+  (*Lemma head_diff
+        (Hneq : j1 <> j2)
+    : exists h, *)
+  
+  Definition sub_list {A : Type} (l l' : list A) : Prop :=
+    exists l1 l2, Postfix (l1 ++ l') l /\ Prefix (l ++ l2) l.  
+
+  Lemma common_tag_prefix_head `{redCFG} h p q i j k t
+        (Hloop__p : loop_contains h p)
+        (Hloop__q : loop_contains h q)
+        (Hdom : Dom edge root q p)
+        (Hpath : TPath (root,start_tag) (p,i) t)
+        (Hprec__q : Precedes fst t (q,j))
+        (Hprec__h : Precedes fst t (h,k))
+    : Prefix k i /\ Prefix k j.
+  Admitted.
+  
+  Lemma common_tag_prefix_qq `{redCFG} p q (i j1 j2 : Tag) t1 t2
+        (Hdeq : deq_loop q p)
+        (Hdom : Dom edge root q p)
+        (Hpath1 : TPath (root,start_tag) (p,i) t1)
+        (Hpath2 : TPath (root,start_tag) (p,i) t2)
+        (Hprec1 : Precedes fst t1 (q,j1))
+        (Hprec2 : Precedes fst t2 (q,j2))
+    : exists j, Prefix j j1 /\ Prefix j j2 /\ length j = depth p.
+  Admitted.
+  
+  Lemma common_tag_prefix_pq `{redCFG} p q i j t
+        (Hdeq : deq_loop q p)
+        (Hdom : Dom edge root q p)
+        (Hpath : TPath (root,start_tag) (p,i) t)
+        (Hprec : Precedes fst t (q,j))
+    : Prefix i j.
+  Admitted.
+  
+  Lemma first_sync_exit `{redCFG} p q l1 l2 i j1 j2 r0 i0
+        (Hneq : j1 <> j2)
+        (Hdom : Dom edge r0 q p)
+        (Hl1 : TPath (r0,i0) (p,i) l1) (* p is possibly the exit *)
+        (Hl2 : TPath (r0,i0) (p,i) l2)
+        (Hprec1 : Precedes fst l1 (q,j1))
+        (Hprec2 : Precedes fst l2 (q,j2))
+    : exists h qe1 qe2 e1 e2 j k1 k2,
+      loop_contains h q /\ ~ loop_contains h p
+      /\ exit_edge h qe1 e1 /\ exit_edge h qe2 e2
+      /\ sub_list ((e1,j)::(qe1,k1)::nil) l1 /\ sub_list ((e2,j)::(qe2,k2)::nil) l2
+      /\ Precedes fst l1 (qe1,k1) /\ Precedes fst l2 (qe2,k2) /\ k1 <> k2
+      /\ Precedes fst l1 ( e1,j ) /\ Precedes fst l2 ( e2,j ).
+  Proof.
+  (* Because q dominates p, all loops containing q are exited only once after the last 
+   * occurence of q is visited. This also implies that the suffices all the tags between q
+   * and p are the same concerning the loops, in which both nodes are. Thus as soon as the
+   * tags are equal they can only differ inside of loops which do not contain p. 
+   * 
+   * the head we're looking for is the head of q at depth given by the last position 
+   * where the tags j1 & j2 are different.
+   * there is exactly one exit on each trace afterwards, where the tags will be equal again.
+
+
+   * don't use this idea:
+   * induction on the size of the non-equal prefix of j1 & j2
+   * base: j1 = js = j2 --> contradiction
+   * step: assume j1 = j1' ++ js /\ j2 = j1' ++ js /\ len j1' = S n = len j2'.
+   * *     and we have the result for len j1' = n = len j2'.
+   * * collapse innermost loop of q. let h be the head. if h has now the same tag on
+   * * both traces then h is the one. otherwise apply IH on this graph. 
+   * * 
+*)    
   Admitted.
 
   

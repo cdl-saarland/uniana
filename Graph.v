@@ -1139,7 +1139,7 @@ Module TCFG.
     | [ |- context[let (_,_) := ?a in _]] => destruct a
     end.
 
-  Definition tcfg_edge (edge : Lab -> Lab -> bool) (tag : Lab -> Lab -> Tag -> Tag) :=
+  Definition tcfg_edge' (edge : Lab -> Lab -> bool) (tag : Lab -> Lab -> Tag -> Tag) :=
     (fun c c' : Coord => let (p,i) := c  in
               let (q,j) := c' in
               edge p q && ( (tag p q i) ==b j)).
@@ -1154,7 +1154,9 @@ Module TCFG.
          let l' := @iter Tag (@tl nat) i (exit_edge_num p q) in
          if loop_head_dec q then O :: l' else l'.
 
-  Notation "pi -t> qj" := ((fun `(redCFG) => tcfg_edge edge eff_tag pi qj = true) _ _ _ _ _)
+  Definition tcfg_edge `{redCFG} := tcfg_edge' edge eff_tag.
+
+  Notation "pi -t> qj" := ((fun `(redCFG) => tcfg_edge pi qj = true) _ _ _ _ _)
                             (at level 50).
   
   Lemma tag_eq_loop_exit `{redCFG} p q i j j'
@@ -1164,8 +1166,13 @@ Module TCFG.
     : exit_edge (get_innermost_loop q) q p.
   Admitted.
   
+  Definition TPath `{redCFG} := Path tcfg_edge.
 
-  Definition TPath `{redCFG} := Path (tcfg_edge edge eff_tag).
+  Lemma tag_depth `{redCFG} p i q j t
+        (Hpath : TPath (root,start_tag) (p,i) t)
+        (Hin : (q,j) ∈ t)
+    : length j = depth q.
+  Admitted.
 
   Lemma TPath_CPath `{redCFG} c c' π :
     TPath c c' π -> CPath (fst c) (fst c') (ne_map fst π).
