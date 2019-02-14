@@ -357,20 +357,6 @@ Module Graph.
 
     Definition Path' π := Path (ne_back π) (ne_front π) π.
 
-    
-
-  (*
-    Lemma path_postfix_path p q q' (l l' : ne_list L) :
-      Path p q l
-      -> Postfix l' l
-      -> Path p q' l'.
-    Proof.
-    Admitted. 
-    intros Hpath Hpost. dependent induction Hpost.
-    - apply ne_to_list_inj in x. setoid_rewrite x; eauto.
-    - unfold Path'. specialize (IHHpost H). erewrite postfix_front; eauto.
-  Qed.*)
-
   End Graph.
 
   Arguments Path {L}.
@@ -589,13 +575,7 @@ Module CFG.
     Definition exited (h q : Lab) : Prop :=
       exists p, exit_edge h p q.
 
-    Fixpoint preds' `{redCFG} (l : list Lab) (p : Lab) : list Lab :=
-      match l with
-      | nil => nil
-      | q :: l => if (edge q p) then q :: (preds' l p) else preds' l p
-      end.
-
-    Definition preds : Lab -> list Lab := preds' all_lab.
+    Definition preds `{redCFG all_lab edge} p : list Lab := filter (fun q => edge q p) all_lab. 
 
     Definition filter_loop h := filter (loop_contains_b h) all_lab.
 

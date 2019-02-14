@@ -467,14 +467,14 @@ Module Uniana.
         assert (Prefix (`t1) (`t)) as pre_t.
         { rewrite Hteq1. cbn. econstructor. econstructor. }
         eapply prefix_trans with (l2:=`t1) (l3:=`t) in rp; eauto. 2:eapply root_no_pred'.
-        apply prefix_cons_in in rp. eapply tag_inj in HIn; [| eapply root_no_pred'| apply rp].
+        apply prefix_cons_in in rp. eapply tag_inj in HIn; [| apply rp].
         subst s0. eauto.
       + specialize (root_prefix t2) as [s0 rp]. apply root_start_tag in HIn as rst. subst i.
         eapply prefix_cons_in in rp as rp'.
         assert (Prefix (`t2) (`t')) as pre_t.
         { rewrite Hteq2. cbn. econstructor. econstructor. }
         eapply prefix_trans with (l2:=`t2) (l3:=`t') in rp; eauto.
-        apply prefix_cons_in in rp. eapply tag_inj in HIn'; [|eapply root_no_pred'| apply rp].
+        apply prefix_cons_in in rp. eapply tag_inj in HIn'; [| apply rp].
         subst s0. eauto. eapply root_no_pred'.
     - conv_bool.
       destruct Htrans as [[Htrans Hpred] | Hunch].
@@ -491,10 +491,10 @@ Module Uniana.
         eapply prefix_in_list in HIn' as Hpre2. destruct Hpre2 as  [l2 Hpre2].
         
         rewrite nlcons_to_list in Hpre1.
-        eapply prefix_trace in Hpre1 as Htr1 ; [|eapply root_no_pred'|destruct t1; eauto].
+        eapply prefix_trace in Hpre1 as Htr1 ; [|destruct t1; eauto].
 
         rewrite nlcons_to_list in Hpre2.
-        eapply prefix_trace in Hpre2 as Htr2; [|eapply root_no_pred'|destruct t2;eauto].
+        eapply prefix_trace in Hpre2 as Htr2; [|destruct t2;eauto].
         simpl_nl' Hpre1. simpl_nl' Hpre2.
         cut (q' = q); intros; subst.
         * cut (j' = j); intros; subst.
@@ -530,9 +530,9 @@ Module Uniana.
           -- cbn;eauto.
         * unfold Precedes' in Hprec,Hprec'. destructH' Hprec. destructH' Hprec'.
           rewrite nlcons_to_list in Hprec0.
-          eapply prefix_trace in Hprec0 as Htr1 ; [|eapply root_no_pred'|destruct t; eauto].
+          eapply prefix_trace in Hprec0 as Htr1 ; [|destruct t; eauto].
           rewrite nlcons_to_list in Hprec'0.
-          eapply prefix_trace in Hprec'0 as Htr2; [|eapply root_no_pred'|destruct t';eauto].
+          eapply prefix_trace in Hprec'0 as Htr2; [|destruct t';eauto].
           rewrite Hteq1 in Hprec0. simpl_nl' Hprec0. eapply prefix_cons_cons in Hprec0.
           rewrite Hteq2 in Hprec'0. simpl_nl' Hprec'0. eapply prefix_cons_cons in Hprec'0.
           eapply unch_same_tag with (l1:=l') ;eauto;[inversion Hprec1|inversion Hprec'1].

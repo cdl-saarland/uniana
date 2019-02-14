@@ -320,6 +320,12 @@ Module NeList.
   Proof.
     intro H. inversion H; eauto. destruct l'; cbn in H0; congruence.
   Qed.
+  
+  Lemma prefix_nil_nil {A : Type} (l : list A) :
+    Prefix l nil -> l = nil.
+  Proof.
+    intro H. inversion H; eauto. 
+  Qed.  
 
   Lemma postfix_rcons_nil_eq {A : Type} l (a b : A) :
     Postfix (l :r: a) (b :: nil) -> a = b /\ l = nil.

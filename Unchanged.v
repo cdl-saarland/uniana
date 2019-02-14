@@ -33,22 +33,17 @@ Module Unchanged.
 
   Definition unch_trans_ptw (unch : Unch) l x : set Lab :=
     if Lab_dec' l root then set_add Lab_dec' root (empty_set Lab) else
-    let f := fun q acc => set_inter Lab_dec' q acc in
     let t := fun q => unch_trans_local unch q l x in
-    fold_right f all_lab (map t (preds l)).
+    fold_right (set_inter Lab_dec') all_lab (map t (preds l)).
       
   Definition unch_trans (unch : Unch) : Unch :=
     fun l x => unch_trans_ptw unch l x.
   
   Lemma in_preds p q : q ∈ preds p <-> q --> p.
   Proof.
-    split.
-    - unfold preds. induction all_lab; cbn; [contradiction|].
-      destruct (edge a p) eqn:E;eauto.
-      + intro H. destruct H; subst;eauto. admit.
-      + admit.
-    - admit.
-  Admitted.
+    unfold preds; rewrite filter_In; firstorder.
+    eapply edge_incl1;eauto.
+  Qed.
 
   Lemma unch_trans_root : forall unch x, unch_trans unch root x = set_add Lab_dec' root (empty_set Lab).
   Proof.
@@ -129,7 +124,7 @@ Module Unchanged.
       apply root_start_tag in Hin as rst. subst i.
       assert (rp := root_prefix t). destruct rp as [s' rp].
       apply prefix_cons_in in rp as rp'. eapply tag_inj with (s0:=s) in rp'. 
-      subst s'. 1,3:assumption. all: eapply root_no_pred'.
+      subst s'. 1,2,3:assumption. 
     - assert (Hpred := Hin).
       rewrite H in Hpred.
       eapply in_exists_pred in Hpred; try eassumption.

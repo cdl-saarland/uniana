@@ -95,7 +95,12 @@ Module Evaluation.
   Lemma eff_eff_tag q j r p i s :
     eff (q,j,r) = Some (p,i,s)
     -> eff_tag q p j = i.
-  Admitted.
+  Proof.
+    intros Heff. unfold eff in Heff.
+    destruct (eff' (q,r)) eqn:E;cbn in Heff. 1:revert Heff;destr_let;intros Heff.
+    - inversion Heff;reflexivity.
+    - congruence.
+  Qed.
 
   Definition eval_edge := (fun k k' : Conf
                            => match eff k with
@@ -397,7 +402,14 @@ Module Evaluation.
 
   Lemma prefix_trace (l l' : ne_list Conf) :
     Prefix l l' -> Tr l' -> Tr l.
-  Admitted.
+  Proof.
+    intros Hpr Htr. induction Htr;cbn in *.
+    - inversion Hpr;[simpl_nl' H1;rewrite H1;econstructor|]. inversion H1.
+      simpl_nl' H5. contradiction.
+    - inversion Hpr.
+      + rewrite nlcons_to_list in H2. simpl_nl' H2. rewrite H2. econstructor;eauto.
+      + eapply IHHtr;eauto.
+  Qed.
 
   Notation "a ≻ b" := (eval_edge a b = true) (at level 50).
 
@@ -558,16 +570,12 @@ Module Evaluation.
   Definition red_prod (h h' : Hyper) : Hyper :=
     fun ts => h ts /\ h' ts.
 
+  (* not used:
   Lemma postfix_rcons_trace_eff l k k' l' :
     Tr l'
     -> Postfix ((l :r: k) :r: k') l'
     -> eff k' = Some k.
-  Proof.
-  Admitted.
-
-  Lemma prefix_incl {A : Type} :
-    forall l l' : list A, Prefix l l' -> incl l l'.
-  Admitted.
+   *)
     
   Lemma Tr_CPath l :
     Tr l -> CPath root (fst (fst (ne_front l))) (ne_map fst (ne_map fst l)).
@@ -579,10 +587,8 @@ Module Evaluation.
 
   Definition Tr' (l : ne_list Conf) :=
     exists l', Tr l' /\ Postfix l l'.
-
  
   Definition EPath' π := EPath (ne_back π) (ne_front π) π.
-
   
   Lemma ne_back_trace t :
     Tr t -> exists s, ne_back t = (root,start_tag,s).
