@@ -159,8 +159,6 @@ Module Uniana.
     - eapply in_prefix_in;eauto.
   Qed.
 
-  
-
   Lemma tr_lc_lt' p i s1 s2 l1 l2
         (Htr1 : Tr ((p, i, s1) :<: l1))
         (Htr2 : Tr ((p, i, s2) :<: l2))
@@ -311,17 +309,70 @@ Module Uniana.
         (Htr2 : Tr ((p, i, s2) :< l2))
         (Hts1 : ts t1)
         (Hts2 : ts t2)
+        (Hneq : p <> u)
     : j1 = j2.
   Proof.
-    assert (p <> u) as Hneq by admit.
     assert (forall p i s l (Htr : Tr ((p, i, s) :< l)),
                TPath (root, start_tag) (p, i) ((p, i) :< map fst l)) as Htr_path.
     {
       clear;intros.
       eapply Tr_EPath in Htr;[|simpl_nl;reflexivity]. destructH.
       eapply EPath_TPath' in Htr;simpl_nl;cbn. 2-4: reflexivity. assumption.
-    }
+    }    
     eapply unch_dom in Hunch.
+
+    Definition ancestor `{redCFG} a p q :=
+      loop_contains a p /\ loop_contains a q \/ a = root .
+
+    Definition near_ancestor `{redCFG} a p q :=
+      ancestor a p q /\ forall a', ancestor a p q -> deq_loop a a'.
+
+    Lemma ex_near_ancestor `{redCFG} p q
+      : exists a, near_ancestor a p q.
+      (* choose either a common head or root if there is no such head *)
+    Admitted.
+
+    specialize (ex_near_ancestor u p) as [a [Hanc Ha_near]].
+
+    Lemma ancestor_dom `{redCFG} a p q
+      : ancestor a p q -> Dom edge root a p /\ Dom edge root a q.
+    Admitted.
+
+    Lemma dom_tpath_prec `{redCFG} p q i l
+          (Hdom : Dom edge root q p)
+          (Hpath : TPath (root,start_tag) (p,i) l)
+      : exists j, Precedes fst l (q,j).
+    Admitted.
+
+    eapply Htr_path in Htr1; eapply prec_tr_tr in Htr1;eauto;[|eapply prec_lab_prec_fst;eauto].
+    destructH' Htr1.
+    eapply ancestor_dom in Hanc as Hanc'. destruct Hanc' as [Hanc1 Hanc2].
+    eapply dom_tpath_prec in Hanc1;eauto. destructH' Hanc1.
+
+    eapply Htr_path in Htr2; eapply prec_tr_tr in Htr2;eauto;[|eapply prec_lab_prec_fst;eauto].
+    destructH' Htr2.
+    Lemma tag_prefix_head `{redCFG} h p i j l 
+          (Hloop : loop_contains h p)
+          (Hpath : TPath (root, start_tag) (p,i) l)
+          (Hprec : Precedes fst l (h,j))
+      : Prefix j i.
+    Admitted.
+
+    (* find Precedes fst ((u, j2) :< l') (a, j') in the same way and show that j & j'
+       both are prefixes of i and both of same length, thus j = j'.
+       then show that j is a prefix of j1 & j2. *)
+    
+    (*
+    
+    Lemma tag_prefix_anc `{redCFG} p i j l 
+          (Hpath : TPath (root, start_tag) (p,i) l)
+          (Hprec : Precedes fst l (h,j))
+      : Prefix j i.
+    Admitted.*)
+    
+
+    (* this proof is deprecated: *)
+    (*
     destruct (destruct_deq_loop p u).
     - (* if p is in the innermost loop of u, u must have been visited (because of dominance)
        * in the same iteration where p is visited, thus the tag of the last ocurrence of u 
@@ -388,7 +439,7 @@ Module Uniana.
       (*cbn in Htr1,Htr2. destruct c as [[qq1 jj1] ss1]. destruct c0 as [[qq2 jj2] ss2].*)
       rewrite <-nlcons_necons in Htr1,Htr2.
       eapply tr_lc_lt' with (l1:=l1') (l2:=l2') in Htr1 as Hlc;eauto;destructH.*)
-
+*)
         
   Admitted.
 

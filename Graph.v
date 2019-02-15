@@ -1099,7 +1099,7 @@ Module TCFG.
     apply list_eqdec, nat_eq_eqdec.
   Qed.
   
-  Parameter start_tag : Tag.
+  Definition start_tag : Tag := nil.
   Definition Coord : Type := (Lab * Tag).
   Hint Resolve Tag_dec.
   

@@ -243,7 +243,7 @@ Module Disjoint.
     exists l1 l2, Postfix (l1 ++ l') l /\ Prefix (l ++ l2) l.  
 
   Lemma common_tag_prefix_head `{redCFG} h p q i j k t
-        (Hloop__p : loop_contains h p)
+        (Hloop__p : loop_contains h p) (* what if h is root ? *)
         (Hloop__q : loop_contains h q)
         (Hdom : Dom edge root q p)
         (Hpath : TPath (root,start_tag) (p,i) t)
@@ -251,7 +251,8 @@ Module Disjoint.
         (Hprec__h : Precedes fst t (h,k))
     : Prefix k i /\ Prefix k j.
   Admitted.
-  
+ 
+  (* TODO: we need a variant of this lemma where we refer to (h,i) h dominating q *)   
   Lemma common_tag_prefix_qq `{redCFG} p q (i j1 j2 : Tag) t1 t2
         (Hdeq : deq_loop q p)
         (Hdom : Dom edge root q p)
