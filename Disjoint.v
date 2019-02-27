@@ -235,6 +235,7 @@ Module Disjoint.
   Admitted.
 
 
+
   (*Lemma head_diff
         (Hneq : j1 <> j2)
     : exists h, *)
@@ -305,6 +306,7 @@ Module Disjoint.
    * * 
 *)    
   Admitted.
+
 
   
 End Disjoint.

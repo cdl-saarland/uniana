@@ -1000,6 +1000,66 @@ Module NeList.
     destruct l;[intros;eapply prefix_nil|
                 cbn;intros;eapply prefix_cons;setoid_rewrite nlcons_to_list at 2;eauto].
   Qed.
+
+  
+  Definition prefix_incl : forall (A : Type) (l l' : list A), Prefix l l' -> l ⊆ l'
+    := fun (A : Type) (l l' : list A) (post : Prefix l l') =>
+         Prefix_ind A (fun l0 l'0 : list A => l0 ⊆ l'0) (fun l0 : list A => incl_refl l0)
+                    (fun (a : A) (l0 l'0 : list A) (_ : Prefix l0 l'0) (IHpost : l0 ⊆ l'0) =>
+                       incl_appr (a :: nil) IHpost) l l' post.      
+
+  Lemma prefix_NoDup {A : Type} (l l' : list A) : Prefix l l' -> NoDup l' -> NoDup l.
+  Proof.
+    intros Hpre Hnd. induction Hpre; eauto.
+    inversion Hnd; subst; eauto.
+  Qed.
+
+  
+  Definition in_before {A : Type} :=
+    fun (l : list A) a b => exists l' : list A, Prefix (b :: l') l /\ a ∈ (b :: l').
+
+  Lemma in_before_trans {A : Type} `{EqDec A eq} (p q r : A) π
+        (Hnd : NoDup π)
+        (Hib__pq : in_before π p q)
+        (Hib__qr : in_before π q r)
+    : in_before π p r.
+  Proof.
+    unfold in_before in *. destruct Hib__pq as [l__pq Hib__pq]. destruct Hib__qr as [l__qr Hib__qr].
+    do 2 destructH.
+    exists l__qr. split.
+    - eauto.
+    - eapply prefix_incl;eauto.
+      induction π.
+      + inversion Hib__pq0.
+      + decide' (r == a).
+        * inversion Hib__qr0;subst;eauto.
+          exfalso. inversion Hnd; subst. eapply H3. eapply prefix_incl;eauto. left. reflexivity.
+        * inversion Hnd; subst. eapply IHπ;eauto.
+          -- inversion Hib__pq0;subst;eauto.
+             exfalso. eapply H2. inversion Hib__qr0;subst; [congruence|].
+             eapply prefix_incl;eauto.
+          -- inversion Hib__qr0;subst;eauto.
+             congruence.
+  Qed.
+
+  Lemma in_before_prefix {A : Type} `{EqDec A eq} (p q : A) π ϕ
+        (Hnd : NoDup π)
+        (Hpre : Prefix ϕ π)
+        (Hin : q ∈ ϕ)
+    : in_before π p q <-> in_before ϕ p q.
+  Proof.
+    unfold in_before. split;intro Hib; destructH.
+    - induction π;inversion Hpre;inversion Hib0;inversion Hnd; subst; eauto.
+      exfalso. eapply H9. eapply prefix_incl;eauto.
+    - eapply prefix_NoDup in Hnd;eauto.
+      induction ϕ;inversion Hpre;inversion Hib0;inversion Hnd;subst;eauto.
+      decide' (q == a).
+      + exfalso. eapply H9. eapply prefix_incl;eauto. left. reflexivity.
+      + eapply IHϕ;eauto.
+        * econstructor. eapply prefix_cons;eauto.
+        * eapply prefix_incl;eauto. left. reflexivity.
+  Qed.
+  
   
   Ltac xeapply X Y :=
     tryif eapply X in Y then idtac

@@ -198,18 +198,6 @@ Module Graph.
         specialize (IHHϕ (l :< l') ϕ). eapply IHHϕ;eauto.
         simpl_nl;reflexivity.
     Qed.
-
-    Definition prefix_incl : forall (A : Type) (l l' : list A), Prefix l l' -> l ⊆ l'
-      := fun (A : Type) (l l' : list A) (post : Prefix l l') =>
-           Prefix_ind A (fun l0 l'0 : list A => l0 ⊆ l'0) (fun l0 : list A => incl_refl l0)
-                      (fun (a : A) (l0 l'0 : list A) (_ : Prefix l0 l'0) (IHpost : l0 ⊆ l'0) =>
-                         incl_appr (a :: nil) IHpost) l l' post.      
-
-    Lemma prefix_NoDup {A : Type} (l l' : list A) : Prefix l l' -> NoDup l' -> NoDup l.
-    Proof.
-      intros Hpre Hnd. induction Hpre; eauto.
-      inversion Hnd; subst; eauto.
-    Qed.
     
     Lemma path_NoDup p q : p -->* q -> exists π, Path p q π /\ NoDup π.
     Proof.
@@ -267,15 +255,35 @@ Module Graph.
         + inversion Hpath; subst. specialize (IHπ b H4 H) as [ϕ [Hϕ Hpre]].
           eexists;split;eauto. econstructor;eauto.
     Qed.
+    
 
-    Lemma path_from_elem p q r π : Path p q π -> r ∈ π -> exists ϕ, Path r q ϕ /\ Postfix ϕ π.
-    Proof.
-      intros Hpath Hin. exists (postfix_nincl r π >: r).
+    Lemma path_from_elem' p q r π : Path p q π -> r ∈ π ->
+                                    let ϕ := postfix_nincl r π >: r in
+                                    Path r q ϕ /\ Postfix ϕ π.
+    Proof. 
+      intros Hpath Hin.
       assert (Postfix (postfix_nincl r π >: r) π) as H;[|split];eauto.
       - simpl_nl. eapply postfix_nincl_spec; eauto.
       - eapply path_postfix_path in Hpath;eauto. simpl_nl' Hpath;eauto.
-    Qed.        
+    Qed.
     
+    Lemma path_from_elem p q r π : Path p q π -> r ∈ π -> exists ϕ, Path r q ϕ /\ Postfix ϕ π.
+    Proof.
+      intros. eexists;eapply path_from_elem';eauto.
+    Qed.
+  
+    Lemma path_from_elem_to_elem (p q r1 r2 : L) (π : ne_list L)
+          (Hπ : Path p q π)
+          (Hprec : in_before π r1 r2)
+      : exists ϕ : ne_list L, Path r1 r2 ϕ. 
+    Proof.
+      unfold in_before in Hprec. destructH' Hprec.
+      rewrite nlcons_to_list in Hprec0.
+      eapply path_prefix_path in Hprec0 as Hprec2;eauto. simpl_nl' Hprec2.
+      eapply path_from_elem in Hprec2;simpl_nl;eauto.
+      destructH. eauto.
+    Qed.
+
     Lemma dom_nin r p q π : Dom r p q -> Path r p π -> NoDup π -> q ∈ π -> p = q.
     Proof.
       intros Hdom Hpath Hnd Hin. eapply path_to_elem in Hpath as Hpath';eauto.
@@ -1171,6 +1179,11 @@ Module TCFG.
       eff_tag q p j = i ->
       eff_tag q p j = i' ->
       i = i'.
+
+  Lemma tpath_NoDup `{redCFG} p q t
+        (Hpath : TPath p q t)
+    : NoDup t.
+  Admitted.
   
 End TCFG.
 
