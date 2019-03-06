@@ -42,30 +42,32 @@ Module Disjoint.
   Definition loop_splits__imp `{C : redCFG} h
     := @loop_splits _ _ _ _ (local_impl_CFG C h) h.
 
-  Definition splits'_spec `{redCFG}
-    := forall h e sp, sp ∈ splits' h e
-                 <-> sp ∈ loop_splits__imp h e
-                   \/ exists br q q', (br,q,q') ∈ loop_splits__imp h e
-                                   /\ (sp ∈ splits' br q
-                                      \/ sp ∈ splits' br q').
+  Parameter splits'_spec 
+    : forall `{redCFG} h e sp, sp ∈ splits' h e
+                <-> sp ∈ loop_splits__imp h e
+                  \/ exists br q q', (br,q,q') ∈ loop_splits__imp h e
+                               /\ (sp ∈ splits' br q
+                                  \/ sp ∈ splits' br q').
 
-  Definition rel_splits_spec `{redCFG}
-    := forall p q sp, sp ∈ rel_splits p q
+  Parameter rel_splits_spec 
+    : forall `{redCFG} p q sp, sp ∈ rel_splits p q
                  <-> exists h e, exited h e
                           /\ e -a>* p (* acyclic, bc. otw. path could use back_edge of outer loop *)
                           /\ loop_contains h q
                           /\ ~ loop_contains h p
-                          /\ sp ∈ splits' h e.
+                          /\ sp ∈ loop_splits h e.
+                          (*/\ sp ∈ splits' h e. <--- deprecated *)
 
-  Definition splits_spec `{redCFG} := forall p sp, sp ∈ splits p
-                                              <-> sp ∈ path_splits__imp p (* usual split *)
-                                                \/ (exists h, let (p,_) := fst sp in
-                                                        (* lsplits of exited loops: *)
-                                                        exited h p /\ sp ∈ splits' h p)
-                                                \/ exists br q q',(br,q,q') ∈ path_splits__imp p
-                                                            (* loop_split of splitting heads *)
-                                                            /\ (sp ∈ splits' br q
-                                                               \/ sp ∈ splits' br q').
+  Parameter splits_spec
+    : forall `{redCFG} p sp, sp ∈ splits p
+                        <-> sp ∈ path_splits__imp p (* usual split *)
+                          \/ (exists h, let (p,_) := fst sp in
+                                  (* lsplits of exited loops: *)
+                                  exited h p /\ sp ∈ splits' h p)
+                          \/ exists br q q',(br,q,q') ∈ path_splits__imp p
+                                      (* loop_split of splitting heads *)
+                                      /\ (sp ∈ splits' br q
+                                         \/ sp ∈ splits' br q').
 
 
   Lemma lc_join_path_split_help1 (L : Type) (edge : L -> L -> bool) (x y : L) (l : list L)
@@ -199,7 +201,7 @@ Module Disjoint.
       exists (qq qq' : Lab), (s,qq,qq') ∈ loop_splits h e.
 
   Definition lc_disj_exits_lsplits_def (d : nat)
-    := forall `{redCFG} (s e1 e2 q1 q2 h : Lab) (i j1 j2 k : Tag) (t1 t2 : ne_list Coord)
+    := forall `{redCFG} (s e1 e2 q1 q2 h : Lab) (i j1 j2 k : Tag) (t1 t2 : list Coord)
          (Hdep : d >= depth s - depth e1)
          (Hdep : d >= depth s - depth e2)
          (Hlc : last_common ((q1,j1) :: t1) ((q2,j2) :: t2) (s,k))
@@ -214,15 +216,45 @@ Module Disjoint.
     unfold lc_disj_exit_lsplits_def, lc_disj_exits_lsplits_def. intro Hlc_disj. intros.
   Admitted.
 
-  Theorem lc_disj_exit_lsplits d : lc_disj_exit_lsplits_def d.
+  Theorem lc_disj_exit_lsplits' d : lc_disj_exit_lsplits_def d.
   Proof.
     unfold lc_disj_exit_lsplits_def;intros.
   Admitted.
 
-  Theorem lc_disj_exits_lsplits d : lc_disj_exits_lsplits_def d.
+  Corollary lc_disj_exit_lsplits `{redCFG} (s e q1 q2 h : Lab) (i j1 j2 k : Tag) (t1 t2 : list Coord)
+         (Hlc : last_common ((q1,j1) :: t1) ((q2,j2) :: t2) (s,k))
+         (Hexit1 : exit_edge h q1 e)
+         (Hexit2 : exit_edge h q2 e)
+         (Hpath1 : TPath' ((e,i) :<: (q1, j1) :< t1))
+         (Hpath2 : TPath' ((e,i) :<: (q2, j2) :< t2))
+    : exists (qq qq' : Lab), (s,qq,qq') ∈ loop_splits h e.
   Proof.
-    apply lc_disj_exit_to_exits_lsplits,lc_disj_exit_lsplits.
+    eapply lc_disj_exit_lsplits';eauto.
+  Qed.
+  
+  Theorem lc_disj_exits_lsplits' d : lc_disj_exits_lsplits_def d.
+  Proof.
+    apply lc_disj_exit_to_exits_lsplits,lc_disj_exit_lsplits'.
   Qed.      
+
+  Lemma exit_edge_dep_eq `{redCFG} h qe1 qe2 e1 e2
+        (Hexit1 : exit_edge h qe1 e1)
+        (Hexit2 : exit_edge h qe2 e2)
+    : depth e1 = depth e2. 
+  Admitted.
+  
+  Corollary lc_disj_exits_lsplits `{redCFG}
+            (s e1 e2 q1 q2 h : Lab) (i j1 j2 k : Tag) (t1 t2 : list Coord)
+            (Hlc : last_common ((q1,j1) :: t1) ((q2,j2) :: t2) (s,k))
+            (Hexit1 : exit_edge h q1 e1)
+            (Hexit2 : exit_edge h q2 e2)
+            (Hpath1 : TPath' ((e1,i) :<: (q1,j1) :< t1))
+            (Hpath2 : TPath' ((e2,i) :<: (q2,j2) :< t2))
+    : exists (qq qq' : Lab), (s,qq,qq') ∈ (loop_splits h e1 ++ loop_splits h e2).
+  Proof.
+    eapply lc_disj_exits_lsplits';eauto.
+    replace (depth e2) with (depth e1);eauto using exit_edge_dep_eq.
+  Qed.
   
   Theorem lc_join_split `{redCFG} t1 t2 (p q1 q2 s : Lab) (i j1 j2 k : Tag)
           (* it is important to cons qj's in front of the t's *)

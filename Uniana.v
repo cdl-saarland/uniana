@@ -217,8 +217,7 @@ Module Uniana.
     }
     eapply (tag_eq_loop_exit p q i) in c. 2,3: eapply Htcfg;eauto. clear Htcfg.
     eapply tr_lc_lt with (j1:=j1) (j2:=j2) in Htr1 as Hlc;eauto;destructH' Hlc.
-    eapply lc_disj_exit_lsplits in c as Hsplits;[|reflexivity|];eauto.
-    exploit' Hsplits. exploit' Hsplits;[|exploit' Hsplits].
+    eapply lc_disj_exit_lsplits in c as Hsplits;eauto; cycle 1.
     - eapply tr_tpath;eauto. 
     - eapply tr_tpath;eauto.
     - destructH.
@@ -229,7 +228,7 @@ Module Uniana.
       + (* uni_same_lab *) admit.
   Admitted.
   
-  Lemma unch_dom u p x unch
+  Lemma unch_dom u p x unch (* TODO: this will need a unch_concr assumption *)
         (Hunch : u ∈ unch_trans unch p x)
     : Dom edge root u p.
     unfold unch_trans,unch_trans_ptw in Hunch. unfold unch_trans_local in Hunch.
@@ -318,6 +317,14 @@ Module Uniana.
     : length j1 = length j2.
   Admitted.
   
+  Lemma tpath_tag_len_eq_elem p q i1 i2 j1 j2 l1 l2
+        (Hpath1 : TPath (root, start_tag) (p, i1) l1)
+        (Hpath2 : TPath (root, start_tag) (p, i2) l2)
+        (Hin1 : (q,j1) ∈ l1)
+        (Hin2 : (q,j2) ∈ l2)
+    : length j1 = length j2.
+  Admitted.
+  
   Hint Unfold Coord.
 
   Definition ancestor a p q :=
@@ -374,10 +381,38 @@ Module Uniana.
   Proof.
     unfold ancestor in Hanc.
     destruct Hanc as [[Hanc _]|Hanc]; [eapply tag_prefix_head|subst a];eauto.
-
     replace j with (@nil nat);[eapply prefix_nil|].
     symmetry; eapply root_tag_nil;eauto using precedes_implies_in_pred.
   Qed.
+
+  Lemma tag_prefix_ancestor_elem a p q r i j k l
+        (Hanc : ancestor a p q)
+        (Hpath : TPath (root,start_tag) (r,k) ((r,k) :< l))
+        (Hprec : Precedes fst ((r,k) :: l) (a,j))
+        (Hib : (r,k) :: l ⊢ (a,j) ≺* (p,i))
+    : Prefix j i.
+  Proof.
+
+    (* 
+    eapply prec_tpath_pre_tpath in Hpath
+    destruct Htr1' as [l1' [Hpath1 Hpre1]].
+    destruct Htr2' as [l2' [Hpath2 Hpre2]].*)
+
+    (*
+    eapply dom_tpath_prec in Htr1 as Hanc11;eauto. destruct Hanc11 as [j1' Hanc11].
+    eapply dom_tpath_prec in Htr2 as Hanc12;eauto. destruct Hanc12 as [j2' Hanc12].
+    assert (j1' = j /\ j2' = j) as Heq;[|destruct Heq;subst j1' j2'].
+    {
+      simpl_nl' Hanc21. simpl_nl' Hanc22. simpl_nl' Hanc11. simpl_nl' Hanc12.
+      split;eapply prec_prec_eq;eauto.
+      (*
+            |eapply prefix_prec_prec_eq with (l':=l2')];eauto.
+      1,3: rewrite nlcons_to_list;eapply tpath_NoDup;eauto.
+      1,2: eapply ancestor_in_before_dominating;eauto;
+        econstructor;cbn;eauto.        *)
+    }*)
+    
+  Admitted.
 
   (*
   Lemma in_tpath_tag_length_eq l r0 p q i0 i j1 j2
@@ -431,6 +466,19 @@ Module Uniana.
     : exists h, loop_contains h p /\ Precedes fst t (h,j2).
   Admitted.
   
+  Lemma first_occ_tag_elem i j j1 j2 p q t
+        (Htag : j = j1 ++ j2)
+        (Hpath : TPath (root,start_tag) (p,i) t)
+        (Hin : (q,j) ∈ t)
+    : exists h, loop_contains h q /\ Precedes fst t (h,j2) /\ t ⊢ (h,j2) ≺* (q,j).
+  Admitted.
+
+  Lemma prec_prec_eq l (q : Lab) (j j' : Tag)
+        (Hprec1 : Precedes fst l (q,j))
+        (Hprec2 : Precedes fst l (q,j'))
+    : j = j'.
+  Admitted.
+  
   Lemma prefix_prec_prec_eq l l' (p q : Lab) (i j j' : Tag)
         (Hpre : Prefix ((p,i) :: l') l)
         (Hprec1 : Precedes fst l (q,j))
@@ -463,24 +511,43 @@ Module Uniana.
     : h1 = h2.
   Admitted.
   
-  Lemma ancestor_level_connector p q a i j k t1 t2 
-        (Hpath1 : TPath (root,start_tag) (p,i) t1)
-        (Hpath2 : TPath (q,j) (p,i) t2)
-        (Hpre   : Postfix t2 t1)
+  Lemma tag_prefix_same_head_elem p q h1 h2 i1 i2 j1 j2 k1 k2 t1 t2
+        (Hpath1 : TPath (root,start_tag) (p,i1) t1)
+        (Hpath2 : TPath (root,start_tag) (p,i2) t2)
+        (Hloop1 : loop_contains h1 q)
+        (Hloop2 : loop_contains h2 q)
+        (Hin1 : (q,j1) ∈ t1)
+        (Hin2 : (q,j2) ∈ t2)
+        (Hprec1 : Precedes fst t1 (h1,k1))
+        (Hprec2 : Precedes fst t2 (h2,k2))
+        (Hlen : length j1 = length j2)
+    : h1 = h2.
+  Admitted.
+  
+  Lemma ancestor_level_connector p q a i j k t
+        (Hpath : TPath (root,start_tag) (p,i) t)
+        (Hin : (q,j) ∈ t)
         (Hanc  : near_ancestor a p q)
-        (Hprec : Precedes fst t1 (a,k))
-        (* maybe we'll also need dominance, because a is otw. not guaranteed to be before q *)
-    : exists a', Precedes fst t2 (a',k).
+        (Hprec : Precedes fst t (a,k))
+        (Hib : t ⊢ (a,k) ≺* (q,j))
+    : exists a', Precedes fst t (a',k) /\ t ⊢ (q,j) ≺* (a',k) ≺* (p,i).
   Admitted.
 
-  Definition succ_in {A : Type} l (a b : A)
-    := exists l1 l2, l = l2 ++ a :: b :: l1.
-  
+  (*
   Lemma find_loop_exit h p i j n l
         (Hpath : TPath (root,start_tag) (p,i) l)
         (Hpre : Prefix i j)
         (Hprec : Precedes fst l (h, n :: j))
-    : exists qe e, Precedes snd l (qe,n :: j) /\ succ_in l (e,j) (qe,n :: j).
+    : exists qe e, Precedes snd l (qe,n :: j) /\ l ⊢ (e,j) ≻ (qe,n :: j) /\ exit_edge h qe e.
+  Admitted.
+  *)
+
+  Lemma find_loop_exit h a p i j k n l
+        (Hpath : TPath (root,start_tag) (p,i) l)
+        (Hpre : Prefix k j)
+        (Hib : l ⊢ (h, n :: j) ≺* (a,k))
+        (Hprec : Precedes fst l (h, n :: j))
+    : exists qe e, l ⊢ (h, n :: j) ≺* (qe,n :: j) ≺* (a,k) /\ l ⊢ (e,j) ≻ (qe,n :: j) /\ exit_edge h qe e.
   Admitted.
 
   
@@ -499,33 +566,252 @@ Module Uniana.
       /\ Precedes fst l1 ( e1,j ) /\ Precedes fst l2 ( e2,j ). *)
 
 
-  Definition in_between {A : Type} `{EqDec A eq} l (a b c : A)
-    := in_before l a b /\ in_before l b c.
+  
+  Ltac eapply2 H H1 H2 :=
+    eapply H in H2; only 1: eapply H in H1.
+  
+  Ltac eapply2' H H1 H2 Q1 Q2 :=
+    eapply H in H2 as Q2; only 1: eapply H in H1 as Q1.
+
+  Lemma uni_branch_uni_succ t1 t2 br q1 q2 p i k j1 j2
+        (Hpath1 : TPath' ((p,i) :< t1))
+        (Hpath2 : TPath' ((p,i) :< t2))
+        (Hsucc1 : succ_in t1 (q1,j1) (br,k))
+        (Hsucc2 : succ_in t2 (q2,j2) (br,k))
+    : q1 = q2.
+  Admitted.
 
   
-  Lemma find_hexit (u p : Lab) (i j j1 j2 : Tag) l1 l2 a a1' a2'
-        (Hanc : near_ancestor a u p)
-        (Hanc1 : Precedes fst l1 (a,j))
-        (Hanc2 : Precedes fst l2 (a,j))
-        (Hancl1 : in_between l1 (u,j1) (a1',j) (p,i))
-        (Hancl2 : in_between l2 (u,j2) (a2',j) (p,i))
-        (Hpath1 : TPath (p,i) (root,start_tag) ((p,i) :< l1))
-        (Hpath2 : TPath (p,i) (root,start_tag) ((p,i) :< l2))
-        (Hprec1 : Precedes fst l1 (u,j1))
-        (Hprec2 : Precedes fst l2 (u,j2))
-    : exists (h qe1 qe2 e1 e2 : Lab) n1 n2,
-      let j' := common_prefix j1 j2 in
-      n1 <> n2
-      /\ loop_contains h u
-      /\ in_between l1 (a,j) (h,n1 :: j') (u,j1)
-      /\ in_between l2 (a,j) (h,n2 :: j') (u,j2)
-      /\ in_between l1 (u,j1) (qe1,n1 :: j') (a1',j)
-      /\ in_between l2 (u,j2) (qe2,n2 :: j') (a2',j)
-      /\ succ_in l1 (e1,j') (qe1,n1 :: j')
-      /\ succ_in l2 (e2,j') (qe2,n2 :: j').
-  Admitted.
-   
+  Lemma tpath_tpath' r i0 p i t
+        (Hpath : TPath (r,i0) (p,i) t)
+    : TPath' t.
+  Proof.
+    unfold TPath'. eapply path_back in Hpath as Hback. eapply path_front in Hpath as Hfront.
+    rewrite Hfront,Hback. assumption.
+  Qed.
 
+  Hint Resolve tpath_tpath'.
+  Hint Resolve precedes_implies_in_pred.
+  
+  Lemma dom_dom_in_between p q r i j k l
+        (Hdom1 : Dom edge root r q)
+        (Hdom2 : Dom edge root q p)
+        (Hpath : TPath' l)
+        (Hnd : NoDup l)
+    : l ⊢ (r,k) ≺* (q,j) ≺* (p,i).
+  Admitted.
+
+  Lemma find_divergent_branch u p l1 l2 i j1 j2 
+        (Hunch : Dom edge root u p)
+        (Hprec1 : Precedes fst l1 (u, j1))
+        (Hprec2 : Precedes fst l2 (u, j2))
+        (Htr1 : TPath (root, start_tag) (p, i) ((p, i) :< l1))
+        (Htr2 : TPath (root, start_tag) (p, i) ((p, i) :< l2))
+        (Hneq : p <> u)
+        (Hjneq : j1 =/= j2)
+    : exists br qq qq' : Lab,
+      (br, qq, qq') ∈ rel_splits p u /\
+      (exists (k k' : Tag) (q1 q2 : Lab),
+          l1 ⊢ (q1, k') ≻ (br, k) /\ l2 ⊢ (q2, k') ≻ (br, k) /\ q1 <> q2).
+  Proof.
+    specialize (ex_near_ancestor u p) as [a [Hanc Ha_near]].
+
+    
+    eapply ancestor_dom1 in Hanc as Hanc1. eapply ancestor_dom2 in Hanc as Hanc2.
+    eapply dom_tpath_prec with (l:=(p,i) :< l1) in Hanc2 as Hanc21;eauto. destructH' Hanc21.
+    eapply dom_tpath_prec with (l:=(p,i) :< l2) in Hanc2 as Hanc22;eauto. destructH' Hanc22.
+        
+    assert (j0 = j); [|subst j0].
+    {
+      eapply ancestor_sym in Hanc;eapply tag_prefix_ancestor in Hanc21 as Ha_pre1;eauto.
+      eapply tag_prefix_ancestor in Hanc22 as Ha_pre2; eauto.
+      simpl_nl' Hanc21. simpl_nl' Hanc22.
+      eapply prec_tpath_tpath in Hanc21;eauto. destructH.
+      eapply prec_tpath_tpath in Hanc22;eauto. destructH.
+      eapply prefix_length_eq;eauto;eapply tpath_tag_len_eq;eauto.
+    }
+
+    enough ((p,i) :: l1 ⊢ (a,j) ≺* (u,j1)) as Hib1.
+    enough ((p,i) :: l2 ⊢ (a,j) ≺* (u,j2)) as Hib2.
+    2: eapply dom_dom_in_between with (l:= (p,i) :< l2) in Hunch;eauto.
+    4: eapply dom_dom_in_between with (l:= (p,i) :< l1) in Hunch;eauto.
+    2,4: simpl_nl' Hunch;destruct Hunch;eauto.
+    2,3: eapply tpath_NoDup;eauto. 
+
+    assert (Prefix j i) as Hprei by (eapply tag_prefix_ancestor;[eapply ancestor_sym| |];eauto).
+    assert (Prefix j j1) as Hprej1
+        by (simpl_nl' Hanc21;eapply tag_prefix_ancestor_elem with (l:=l1);eauto).
+    assert (Prefix j j2) as Hprej2
+        by (simpl_nl' Hanc22;eapply tag_prefix_ancestor_elem with (l:=l2);eauto).
+
+    assert (exists j1', j1 = j1' ++ j) as [j1' Hj1] by (eapply prefix_eq;eauto).
+    assert (exists j2', j2 = j2' ++ j) as [j2' Hj2] by (eapply prefix_eq;eauto).
+
+    assert (j1' <> j2') as c'.
+    {
+      subst j1 j2. intro c'. rewrite c' in Hjneq. eapply Hjneq. reflexivity.
+    } 
+
+    eapply Pr_cont with (c:=(p,i)) in Hprec1;[|cbn;eauto].
+    eapply Pr_cont with (c:=(p,i)) in Hprec2;[|cbn;eauto].
+    (* find the first difference in the tag suffices *)
+    eapply first_diff in c'. 
+    2,3: intro N; eapply c'; subst;
+      eapply precedes_implies_in_pred in Hprec1;eapply precedes_implies_in_pred in Hprec2;
+    rewrite nlcons_to_list in Hprec1; rewrite nlcons_to_list in Hprec2;
+      eapply tpath_tag_len_eq_elem in Hprec1;eauto;simpl_nl;
+        do 2 rewrite app_length in Hprec1;exfalso.
+    3:destruct j1';cbn in Hprec1; [congruence|omega]. 
+    2:destruct j2';cbn in Hprec1;[congruence|omega].
+    rename c' into Htag. destructH.
+    subst j1' j2'. rewrite <-app_assoc in Hj1,Hj2. rewrite <-app_comm_cons in Hj1,Hj2.
+    (* find the head of the divergent loop *)
+    eapply first_occ_tag_elem with (t:=(p,i) :< l1) in Hj1 as Hocc1;eauto;
+      simpl_nl;eauto using precedes_implies_in_pred.
+    eapply first_occ_tag_elem in Hj2 as Hocc2;eauto;
+      simpl_nl;eauto using precedes_implies_in_pred.
+    do 2 destructH.
+    (* show that it is the same head in both traces *)
+    assert (h0 = h);[eapply tag_prefix_same_head_elem with (h1:=h0) (t1:=(p,i):<l1) (j1:=j1) (j2:=j2);
+                     eauto;simpl_nl;eauto|subst h0].
+    1: eapply tpath_tag_len_eq_elem with (l1:=(p,i):<l1);eauto;simpl_nl;eauto.
+    (* find node on ancestor-depth that is between u & p *)
+
+    Ltac copy H Q :=
+      eapply id in H as Q.
+
+    (*
+    copy Htr1 Hϕ1; copy Htr2 Hϕ2.
+    eapply2 path_from_elem Hϕ1 Hϕ2;eauto.
+    2,3: simpl_nl;eapply prefix_incl;eauto;left;eauto.
+    do 2 destructH.*)
+    eapply2 ancestor_level_connector Hanc21 Hanc22.
+    4,8: split;[eapply ancestor_sym|];eauto. all: simpl_nl;eauto.
+    destruct Hanc21 as [a1' [Hanc21 Hanc11]]. destruct Hanc22 as [a2' [Hanc22 Hanc12]].
+    assert (Prefix j (l' ++ j)) as Hexit1.
+    { eapply prefix_eq. eexists;reflexivity. }
+    copy Hexit1 Hexit2.
+    (*
+    copy Htr1 Hπ1. copy Htr2 Hπ2.
+    
+    eapply path_to_elem with (r:=(a1',j)) in Hπ1. destruct Hπ1 as [π1 [Hπ10 Hπ11]].
+    eapply path_to_elem with (r:=(a2',j)) in Hπ2. destruct Hπ2 as [π2 [Hπ20 Hπ21]].
+    2,3: eapply postfix_incl;eauto;eapply precedes_implies_in_pred;eauto.*)
+    eapply find_loop_exit with (a:=a1') (n:=a1) (h:=h) (l:= (p,i):<l1) in Hexit1;eauto.
+    eapply find_loop_exit with (a:=a2') (n:=a2) in Hexit2;eauto.
+    2,3: eapply in_before_trans;[eapply tpath_NoDup;eauto|eauto|
+                                 unfold in_between in Hanc11,Hanc12; destruct Hanc11,Hanc12;eauto].
+    (*
+    2:eapply Hπ10. 3: eapply Hπ20. all:cycle 1.
+    {
+      Lemma exit_cascade u p i j t 
+            (Hdom : Dom edge root u p)
+            (Hprec : Precedes fst t (u,j))
+            (Hpath : TPath (root,start_tag) (p,i) ((p,i) :< t))
+      : forall q, loop_contains q u -> forall k, ~ in_between t (u,j) (q,k) (p,i).
+        (* otw. there would be a path through this q to p without visiting u *)
+        (* this could even be generalized to CPaths *)
+      Admitted.
+
+      instantiate (1:=a1). instantiate (1:=h).
+
+      Lemma precedes_prefix_extend p u i j l l'
+            (Hpath : TPath (root,start_tag) (p,i) l)
+            (Hprec : Precedes fst l' (u,j))
+            (Hpre : Prefix l' l)
+            (Hnin : forall k, in_between l (u,j) (u,k) (p,i) -> j = k)
+        : Precedes fst l (u,j).
+      Admitted.
+
+      Lemma precedes_prefix_shrink p u i j l l'
+            (Hpath : TPath (root,start_tag) (p,i) l)
+            (Hprec : Precedes fst l (u,j))
+            (Hnin : forall k, ~ in_between l (ne_front l') (u,k) (p,i))
+            (Hpre : Prefix l' l)
+        : Precedes fst l' (u,j).
+      Admitted.
+
+      eapply precedes_prefix_extend;eauto.
+      - admit.
+      - admit. 
+      
+      (* complicated! 
+         if u is preceding in l1, and h preceding in l1', then h preceding in l1. *)
+      
+    }
+    {
+      instantiate (1:= a2).
+      (* the same *)
+      admit.
+    }
+                                                       *)
+    
+    destruct Hexit1 as [qe1 [e1 [Hexit__seq1 [Hexit__succ1 Hexit__edge1]]]].
+    destruct Hexit2 as [qe2 [e2 [Hexit__seq2 [Hexit__succ2 Hexit__edge2]]]].
+    (*enough (π1 = (a1',j) :< tl π1) as πeq1.
+    enough (π2 = (a2',j) :< tl π2) as πeq2.
+    2,3: let f := fun Q => clear - Q; inversion Q;subst;cbn;simpl_nl;eauto in
+         only 2:f Hπ10; f Hπ20.
+    let f := fun Q Q1 Q2 => (rewrite Q in Q1, Q2) in f πeq1 Hexiting1 Hπ10; f πeq2 Hexiting2 Hπ20.
+    simpl_nl' Hexiting1.*)
+
+
+    eapply in_between_in2 in Hexit__seq1 as Hin1.
+    eapply in_between_in2 in Hexit__seq2 as Hin2.
+    eapply2 path_to_elem Hin1 Hin2; eauto.
+    destruct Hin1 as [η1 [Hη1 Hpreη1]]. destruct Hin2 as [η2 [Hη2 Hprenη2]].
+    assert (exists brk, last_common η1 η2 brk) as Hlc.
+    {
+      eapply ne_last_common. clear - Hη1 Hη2. eapply2 path_back Hη1 Hη2. rewrite Hη1,Hη2. reflexivity.
+    }
+    destruct Hlc as [[br k] Hlc].
+    enough (η1 = (qe1, a1 :: l' ++ j) :< tl η1) as ηeq1.
+    enough (η2 = (qe2, a2 :: l' ++ j) :< tl η2) as ηeq2.
+    rewrite ηeq1 in Hlc; rewrite ηeq2 in Hlc.
+    2,3: let f := fun Q => clear - Q; inversion Q;subst;cbn;simpl_nl;eauto in
+         only 2:f Hη1; f Hη2.
+    simpl_nl' Hlc.
+    eapply lc_disj_exits_lsplits with (h0:=h) (e3:=e1) (e4:=e2) (i0:=l'++j) in Hlc as Hsplit;eauto.
+    all: cycle 1.
+    {
+      clear - ηeq1 Hη1 Hexit__edge1 Hexit__succ1 Htr1. unfold TPath'. econstructor. cbn.
+      + rewrite ηeq1 in Hη1. replace (ne_back (_ :< tl η1)) with (root,start_tag);eauto.
+        symmetry. eapply path_back;eauto.
+      + eapply succ_in_path_edge;cycle 4;eauto.
+    } 
+    {
+      clear - ηeq2 Hη2 Hexit__edge2 Hexit__succ2 Htr2. unfold TPath'. econstructor. cbn.
+      + rewrite ηeq2 in Hη2. replace (ne_back (_ :< tl η2)) with (root,start_tag);eauto.
+        symmetry. eapply path_back;eauto.
+      + eapply succ_in_path_edge;cycle 4;eauto.
+    } 
+    destructH.
+    exists br, qq, qq';split.
+    - eapply rel_splits_spec. exists h.
+      eapply in_app_or in Hsplit. destruct Hsplit as [Hsplit|Hsplit].
+      + exists e1. split_conj;eauto.
+        1,2: unfold exited;eauto.
+        * (* idea: path from (u,j1) to (a1',j) is acyclic 
+             and then cut cycles from a1' until first p*) admit. 
+        * (*Lemma not_in_loop
+                (Hanc : ancestor a u p)
+                ( *)
+          (* something with ancestors *) admit.
+      + exists e2. split_conj;eauto.
+        1,2: unfold exited;eauto.
+        * (* same as *) admit.
+        * (*  above  *) admit.           
+    - exists k, (l' ++ j).
+      destruct η1,η2;cbn in *.
+      + (* k = a1 :: ... = a2 :: ...  -> contradiction *) admit.
+      + exists e1. (* br = qe1, thus successor is e1, the successor in l2 is in inside the loop,
+                 thus they are unequal *) admit.
+      + (* analogous to the one above *) admit. 
+      + (* because successors are inside the last_common *) admit.
+
+  
+  Admitted.
+  
   Lemma unch_same_tag p u i s1 s2 j1 j2 r1 r2 ts l1 l2 (t1 t2 : trace) x uni unch
         (Hunibr : join_andb (map (uni_branch uni) (rel_splits p u)) = true)
         (Hunch : u ∈ unch_trans unch p x)
@@ -541,148 +827,48 @@ Module Uniana.
         (Hneq : p <> u)
     : j1 = j2.
   Proof.
-    
     assert (forall p i s l (Htr : Tr ((p, i, s) :< l)),
                TPath (root, start_tag) (p, i) ((p, i) :< map fst l)) as Htr_path.
     {
       clear;intros.
       eapply Tr_EPath in Htr;[|simpl_nl;reflexivity]. destructH.
       eapply EPath_TPath' in Htr;simpl_nl;cbn. 2-4: reflexivity. assumption.
-    }    
-    eapply unch_dom in Hunch.
-
-    clear - Htr1 Htr2 Hprec1 Hprec2 Htr_path Hneq Hunch. 
-    specialize (ex_near_ancestor u p) as [a [Hanc Ha_near]].
-
-    eapply Htr_path in Htr1 as Htr1';eapply prec_tpath_pre_tpath in Htr1';eauto;
-      [|eapply prec_lab_prec_fst;eauto]. destruct Htr1' as [l1' [Hpath1 Hpre1]].
-    eapply Htr_path in Htr2 as Htr2';eapply prec_tpath_pre_tpath in Htr2';eauto;
-      [|eapply prec_lab_prec_fst;eauto]. destruct Htr2' as [l2' [Hpath2 Hpre2]].
-    eapply ancestor_dom1 in Hanc as Hanc1. eapply ancestor_dom2 in Hanc as Hanc2.
-    eapply dom_tpath_prec with (l:=(p,i) :< map fst l1) in Hanc2 as Hanc21;eauto. destructH' Hanc21.
-    eapply dom_tpath_prec with (l:=(p,i) :< map fst l2) in Hanc2 as Hanc22;eauto. destructH' Hanc22.
-
-    assert (j = j0).
-    {
-      eapply ancestor_sym in Hanc;eapply tag_prefix_ancestor in Hanc21 as Ha_pre1;eauto.
-      eapply tag_prefix_ancestor in Hanc22 as Ha_pre2; eauto.
-      simpl_nl' Hanc21. simpl_nl' Hanc22.
-      eapply prec_tpath_tpath in Hanc21;eauto. destructH.
-      eapply prec_tpath_tpath in Hanc22;eauto. destructH.
-      eapply prefix_length_eq;eauto;eapply tpath_tag_len_eq;eauto.
     }
-    subst j0.
-              
-    eapply dom_tpath_prec in Hpath1 as Hanc11;eauto. destruct Hanc11 as [j1' Hanc11].
-    eapply dom_tpath_prec in Hpath2 as Hanc12;eauto. destruct Hanc12 as [j2' Hanc12].
-    assert (j1' = j /\ j2' = j) as Heq;[|destruct Heq;subst j1' j2'].
-    {
-      simpl_nl' Hanc21. simpl_nl' Hanc22. simpl_nl' Hanc11. simpl_nl' Hanc12.
-      split;[eapply prefix_prec_prec_eq with (l':=l1')
-            |eapply prefix_prec_prec_eq with (l':=l2')];eauto.
-      1,3: rewrite nlcons_to_list;eapply tpath_NoDup;eauto.
-      1,2: eapply ancestor_in_before_dominating;eauto.
-      1,2: eapply prec_lab_prec_fst in Hprec1;eapply prec_lab_prec_fst in Hprec2;
-        econstructor;cbn;eauto.        
-    }
-    assert (Prefix j i) as Hprei by (eapply tag_prefix_ancestor;[eapply ancestor_sym| |];eauto).
-    assert (Prefix j j1) as Hprej1 by (eapply tag_prefix_ancestor;eauto).
-    assert (Prefix j j2) as Hprej2 by (eapply tag_prefix_ancestor;eauto).
-
-    assert (exists j1', j1 = j1' ++ j) as [j1' Hj1] by (eapply prefix_eq;eauto).
-    assert (exists j2', j2 = j2' ++ j) as [j2' Hj2] by (eapply prefix_eq;eauto).
-
-    (* it suffices to show that the suffices of j1 & j2 are equal, since the prefixes already are *)
-    enough (j1' = j2') by (subst j1' j1 j2;reflexivity).
-
-    (* find the first difference in the tag suffices *)
-    destruct (j1' == j2');[eauto|exfalso]. eapply first_diff in c.
-    2,3: intro N;eapply c;subst;eapply tpath_tag_len_eq in Hpath1;eauto; clear - c Hpath1;cbn in *;
-      rewrite app_length in Hpath1;exfalso.
-    3:destruct j1';cbn in Hpath1;[congruence|omega].
-    2:destruct j2';cbn in Hpath1;[congruence|omega].
-    rename c into Htag. destructH.
-    subst j1' j2'. rewrite <-app_assoc in Hj1,Hj2. rewrite <-app_comm_cons in Hj1,Hj2.
-    (* find the head of the divergent loop *)
-    eapply first_occ_tag in Hj1 as Hocc1;eauto. eapply first_occ_tag in Hj2 as Hocc2;eauto.
-    do 2 destructH.
-    (* show that it is the same head in both traces *)
-    assert (h0 = h);[eapply tag_prefix_same_head with (i1:=j1);eauto|subst h0].
-    (* find node on ancestor-depth that is between u & p *)
-    eapply Htr_path in Htr1 as Hϕ. eapply path_from_elem in Hϕ;eauto. destructH. 
-    eapply ancestor_level_connector with (p:=p) (q:=u) in Hanc21 as Hcon;eauto.
-    2: split;eauto using ancestor_sym.
-    2: simpl_nl;eapply prefix_incl;eauto;left;eauto.
-    destructH.
-    assert (Prefix j (l' ++ j)) as Hexit1. { eapply prefix_eq. eexists;reflexivity. }
-
-                                           eapply Htr_path in Htr1 as Hπ.
-
-
-    (*eapply path_from_elem_to_elem with (r1:=(h,a1::l'++j)) (r2:=(a',j)) in Hπ;eauto;cycle 1.
-    {
-      unfold in_before. exists (prefix_nincl (a',j) ((p,i) :: map fst l1)).
-      split.
-      + simpl_nl. eapply prefix_nincl_prefix. eapply postfix_incl; simpl_nl' Hϕ1;eauto.
-        eapply precedes_implies_in_pred;eauto.
-      + eapply prefix_incl;[|eapply precedes_implies_in_pred;eauto]. admit.
-    }
-    destruct Hπ as [π1 Hπ1].*)
-
-    eapply path_to_elem with (r:=(a',j)) in Hπ. destruct Hπ as [π [Hπ0 Hπ1]].
-    2: eapply postfix_incl;eauto;eapply precedes_implies_in_pred;eauto.
-    eapply find_loop_exit with (h:=h) (p:=a') (n:=a1) in Hexit1;eauto;cycle 1.
-    {
-      (* complicated! because of dom u p, also dom u a',
-         thus if u is preceding in l1, and h preceding in l1', then h preceding in l1. *)
-      admit.
-    }
-    destruct Hexit1 as [qe1 [e1 [Hexiting1 Hexited1]]].
-    assert (π = (a',j) :< tl π) as πeq.
-    {
-      clear - Hπ0. inversion Hπ0;subst;cbn;simpl_nl;eauto.
-    }
-    rewrite πeq in Hexiting1,Hπ0.
-    simpl_nl' Hexiting1.
-    eapply precedes_implies_in_pred in Hexiting1 as Hin.
-    setoid_rewrite nlcons_to_list in Hin at 2.
-    eapply path_to_elem in Hin; eauto.
-    destruct Hin as [η [Hη Hpreη]].    
-    assert (exists brk, last_common η η brk) as Hlc.
-    {
-      eapply ne_last_common. admit. (* wrong η *)
-    }
-    
-    
-    
-    
-    
-
-
-    (* proof idea:
-       first find ancestor of p and u, and establish, that i, j1 & j2 have the common prefix j.
-       (i.e. j1 = j1' ++ j /\ j2 = j2' ++ j)
-       then find head h such that it is the first loop where j1' & j2' differ.
-       then find exit of this head in both tpaths *)
-
-  Admitted.
+    decide' (j1 == j2);[eauto|exfalso].
+    eapply find_divergent_branch with (l1:=map fst l1) in c as Hwit;eauto.
+    - destructH.
+      eapply join_andb_true_iff in Hunibr;eauto.
+      eapply2' uni_branch_uni_succ Hwit1 Hwit2 Hwit1' Hwit2'.
+      4: eapply Hwit2.
+      6: eapply Hwit1.
+      1:contradiction.
+      all: unfold TPath';
+        eapply2 Htr_path Htr1 Htr2;cbn;simpl_nl;
+          try replace (ne_back (_ :< map fst l1)) with (root,start_tag);
+          try replace (ne_back (_ :< map fst l2)) with (root,start_tag);eauto;
+            eapply2 path_back Htr1 Htr2;eauto.
+    - eapply unch_dom;eauto.
+    - eapply prec_lab_prec_fst;eauto.
+    - eapply prec_lab_prec_fst;eauto.
+  Qed.
+  
     
     
     
             
     
-    Lemma precedes_fst_same_tag {A B : Type} `{EqDec B} (p : A) (i j : B) l
-          (Hprec1 : Precedes fst l (p,i))
-          (Hprec2 : Precedes fst l (p,j))
-      : i = j.
-    Proof.
-      clear all_lab edge root a_edge C.
-      dependent induction Hprec1.
-      - inversion Hprec2;subst;[reflexivity|]. cbn in H2; contradiction.
-      - inversion Hprec2;subst.
-        + cbn in H0;contradiction.
-        + eapply IHHprec1;eauto.
-    Qed.
+  Lemma precedes_fst_same_tag {A B : Type} `{EqDec B} (p : A) (i j : B) l
+        (Hprec1 : Precedes fst l (p,i))
+        (Hprec2 : Precedes fst l (p,j))
+    : i = j.
+  Proof.
+    clear all_lab edge root a_edge C.
+    dependent induction Hprec1.
+    - inversion Hprec2;subst;[reflexivity|]. cbn in H2; contradiction.
+    - inversion Hprec2;subst.
+      + cbn in H0;contradiction.
+      + eapply IHHprec1;eauto.
+  Qed.
 
     
 
@@ -899,6 +1085,7 @@ Module Uniana.
         specialize (HCunch' p i s' u x HIn' Hunch).
         destruct HCunch as [j [r [Hprec Heq]]]; try eassumption.
         destruct HCunch' as [j' [r' [Hprec' Heq']]]; try eassumption.
+        (* TODO: we'll need HCunch' for unch_dom *)
         rewrite <- Heq. rewrite <- Heq'.
         cut (j = j'); intros.
         * subst j'. eapply HCuni. eapply Hts1. eapply Hts2. 3: eauto.

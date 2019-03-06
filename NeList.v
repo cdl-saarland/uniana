@@ -1018,11 +1018,18 @@ Module NeList.
   Definition in_before {A : Type} :=
     fun (l : list A) a b => exists l' : list A, Prefix (b :: l') l /\ a ∈ (b :: l').
 
+  Notation "l ⊢ a ≺* b" := (in_before l a b) (at level 70).
+  
+  Definition in_between {A : Type} `{EqDec A eq} l (a b c : A)
+    := l ⊢ a ≺* b /\ l ⊢ b ≺* c.
+
+  Notation "l ⊢ a ≺* b ≺* c" := (in_between l a b c) (at level 70, b at next level).
+
   Lemma in_before_trans {A : Type} `{EqDec A eq} (p q r : A) π
         (Hnd : NoDup π)
-        (Hib__pq : in_before π p q)
-        (Hib__qr : in_before π q r)
-    : in_before π p r.
+        (Hib__pq : π ⊢ p ≺* q)
+        (Hib__qr : π ⊢ q ≺* r)
+    : π ⊢ p ≺* r.
   Proof.
     unfold in_before in *. destruct Hib__pq as [l__pq Hib__pq]. destruct Hib__qr as [l__qr Hib__qr].
     do 2 destructH.
@@ -1042,6 +1049,14 @@ Module NeList.
              congruence.
   Qed.
 
+  Lemma in_between_in_before {A : Type} `{EqDec A eq} (p q r : A) π
+        (Hnd : NoDup π)
+        (Hib : π ⊢ p ≺* q ≺* r)
+    : π ⊢ p ≺* r. 
+  Proof.
+    destruct Hib. eapply in_before_trans;eauto.
+  Qed.
+
   Lemma in_before_prefix {A : Type} `{EqDec A eq} (p q : A) π ϕ
         (Hnd : NoDup π)
         (Hpre : Prefix ϕ π)
@@ -1059,7 +1074,18 @@ Module NeList.
         * econstructor. eapply prefix_cons;eauto.
         * eapply prefix_incl;eauto. left. reflexivity.
   Qed.
-  
+
+  Definition succ_in {A : Type} l (a b : A)
+    := exists l1 l2, l = l2 ++ a :: b :: l1.
+
+  Lemma in_between_in2 {A : Type} `{EqDec A eq} (x y z : A) l
+        (Hib : l ⊢ x ≺* y ≺* z)
+    : y ∈ l.
+  Proof.
+    unfold in_between,in_before in *. destructH. eapply prefix_incl;eauto.
+  Qed.
+
+  Notation "l ⊢ a ≻ b" := (succ_in l a b) (at level 70).
   
   Ltac xeapply X Y :=
     tryif eapply X in Y then idtac

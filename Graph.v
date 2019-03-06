@@ -363,6 +363,12 @@ Module Graph.
         + clear. revert a. induction l; intros b; simpl_nl; cbn; eauto. rewrite <-IHl. reflexivity.
     Qed.
 
+    Lemma succ_in_path_edge π (x y w z : L)
+              (Hpath : Path x y π)
+              (Hsucc : succ_in π w z)
+      : edge z w = true.
+    Admitted.
+
     Definition Path' π := Path (ne_back π) (ne_front π) π.
 
   End Graph.
