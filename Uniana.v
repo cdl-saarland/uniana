@@ -192,6 +192,38 @@ Module Uniana.
     cbn in *. unfold TPath'. simpl_nl' Htr. cbn in *.
     eapply path_back in Htr as Hback. cbn in Hback. unfold Coord in *. rewrite Hback;eauto.
   Qed.
+
+
+  Lemma uni_branch_uni_succ t1 t2 br q1 q2 k j1 j2
+        (Hpath1 : TPath' t1)
+        (Hpath2 : TPath' t2)
+        (Hsucc1 : succ_in t1 (q1,j1) (br,k))
+        (Hsucc2 : succ_in t2 (q2,j2) (br,k))
+    : q1 = q2.
+  Admitted.
+
+  Ltac copy H Q :=
+    eapply id in H as Q.
+
+  
+  Ltac eapply2 H H1 H2 :=
+    eapply H in H2; only 1: eapply H in H1.
+  
+  Ltac eapply2' H H1 H2 Q1 Q2 :=
+    eapply H in H2 as Q2; only 1: eapply H in H1 as Q1.
+
+  Lemma last_common_singleton1 {A : Type} `{EqDec A eq} (s a : A) l
+        (Hlc : last_common (a :: nil) l s)
+    : a = s.
+  Proof.
+    unfold last_common in Hlc. destructH. eapply postfix_rcons_nil_eq in Hlc0. firstorder.
+  Qed.
+  Lemma last_common_singleton2 {A : Type} `{EqDec A eq} (s a : A) l
+        (Hlc : last_common l (a :: nil) s)
+    : a = s.
+  Proof.
+    unfold last_common in Hlc. destructH. eapply postfix_rcons_nil_eq in Hlc2. firstorder.
+  Qed.
   
   Lemma uni_same_tag p q i j1 j2 s1 s2 r1 r2 (t1 t2 : trace) uni ts l1 l2
         (Htr1 : Tr ((p,i,s1) :<: (q,j1,r1) :< l1))
@@ -215,6 +247,7 @@ Module Uniana.
       + inversion H7;subst;eauto.
       + simpl_nl' H4; cbn in H4. destruct l; cbn in H4;[congruence|]. inversion H4;subst;eauto.
     }
+    copy c Hneq.
     eapply (tag_eq_loop_exit p q i) in c. 2,3: eapply Htcfg;eauto. clear Htcfg.
     eapply tr_lc_lt with (j1:=j1) (j2:=j2) in Htr1 as Hlc;eauto;destructH' Hlc.
     eapply lc_disj_exit_lsplits in c as Hsplits;eauto; cycle 1.
@@ -222,7 +255,10 @@ Module Uniana.
     - eapply tr_tpath;eauto.
     - destructH.
       destruct l1,l2.
-      + (* same *) admit.
+      + cbn in Hlc.
+        eapply last_common_singleton1 in Hlc as Hleft.
+        eapply last_common_singleton2 in Hlc as Hright.
+        inversion Hleft; inversion Hright; subst. congruence.
       + (* as *) admit. 
       + (* in *) admit.
       + (* uni_same_lab *) admit.
@@ -273,7 +309,7 @@ Module Uniana.
   (*
   Lemma top_level_tag_nil p i t
         (Hdep : depth p = 0)
-        (Htr : TPath (root,start_tag) (p,i) ((p,i) :< t))
+a        (Htr : TPath (root,start_tag) (p,i) ((p,i) :< t))
     : i = nil.
   Admitted.
    *)
@@ -438,6 +474,7 @@ Module Uniana.
   Proof.
   Admitted.
 
+  (*
   Fixpoint common_prefix' {A:Type} `{EqDec A eq} (la l1 l2 : list A) :=
     match l1,l2 with
     | a1 :: l1, a2 :: l2 => if a1 == a2
@@ -459,6 +496,7 @@ Module Uniana.
   Compute (common_prefix (1 :: 2 :: 3 :: nil) (1 :: 1 :: 3 :: nil)).
   Compute (common_prefix (2 :: 2 :: 3 :: nil) (1 :: 2 :: 3 :: nil)).
   Compute (common_prefix (2 :: 3 :: nil) (2 :: 3 :: 5 :: nil)).
+  *)
 
   Lemma first_occ_tag j j1 j2 p t
         (Htag : j = j1 ++ j2)
@@ -567,19 +605,7 @@ Module Uniana.
 
 
   
-  Ltac eapply2 H H1 H2 :=
-    eapply H in H2; only 1: eapply H in H1.
-  
-  Ltac eapply2' H H1 H2 Q1 Q2 :=
-    eapply H in H2 as Q2; only 1: eapply H in H1 as Q1.
 
-  Lemma uni_branch_uni_succ t1 t2 br q1 q2 p i k j1 j2
-        (Hpath1 : TPath' ((p,i) :< t1))
-        (Hpath2 : TPath' ((p,i) :< t2))
-        (Hsucc1 : succ_in t1 (q1,j1) (br,k))
-        (Hsucc2 : succ_in t2 (q2,j2) (br,k))
-    : q1 = q2.
-  Admitted.
 
   
   Lemma tpath_tpath' r i0 p i t
@@ -677,8 +703,6 @@ Module Uniana.
     1: eapply tpath_tag_len_eq_elem with (l1:=(p,i):<l1);eauto;simpl_nl;eauto.
     (* find node on ancestor-depth that is between u & p *)
 
-    Ltac copy H Q :=
-      eapply id in H as Q.
 
     (*
     copy Htr1 Hϕ1; copy Htr2 Hϕ2.
@@ -704,14 +728,6 @@ Module Uniana.
     (*
     2:eapply Hπ10. 3: eapply Hπ20. all:cycle 1.
     {
-      Lemma exit_cascade u p i j t 
-            (Hdom : Dom edge root u p)
-            (Hprec : Precedes fst t (u,j))
-            (Hpath : TPath (root,start_tag) (p,i) ((p,i) :< t))
-      : forall q, loop_contains q u -> forall k, ~ in_between t (u,j) (q,k) (p,i).
-        (* otw. there would be a path through this q to p without visiting u *)
-        (* this could even be generalized to CPaths *)
-      Admitted.
 
       instantiate (1:=a1). instantiate (1:=h).
 
@@ -791,8 +807,37 @@ Module Uniana.
       eapply in_app_or in Hsplit. destruct Hsplit as [Hsplit|Hsplit].
       + exists e1. split_conj;eauto.
         1,2: unfold exited;eauto.
-        * (* idea: path from (u,j1) to (a1',j) is acyclic 
-             and then cut cycles from a1' until first p*) admit. 
+        * 
+
+          
+      Lemma exit_cascade u p i j t 
+            (Hdom : Dom edge root u p)
+            (Hprec : Precedes fst t (u,j))
+            (Hpath : TPath (root,start_tag) (p,i) ((p,i) :< t))
+      : forall h, loop_contains h u -> forall k, ~ in_between t (u,j) (h,k) (p,i).
+        (* otw. there would be a path through this q to p without visiting u *)
+        (* this could even be generalized to CPaths *)
+      Admitted.
+
+      assert (deq_loop u e1) as Hdeq by admit.
+
+      Lemma loop_cutting q p t
+            (Hpath : CPath q p t)
+            (Hnoh : forall h, loop_contains h q -> h ∉ t)
+        : exists t', Path a_edge q p t'.
+      Admitted.
+
+      Lemma loop_cutting_elem q p π
+            (Hpath : CPath' π)
+            (Hib : π ⊢ q ≺* p)
+            (Hnoh : forall h, loop_contains h q -> ~ π ⊢ q ≺* h ≺* p)
+        : exists t', Path a_edge q p t'.
+      Admitted.
+      eapply loop_cutting_elem. admit.
+      
+      
+          (* idea: path from (u,j1) to (a1',j) is acyclic 
+             and then cut cycles from a1' until first p*) admit. admit.
         * (*Lemma not_in_loop
                 (Hanc : ancestor a u p)
                 ( *)
@@ -803,7 +848,10 @@ Module Uniana.
         * (*  above  *) admit.           
     - exists k, (l' ++ j).
       destruct η1,η2;cbn in *.
-      + (* k = a1 :: ... = a2 :: ...  -> contradiction *) admit.
+      + cbn in Hlc.
+        eapply last_common_singleton1 in Hlc as Hleft.
+        eapply last_common_singleton2 in Hlc as Hright.
+        inversion Hleft; inversion Hright; subst. congruence.
       + exists e1. (* br = qe1, thus successor is e1, the successor in l2 is in inside the loop,
                  thus they are unequal *) admit.
       + (* analogous to the one above *) admit. 
@@ -837,7 +885,17 @@ Module Uniana.
     decide' (j1 == j2);[eauto|exfalso].
     eapply find_divergent_branch with (l1:=map fst l1) in c as Hwit;eauto.
     - destructH.
-      eapply join_andb_true_iff in Hunibr;eauto.
+      Lemma succ_cons {A : Type} `{EqDec A eq} (a b c : A) l
+            (Hsucc : l ⊢ b ≻ c)
+        : a :: l ⊢ b ≻ c.
+      Proof.
+        revert a;destruct l;intros a0.
+        - unfold succ_in in *;cbn in *;eauto. destructH. destruct l2;cbn in *;congruence.
+        - unfold succ_in in Hsucc. destructH. unfold succ_in. exists l1, (a0 :: l2).  cbn.
+          rewrite Hsucc. reflexivity.
+      Qed.
+      eapply succ_cons in Hwit1. eapply succ_cons in Hwit2.
+      eapply join_andb_true_iff in Hunibr;eauto. rewrite nlcons_to_list in Hwit1,Hwit2.
       eapply2' uni_branch_uni_succ Hwit1 Hwit2 Hwit1' Hwit2'.
       4: eapply Hwit2.
       6: eapply Hwit1.
@@ -957,7 +1015,32 @@ Module Uniana.
       (*cbn in Htr1,Htr2. destruct c as [[qq1 jj1] ss1]. destruct c0 as [[qq2 jj2] ss2].*)
       rewrite <-nlcons_necons in Htr1,Htr2.
       eapply tr_lc_lt' with (l1:=l1') (l2:=l2') in Htr1 as Hlc;eauto;destructH.*)
-*)
+     *)
+  
+  Lemma postfix_succ_in {A : Type} (a b : A) l l'
+        (Hpost : Postfix l l')
+        (Hsucc : l ⊢ a ≻ b)
+    : l' ⊢ a ≻ b.
+  Proof.
+    induction Hpost;eauto.
+    eapply IHHpost in Hsucc.
+    unfold succ_in in Hsucc. destructH. exists (l1 :r: a0), l2. rewrite Hsucc.
+    rewrite <-cons_rcons_assoc. unfold rcons. rewrite <-app_assoc.
+    rewrite app_comm_cons. reflexivity.
+  Qed.
+  
+  Lemma succ_in_rcons2 {A : Type} (a b : A) l
+    : l :r: a :r: b ⊢ a ≻ b.
+  Proof.
+    exists nil, l. unfold rcons. rewrite <-app_assoc. rewrite <-app_comm_cons. cbn. reflexivity.
+  Qed.
+  
+  Lemma succ_in_tpath_eff_tag p q i j t
+        (Hpath : TPath' t)
+        (Hsucc : t ⊢ (p,i) ≻ (q,j))
+    : eff_tag q p j = i.
+  Proof.
+  Admitted.
 
   Lemma uni_same_lab p q1 q2 i j1 j2 s1 s2 r1 r2 (t1 t2 : trace) uni ts l1 l2
         (Htr1 : Tr ((p,i,s1) :<: (q1,j1,r1) :< l1))
@@ -977,16 +1060,47 @@ Module Uniana.
   Unshelve. all:cycle 3. exact p. exact i.
   - unfold last_common in LC_lt. destructH' LC_lt.
     destruct l1',l2';cbn in *.
-    + (* q1 = br = q2 --> contradiction *) admit.
+    + eapply postfix_hd_eq in LC_lt0.
+      eapply postfix_hd_eq in LC_lt2.
+      inversion LC_lt0; inversion LC_lt2. subst q1. congruence. 
     + (* since (br,k) = (q1,j1) & uniform, we have that (p,i) succeeds (br,k) thus
-         (p,i) ∈ l2, thus double occurence of the same instance in t2 --> contradiction *) admit.
+         (p,i) ∈ l2, thus double occurence of the same instance in t2 --> contradiction *) 
+      eapply postfix_hd_eq in LC_lt0.
+      eapply2 tr_tpath Htr1 Htr2.
+      destruct (hd p0 (rev (p0 :: l2'))) eqn:E.
+      assert ((p,i) :: (q1,j1) :: map fst l1 ⊢ (l,t) ≻ (br,k)) as Hsucc1.
+      {
+        eapply succ_cons. simpl_nl.
+        eapply postfix_succ_in;eauto. rewrite app_comm_cons.
+        rewrite cons_rcons'.
+        rewrite E. fold (rcons (rev (tl (rev (p0 :: l2'))) :r: (l,t)) (br,k)).
+        eapply succ_in_rcons2.
+      }
+      assert ((p,i) :: (q2,j2) :: map fst l2 ⊢ (p,i) ≻ (br,k)) as Hsucc2.
+      {
+        exists (map fst l2), nil. cbn. rewrite LC_lt0. reflexivity.
+      }
+      eapply uni_branch_uni_succ in Htr2 as Heq;cycle 1; swap 2 3. 1: clear Htr2; eauto.
+      * unfold succ_in. exists (map fst l2), nil. cbn. simpl_nl. reflexivity.
+      * setoid_rewrite <- LC_lt0 at 2. cbn.
+        simpl_nl. eapply Hsucc1.
+      * subst l.
+        assert (t = i);[|subst t].
+        {
+          eapply eff_tag_det.
+          eapply succ_in_tpath_eff_tag;clear Htr2;eauto;cbn;simpl_nl;eauto.
+          eapply succ_in_tpath_eff_tag;clear Htr1;eauto;cbn;simpl_nl;eauto.
+        }
+        eapply tpath_NoDup in Htr1.
+        inversion  Htr1. eapply H1. eapply postfix_incl;simpl_nl;eauto. rewrite app_comm_cons.
+        eapply in_or_app. left. rewrite cons_rcons'. eapply In_rcons. left. eauto. 
     + (* since (br,k) = (q2,j2) & uniform, we have that (p,i) succeeds (br,k) thus
          (p,i) ∈ l1, thus double occurence of the same instance in t1 --> contradiction *) admit. 
     + (* successor of br is the same because of uniformity and in l1' & l2', 
          thus l1' & l2' are not disjoint --> contradiction *) admit.
   - eapply tr_tpath;eauto. 
   - eapply tr_tpath;eauto.
-  Admitted.   
+  Admitted.
   
   Lemma uni_correct :
     forall uni unch ts,

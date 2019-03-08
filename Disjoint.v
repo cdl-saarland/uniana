@@ -56,7 +56,7 @@ Module Disjoint.
                           /\ loop_contains h q
                           /\ ~ loop_contains h p
                           /\ sp ∈ loop_splits h e.
-                          (*/\ sp ∈ splits' h e. <--- deprecated *)
+                          (* sp ∈ splits' h e. <--- deprecated *)
 
   Parameter splits_spec
     : forall `{redCFG} p sp, sp ∈ splits p

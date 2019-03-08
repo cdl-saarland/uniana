@@ -283,8 +283,8 @@ Module NeList.
       + unfold rcons. rewrite app_assoc. econstructor. eauto.
   Qed.
 
-  Lemma cons_postfix {A : Type} a (l l': list A) :
-    Postfix (a :: l) (a :: l') -> Postfix l l'.
+  Lemma cons_postfix {A : Type} a b (l l': list A) :
+    Postfix (a :: l) (b :: l') -> Postfix l l'.
   Proof.
     intros post. apply postfix_eq. apply postfix_eq in post as [l1' leq].
     exists l1'. inversion leq. reflexivity.
