@@ -443,7 +443,7 @@ Module NeList.
     - apply incl_appl; eauto.
   Qed.
 
-  Lemma postfix_hd_eq {A : Type} (a b : A) l l' :
+  Lemma postfix_hd_eq (A : Type) (a b : A) l l' :
     Postfix (a :: l) (b :: l') -> a = b.
   Proof.
     intro post. eapply postfix_eq in post as [l2' pst].
