@@ -28,10 +28,10 @@ Module Uniana.
 
   Parameter branch_spec :
     forall p, match branch p with
-         | Some x => exists q q' s r r', q <> q'
-                                   /\ if val_true (s x)
-                                     then eff' (p,s) = Some (q, r)
-                                     else eff' (p,s) = Some (q',r')                                
+         | Some x => exists q q', q <> q' /\ forall s,
+                        if val_true (s x)
+                        then exists r, eff' (p,s) = Some (q, r)
+                        else exists r', eff' (p,s) = Some (q',r')                                
          | None => forall q q', p --> q -> p --> q' -> q = q'
          end.
 
@@ -193,18 +193,82 @@ Module Uniana.
     eapply path_back in Htr as Hback. cbn in Hback. unfold Coord in *. rewrite Hback;eauto.
   Qed.
 
+  
+  Ltac copy H Q :=
+    eapply id in H as Q.
 
-  Lemma uni_branch_uni_succ p br q1 q2 qq qq' i k j1 j2 uni l1 l2
-        (Hpath1 : TPath' ((p,i) :< map fst l1))
-        (Hpath2 : TPath' ((p,i) :< map fst l2))
+  
+  Ltac eapply2 H H1 H2 :=
+    eapply H in H2; only 1: eapply H in H1.
+  
+  Ltac eapply2' H H1 H2 Q1 Q2 :=
+    eapply H in H2 as Q2; only 1: eapply H in H1 as Q1.
+
+
+  Ltac subst' :=
+    repeat
+      match goal with
+      | [H:(_,_) = (_,_) |- _] => inversion H; subst; clear H
+      | [H: _ = _ /\ _ = _ |- _]=> destruct H; subst
+      end.
+
+  Lemma tr_lift_succ l q q' j j'
+        (Hpath : Tr l)
+        (Hsucc : map fst l ⊢ (q',j') ≻ (q,j))
+    : exists r r', l ⊢ (q',j',r') ≻ (q,j,r).
+  Proof.
+    unfold succ_in in *. destructH.
+  Admitted.
+  
+  Lemma in_succ_in2 (A : Type) (a b c : A) l
+        (Hsucc : c :: l ⊢ a ≻ b)
+    : b ∈ l.
+  Proof.
+    unfold succ_in in Hsucc. destructH. 
+    destruct l2;cbn in *; inversion Hsucc;subst; [|eapply in_or_app]; firstorder.
+  Qed.
+  
+  Lemma tr_succ_eff' p q q' br i j k s r r' r0 l
+        (Htr : Tr ((p, i, s) :< l))
+        (Hsucc : (p, i, s) :< l ⊢ (q, j, r) ≻ (br, k, r0))
+        (Heff : eff' (br,r0) = Some (q',r'))
+    : q = q'.
+  Admitted.
+  
+  Lemma uni_branch_uni_succ p br q1 q2 qq qq' i k j1 j2 s1 s2 uni l1 l2 
+        (Hpath1 : Tr ((p,i,s1) :< l1))
+        (Hpath2 : Tr ((p,i,s2) :< l2))
         (Hsucc1 : ((p,i) :: map fst l1) ⊢ (q1,j1) ≻ (br,k))
         (Hsucc2 : ((p,i) :: map fst l2) ⊢ (q2,j2) ≻ (br,k))
         (Hunibr : uni_branch uni (br, qq, qq') = true)
         (HCuni : forall (x : Var) (p : Lab) (i : Tag) (s s' : State),
             (p, i, s) ∈ l1 -> (p, i, s') ∈ l2 -> uni p x = true -> s x = s' x)
     : q1 = q2.
-  Admitted.
-
+  Proof.
+    unfold uni_branch in Hunibr. cbn in Hunibr.
+    specialize (branch_spec br) as Hbr.
+    destruct (branch br) eqn:E; [|congruence]. destructH.
+    replace ((p,i) :: map fst l1) with (map fst ((p,i,s1) :: l1)) in Hsucc1 by (cbn;eauto).
+    replace ((p,i) :: map fst l2) with (map fst ((p,i,s2) :: l2)) in Hsucc2 by (cbn;eauto).
+    rewrite nlcons_to_list in Hsucc1, Hsucc2.
+    eapply2 tr_lift_succ Hsucc1 Hsucc2;eauto. do 2 destructH.
+    specialize (HCuni v br k r0 r).
+    exploit HCuni.
+    1,2: eapply in_succ_in2;simpl_nl' Hsucc1; simpl_nl' Hsucc2;eauto.
+    specialize (Hbr1 r0) as Hbr1'.
+    specialize (Hbr1 r). 
+    destruct (val_true (r0 v)) eqn:Heq1, (val_true (r v)) eqn:Heq2.
+    2,3: rewrite HCuni in Heq1; congruence.
+    all:do 2 destructH.
+    - enough (q1 = q /\ q2 = q) by (subst';eauto).
+      split.
+      eapply tr_succ_eff' with (s:=s1) (q':=q);eauto.
+      eapply tr_succ_eff' with (s:=s2) (q':=q);eauto.
+    - enough (q1 = q' /\ q2 = q') by (subst';eauto).
+      split.
+      eapply tr_succ_eff' with (s:=s1) (q':=q');eauto.
+      eapply tr_succ_eff' with (s:=s2) (q':=q');eauto.
+  Qed.
   
   Lemma succ_in_rcons2 {A : Type} (a b : A) l
     : l :r: a :r: b ⊢ a ≻ b.
@@ -236,10 +300,30 @@ Module Uniana.
     - unfold succ_in in Hsucc. destructH. unfold succ_in. exists l1, (a0 :: l2).  cbn.
       rewrite Hsucc. reflexivity.
   Qed.
+  
+  Lemma eff_tcfg p q i j s r
+        (Heff : eff (p,i,s) = Some (q,j,r))
+    : tcfg_edge (p,i) (q,j) = true.
+  Proof.
+    eapply eff_eff_tag in Heff as Heff'. unfold tcfg_edge, tcfg_edge'.
+    eapply step_conf_implies_edge in Heff. conv_bool; firstorder.
+  Qed.
+  
+  Lemma tr_tpath' (l : list Conf) c
+        (Htr : Tr (c :< l))
+    : TPath' ((fst c) :< map fst l).
+  Proof.
+    revert dependent c.
+    induction l; intros c Htr; inversion Htr; cbn; [econstructor|]. unfold TPath'. cbn.
+    econstructor. eapply IHl;eauto.
 
-  Lemma uni_branch_uni_succ' p br q1 q2 qq qq' i k j1 j2 uni l1 l2
-        (Hpath1 : TPath' ((p,i) :< map fst l1))
-        (Hpath2 : TPath' ((p,i) :< map fst l2))
+    simpl_nl' H2. destruct a as [[p i] s]. destruct c as [[q j] r]. cbn. simpl_nl.
+    eapply eff_tcfg;eauto.
+  Qed.
+  
+  Lemma uni_branch_uni_succ' p br q1 q2 qq qq' i k j1 j2 uni l1 l2 s1 s2
+        (Hpath1 : Tr ((p,i,s1) :< l1))
+        (Hpath2 : Tr ((p,i,s2) :< l2))
         (Hsucc1 : ((p,i) :: map fst l1) ⊢ (q1,j1) ≻ (br,k))
         (Hsucc2 : ((p,i) :: map fst l2) ⊢ (q2,j2) ≻ (br,k))
         (Hunibr : uni_branch uni (br, qq, qq') = true)
@@ -249,21 +333,12 @@ Module Uniana.
   Proof.
     assert (q1 = q2) by (eapply uni_branch_uni_succ with (q1:=q1) (l1:=l1) ;eauto).
     split;[eauto|subst].
+    eapply2 tr_tpath' Hpath1 Hpath2.
     eapply eff_tag_det.
     2: eapply succ_in_tpath_eff_tag;clear Hpath1;eauto;cbn;simpl_nl;
       eauto using succ_in_cons_cons.
     eapply succ_in_tpath_eff_tag;clear Hpath2 Hsucc2;eauto;cbn;simpl_nl;eauto.
   Qed.
-
-  Ltac copy H Q :=
-    eapply id in H as Q.
-
-  
-  Ltac eapply2 H H1 H2 :=
-    eapply H in H2; only 1: eapply H in H1.
-  
-  Ltac eapply2' H H1 H2 Q1 Q2 :=
-    eapply H in H2 as Q2; only 1: eapply H in H1 as Q1.
 
   Lemma last_common_singleton1 {A : Type} `{EqDec A eq} (s a : A) l
         (Hlc : last_common (a :: nil) l s)
@@ -271,6 +346,7 @@ Module Uniana.
   Proof.
     unfold last_common in Hlc. destructH. eapply postfix_rcons_nil_eq in Hlc0. firstorder.
   Qed.
+  
   Lemma last_common_singleton2 {A : Type} `{EqDec A eq} (s a : A) l
         (Hlc : last_common l (a :: nil) s)
     : a = s.
@@ -290,17 +366,11 @@ Module Uniana.
     rewrite app_comm_cons. reflexivity.
   Qed.
   
-  Ltac subst' :=
-    repeat
-      match goal with
-      | [H:(_,_) = (_,_) |- _] => inversion H; subst; clear H
-      | [H: _ = _ /\ _ = _ |- _]=> destruct H; subst
-      end.
 
 
-  Lemma uni_branch_succ_p p q br qq qq' i j k r r' l1 l2 l2' uni
-        (Htr1 : TPath' ((p, i) :<: (q, j) :< map fst l1))
-        (Htr2 : TPath' ((p, i) :<: (br, k) :< map fst l2))
+  Lemma uni_branch_succ_p p q br qq qq' i j k s1 s2 r r' l1 l2 l2' uni
+        (Htr1 : Tr ((p, i,s1) :<: (q, j,r) :< l1))
+        (Htr2 : Tr ((p, i,s2) :<: (br, k,r') :< l2))
         (Hsplit : uni_branch uni (br, qq, qq') = true)
         (HCuni : forall (x : Var) (p : Lab) (i : Tag) (s s' : State),
             (p, i, s) ∈ ((q, j, r) :: l1) ->
@@ -320,6 +390,7 @@ Module Uniana.
     } 
     eapply uni_branch_uni_succ' with (q1:=l) (q2:=p) (j1:=t) (j2:=i) in HCuni;cbn;eauto.
     * subst'.
+      eapply2 tr_tpath Htr1 Htr2;eauto.
       eapply tpath_NoDup in Htr1.
       inversion  Htr1. eapply H1. simpl_nl. eapply postfix_incl;eauto. fold (rcons l2' (br,k)).
       eapply In_rcons. right.
@@ -329,9 +400,9 @@ Module Uniana.
   Qed.
   
   
-  Lemma uni_branch_non_disj p i br k l1 l2 l1' l2' qq qq' uni
-        (Hpath1 : TPath' ((p,i) :< map fst l1))
-        (Hpath2 : TPath' ((p,i) :< map fst l2))
+  Lemma uni_branch_non_disj p i br k s1 s2 l1 l2 l1' l2' qq qq' uni
+        (Hpath1 : Tr ((p,i,s1) :< l1))
+        (Hpath2 : Tr ((p,i,s2) :< l2))
         (Hpost1 : Postfix (l1' :>: (br, k)) (map fst l1))
         (Hpost2 : Postfix (l2' :>: (br, k)) (map fst l2))
         (Hdisj : Disjoint l1' l2')
@@ -348,10 +419,11 @@ Module Uniana.
     - destruct (ne_back l1') as [q1 j1] eqn:Heq1.
       destruct (ne_back l2') as [q2 j2] eqn:Heq2.
       eapply uni_branch_uni_succ' with (q1:=q1) (q2:=q2) (j1:=j1) (j2:=j2) (l1:=l1) in Hsplit;eauto.
-      + subst'. reflexivity.
-      + admit.
-      + admit.
-  Admitted.            
+      1: subst';reflexivity.
+      1,2: eapply succ_cons; eapply postfix_succ_in;eauto;
+        eapply ne_back_E_rcons in Heq1; eapply ne_back_E_rcons in Heq2; destructH; destructH;
+          simpl_nl; only 1: rewrite <- Heq1; only 2: rewrite <- Heq2; eapply succ_in_rcons2.
+  Qed.
     
   Lemma ne_list_nlcons (A : Type) (l : ne_list A)
     : exists a l', l = a :< l'.
@@ -403,19 +475,18 @@ Module Uniana.
       destruct l1',l2'.
       + cbn in *. eapply2 postfix_hd_eq Hlc0 Hlc2.
         subst'. congruence.
-      + eapply2 tr_tpath Htr1 Htr2. cbn in Hlc0.
+      + cbn in Hlc0.
         destruct p0.
         eapply2' postfix_hd_eq Hlc0 Hlc2 Hlc0' Hlc2'. symmetry in Hlc0'. subst'.
         clear Hlc0 Hlc1 Hlc3 Hlc5.
         eapply uni_branch_succ_p with (j:=j2);eauto. intros;symmetry;eapply HCuni;eauto.
-      + eapply2 tr_tpath Htr1 Htr2. cbn in Hlc2.
+      + cbn in Hlc2.
         destruct p0. 
         eapply2' postfix_hd_eq Hlc0 Hlc2 Hlc0' Hlc2'. subst'.
         clear Hlc2 Hlc1 Hlc3 Hlc5.
         eapply uni_branch_succ_p with (j:=j1);eauto. 
-      + eapply (uni_branch_non_disj p i br k ((q,j1,r1)::l1) ((q,j2,r2)::l2) (p0:<l1') (p1:<l2'));
+      + eapply (uni_branch_non_disj p i br k _ _ ((q,j1,r1)::l1) ((q,j2,r2)::l2) (p0:<l1') (p1:<l2'));
           cbn;simpl_nl;eauto.
-        1,2: eapply tr_tpath;eauto.
   Qed.
   
   Lemma unch_dom u p x unch (* TODO: this will need a unch_concr assumption *)
@@ -1191,7 +1262,7 @@ a        (Htr : TPath (root,start_tag) (p,i) ((p,i) :< t))
         subst'. congruence.
       + (* since (br,k) = (q1,j1) & uniform, we have that (p,i) succeeds (br,k) thus
          (p,i) ∈ l2, thus double occurence of the same instance in t2 --> contradiction *)
-        eapply2 tr_tpath Htr1 Htr2. cbn in LC_lt0.
+        cbn in LC_lt0.
         destruct p0.
         eapply2' postfix_hd_eq LC_lt0 LC_lt2 LC_lt0' LC_lt2'. symmetry in LC_lt0'. subst'.
         clear LC_lt0 LC_lt1 LC_lt3 LC_lt5.
@@ -1199,16 +1270,16 @@ a        (Htr : TPath (root,start_tag) (p,i) ((p,i) :< t))
         intros;symmetry;eapply HCuni;eauto.
       + (* since (br,k) = (q2,j2) & uniform, we have that (p,i) succeeds (br,k) thus
          (p,i) ∈ l1, thus double occurence of the same instance in t1 --> contradiction *)
-        eapply2 tr_tpath Htr1 Htr2. cbn in LC_lt0.
+        cbn in LC_lt0.
         destruct p0.
         eapply2' postfix_hd_eq LC_lt0 LC_lt2 LC_lt0' LC_lt2'. symmetry in LC_lt2'. subst'.
         clear LC_lt2 LC_lt1 LC_lt3 LC_lt5.
-        eapply (uni_branch_succ_p p q1 br qq qq' i j1 k r1 r2);eauto.
+        eapply (uni_branch_succ_p p q1 br qq qq' i j1 k s1 s2 r1 r2);eauto.
       + (* successor of br is the same because of uniformity and in l1' & l2', 
            thus l1' & l2' are not disjoint --> contradiction *)
-        eapply (uni_branch_non_disj p i br k ((q1,j1,r1)::l1) ((q2,j2,r2)::l2) (p0:<l1') (p1:<l2'));
+        eapply (uni_branch_non_disj p i br k _ _ ((q1,j1,r1)::l1)
+                                    ((q2,j2,r2)::l2) (p0:<l1') (p1:<l2'));
           cbn;simpl_nl;eauto.
-        1,2: eapply tr_tpath;eauto.
   - eapply tr_tpath;eauto. 
   - eapply tr_tpath;eauto.
   Qed.
