@@ -68,6 +68,12 @@ Module Disjoint.
                                       /\ (sp ∈ splits' br q
                                          \/ sp ∈ splits' br q').
 
+  Arguments loop_splits : default implicits.
+  Lemma loop_splits_impl_invariant q p x `(C : redCFG)
+        (Hin : x ∈ loop_splits C (get_innermost_loop q) p)
+    : x ∈ loop_splits (local_impl_CFG C (get_innermost_loop q)) (get_innermost_loop q) p.
+  Admitted.
+  Arguments loop_splits {_ _ _ _ _}.
 
   Lemma lc_join_path_split_help1 (L : Type) (edge : L -> L -> bool) (x y : L) (l : list L)
     : @Path L edge x y (y :<: l >: x)

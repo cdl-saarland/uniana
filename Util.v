@@ -244,3 +244,30 @@ Qed.
     | [H : exists x, ?P |- _ ] => let x0 := fresh x in
                            destruct H as [x0 H]; destructH' H
     end.
+
+  
+  Definition concat {A B C : Type} (f : B -> C) (g : A -> B) := fun a => f (g a).
+  
+  Infix "∘" := Basics.compose (at level 70).
+
+  
+  Ltac copy H Q :=
+    eapply id in H as Q.
+
+  
+  Ltac eapply2 H H1 H2 :=
+    eapply H in H2; only 1: eapply H in H1.
+  
+  Ltac eapply2' H H1 H2 Q1 Q2 :=
+    eapply H in H2 as Q2; only 1: eapply H in H1 as Q1.
+
+
+  Ltac subst' :=
+    repeat
+      match goal with
+      | [H:(_,_) = (_,_) |- _] => inversion H; subst; clear H
+      | [H: _ = _ /\ _ = _ |- _]=> destruct H; subst
+      end.
+
+
+  (* TODO: tidy up this file *)

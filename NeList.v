@@ -1100,5 +1100,45 @@ Module NeList.
     else lazymatch type of Y with
            context [_ :r: _] => rewrite rcons_nl_rcons in Y
          end; eapply X in Y.
+  
+  Lemma in_succ_in2 (A : Type) (a b c : A) l
+        (Hsucc : c :: l ⊢ a ≻ b)
+    : b ∈ l.
+  Proof.
+    unfold succ_in in Hsucc. destructH. 
+    destruct l2;cbn in *; inversion Hsucc;subst; [|eapply in_or_app]; firstorder.
+  Qed.
+
+  Lemma last_common_singleton1 {A : Type} `{EqDec A eq} (s a : A) l
+        (Hlc : last_common (a :: nil) l s)
+    : a = s.
+  Proof.
+    unfold last_common in Hlc. destructH. eapply postfix_rcons_nil_eq in Hlc0. firstorder.
+  Qed.
+  
+  Lemma last_common_singleton2 {A : Type} `{EqDec A eq} (s a : A) l
+        (Hlc : last_common l (a :: nil) s)
+    : a = s.
+  Proof.
+    unfold last_common in Hlc. destructH. eapply postfix_rcons_nil_eq in Hlc2. firstorder.
+  Qed.
+  
+  Lemma postfix_succ_in {A : Type} (a b : A) l l'
+        (Hpost : Postfix l l')
+        (Hsucc : l ⊢ a ≻ b)
+    : l' ⊢ a ≻ b.
+  Proof.
+    induction Hpost;eauto.
+    eapply IHHpost in Hsucc.
+    unfold succ_in in Hsucc. destructH. exists (l1 :r: a0), l2. rewrite Hsucc.
+    rewrite <-cons_rcons_assoc. unfold rcons. rewrite <-app_assoc.
+    rewrite app_comm_cons. reflexivity.
+  Qed.
+  
+  Lemma ne_list_nlcons (A : Type) (l : ne_list A)
+    : exists a l', l = a :< l'.
+  Proof.
+    destruct l as [a | a l'];exists a;[exists nil|exists l'];cbn;simpl_nl;reflexivity.
+  Qed.
 
 End NeList.

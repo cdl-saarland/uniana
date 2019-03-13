@@ -538,8 +538,6 @@ Module CFG.
 
     Lemma loop_contains_dec qh q : {loop_contains qh q} + {~ loop_contains qh q}.
     Admitted.
-
-    Infix "∘" := Basics.compose (at level 40).
     
     Definition loop_contains_b qh q := to_bool (loop_contains_dec qh q).
 
@@ -791,6 +789,33 @@ Module CFG.
           eapply f_equal with (f:=ne_back) in x. simpl_nl' x. eapply path_back in Hπ. rewrite Hπ in x.
           subst a.
           eapply NoDup_nin_rcons; eauto. rewrite rcons_nl_rcons. assumption.
+    Qed.
+
+    Definition ancestor a p q :=
+      loop_contains a p /\ loop_contains a q \/ a = root .
+
+    Definition near_ancestor  a p q :=
+      ancestor a p q /\ forall a', ancestor a p q -> deq_loop a a'.
+
+    Lemma ex_near_ancestor p q
+      : exists a, near_ancestor a p q.
+      (* choose either a common head or root if there is no such head *)
+    Admitted.
+    
+    Lemma ancestor_dom1 a p q
+      : ancestor a p q -> Dom edge root a p.
+    Admitted.
+
+    Lemma ancestor_sym a p q
+      : ancestor a p q -> ancestor a q p.
+    Proof.
+      unfold ancestor;firstorder 0.
+    Qed.
+    
+    Lemma ancestor_dom2 a p q
+      : ancestor a p q -> Dom edge root a q.
+    Proof.
+      eauto using ancestor_dom1, ancestor_sym.
     Qed.
 
     Definition loop_edge h := (fun q _ : Lab => loop_contains_b h q)
