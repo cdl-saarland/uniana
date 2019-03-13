@@ -943,6 +943,12 @@ Module NeList.
   Proof.
     induction l;cbn;eauto. rewrite <-IHl. destruct l;eauto.
   Qed.
+
+  Lemma rcons_necons (A : Type) l (a : A)
+    : (ne_to_list l) :r: a = l :>: a.
+  Proof.
+    induction l;cbn;eauto. unfold rcons in IHl. rewrite IHl. reflexivity.
+  Qed.
     
   Ltac simpl_nl :=
     repeat lazymatch goal with
@@ -956,9 +962,10 @@ Module NeList.
            | [ |- context[ne_back (?l :>: ?a)]] => rewrite ne_rcons_back
            | [ |- context[(_ :< ne_to_list _)]] => rewrite <-nlcons_necons
            | [ |- context[(ne_to_list _ >: _)]] => rewrite <-nercons_nlrcons
-           | [ |- context[ne_to_list (nlcons _ _)]] => rewrite <-nlcons_to_list
-           | [ |- context[ne_to_list (nl_rcons _ _)]] => rewrite <-rcons_nl_rcons
+           | [ |- context[ne_to_list (_ :< _)]] => rewrite <-nlcons_to_list
+           | [ |- context[ne_to_list (_ >: _)]] => rewrite <-rcons_nl_rcons
            | [ |- context[ne_map ?f (_ :< _)]] => rewrite ne_map_nlcons
+           | [ |- context[ne_to_list (_ :>: _)]] => rewrite <-rcons_necons
            end.
 
   Ltac simpl_nl' H := 
@@ -976,6 +983,7 @@ Module NeList.
            | context[ne_to_list (nlcons _ _)] => rewrite <-nlcons_to_list in H
            | context[ne_to_list (nl_rcons _ _)] => rewrite <-rcons_nl_rcons in H
            | context[ne_map ?f (_ :< _)] => rewrite ne_map_nlcons in H
+           | context[ne_to_list (_ :>: _)] => rewrite <-rcons_necons in H
            end.
 
   Lemma prefix_in_list {A : Type} l (a:A) :

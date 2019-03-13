@@ -61,8 +61,7 @@ Module Disjoint.
   Parameter splits_spec
     : forall `{redCFG} p sp, sp ∈ splits p
                         <-> sp ∈ path_splits__imp p (* usual split *)
-                          \/ (exists h, let (p,_) := fst sp in
-                                  (* lsplits of exited loops: *)
+                          \/ (exists h, (* lsplits of exited loops: *)
                                   exited h p /\ sp ∈ splits' h p)
                           \/ exists br q q',(br,q,q') ∈ path_splits__imp p
                                       (* loop_split of splitting heads *)
