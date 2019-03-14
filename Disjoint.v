@@ -7,10 +7,11 @@ Require Import Nat.
 Require Import Bool.Bool.
 Require Import Coq.Logic.Eqdep_dec.
 
-Require Evaluation Util.
+Require Evaluation Util Tagged.
 
 Module Disjoint.
   Import Evaluation.Evaluation Util.
+  Export  Tagged.Tagged.
 
 
   Parameter path_splits : forall `{redCFG}, Lab -> list (Lab * Lab * Lab).

@@ -818,6 +818,19 @@ Module CFG.
       eauto using ancestor_dom1, ancestor_sym.
     Qed.
 
+    Lemma loop_cutting q p t
+          (Hpath : CPath q p t)
+          (Hnoh : forall h, loop_contains h q -> h ∉ t)
+      : exists t', Path a_edge q p t'.
+    Admitted.
+    
+    Lemma loop_cutting_elem q p π
+          (Hpath : CPath' π)
+          (Hib : π ⊢ q ≺* p)
+          (Hnoh : forall h, loop_contains h q -> ~ π ⊢ q ≺* h ≺* p)
+      : exists t', Path a_edge q p t'.
+    Admitted.
+
     Definition loop_edge h := (fun q _ : Lab => loop_contains_b h q)
                                 ∩ (fun _ q : Lab => loop_contains_b h q).
 

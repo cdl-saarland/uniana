@@ -46,9 +46,6 @@ Module Evaluation.
     Parameter Tag_dec : EqDec Tag eq.
     Parameter State_dec : EqDec State eq.
 
-    
-    Parameter start_tag : Tag.
-
     Definition States := State -> Prop.
     Definition Conf := prod Coord State.
 
@@ -177,6 +174,7 @@ Module Evaluation.
                               => apply inj_pair2_eq_dec in H0; try (apply Conf_dec); subst
                             end.
 
+
     Definition trace := {l : ne_list Conf | Tr l}.
 
     Open Scope prg.
@@ -255,21 +253,9 @@ Module Evaluation.
       eapply eff_tag_det;eapply eff_eff_tag; eauto.
     Qed.
     
-    Inductive Precedes {A B : Type} (f : A -> B) : list A -> A -> Prop :=
-    | Pr_in : forall (k : A) (l : list A), Precedes f (k :: l) k
-    | Pr_cont : forall c k l, f c <> f k -> Precedes f l k -> Precedes f (c :: l) k.
-
     Definition Precedes' (l : list Conf) (k k' : Conf) : Prop :=
       exists l', Prefix (k' :: l') l /\ Precedes lab_of (k' :: l') k.
 
-    Lemma precedes_implies_in_pred {A B : Type} k t (f : A -> B) :
-      Precedes f t k -> In k t.
-    Proof.
-      intros H.
-      dependent induction t.
-      - inv_tr H. 
-      - inv_tr H; eauto using In; cbn; eauto.
-    Qed.
 
     (*
   Lemma start_no_tgt :
@@ -317,7 +303,7 @@ Module Evaluation.
       destruct H as [l [Hpre Hprec]].
       inv_tr Hprec.
       - firstorder.
-      - eapply precedes_implies_in_pred in H5.
+      - eapply precedes_in in H5.
         rewrite <-nlcons_to_list in Hpre. eapply prefix_cons_cons in Hpre.      
         eapply in_prefix_in; eauto.
     Qed.
@@ -658,23 +644,6 @@ Module Evaluation.
     Proof.
     Admitted.
 
-    
-    Lemma succ_in_cons_cons {A : Type} (a b : A) l
-      : a :: b :: l ⊢ a ≻ b.
-    Proof.
-      exists l, nil. cbn. reflexivity.
-    Qed.
-    
-    Lemma succ_cons {A : Type} `{EqDec A eq} (a b c : A) l
-          (Hsucc : l ⊢ b ≻ c)
-      : a :: l ⊢ b ≻ c.
-    Proof.
-      revert a;destruct l;intros a0.
-      - unfold succ_in in *;cbn in *;eauto. destructH. destruct l2;cbn in *;congruence.
-      - unfold succ_in in Hsucc. destructH. unfold succ_in. exists l1, (a0 :: l2).  cbn.
-        rewrite Hsucc. reflexivity.
-    Qed.
-    
     Lemma eff_tcfg p q i j s r
           (Heff : eff (p,i,s) = Some (q,j,r))
       : tcfg_edge (p,i) (q,j) = true.
@@ -704,47 +673,6 @@ Module Evaluation.
       - econstructor;eauto.
         destruct a as [[a1 a2] a]; cbn in *;eauto.
     Qed.
-
-    Lemma prec_tpath_pre_tpath p i q j l
-          (Hneq : p <> q)
-          (Htr : TPath (root,start_tag) (p,i) ((p, i) :< l))
-          (Hprec : Precedes fst l (q, j))
-      : exists l', TPath (root,start_tag) (q,j) ((q,j) :< l') /\ Prefix ((q,j) :: l') ((p,i) :: l).
-    Proof.
-      eapply path_to_elem with (r:= (q,j)) in Htr.
-      - destructH. exists (tl ϕ).
-        assert (ϕ = (q,j) :< tl ϕ) as ϕeq.
-        { inversion Htr0;subst;cbn;simpl_nl;eauto. }
-        split;eauto.
-        + rewrite ϕeq in Htr0;eauto.        
-        + rewrite ϕeq in Htr1;simpl_nl' Htr1;eauto.
-      - eapply precedes_implies_in_pred. simpl_nl. econstructor;eauto;cbn;eauto.
-    Qed.
-    
-    Lemma prec_tpath_tpath p i q j l
-          (Htr : TPath (root,start_tag) (p,i) ((p, i) :< l))
-          (Hprec : Precedes fst ((p,i) :: l) (q, j))
-      : exists l', TPath (root,start_tag) (q,j) ((q,j) :< l').
-    Proof.
-      inversion Hprec;subst.
-      - firstorder.
-      - eapply prec_tpath_pre_tpath in Htr;eauto. destructH. eauto.
-    Qed.
-    
-    Lemma tpath_tag_len_eq p j1 j2 l1 l2
-          (Hpath1 : TPath (root, start_tag) (p, j1) l1)
-          (Hpath2 : TPath (root, start_tag) (p, j2) l2)
-      : length j1 = length j2.
-    Admitted.
-    
-    Lemma tpath_tag_len_eq_elem p q i1 i2 j1 j2 l1 l2
-          (Hpath1 : TPath (root, start_tag) (p, i1) l1)
-          (Hpath2 : TPath (root, start_tag) (p, i2) l2)
-          (Hin1 : (q,j1) ∈ l1)
-          (Hin2 : (q,j2) ∈ l2)
-      : length j1 = length j2.
-    Admitted.
-
 
   End eval.
   

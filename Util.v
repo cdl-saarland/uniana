@@ -3,6 +3,8 @@ Require Import List.
 Require Import Coq.Bool.Bool.
 Require Import Coq.Classes.EquivDec.
 Require Import Coq.Program.Utils.
+Require Import Coq.Classes.EquivDec.
+
 
 Lemma list_emp_in : forall {A: Type} l, (forall (a: A), ~ List.In a l) -> l = nil.
 Proof.
@@ -268,6 +270,5 @@ Qed.
       | [H:(_,_) = (_,_) |- _] => inversion H; subst; clear H
       | [H: _ = _ /\ _ = _ |- _]=> destruct H; subst
       end.
-
-
+  
   (* TODO: tidy up this file *)

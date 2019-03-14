@@ -780,6 +780,13 @@ Module NeList.
                    }
                    prove_last_common.
   Qed.
+    
+  Lemma last_common_sym {A : Type} `{EqDec A eq} (l l' : list A) a
+        (Hlc : last_common l l' a)
+    : last_common l' l a.
+  Proof.
+    unfold last_common in *; firstorder.
+  Qed.
 
   Fixpoint nlcons {A : Type} (a : A) l :=
     match l with
@@ -891,17 +898,12 @@ Module NeList.
       Unset Printing Coercions.
   Qed.
 
-  (*
-  Lemma postfix_ex_unmapped_postfix {A B : Type} l l' (a:A) :
-    inhabited B
-    -> Postfix (l :r: a) l'
-    -> exists l0 l0' (b:B), Postfix (l0 :r: (a,b)) l0' /\ l = map fst l0 /\ l' = map fst l0'.
-
-  Lemma postfix_ex_unmapped_postfix' {A B : Type} l l' (a:A) :
-    inhabited B
-    -> Postfix (l :r: a) (ne_map fst l')
-    -> exists l0 (b:B), Postfix (l0 :r: (a,b)) l' /\ l = map fst l0.
-   *)
+  Lemma incl_cons_hd (A : Type) (a : A) l l'
+        (Hincl : (a :: l) ⊆ l')
+    : a ∈ l'.
+  Proof.
+    induction l;cbn in *;unfold incl in Hincl;eauto;firstorder.
+  Qed.
 
   Lemma ne_map_in {A B : Type} (f:A->B) a (l:ne_list A) :
     In a l -> In (f a) (ne_map f l).
@@ -1140,5 +1142,53 @@ Module NeList.
   Proof.
     destruct l as [a | a l'];exists a;[exists nil|exists l'];cbn;simpl_nl;reflexivity.
   Qed.
+
+      
+  Lemma succ_in_cons_cons {A : Type} (a b : A) l
+    : a :: b :: l ⊢ a ≻ b.
+  Proof.
+    exists l, nil. cbn. reflexivity.
+  Qed.
+  
+  Lemma succ_cons {A : Type} `{EqDec A eq} (a b c : A) l
+        (Hsucc : l ⊢ b ≻ c)
+    : a :: l ⊢ b ≻ c.
+  Proof.
+    revert a;destruct l;intros a0.
+    - unfold succ_in in *;cbn in *;eauto. destructH. destruct l2;cbn in *;congruence.
+    - unfold succ_in in Hsucc. destructH. unfold succ_in. exists l1, (a0 :: l2).  cbn.
+      rewrite Hsucc. reflexivity.
+  Qed.
+
+  Inductive Precedes {A B : Type} (f : A -> B) : list A -> A -> Prop :=
+  | Pr_in : forall (k : A) (l : list A), Precedes f (k :: l) k
+  | Pr_cont : forall c k l, f c <> f k -> Precedes f l k -> Precedes f (c :: l) k.
+
+  Lemma precedes_in {A B : Type} k t (f : A -> B) :
+    Precedes f t k -> In k t.
+  Proof.
+    intros H.
+    dependent induction t.
+    - inversion H. 
+    - inversion H; eauto using In; cbn; eauto.
+  Qed.
+  
+  Lemma prefix_length_eq {A : Type} (l1 l2 l : list A)
+        (Hlen : length l1 = length l2)
+        (Hpre1 : Prefix l1 l)
+        (Hpre2 : Prefix l2 l)
+    : l1 = l2.
+  Admitted.
+
+  Lemma first_diff {A : Type} (l1 l2 : list A)
+        (Hneq : l1 <> l2)
+        (Hnnil1 : l1 <> nil)
+        (Hnnil2 : l2 <> nil)
+    : exists a1 a2 l' l1' l2', a1 <> a2 /\ l1 = l1' ++ a1 :: l' /\ l2 = l2' ++ a2 :: l'.
+  Proof.
+  Admitted.
+
+  (* TODO : tidy up this file *)
+  
 
 End NeList.
