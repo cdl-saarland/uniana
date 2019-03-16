@@ -529,6 +529,15 @@ Module CFG.
     Context `{C : redCFG}.
 
     Definition CPath' π := CPath (ne_back π) (ne_front π) π.
+
+    Lemma cpath_cpath' r p t
+          (Hpath : CPath r p t)
+      : CPath' t.
+    Proof.
+      unfold CPath'. eapply path_back in Hpath as Hback.
+      eapply path_front in Hpath as Hfront.
+      rewrite Hfront,Hback. assumption.
+    Qed.
     
     Lemma loop_head_dec p : decidableT (loop_head p).
     Admitted.
@@ -1215,6 +1224,7 @@ Module TCFG.
   Qed.            
   
   Definition TPath' `{redCFG} π := TPath (ne_back π) (ne_front π) π.
+
   
   Parameter eff_tag_fresh : forall `{redCFG} p q q0 i j j0 l,
       TPath (q0,j0) (q,j) l -> eff_tag q p j = i -> forall i', In (p, i') l -> i' <> i.

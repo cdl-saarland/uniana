@@ -7,12 +7,12 @@ Require Import Nat.
 Require Import Bool.Bool.
 Require Import Coq.Logic.Eqdep_dec.
 
-Require Graph NeList.
+Require Graph NeList Tagged.
 Require Import Util.
 
 Module Evaluation.
 
-  Export Graph.TCFG Graph.CFG.
+  Export Graph.TCFG Graph.CFG Tagged.Tagged.
 
   Section eval.
 
@@ -572,7 +572,18 @@ Module Evaluation.
     Definition Tr' (l : ne_list Conf) :=
       exists l', Tr l' /\ Postfix l l'.
     
+
     Definition EPath' π := EPath (ne_back π) (ne_front π) π.
+
+    Lemma epath_epath' r i0 s0 p i s t
+          (Hpath : EPath (r,i0,s0) (p,i,s) t)
+      : EPath' t.
+    Proof.
+      unfold EPath'. eapply path_back in Hpath as Hback.
+      eapply path_front in Hpath as Hfront.
+      rewrite Hfront,Hback. assumption.
+    Qed.
+
     
     Lemma ne_back_trace t :
       Tr t -> exists s, ne_back t = (root,start_tag,s).
@@ -675,5 +686,41 @@ Module Evaluation.
     Qed.
 
   End eval.
+      
+  Ltac spot_path_e :=
+    let H := fresh "H" in
+    let Q := fresh "Q" in
+    let p := fresh "p" in
+    let i := fresh "i" in
+    let s := fresh "s" in
+    lazymatch goal with 
+    | [ H : Tr ?t |- _ ] => destruct (ne_front t) as [[p i] s] eqn:Q;
+                          eapply Tr_EPath in H;[clear Q|apply Q]; destructH' H; cbn_nl' H
+    end.
+
+  Ltac spot_path_t :=
+    try spot_path_e;
+    lazymatch goal with
+    | [ H : EPath _ _ _ |- _ ] => eapply EPath_TPath in H; cbn_nl' H
+    end.
+
+  Ltac spot_path_c :=
+    try spot_path_t;
+    lazymatch goal with
+      [ H : TPath _ _ _ |- _ ] => eapply TPath_CPath in H; cbn_nl' H
+    end.
+  
+  Ltac spot_path :=
+    lazymatch goal with
+    | [ H : CPath' _ |- _ ] => unfold CPath' in H;spot_path
+    | [ H : TPath' _ |- _ ] => unfold TPath' in H;spot_path
+    | [ H : EPath' _ |- _ ] => unfold EPath' in H;spot_path
+    | [ |- CPath' _ ] => repeat spot_path_c; eapply cpath_cpath';eauto
+    | [ |- TPath' _ ] => repeat spot_path_t; eapply tpath_tpath';eauto
+    | [ |- EPath' _ ] => repeat spot_path_e; eapply epath_epath';eauto
+    | [ |- CPath _ _ _ ] => repeat (spot_path_c;eauto)
+    | [ |- TPath _ _ _ ] => repeat (spot_path_t;eauto)
+    | [ |- EPath _ _ _ ] => repeat (spot_path_e;eauto)
+    end.
   
 End Evaluation.

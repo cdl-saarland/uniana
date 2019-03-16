@@ -18,8 +18,8 @@ Module Uniana.
 
   Section uniana.
 
-    Context `(C : redCFG).
-
+    Context `(C : redCFG).    
+        
     (** definitions **)
     Parameter branch: Lab -> option Var.
 
@@ -156,11 +156,10 @@ Module Uniana.
     Proof.
       assert (q1 = q2) by (eapply uni_branch_uni_succ with (q1:=q1) (l1:=l1) ;eauto).
       split;[eauto|subst].
-      eapply2 tr_tpath_cons1 Hpath1 Hpath2.
       eapply eff_tag_det.
-      2: eapply succ_in_tpath_eff_tag;clear Hpath1;eauto;cbn;simpl_nl;
+      2: eapply succ_in_tpath_eff_tag;[clear Hpath1;spot_path|];eauto;cbn;simpl_nl;
         eauto using succ_in_cons_cons.
-      eapply succ_in_tpath_eff_tag;clear Hpath2 Hsucc2;eauto;cbn;simpl_nl;eauto.
+      eapply succ_in_tpath_eff_tag;[spot_path|];clear Hpath2 Hsucc2;eauto;cbn;simpl_nl;eauto.
     Qed.
     
     Lemma uni_branch_succ_p p q br i j k s1 s2 r r' l1 l2 l2' uni
@@ -244,8 +243,8 @@ Module Uniana.
       eapply (tag_eq_loop_exit p q i) in c. 2,3: eapply Htcfg;eauto. clear Htcfg.
       eapply tr_lc_lt with (j3:=j1) (j4:=j2) in Htr1 as Hlc;eauto;destructH' Hlc.
       eapply lc_disj_exit_lsplits in c as Hsplits;eauto; cycle 1.
-      - eapply tr_tpath_cons2;eauto. 
-      - eapply tr_tpath_cons2;eauto.
+      - spot_path. 
+      - spot_path.
       - destructH.
         eapply join_andb_true_iff in Hsplit;eauto;cycle 1.
         {
@@ -272,6 +271,7 @@ Module Uniana.
                                       ((q,j1,r1)::l1) ((q,j2,r2)::l2) (p0:<l1') (p1:<l2'));
             cbn;simpl_nl;eauto.
     Qed.
+
     
     Lemma unch_dom u p x unch (* TODO: this will need a unch_concr assumption *)
           (Hunch : u ∈ unch_trans unch p x)
@@ -285,6 +285,9 @@ Module Uniana.
 
     Hint Resolve tpath_tpath'.
     Hint Resolve precedes_in.
+
+
+
     
     Lemma find_divergent_branch u p l1 l2 i j1 j2 
           (Hunch : Dom edge root u p)
@@ -411,10 +414,7 @@ Module Uniana.
           1,2: unfold exited;eauto.
           * assert (deq_loop u e1) as Hdeq by admit.
             eapply loop_cutting_elem.
-            -- eapply TPath_CPath in Htr1. unfold CPath'. cbn in Htr1.
-               instantiate (1:=ne_map fst ((p, i) :< l1)). simpl_nl. cbn. simpl_nl' Htr1.
-               replace (ne_back (p:< map fst l1)) with root; eauto.
-               eapply path_back in Htr1. rewrite <-Htr1. cbn. reflexivity.
+            -- spot_path.
             -- admit. (* consequence from some succ & in_before propositions *)
             -- intros h0 Hloop0. eapply Hdeq in Hloop0. eapply exit_cascade in Hunch;eauto.
                ++ contradict Hunch. admit. (* possibly I have to switch to tpath bc they are NoDup *)
@@ -426,10 +426,7 @@ Module Uniana.
                      --- cbn. econstructor.
                      --- econstructor;[cbn;eauto|]. eapply IHl1.
                          inversion H3;subst;[congruence|eauto].
-               ++ eapply TPath_CPath in Htr1. unfold CPath'. cbn in Htr1.
-                  simpl_nl. cbn. simpl_nl' Htr1.
-                  replace (ne_back (p:< map fst l1)) with root; eauto.
-                  eapply path_back in Htr1. rewrite <-Htr1. cbn. reflexivity.               
+               ++ spot_path.
           * (* something with ancestors *) admit.
         + exists e2. split_conj;eauto.
           1,2: unfold exited;eauto.
@@ -522,10 +519,11 @@ Module Uniana.
           eapply (uni_branch_non_disj p i br k _ _ ((q1,j1,r1)::l1)
                                       ((q2,j2,r2)::l2) (p0:<l1') (p1:<l2'));
             cbn;simpl_nl;eauto.
-      - eapply tr_tpath_cons2;eauto. 
-      - eapply tr_tpath_cons2;eauto.
+      - spot_path. 
+      - spot_path. 
     Qed.
 
+    
     Ltac reduce_uni_concr HCuni Hpre1 Hpre2 :=
       clear - HCuni Hpre1 Hpre2; eapply2 prefix_incl Hpre1 Hpre2; intros; eapply HCuni;eauto.
     
@@ -653,3 +651,5 @@ Module Uniana.
   End uniana.
 
 End Uniana.
+
+       
