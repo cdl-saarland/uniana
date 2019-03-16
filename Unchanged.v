@@ -3,15 +3,13 @@ Require Import Coq.Program.Utils.
 Require Import Lists.ListSet.
 Require Import List.
 
-Require Util Evaluation.
+Require Export Evaluation.
 
-Module Unchanged.
-  Import Evaluation.Evaluation Util.
-  Open Scope prg.
+Open Scope prg.
 
-  Section unch.
+Section unch.
   Context `{C : redCFG}.
-    
+  
   Variable root_no_pred' : forall p, p --> root -> False.
 
   Definition Unch := Lab -> Var -> set Lab.
@@ -19,10 +17,10 @@ Module Unchanged.
 
   Definition unch_concr (unch : Unch) : Traces :=
     fun t => forall to i s u x, In (to, i, s) (`t) ->
-                              set_In u (unch to x) ->
-                              exists j r, Precedes' (`t) (u, j, r) (to, i, s) /\
-                                     r x = s x.
-                           
+                        set_In u (unch to x) ->
+                        exists j r, Precedes' (`t) (u, j, r) (to, i, s) /\
+                               r x = s x.
+  
   Definition unch_join_ptw (d d' : set Lab) := set_inter Lab_dec' d d'. 
 
   Definition unch_join (u u' : Unch) : Unch :=
@@ -33,9 +31,9 @@ Module Unchanged.
 
   Definition unch_trans_ptw (unch : Unch) l x : set Lab :=
     if Lab_dec' l root then set_add Lab_dec' root (empty_set Lab) else
-    let t := fun q => unch_trans_local unch q l x in
-    fold_right (set_inter Lab_dec') all_lab (map t (preds l)).
-      
+      let t := fun q => unch_trans_local unch q l x in
+      fold_right (set_inter Lab_dec') all_lab (map t (preds l)).
+  
   Definition unch_trans (unch : Unch) : Unch :=
     fun l x => unch_trans_ptw unch l x.
   
@@ -56,17 +54,17 @@ Module Unchanged.
   Qed.
 
   Inductive Front (u : Unch) : Var -> Lab -> Prop :=
-    | FrontDef : forall x p, is_def_lab x p -> Front u x p
-    | FrontIter : forall x l l' r r' p, l <> r ->
-                                   Front u x l ->
-                                   Front u x r ->
-                                   l' --> p ->
-                                   r' --> p ->
-                                   set_In l (u l' x) ->
-                                   set_In r (u r' x) ->
-                                   ~ set_In l (u r' x) ->
-                                   ~ set_In r (u l' x) ->
-                                   Front u x p.
+  | FrontDef : forall x p, is_def_lab x p -> Front u x p
+  | FrontIter : forall x l l' r r' p, l <> r ->
+                                 Front u x l ->
+                                 Front u x r ->
+                                 l' --> p ->
+                                 r' --> p ->
+                                 set_In l (u l' x) ->
+                                 set_In r (u r' x) ->
+                                 ~ set_In l (u r' x) ->
+                                 ~ set_In r (u l' x) ->
+                                 Front u x p.
   
   Lemma unch_trans_lem u to x unch :
     set_In u (unch_trans unch to x) ->
@@ -91,7 +89,7 @@ Module Unchanged.
         * eauto using set_add_elim2.
   Qed.
 
-(*  Lemma in_exists_pred p i s k t :
+  (*  Lemma in_exists_pred p i s k t :
     forall tr step, proj2_sig tr = Step (`t) k (proj2_sig t) step -> In (p, i, s) tr  ->
     p <> root ->
     exists q j r, In (q, j, r) t /\ eff (q, j, r) = Some (p, i, s).
@@ -144,6 +142,4 @@ Module Unchanged.
         * congruence.
         * inversion H2. subst; eauto.
   Qed.
-  End unch.
-End Unchanged.
-
+End unch.
