@@ -511,10 +511,10 @@ Qed.
 
 Ltac congruence' :=
   lazymatch goal with
-  | [ H : ?l ++ (?a :: nil) = nil |- _ ] => destruct l; cbn in H; congruence
-  | [ H : (?l ++ ?a) :: nil = nil |- _ ] => destruct l; cbn in H; congruence
-  | [ H : nil = ?l ++ (?a :: nil) |- _ ] => destruct l; cbn in H; congruence
-  | [ H : nil = (?l ++ ?a) :: nil |- _ ] => destruct l; cbn in H; congruence
+  | [ H : ?l ++ (?a :: ?l') = nil |- _ ] => destruct l; cbn in H; congruence
+  | [ H : (?l ++ ?l') :: ?a :: ?l'' = nil |- _ ] => destruct l; cbn in H; congruence
+  | [ H : nil = ?l ++ (?a :: ?l') |- _ ] => destruct l; cbn in H; congruence
+  | [ H : nil = (?l ++ ?l') :: ?a :: ?l'' |- _ ] => destruct l; cbn in H; congruence
   end.
 
 Lemma rcons_eq {A : Type} (a a' : A) l l' :
@@ -1022,93 +1022,6 @@ Proof.
   inversion Hnd; subst; eauto.
 Qed.
 
-
-Definition in_before {A : Type} :=
-  fun (l : list A) a b => exists l' : list A, Prefix (b :: l') l /\ a ∈ (b :: l').
-
-Notation "l ⊢ a ≺* b" := (in_before l a b) (at level 70).
-
-Definition in_between {A : Type} `{EqDec A eq} l (a b c : A)
-  := l ⊢ a ≺* b /\ l ⊢ b ≺* c.
-
-Notation "l ⊢ a ≺* b ≺* c" := (in_between l a b c) (at level 70, b at next level).
-
-Lemma in_before_trans {A : Type} `{EqDec A eq} (p q r : A) π
-      (Hnd : NoDup π)
-      (Hib__pq : π ⊢ p ≺* q)
-      (Hib__qr : π ⊢ q ≺* r)
-  : π ⊢ p ≺* r.
-Proof.
-  unfold in_before in *. destruct Hib__pq as [l__pq Hib__pq]. destruct Hib__qr as [l__qr Hib__qr].
-  do 2 destructH.
-  exists l__qr. split.
-  - eauto.
-  - eapply prefix_incl;eauto.
-    induction π.
-    + inversion Hib__pq0.
-    + decide' (r == a).
-      * inversion Hib__qr0;subst;eauto.
-        exfalso. inversion Hnd; subst. eapply H3. eapply prefix_incl;eauto. left. reflexivity.
-      * inversion Hnd; subst. eapply IHπ;eauto.
-        -- inversion Hib__pq0;subst;eauto.
-           exfalso. eapply H2. inversion Hib__qr0;subst; [congruence|].
-           eapply prefix_incl;eauto.
-        -- inversion Hib__qr0;subst;eauto.
-           congruence.
-Qed.
-
-Lemma in_between_in_before {A : Type} `{EqDec A eq} (p q r : A) π
-      (Hnd : NoDup π)
-      (Hib : π ⊢ p ≺* q ≺* r)
-  : π ⊢ p ≺* r. 
-Proof.
-  destruct Hib. eapply in_before_trans;eauto.
-Qed.
-
-Lemma in_before_prefix {A : Type} `{EqDec A eq} (p q : A) π ϕ
-      (Hnd : NoDup π)
-      (Hpre : Prefix ϕ π)
-      (Hin : q ∈ ϕ)
-  : in_before π p q <-> in_before ϕ p q.
-Proof.
-  unfold in_before. split;intro Hib; destructH.
-  - induction π;inversion Hpre;inversion Hib0;inversion Hnd; subst; eauto.
-    exfalso. eapply H9. eapply prefix_incl;eauto.
-  - eapply prefix_NoDup in Hnd;eauto.
-    induction ϕ;inversion Hpre;inversion Hib0;inversion Hnd;subst;eauto.
-    decide' (q == a).
-    + exfalso. eapply H9. eapply prefix_incl;eauto. left. reflexivity.
-    + eapply IHϕ;eauto.
-      * econstructor. eapply prefix_cons;eauto.
-      * eapply prefix_incl;eauto. left. reflexivity.
-Qed.
-
-Definition succ_in {A : Type} l (a b : A)
-  := exists l1 l2, l = l2 ++ a :: b :: l1.
-
-Lemma in_between_in2 {A : Type} `{EqDec A eq} (x y z : A) l
-      (Hib : l ⊢ x ≺* y ≺* z)
-  : y ∈ l.
-Proof.
-  unfold in_between,in_before in *. destructH. eapply prefix_incl;eauto.
-Qed.
-
-Notation "l ⊢ a ≻ b" := (succ_in l a b) (at level 70).
-
-Ltac xeapply X Y :=
-  tryif eapply X in Y then idtac
-  else lazymatch type of Y with
-         context [_ :r: _] => rewrite rcons_nl_rcons in Y
-       end; eapply X in Y.
-
-Lemma in_succ_in2 (A : Type) (a b c : A) l
-      (Hsucc : c :: l ⊢ a ≻ b)
-  : b ∈ l.
-Proof.
-  unfold succ_in in Hsucc. destructH. 
-  destruct l2;cbn in *; inversion Hsucc;subst; [|eapply in_or_app]; firstorder.
-Qed.
-
 Lemma last_common_singleton1 {A : Type} `{EqDec A eq} (s a : A) l
       (Hlc : last_common (a :: nil) l s)
   : a = s.
@@ -1123,18 +1036,6 @@ Proof.
   unfold last_common in Hlc. destructH. eapply postfix_rcons_nil_eq in Hlc2. firstorder.
 Qed.
 
-Lemma postfix_succ_in {A : Type} (a b : A) l l'
-      (Hpost : Postfix l l')
-      (Hsucc : l ⊢ a ≻ b)
-  : l' ⊢ a ≻ b.
-Proof.
-  induction Hpost;eauto.
-  eapply IHHpost in Hsucc.
-  unfold succ_in in Hsucc. destructH. exists (l1 :r: a0), l2. rewrite Hsucc.
-  rewrite <-cons_rcons_assoc. unfold rcons. rewrite <-app_assoc.
-  rewrite app_comm_cons. reflexivity.
-Qed.
-
 Lemma ne_list_nlcons (A : Type) (l : ne_list A)
   : exists a l', l = a :< l'.
 Proof.
@@ -1142,21 +1043,6 @@ Proof.
 Qed.
 
 
-Lemma succ_in_cons_cons {A : Type} (a b : A) l
-  : a :: b :: l ⊢ a ≻ b.
-Proof.
-  exists l, nil. cbn. reflexivity.
-Qed.
-
-Lemma succ_cons {A : Type} `{EqDec A eq} (a b c : A) l
-      (Hsucc : l ⊢ b ≻ c)
-  : a :: l ⊢ b ≻ c.
-Proof.
-  revert a;destruct l;intros a0.
-  - unfold succ_in in *;cbn in *;eauto. destructH. destruct l2;cbn in *;congruence.
-  - unfold succ_in in Hsucc. destructH. unfold succ_in. exists l1, (a0 :: l2).  cbn.
-    rewrite Hsucc. reflexivity.
-Qed.
 
 Inductive Precedes {A B : Type} (f : A -> B) : list A -> A -> Prop :=
 | Pr_in : forall (k : A) (l : list A), Precedes f (k :: l) k
@@ -1187,3 +1073,238 @@ Proof.
 Admitted.
 
 (* TODO : tidy up this file *)
+
+
+
+(** DEPRECATED **)
+
+
+Definition in_before {A : Type} :=
+  fun (l : list A) a b => exists l' : list A, Prefix (b :: l') l /\ a ∈ (b :: l').
+
+Inductive inBefore {A : Type} : list A -> A -> A -> Prop :=
+| ibRefl l (a : A) : a ∈ l -> inBefore l a a
+| ibPred l (a b : A) : a ∈ l -> inBefore (b :: l) a b
+| ibStep l (a b c : A) : inBefore l a b -> inBefore (c :: l) a b.
+
+Notation "l ⊢ a ≺* b" := (in_before l a b) (at level 70).
+
+Definition in_between {A : Type} l (a b c : A)
+  := l ⊢ a ≺* b /\ l ⊢ b ≺* c.
+
+Notation "l ⊢ a ≺* b ≺* c" := (in_between l a b c) (at level 70, b at next level).
+
+Definition succ_in {A : Type} l (a b : A)
+  := exists l1 l2, l = l2 ++ a :: b :: l1.
+
+Notation "l ⊢ a ≻ b" := (succ_in l a b) (at level 70).
+
+Ltac destr_inb H :=
+  let H1 := fresh H in
+  let H2 := fresh H in
+  let H3 := fresh H in
+  lazymatch type of H with
+  | ?l ⊢ ?a ≺* ?b => let l' := fresh l in
+                    destruct H as [l' [H1 [H2|H3]]]
+  | ?l ⊢ ?a ≺* ?b ≺* ?c => destruct H as [H1 H2];
+                          destr_inb H1; destr_inb H2
+  end.
+
+Section inBefore1.
+
+  Context {A : Type} `{EqDec A eq}.
+
+  Lemma inBefore_cons (a b c : A) l
+        (Hin : inBefore l a b)
+    : inBefore (c :: l) a b.
+  Proof.
+    revert c. induction Hin; econstructor; [firstorder|econstructor|econstructor];eauto.
+  Qed.
+
+  Lemma inBefore_prefix (a b : A) l l'
+        (Hin : inBefore l a b)
+        (Hpre : Prefix l l')
+    : inBefore l' a b.
+  Proof.
+    induction Hpre; eauto.
+    eapply inBefore_cons; eauto.
+  Qed.
+
+  Lemma in_before_refl (a : A) l
+        (Hin : a ∈ l)
+    : l ⊢ a ≺* a.
+  Proof.
+    induction l; cbn in *;[contradiction|].
+    decide' (a == a0).
+    - exists l. split;[econstructor|firstorder].
+    - destruct Hin;[congruence|]. specialize (IHl H0). destruct IHl as [l' [IHl _]].
+      exists l'. split;[|firstorder].
+      econstructor;eauto.
+  Qed.
+
+  Lemma in_before_cons (a b c : A) l
+        (Hin : l ⊢ a ≺* b)
+    : c :: l ⊢ a ≺* b.
+  Proof.
+    destr_inb Hin; subst.
+    - eapply in_before_refl. right. eapply prefix_incl;eauto. firstorder.
+    - unfold in_before. exists l0. split;[|firstorder].
+      econstructor;eauto.
+  Qed.
+
+End inBefore1.
+
+Section inBefore2.
+
+  Context {A : Type} `{EqDec A eq}.
+  
+  Lemma in_before_inBefore (a b : A) l
+    : in_before l a b <-> inBefore l a b.
+  Proof.
+    split; intro Hin.
+    - destr_inb Hin; subst.
+      + eapply prefix_incl in Hin0. assert (a ∈ l) as Hin1 by (eapply Hin0;firstorder).
+        clear Hin0. induction l; [cbn in *; contradiction|].
+        decide' (a == a0).
+        * econstructor;eauto.
+        * eapply inBefore_cons;eapply IHl. destruct Hin1; [congruence|eauto].
+      + eapply inBefore_prefix;eauto. econstructor;eauto.
+    - induction Hin.
+      + eapply in_before_refl;eauto.
+      + exists l. split;[econstructor|firstorder].
+      + eapply in_before_cons;eauto.
+  Qed.
+
+  Lemma in_before_trans (p q r : A) π
+        (Hnd : NoDup π)
+        (Hib__pq : π ⊢ p ≺* q)
+        (Hib__qr : π ⊢ q ≺* r)
+    : π ⊢ p ≺* r.
+  Proof.
+    unfold in_before in *. destruct Hib__pq as [l__pq Hib__pq]. destruct Hib__qr as [l__qr Hib__qr].
+    do 2 destructH.
+    exists l__qr. split.
+    - eauto.
+    - eapply prefix_incl;eauto.
+      induction π.
+      + inversion Hib__pq0.
+      + decide' (r == a).
+        * inversion Hib__qr0;subst;eauto.
+          exfalso. inversion Hnd; subst. eapply H3. eapply prefix_incl;eauto. left. reflexivity.
+        * inversion Hnd; subst. eapply IHπ;eauto.
+          -- inversion Hib__pq0;subst;eauto.
+             exfalso. eapply H2. inversion Hib__qr0;subst; [congruence|].
+             eapply prefix_incl;eauto.
+          -- inversion Hib__qr0;subst;eauto.
+             congruence.
+  Qed.
+
+  Lemma in_between_in_before (p q r : A) π
+        (Hnd : NoDup π)
+        (Hib : π ⊢ p ≺* q ≺* r)
+    : π ⊢ p ≺* r. 
+  Proof.
+    destruct Hib. eapply in_before_trans;eauto.
+  Qed.
+
+  Lemma in_before_prefix (p q : A) π ϕ
+        (Hnd : NoDup π)
+        (Hpre : Prefix ϕ π)
+        (Hin : q ∈ ϕ)
+    : in_before π p q <-> in_before ϕ p q.
+  Proof.
+    unfold in_before. split;intro Hib; destructH.
+    - induction π;inversion Hpre;inversion Hib0;inversion Hnd; subst; eauto.
+      exfalso. eapply H9. eapply prefix_incl;eauto.
+    - eapply prefix_NoDup in Hnd;eauto.
+      induction ϕ;inversion Hpre;inversion Hib0;inversion Hnd;subst;eauto.
+      decide' (q == a).
+      + exfalso. eapply H9. eapply prefix_incl;eauto. left. reflexivity.
+      + eapply IHϕ;eauto.
+        * econstructor. eapply prefix_cons;eauto.
+        * eapply prefix_incl;eauto. left. reflexivity.
+  Qed.
+
+  Lemma in_fst' {B : Type} (a : A) (b : B) l
+        (Hin : (a,b) ∈ l)
+    : a ∈ map fst l.
+  Proof.
+    induction l; cbn in *; [contradiction|].
+    destruct Hin;[subst;cbn;eauto|right;eauto].
+  Qed.
+
+End inBefore2.
+
+Section inBefore3.
+  Context {A : Type} `{EqDec A eq}.
+  
+  Lemma in_before_map {B : Type} `{EqDec B eq} (a1 a2 : A) (b1 b2 : B) l
+        (Hin : l ⊢ (a1,b1) ≺* (a2,b2))
+    : map fst l ⊢ a1 ≺* a2.
+  Proof.
+    eapply in_before_inBefore in Hin. eapply in_before_inBefore.
+    dependent induction Hin;cbn;econstructor.
+    1,2:eapply in_fst';eauto.
+    eapply IHHin;eauto.
+  Qed.
+  
+  Lemma in_between_in2 (x y z : A) l
+        (Hib : l ⊢ x ≺* y ≺* z)
+    : y ∈ l.
+  Proof.
+    unfold in_between,in_before in *. destructH. eapply prefix_incl;eauto.
+  Qed.
+End inBefore3.
+Create HintDb in_before.
+Hint Immediate in_before_trans in_between_in_before in_between_in2 in_before_prefix in_before_map
+  : in_before.
+
+
+
+Lemma in_succ_in1 (A : Type) (a b : A) l
+      (Hsucc : l ⊢ a ≻ b)
+  : a ∈ l.
+Proof.
+  unfold succ_in in Hsucc. destructH.
+  destruct l.
+  - congruence'.
+  - symmetry in Hsucc. eapply eq_incl in Hsucc. eapply Hsucc.
+    clear Hsucc. induction l2;cbn;firstorder.
+Qed.
+  
+Lemma in_succ_in2 (A : Type) (a b c : A) l
+      (Hsucc : c :: l ⊢ a ≻ b)
+  : b ∈ l.
+Proof.
+  unfold succ_in in Hsucc. destructH. 
+  destruct l2;cbn in *; inversion Hsucc;subst; [|eapply in_or_app]; firstorder.
+Qed.
+
+Lemma postfix_succ_in {A : Type} (a b : A) l l'
+      (Hpost : Postfix l l')
+      (Hsucc : l ⊢ a ≻ b)
+  : l' ⊢ a ≻ b.
+Proof.
+  induction Hpost;eauto.
+  eapply IHHpost in Hsucc.
+  unfold succ_in in Hsucc. destructH. exists (l1 :r: a0), l2. rewrite Hsucc.
+  rewrite <-cons_rcons_assoc. unfold rcons. rewrite <-app_assoc.
+  rewrite app_comm_cons. reflexivity.
+Qed.
+
+
+Lemma succ_in_cons_cons {A : Type} (a b : A) l
+  : a :: b :: l ⊢ a ≻ b.
+Proof.
+  exists l, nil. cbn. reflexivity.
+Qed.
+
+Lemma succ_cons {A : Type} `{EqDec A eq} (a b c : A) l
+      (Hsucc : l ⊢ b ≻ c)
+  : a :: l ⊢ b ≻ c.
+Proof.
+  revert a;destruct l;intros a0.
+  - unfold succ_in in *;cbn in *;eauto. destructH. destruct l2;cbn in *;congruence.
+  - unfold succ_in in Hsucc. destructH. unfold succ_in. exists l1, (a0 :: l2).  cbn.
+    rewrite Hsucc. reflexivity.
+Qed.

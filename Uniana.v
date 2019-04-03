@@ -279,12 +279,8 @@ Section uniana.
   
   Hint Unfold Coord.
   
-
   Hint Resolve tpath_tpath'.
   Hint Resolve precedes_in.
-
-
-
   
   Lemma find_divergent_branch u p l1 l2 i j1 j2 
         (Hunch : Dom edge root u p)
@@ -411,8 +407,13 @@ Section uniana.
         1,2: unfold exited;eauto.
         * assert (deq_loop u e1) as Hdeq by admit.
           eapply loop_cutting_elem.
-          -- spot_path.
-          -- admit. (* consequence from some succ & in_before propositions *)
+          -- clear Htr2. spot_path.
+          -- eapply in_before_inBefore.
+             simpl_nl.
+             decide' (e1 == p);econstructor;[clear;firstorder|].
+             eapply in_fst'. simpl_nl' Hexit__succ1.
+             eapply in_succ_in1 in Hexit__succ1.
+             destruct Hexit__succ1;[inversion H; congruence|eauto].
           -- intros h0 Hloop0. eapply Hdeq in Hloop0. eapply exit_cascade in Hunch;eauto.
              ++ contradict Hunch. admit. (* possibly I have to switch to tpath bc they are NoDup *)
              ++ instantiate (1:= map fst l1). clear - Hprec1 Hneq.
