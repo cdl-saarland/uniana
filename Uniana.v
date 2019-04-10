@@ -109,8 +109,8 @@ Section uniana.
   Lemma uni_branch_uni_succ p br q1 q2 i k j1 j2 s1 s2 uni l1 l2 
         (Hpath1 : Tr ((p,i,s1) :< l1))
         (Hpath2 : Tr ((p,i,s2) :< l2))
-        (Hsucc1 : ((p,i) :: map fst l1) ⊢ (q1,j1) ≻ (br,k))
-        (Hsucc2 : ((p,i) :: map fst l2) ⊢ (q2,j2) ≻ (br,k))
+        (Hsucc1 : (q1,j1) ≻ (br,k) | ((p,i) :: map fst l1))
+        (Hsucc2 : (q2,j2) ≻ (br,k) | ((p,i) :: map fst l2))
         (Hunibr : uni_branch uni br = true)
         (HCuni : forall (x : Var) (p : Lab) (i : Tag) (s s' : State),
             (p, i, s) ∈ l1 -> (p, i, s') ∈ l2 -> uni p x = true -> s x = s' x)
@@ -144,8 +144,8 @@ Section uniana.
   Lemma uni_branch_uni_succ' p br q1 q2 i k j1 j2 uni l1 l2 s1 s2
         (Hpath1 : Tr ((p,i,s1) :< l1))
         (Hpath2 : Tr ((p,i,s2) :< l2))
-        (Hsucc1 : ((p,i) :: map fst l1) ⊢ (q1,j1) ≻ (br,k))
-        (Hsucc2 : ((p,i) :: map fst l2) ⊢ (q2,j2) ≻ (br,k))
+        (Hsucc1 : (q1,j1) ≻ (br,k) | ((p,i) :: map fst l1))
+        (Hsucc2 : (q2,j2) ≻ (br,k)| ((p,i) :: map fst l2))
         (Hunibr : uni_branch uni br = true)
         (HCuni : forall (x : Var) (p : Lab) (i : Tag) (s s' : State),
             (p, i, s) ∈ l1 -> (p, i, s') ∈ l2 -> uni p x = true -> s x = s' x)
@@ -170,7 +170,7 @@ Section uniana.
     : False.
   Proof.
     destruct (hd (q, j) (rev ((q, j) :: l2'))) eqn:E.
-    assert (((q, j) :: map fst l1) ⊢ (l, t) ≻ (br, k)) as Hsucc1.
+    assert ((l, t) ≻ (br, k) | ((q, j) :: map fst l1)) as Hsucc1.
     {
       eapply postfix_succ_in;eauto.
       rewrite cons_rcons'.
@@ -278,9 +278,12 @@ Section uniana.
 
   
   Hint Unfold Coord.
-  
+  Hint Unfold Tag.
+  Hint Immediate tpath_NoDup.
   Hint Resolve tpath_tpath'.
   Hint Resolve precedes_in.
+
+
   
   Lemma find_divergent_branch u p l1 l2 i j1 j2 
         (Hunch : Dom edge root u p)
@@ -293,7 +296,7 @@ Section uniana.
     : exists br qq qq' : Lab,
       (br, qq, qq') ∈ rel_splits p u /\
       (exists (k k' : Tag) (q1 q2 : Lab),
-          l1 ⊢ (q1, k') ≻ (br, k) /\ l2 ⊢ (q2, k') ≻ (br, k) /\ q1 <> q2).
+          (q1, k') ≻ (br, k) | l1 /\ (q2, k') ≻ (br, k) | l2 /\ q1 <> q2).
   Proof.
     specialize (ex_near_ancestor u p) as [a [Hanc Ha_near]].
     eapply ancestor_dom1 in Hanc as Hanc1. eapply ancestor_dom2 in Hanc as Hanc2.
@@ -310,12 +313,12 @@ Section uniana.
       eapply prefix_length_eq;eauto;eapply tpath_tag_len_eq;eauto.
     }
 
-    enough ((p,i) :: l1 ⊢ (a,j) ≺* (u,j1)) as Hib1.
-    enough ((p,i) :: l2 ⊢ (a,j) ≺* (u,j2)) as Hib2.
+    enough ((u,j1) ≻* (a,j) | (p,i) :: l1) as Hib1.
+    enough ((u,j2) ≻* (a,j) | (p,i) :: l2) as Hib2.
     2: eapply dom_dom_in_between with (l:= (p,i) :< l2) in Hunch;eauto.
-    4: eapply dom_dom_in_between with (l:= (p,i) :< l1) in Hunch;eauto.
-    2,4: simpl_nl' Hunch;destruct Hunch;eauto.
-    2,3: eapply tpath_NoDup;eauto. 
+    3: eapply dom_dom_in_between with (l:= (p,i) :< l1) in Hunch;eauto.
+    Unshelve. 4: exact i. 4 : exact j2. 4: exact j. 4: exact i. 4: exact j1. 4: exact j. 
+    2,3: unfold Tag in *; simpl_nl' Hunch; find_succ_rel.
 
     assert (Prefix j i) as Hprei by (eapply tag_prefix_ancestor;[eapply ancestor_sym| |];eauto).
     assert (Prefix j j1) as Hprej1
@@ -364,13 +367,14 @@ Section uniana.
     copy Hexit1 Hexit2.
     eapply find_loop_exit with (a0:=a1') (n:=a1) (h0:=h) (l:= (p,i):<l1) in Hexit1;eauto.
     eapply find_loop_exit with (a0:=a2') (n:=a2) in Hexit2;eauto.
-    2,3: eapply in_before_trans;[eapply tpath_NoDup;eauto|eauto|
-                                 unfold in_between in Hanc11,Hanc12; destruct Hanc11,Hanc12;eauto].
+
+    2,3: unfold Tag in *; resolve_succ_rt.
+    
+    (*2,3: eapply succ_rt_trans;[eapply tpath_NoDup;eauto|eauto|destruct Hanc11,Hanc12;eauto].*)
     destruct Hexit1 as [qe1 [e1 [Hexit__seq1 [Hexit__succ1 Hexit__edge1]]]].
     destruct Hexit2 as [qe2 [e2 [Hexit__seq2 [Hexit__succ2 Hexit__edge2]]]].
-
-    eapply in_between_in2 in Hexit__seq1 as Hin1.
-    eapply in_between_in2 in Hexit__seq2 as Hin2.
+    assert ((qe1, a1 :: l' ++ j) ∈ ((p,i) :< l1)) as Hin1 by find_in_splinter.
+    assert ((qe2, a2 :: l' ++ j) ∈ ((p,i) :< l2)) as Hin2 by find_in_splinter.
     eapply2 path_to_elem Hin1 Hin2; eauto.
     destruct Hin1 as [η1 [Hη1 Hpreη1]]. destruct Hin2 as [η2 [Hη2 Hprenη2]].
     assert (exists brk, last_common η1 η2 brk) as Hlc.
@@ -408,12 +412,12 @@ Section uniana.
         * assert (deq_loop u e1) as Hdeq by admit.
           eapply loop_cutting_elem.
           -- clear Htr2. spot_path.
-          -- eapply in_before_inBefore.
+          -- admit. (*eapply in_before_inBefore.
              simpl_nl.
              decide' (e1 == p);econstructor;[clear;firstorder|].
              eapply in_fst'. simpl_nl' Hexit__succ1.
              eapply in_succ_in1 in Hexit__succ1.
-             destruct Hexit__succ1;[inversion H; congruence|eauto].
+             destruct Hexit__succ1;[inversion H; congruence|eauto].*)
           -- intros h0 Hloop0. eapply Hdeq in Hloop0. eapply exit_cascade in Hunch;eauto.
              ++ contradict Hunch. admit. (* possibly I have to switch to tpath bc they are NoDup *)
              ++ instantiate (1:= map fst l1). clear - Hprec1 Hneq.

@@ -623,29 +623,28 @@ Section eval.
   
   Lemma tr_lift_succ l q q' j j'
         (Hpath : Tr l)
-        (Hsucc : map fst l ⊢ (q',j') ≻ (q,j))
-    : exists r r', l ⊢ (q',j',r') ≻ (q,j,r).
+        (Hsucc : (q',j') ≻ (q,j) | map fst l)
+    : exists r r', (q',j',r') ≻ (q,j,r) | l.
   Proof.
-    unfold succ_in in *. destructH.
   Admitted.
   
   Lemma tr_succ_eff' p q q' br i j k s r r' r0 l
         (Htr : Tr ((p, i, s) :< l))
-        (Hsucc : (p, i, s) :< l ⊢ (q, j, r) ≻ (br, k, r0))
+        (Hsucc : (q, j, r) ≻ (br, k, r0) | (p, i, s) :< l)
         (Heff : eff' (br,r0) = Some (q',r'))
     : q = q'.
   Admitted.
 
   
   Lemma succ_in_rcons2 {A : Type} (a b : A) l
-    : l :r: a :r: b ⊢ a ≻ b.
+    : a ≻ b | l :r: a :r: b.
   Proof.
     exists nil, l. unfold rcons. rewrite <-app_assoc. rewrite <-app_comm_cons. cbn. reflexivity.
   Qed.
   
   Lemma succ_in_tpath_eff_tag p q i j t
         (Hpath : TPath' t)
-        (Hsucc : t ⊢ (p,i) ≻ (q,j))
+        (Hsucc : (p,i) ≻ (q,j) | t)
     : eff_tag q p j = i.
   Proof.
   Admitted.

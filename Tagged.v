@@ -192,7 +192,7 @@ Section tagged.
         (Hanc : ancestor a p q)
         (Hpath : TPath (root,start_tag) (r,k) ((r,k) :< l))
         (Hprec : Precedes fst ((r,k) :: l) (a,j))
-        (Hib : (r,k) :: l ⊢ (a,j) ≺* (p,i))
+        (Hib : (p,i) ≻* (a,j) | (r,k) :: l)
     : Prefix j i.
   Proof.   
   Admitted.
@@ -207,7 +207,7 @@ Section tagged.
         (Htag : j = j1 ++ j2)
         (Hpath : TPath (root,start_tag) (p,i) t)
         (Hin : (q,j) ∈ t)
-    : exists h, loop_contains h q /\ Precedes fst t (h,j2) /\ t ⊢ (h,j2) ≺* (q,j).
+    : exists h, loop_contains h q /\ Precedes fst t (h,j2) /\ (q,j) ≻* (h, j2) | t.
   Admitted.
 
   Lemma prec_prec_eq l (q : Lab) (j j' : Tag)
@@ -221,7 +221,7 @@ Section tagged.
         (Hprec1 : Precedes fst l (q,j))
         (Hprec2 : Precedes fst ((p,i) :: l') (q,j'))
         (Hnd : NoDup l)
-        (Hib : in_before l (q,j) (p,i))
+        (Hib : (p,i) ≻* (q,j) | l)
     : j' = j.
   Admitted.
 
@@ -230,7 +230,7 @@ Section tagged.
         (Hanc : ancestor a q p) 
         (Hprec__a: Precedes fst ((p,i) :: l) (a,k))
         (Hprec__q: Precedes fst ((p,i) :: l) (q,j))
-    : in_before ((p,i) :: l) (a,k) (q,j).
+    : (q,j) ≻* (a,k) | (p,i) :: l.
   Admitted. 
 
   Lemma prefix_eq:
@@ -266,16 +266,16 @@ Section tagged.
         (Hin : (q,j) ∈ t)
         (Hanc  : near_ancestor a p q)
         (Hprec : Precedes fst t (a,k))
-        (Hib : t ⊢ (a,k) ≺* (q,j))
-    : exists a', Precedes fst t (a',k) /\ t ⊢ (q,j) ≺* (a',k) ≺* (p,i).
+        (Hib : (q,j) ≻* (a,k) | t)
+    : exists a', Precedes fst t (a',k) /\ (p,i) ≻* (a',k) ≻* (q,j) | t.
   Admitted.
 
   Lemma find_loop_exit h a p i j k n l
         (Hpath : TPath (root,start_tag) (p,i) l)
         (Hpre : Prefix k j)
-        (Hib : l ⊢ (h, n :: j) ≺* (a,k))
+        (Hib : (a,k) ≻* (h, n :: j) | l)
         (Hprec : Precedes fst l (h, n :: j))
-    : exists qe e, l ⊢ (h, n :: j) ≺* (qe,n :: j) ≺* (a,k) /\ l ⊢ (e,j) ≻ (qe,n :: j) /\ exit_edge h qe e.
+    : exists qe e, (a,k) ≻* (qe,n :: j) ≻* (h, n :: j) | l /\ (e,j) ≻ (qe,n :: j) | l /\ exit_edge h qe e.
   Admitted.
 
   
@@ -295,14 +295,14 @@ Section tagged.
         (Hdom2 : Dom edge root q p)
         (Hpath : TPath' l)
         (Hnd : NoDup l)
-    : l ⊢ (r,k) ≺* (q,j) ≺* (p,i).
+    : (p,i) ≻* (q,j) ≻* (r,k) | l.
   Admitted.
 
   Lemma exit_cascade u p π
         (Hdom : Dom edge root u p)
         (Hprec : Precedes id π u)
         (Hpath : CPath root p (p :< π))
-    : forall h, loop_contains h u -> ~ π ⊢ u ≺* h ≺* p.
+    : forall h, loop_contains h u -> ~ p ≻* h ≻* u | π.
     (* otw. there would be a path through this q to p without visiting u *)
     (* this could even be generalized to CPaths *)
     (* TODO: lift on tpaths, on cpaths we might have duplicates, thus it doesn't work there *)

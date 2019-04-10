@@ -9,7 +9,7 @@ Require Import Lists.List.
 Require Import Coq.Program.Equality.
 Require Import Coq.Program.Utils.
 
-Require Export Util NeList.
+Require Export Util NeList ListOrder.
 
 (** Graph **)  
 
@@ -269,10 +269,11 @@ Section graph.
   
   Lemma path_from_elem_to_elem (p q r1 r2 : L) (π : ne_list L)
         (Hπ : Path p q π)
-        (Hprec : in_before π r1 r2)
+        (Hprec : r2 ≻* r1 | π)
     : exists ϕ : ne_list L, Path r1 r2 ϕ. 
   Proof.
-    unfold in_before in Hprec. destructH' Hprec.
+    eapply succ_rt_prefix in Hprec.
+    destructH' Hprec.
     rewrite nlcons_to_list in Hprec0.
     eapply path_prefix_path in Hprec0 as Hprec2;eauto. simpl_nl' Hprec2.
     eapply path_from_elem in Hprec2;simpl_nl;eauto.

@@ -391,8 +391,8 @@ Section red_cfg.
   
   Lemma loop_cutting_elem q p π
         (Hpath : CPath' π)
-        (Hib : π ⊢ q ≺* p)
-        (Hnoh : forall h, loop_contains h q -> ~ π ⊢ q ≺* h ≺* p)
+        (Hib : p ≻* q | π)
+        (Hnoh : forall h, loop_contains h q -> ~ p ≻* h | π)
     : exists t', Path a_edge q p t'.
   Admitted.
 
