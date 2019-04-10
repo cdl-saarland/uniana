@@ -488,3 +488,35 @@ Ltac resolve_succ_rt :=
     => eapply (succ_rt_trans _ c _);
       [eauto|find_succ_rel|find_succ_rel]
   end.
+
+Ltac fold_rcons H :=
+  match type of H with
+  | context C [?a :: ?b :: nil] => fold (app (a :: nil) (b :: nil)) in H;
+                                  fold (rcons (a :: nil) b) in H;
+                                  repeat rewrite <-cons_rcons_assoc in H
+  end.
+
+Ltac splice_splinter :=
+  match goal with
+  | [H : splinter ?l1 ?l,
+     Q : splinter ?l2 ?l |- _ ]
+    => lazymatch l2 with
+      | ?a :: _
+        => lazymatch l1 with
+          | context C [a :: nil]
+            => idtac a; idtac H; idtac Q; fold_rcons H; eapply (splinter_app_l a l) in H;[|eauto|eapply Q];
+              clear Q; cbn in H
+          end
+      end
+  end.
+
+Goal forall (A : Type) (a b c d : A) (l : list A), NoDup l -> splinter (a :: b :: d :: nil) l
+                                              -> splinter (d :: c :: a :: nil) l -> False.
+  intros.  splice_splinter.
+Abort.
+
+Goal forall (A : Type) (a b c : A) (l : list A), NoDup (c :: l) -> a ≻* b | c :: l -> b ≻* c | c :: l -> False.
+  intros. splice_splinter.
+Abort.
+
+  

@@ -332,8 +332,8 @@ Section uniana.
     assert (j1' <> j2') as c'.
     {
       subst j1 j2. intro c'. rewrite c' in Hjneq. eapply Hjneq. reflexivity.
-    } 
-
+    }
+    
     eapply Pr_cont with (c:=(p,i)) in Hprec1;[|cbn;eauto].
     eapply Pr_cont with (c:=(p,i)) in Hprec2;[|cbn;eauto].
     (* find the first difference in the tag suffices *)
@@ -369,8 +369,6 @@ Section uniana.
     eapply find_loop_exit with (a0:=a2') (n:=a2) in Hexit2;eauto.
 
     2,3: unfold Tag in *; resolve_succ_rt.
-    
-    (*2,3: eapply succ_rt_trans;[eapply tpath_NoDup;eauto|eauto|destruct Hanc11,Hanc12;eauto].*)
     destruct Hexit1 as [qe1 [e1 [Hexit__seq1 [Hexit__succ1 Hexit__edge1]]]].
     destruct Hexit2 as [qe2 [e2 [Hexit__seq2 [Hexit__succ2 Hexit__edge2]]]].
     assert ((qe1, a1 :: l' ++ j) ∈ ((p,i) :< l1)) as Hin1 by find_in_splinter.
