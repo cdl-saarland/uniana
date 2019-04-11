@@ -295,8 +295,8 @@ Section uniana.
         (Hjneq : j1 =/= j2)
     : exists br qq qq' : Lab,
       (br, qq, qq') ∈ rel_splits p u /\
-      (exists (k k' : Tag) (q1 q2 : Lab),
-          (q1, k') ≻ (br, k) | l1 /\ (q2, k') ≻ (br, k) | l2 /\ q1 <> q2).
+      (exists (k k1 k2 : Tag) (q1 q2 : Lab),
+          (q1, k1) ≻ (br, k) | (p,i) :: l1 /\ (q2, k2) ≻ (br, k) | (p,i) :: l2 /\ q1 <> q2).
   Proof.
     specialize (ex_near_ancestor u p) as [a [Hanc Ha_near]].
     eapply ancestor_dom1 in Hanc as Hanc1. eapply ancestor_dom2 in Hanc as Hanc2.
@@ -452,16 +452,57 @@ Section uniana.
       + exists e2. split_conj;eauto.
         1: unfold exited;eauto.
         (* same as *) admit.
-    - exists k, (l' ++ j).
+    - exists k.
+      Lemma last_common_ex_succ (A : Type) `{EqDec A eq} (a1 a2 a1' a2' c : A) ll1 ll2 l1 l2
+            (Hpre1 : Prefix (a1 :: l1) ll1)
+            (Hpre2 : Prefix (a2 :: l2) ll2)
+            (Hnin1 : a1' ∉ (a2 :: l2))
+            (Hnin2 : a2' ∉ (a1 :: l1))
+            (Hsucc1 : a1' ≻ a1 | ll1)
+            (Hsucc2 : a2' ≻ a2 | ll2)
+            (Hneq : a1 <> a2)
+            (Hlc : last_common (a1 :: l1) (a2 :: l2) c)
+        : exists (b1 b2 : A), b1 ≻ c | ll1 /\ b2 ≻ c | ll2 /\ b1 <> b2.
+      Proof.
+        unfold last_common in Hlc. destructH.
+        specialize (rcons_destruct l1') as Hl1'.
+        specialize (rcons_destruct l2') as Hl2'.
+        destruct Hl1', Hl2'; subst; cbn in Hlc0,Hlc2.
+        - eapply2' postfix_hd_eq Hlc0 Hlc2 Heq1 Heq2; subst. congruence.
+        - destructH. subst. eapply postfix_hd_eq in Hlc0. subst.
+          exists a1', a. split_conj;eauto.
+          + admit. (* postfix & prefix transport succ *)
+          + contradict Hnin1. eapply postfix_incl;eauto. rewrite In_rcons. rewrite In_rcons. firstorder 0.
+        - admit. (* exactly the same *)
+        - repeat destructH; subst.
+          exists a0, a. split_conj.
+          + admit. (* as above *)
+          + admit. (* as above *)
+          + intro Heq; subst. unfold Disjoint in Hlc1. destruct Hlc1. clear - H0.
+            eapply H0; eapply In_rcons; left; eauto.
+      Admitted.
+
+      eapply last_common_ex_succ in Hlc; eauto.
+      2: rewrite nlcons_to_list; unfold Tag in *; rewrite <-ηeq1;eauto.
+      2: rewrite nlcons_to_list; unfold Tag in *; rewrite <-ηeq2;eauto.
+      4: contradict Htag0; inversion Htag0; eauto.
+      clear - Hlc Htr1 Htr2. destructH. destruct b1, b2. exists t, t0, l, l0. split_conj;eauto.
+      contradict Hlc3. inversion Hlc3;subst;eauto. f_equal. eapply eff_tag_det. 1,2: admit.
+      1,2: admit.
+       (* we will have to prove that (e1, l' ++ j) does not occur in η2 *)
+      
+        (*
       destruct η1,η2;cbn in *.
       + cbn in Hlc.
         eapply last_common_singleton1 in Hlc as Hleft.
         eapply last_common_singleton2 in Hlc as Hright.
         inversion Hleft; inversion Hright; subst. congruence.
-      + exists e1. (* br = qe1, thus successor is e1, the successor in l2 is in inside the loop,
-                 thus they are unequal *) admit.
+      + exists e1.
+        eapply last_common_singleton1 in Hlc as Hlc'. inversion Hlc'; subst br k. split_conj;eauto.
+        (* br = qe1, thus successor is e1, the successor in l2 is in inside the loop,
+                 thus they are unequal *) admit. 
       + (* analogous to the one above *) admit. 
-      + (* because successors are inside the last_common *) admit.
+      + (* because successors are inside the last_common *) admit.*)
   Admitted.
   
   Lemma unch_same_tag p u i s1 s2 j1 j2 r1 r2 l1 l2 x uni unch
@@ -486,15 +527,12 @@ Section uniana.
     decide' (j1 == j2);[eauto|exfalso].
     eapply find_divergent_branch with (l1:=map fst l1) in c as Hwit;eauto.
     - destructH.
-      (*eapply succ_cons in Hwit1. eapply succ_cons in Hwit2.*)
-      eapply join_andb_true_iff in Hunibr;eauto. (*rewrite nlcons_to_list in Hwit1,Hwit2.*)
+      eapply join_andb_true_iff in Hunibr;eauto.
       eapply uni_branch_uni_succ 
         with (q1:=q1) (q2:=q2) (uni:=uni) in HCuni;eauto.
-      1,2: eapply succ_cons;eauto.      
     - eapply unch_dom;eauto.
     - eapply prec_lab_prec_fst;eauto.
     - eapply prec_lab_prec_fst;eauto.
-      Unshelve. all:eauto.      
   Qed.
 
   Lemma uni_same_lab p q1 q2 i j1 j2 s1 s2 r1 r2 uni l1 l2
