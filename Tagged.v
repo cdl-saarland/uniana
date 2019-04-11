@@ -275,9 +275,15 @@ Section tagged.
         (Hpre : Prefix k j)
         (Hib : (a,k) ≻* (h, n :: j) | l)
         (Hprec : Precedes fst l (h, n :: j))
-    : exists qe e, (a,k) ≻* (qe,n :: j) ≻* (h, n :: j) | l /\ (e,j) ≻ (qe,n :: j) | l /\ exit_edge h qe e.
+    : exists qe e, (a,k) ≻* (e,j) ≻* (qe,n :: j) ≻* (h, n :: j) | l /\ (e,j) ≻ (qe,n :: j) | l /\ exit_edge h qe e.
   Admitted.
-
+  
+  Lemma tpath_deq_loop_prefix p q i j t
+        (Hdeq : deq_loop p q)
+        (Hpath : TPath' t)
+        (Hpre : Prefix j i)
+    : (q,j) ≻* (p,i) | t.
+  Admitted.
   
   Lemma tpath_tpath' r i0 p i t
         (Hpath : TPath (r,i0) (p,i) t)
@@ -297,12 +303,25 @@ Section tagged.
         (Hnd : NoDup l)
     : (p,i) ≻* (q,j) ≻* (r,k) | l.
   Admitted.
+  
+  Lemma loop_cutting q p t
+        (Hpath : CPath q p t)
+        (Hnoh : forall h, loop_contains h q -> h ∉ t)
+    : exists t', Path a_edge q p t'.
+  Admitted.
+  
+  Lemma loop_cutting_elem q p t i j
+        (Hpath : TPath' ((p,i) :< t))
+        (Hib : (p,i) ≻* (q,j) | (p,i) :: t)
+        (Hnoh : forall h k, loop_contains h q -> ~ (p,i) ≻* (h,k) ≻* (q,j) | (p,i) :: t)
+    : exists t', Path a_edge q p t'.
+  Admitted.
 
-  Lemma exit_cascade u p π
+  Lemma exit_cascade u p t i j k
         (Hdom : Dom edge root u p)
-        (Hprec : Precedes id π u)
-        (Hpath : CPath root p (p :< π))
-    : forall h, loop_contains h u -> ~ p ≻* h ≻* u | π.
+        (Hprec : Precedes fst ((p,i) :: t) (u,j))
+        (Hpath : TPath' ((p,i) :< t))
+    : forall h, loop_contains h u -> ~ (p,i) ≻* (h,k) ≻* (u,j) | (p,i) :: t.
     (* otw. there would be a path through this q to p without visiting u *)
     (* this could even be generalized to CPaths *)
     (* TODO: lift on tpaths, on cpaths we might have duplicates, thus it doesn't work there *)

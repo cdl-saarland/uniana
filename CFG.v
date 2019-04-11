@@ -123,6 +123,29 @@ Section red_cfg.
     unfold deq_loop;firstorder.
   Qed.
 
+  Lemma deq_loop_exited h qe e
+        (Hexit : exit_edge h qe e)
+    : deq_loop qe e.
+  Admitted.
+  
+  Lemma deq_loop_exiting h qe e
+        (Hexit : exit_edge h qe e)
+    : deq_loop h qe.
+  Admitted.
+  
+  Lemma deq_loop_trans p q r
+        (H1 : deq_loop p q)
+        (H2 : deq_loop q r)
+    : deq_loop p r.
+  Proof.
+    unfold deq_loop in *. intros. eapply H1,H2;eauto.
+  Qed.
+  
+  Lemma loop_contains_deq_loop h p
+        (Hloop : loop_contains h p)
+    : deq_loop p h.
+  Admitted.
+  
   Definition innermost_loop h p : Prop := loop_head h /\ deq_loop h p /\ loop_contains h p.
 
   Lemma ex_innermost_loop p
@@ -382,19 +405,6 @@ Section red_cfg.
   Proof.
     eauto using ancestor_dom1, ancestor_sym.
   Qed.
-
-  Lemma loop_cutting q p t
-        (Hpath : CPath q p t)
-        (Hnoh : forall h, loop_contains h q -> h ∉ t)
-    : exists t', Path a_edge q p t'.
-  Admitted.
-  
-  Lemma loop_cutting_elem q p π
-        (Hpath : CPath' π)
-        (Hib : p ≻* q | π)
-        (Hnoh : forall h, loop_contains h q -> ~ p ≻* h | π)
-    : exists t', Path a_edge q p t'.
-  Admitted.
 
   (** loop_CFG: remove everything outside the loop **)
 

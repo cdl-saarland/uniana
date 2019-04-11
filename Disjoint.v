@@ -50,7 +50,6 @@ Parameter rel_splits_spec
                         <-> exists h e, exited h e
                                  /\ e -a>* p (* acyclic, bc. otw. path could use back_edge of outer loop *)
                                  /\ loop_contains h q
-                                 /\ ~ loop_contains h p
                                  /\ sp ∈ loop_splits h e.
 (* sp ∈ splits' h e. <--- deprecated *)
 

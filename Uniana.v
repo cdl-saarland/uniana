@@ -317,7 +317,6 @@ Section uniana.
     enough ((u,j2) ≻* (a,j) | (p,i) :: l2) as Hib2.
     2: eapply dom_dom_in_between with (l:= (p,i) :< l2) in Hunch;eauto.
     3: eapply dom_dom_in_between with (l:= (p,i) :< l1) in Hunch;eauto.
-    Unshelve. 4: exact i. 4 : exact j2. 4: exact j. 4: exact i. 4: exact j1. 4: exact j. 
     2,3: unfold Tag in *; simpl_nl' Hunch; find_succ_rel.
 
     assert (Prefix j i) as Hprei by (eapply tag_prefix_ancestor;[eapply ancestor_sym| |];eauto).
@@ -402,23 +401,46 @@ Section uniana.
       + eapply succ_in_path_edge;cycle 1;eauto.
     } 
     destructH.
+    repeat match goal with
+           | [H : context C [ne_to_list (_ :< _)] |- _] => simpl_nl' H
+           end.
+    repeat splice_splinter.
+    2-4: rewrite nlcons_to_list;eauto.
     exists br, qq, qq';split.
     - eapply rel_splits_spec. exists h.
       eapply in_app_or in Hsplit. destruct Hsplit as [Hsplit|Hsplit].
-      + exists e1. split_conj;eauto.
-        1,2: unfold exited;eauto.
-        * assert (deq_loop u e1) as Hdeq by admit.
-          eapply loop_cutting_elem.
-          -- clear Htr2. spot_path.
-          -- admit. (*eapply in_before_inBefore.
-             simpl_nl.
-             decide' (e1 == p);econstructor;[clear;firstorder|].
-             eapply in_fst'. simpl_nl' Hexit__succ1.
-             eapply in_succ_in1 in Hexit__succ1.
-             destruct Hexit__succ1;[inversion H; congruence|eauto].*)
-          -- intros h0 Hloop0. eapply Hdeq in Hloop0. eapply exit_cascade in Hunch;eauto.
-             ++ contradict Hunch. admit. (* possibly I have to switch to tpath bc they are NoDup *)
-             ++ instantiate (1:= map fst l1). clear - Hprec1 Hneq.
+      + exists e1.
+        repeat lazymatch goal with
+               | [H : context C [l2] |- _ ] => clear H
+               | [H : context C [qe2] |- _ ] => clear H
+               | [H : context C [j2] |- _ ] => clear H
+               end.
+        split_conj;eauto.
+        1: unfold exited;eauto.
+        assert (deq_loop u e1) as Hdeq.
+        {
+          clear - Hexit__edge1 Hocc0.
+          eapply deq_loop_trans;cycle 1.
+          - eapply deq_loop_exited;eauto.
+          - eapply deq_loop_trans;cycle 1.
+            + eapply deq_loop_exiting;eauto.
+            + eapply loop_contains_deq_loop;eauto.
+        }
+        eapply (loop_cutting_elem _ _ l1).
+        -- spot_path.
+        -- simpl_nl. econstructor.
+           instantiate (1 := l' ++ j).
+           eapply splinter_single.
+           unfold Tag in *. find_in_splinter.
+        -- intros h0 k0 Hloop0. eapply Hdeq in Hloop0. eapply exit_cascade in Hunch;eauto.
+           ++ contradict Hunch.
+              simpl_nl' Hunch. instantiate (1 := k0).
+              eapply succ_rt_combine;eauto;[rewrite nlcons_to_list; eauto| | find_succ_rel].
+              eapply (succ_rt_trans _ (e1, l' ++ j) _);eauto;[rewrite nlcons_to_list;eauto| |find_succ_rel].
+              setoid_rewrite nlcons_to_list at 3. eapply tpath_deq_loop_prefix; eauto.
+              eapply prefix_eq. rewrite app_cons_assoc in Hj1. eexists;eauto.
+      (* (h0, k0) ≻* (u, j1) | (p, i) :: l1 *)
+      (*             ++ clear - Hprec1 Hneq.
                 inversion Hprec1;subst;[contradiction|].
                 cbn in *. clear Hprec1. induction l1;cbn in *.
                 ** inversion H3.
@@ -426,12 +448,10 @@ Section uniana.
                    --- cbn. econstructor.
                    --- econstructor;[cbn;eauto|]. eapply IHl1.
                        inversion H3;subst;[congruence|eauto].
-             ++ spot_path.
-        * (* something with ancestors *) admit.
+             ++ spot_path.*)
       + exists e2. split_conj;eauto.
-        1,2: unfold exited;eauto.
-        * (* same as *) admit.
-        * (*  above  *) admit.           
+        1: unfold exited;eauto.
+        (* same as *) admit.
     - exists k, (l' ++ j).
       destruct η1,η2;cbn in *.
       + cbn in Hlc.

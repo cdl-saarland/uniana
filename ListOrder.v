@@ -116,8 +116,17 @@ Notation "l1 ⊴ l2" := (splinter l1 l2) (at level 70).
 
 (* Read: a succeeds b in l modulo reflexivity and transitivity *)
 Notation "a ≻* b | l" := (splinter (a :: b :: nil) l) (at level 70, b at next level).
-
-Notation "a ≻* b ≻* c | l" := (splinter (a :: b :: c :: nil) l) (at level 70, b at next level).
+Notation "a ≻* b ≻* c | l" := (splinter (a :: b :: c :: nil) l) (at level 70,
+                                                                 b at next level,
+                                                                c at next level).
+Notation "a ≻* b ≻* c ≻* d | l" := (splinter (a :: b :: c :: d :: nil) l) (at level 70,
+                                                                           b at next level,
+                                                                           c at next level,
+                                                                           d at next level).
+Notation "a ≻* b ≻* c ≻* d ≻* e | l" := (splinter (a :: b :: c :: d :: e :: nil) l) (at level 70,
+                                                                                     b at next level,
+                                                                                     c at next level,
+                                                                                     d at next level).
 
 Definition succ_in {A : Type} l (a b : A)
   := exists l1 l2, l = l2 ++ a :: b :: l1.
@@ -370,6 +379,27 @@ End splinter.
 Hint Constructors splinter : splinter.
 Hint Resolve splinter_nil splinter_in splinter_incl : splinter.
 
+Ltac fold_rcons H :=
+  match type of H with
+  | context C [?a :: ?b :: nil] => fold (app (a :: nil) (b :: nil)) in H;
+                                  fold (rcons (a :: nil) b) in H;
+                                  repeat rewrite <-cons_rcons_assoc in H
+  end.
+
+Ltac splice_splinter :=
+  match goal with
+  | [H : splinter ?l1 ?l,
+     Q : splinter ?l2 ?l |- _ ]
+    => lazymatch l2 with
+      | ?a :: _
+        => lazymatch l1 with
+          | context C [a :: nil]
+            => fold_rcons H; eapply (splinter_app_l a l) in H;[|eauto|eapply Q];
+              clear Q; cbn in H
+          end
+      end
+  end.
+
 Section succ_rt.
   Context {A : Type} `{EqDec A eq}.
 
@@ -408,7 +438,16 @@ Section succ_rt.
       eapply splinter_single;eauto. firstorder 1.
     - (* skip-skip *)
       econstructor;eauto.
-  Qed.  
+  Qed.
+
+  Lemma succ_rt_combine (a b c : A) l
+        (Hnd : NoDup l)
+        (Hsucc1 : b ≻* a | l)
+        (Hsucc2 : c ≻* b | l)
+    : c ≻* b ≻* a | l.
+  Proof.
+    splice_splinter;eauto.
+  Qed.
 
   Ltac find_in_succ_rt := eapply splinter_incl; eauto; firstorder.
   
@@ -472,11 +511,14 @@ Ltac find_in_splinter :=
 Ltac find_succ_rel :=
   match goal with
   | [H : splinter ?l1 ?l |- ?a ≻* ?b | ?l]
-    => lazymatch l1 with
-      | context C [a]
-        => lazymatch l1 with
-          | context C [b] => eapply (splinter_trans _ l1);
-                            [repeat (econstructor;eauto)|apply H]
+    => match l1 with
+      | context C [?a']
+        => unify a a';
+          match l1 with
+          | context C [?b']
+            => unify b b';
+              eapply (splinter_trans _ l1);
+              [|apply H]; solve [repeat (econstructor;eauto)]
           end
       end
   end.
@@ -485,30 +527,11 @@ Ltac resolve_succ_rt :=
   lazymatch goal with
   | [ Ha : context Ca [?a :: ?c :: _],
            Hb : context Cb [?b] |- ?a ≻* ?b | ?l ]
-    => eapply (succ_rt_trans _ c _);
+    => try find_succ_rel; eapply (succ_rt_trans _ c _);
       [eauto|find_succ_rel|find_succ_rel]
+  | [ |- ?a ≻* ?b ≻* ?c | ?l ] => eapply succ_rt_combine;resolve_succ_rt
   end.
 
-Ltac fold_rcons H :=
-  match type of H with
-  | context C [?a :: ?b :: nil] => fold (app (a :: nil) (b :: nil)) in H;
-                                  fold (rcons (a :: nil) b) in H;
-                                  repeat rewrite <-cons_rcons_assoc in H
-  end.
-
-Ltac splice_splinter :=
-  match goal with
-  | [H : splinter ?l1 ?l,
-     Q : splinter ?l2 ?l |- _ ]
-    => lazymatch l2 with
-      | ?a :: _
-        => lazymatch l1 with
-          | context C [a :: nil]
-            => idtac a; idtac H; idtac Q; fold_rcons H; eapply (splinter_app_l a l) in H;[|eauto|eapply Q];
-              clear Q; cbn in H
-          end
-      end
-  end.
 
 Goal forall (A : Type) (a b c d : A) (l : list A), NoDup l -> splinter (a :: b :: d :: nil) l
                                               -> splinter (d :: c :: a :: nil) l -> False.
