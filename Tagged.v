@@ -92,6 +92,29 @@ Parameter eff_tag_det : forall `{redCFG} q j p i i',
     eff_tag q p j = i' ->
     i = i'.
 
+Lemma tpath_succ_eff_tag `{redCFG} p q r i j s t
+      (Hpath : TPath' ((r,s) :< t))
+      (Hsucc : (q,j) ≻ (p,i) | (r,s) :: t)
+  : eff_tag p q i = j.
+Proof.
+  unfold succ_in in Hsucc. destructH.
+  assert ((r,s) :< t = l2 >: (q,j) :>: (p,i) :+ l1) as Hsucc'.
+  {
+    rewrite nlcons_to_list in Hsucc. eapply ne_to_list_inj. rewrite Hsucc.
+    simpl_nl.
+    rewrite <-nlconc_to_list. simpl_nl. repeat rewrite app_cons_assoc. reflexivity.
+  }
+  rewrite Hsucc' in Hpath.
+  unfold TPath' in Hpath.
+  eapply postfix_path with (l:=l2 :r: (q,j)) (p:=(p,i)) in Hpath.
+  - eapply path_prefix_path with (ϕ:= (q,j) :<: ne_single (p,i)) in Hpath.
+    + inversion Hpath;subst;eauto. unfold tcfg_edge,tcfg_edge' in H4. cbn in H4. destruct b. conv_bool.
+      inversion H1;subst. destruct H4. eauto.
+    + cbn; simpl_nl. clear. induction l2; cbn; econstructor; eauto.
+  - cbn; simpl_nl. clear. induction l2; cbn; destruct l1; cbn; simpl_nl; eauto using postfix_cons.
+    1,2: repeat (eapply postfix_cons; try econstructor). eapply postfix_nil.
+Qed.
+
 Lemma tpath_NoDup `{redCFG} p q t
       (Hpath : TPath p q t)
   : NoDup t.
@@ -308,6 +331,14 @@ Section tagged.
         (Hpath : CPath q p t)
         (Hnoh : forall h, loop_contains h q -> h ∉ t)
     : exists t', Path a_edge q p t'.
+  Admitted.
+
+  Lemma tpath_exit_nin h q e n j t
+        (Hpath : TPath (root, start_tag) (q,n :: j) t)
+        (Hloop : loop_contains h q)
+        (Hexit : exited h e)
+    : (e,j) ∉ t.
+  Proof.
   Admitted.
   
   Lemma loop_cutting_elem q p t i j

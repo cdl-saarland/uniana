@@ -284,6 +284,52 @@ Section uniana.
   Hint Resolve precedes_in.
 
 
+  Lemma prefix_succ_in (A : Type) (a b : A) l l'
+        (Hpre : Prefix l l')
+        (Hsucc : a ≻ b | l)
+    : a ≻ b | l'.
+  Proof.
+    induction Hpre;eauto.
+    eapply IHHpre in Hsucc.
+    unfold succ_in in Hsucc. destructH. exists l1, (a0 :: l2). rewrite Hsucc. cbn; reflexivity.
+  Qed.
+
+  Local Ltac lc_ex_succ_pre_post := 
+    eapply prefix_succ_in; eauto;
+    eapply postfix_succ_in; eauto;
+    eapply succ_in_rcons2.
+  
+  Lemma last_common_ex_succ (A : Type) `{EqDec A eq} (a1 a2 a1' a2' c : A) ll1 ll2 l1 l2
+        (Hpre1 : Prefix (a1 :: l1) ll1)
+        (Hpre2 : Prefix (a2 :: l2) ll2)
+        (Hnin1 : a1' ∉ (a2 :: l2))
+        (Hnin2 : a2' ∉ (a1 :: l1))
+        (Hsucc1 : a1' ≻ a1 | ll1)
+        (Hsucc2 : a2' ≻ a2 | ll2)
+        (Hneq : a1 <> a2)
+        (Hlc : last_common (a1 :: l1) (a2 :: l2) c)
+    : exists (b1 b2 : A), b1 ≻ c | ll1 /\ b2 ≻ c | ll2 /\ b1 <> b2.
+  Proof.
+    unfold last_common in Hlc. destructH.
+    specialize (rcons_destruct l1') as Hl1'.
+    specialize (rcons_destruct l2') as Hl2'.
+    destruct Hl1', Hl2'; subst; cbn in Hlc0,Hlc2.
+    - eapply2' postfix_hd_eq Hlc0 Hlc2 Heq1 Heq2; subst. congruence.
+    - destructH. subst. eapply postfix_hd_eq in Hlc0. subst.
+      exists a1', a. split_conj;eauto.
+      + lc_ex_succ_pre_post.
+      + contradict Hnin1. eapply postfix_incl;eauto. rewrite In_rcons. rewrite In_rcons. firstorder 0.
+    - destructH. subst. eapply postfix_hd_eq in Hlc2. subst.
+      exists a, a2'. split_conj;eauto.
+      + lc_ex_succ_pre_post.
+      + contradict Hnin2. eapply postfix_incl;eauto. rewrite In_rcons. rewrite In_rcons. subst. firstorder 0.
+    - repeat destructH; subst.
+      exists a0, a. split_conj.
+      + lc_ex_succ_pre_post.
+      + lc_ex_succ_pre_post.
+      + intro Heq; subst. unfold Disjoint in Hlc1. destruct Hlc1. clear - H0.
+        eapply H0; eapply In_rcons; left; eauto.
+  Qed.
   
   Lemma find_divergent_branch u p l1 l2 i j1 j2 
         (Hunch : Dom edge root u p)
@@ -449,61 +495,52 @@ Section uniana.
                    --- econstructor;[cbn;eauto|]. eapply IHl1.
                        inversion H3;subst;[congruence|eauto].
              ++ spot_path.*)
-      + exists e2. split_conj;eauto.
+      + exists e2.
+        repeat lazymatch goal with
+               | [H : context C [l1] |- _ ] => clear H
+               | [H : context C [qe1] |- _ ] => clear H
+               | [H : context C [j1] |- _ ] => clear H
+               end.
+        split_conj;eauto.
         1: unfold exited;eauto.
-        (* same as *) admit.
+        assert (deq_loop u e2) as Hdeq.
+        {
+          clear - Hexit__edge2 Hocc0.
+          eapply deq_loop_trans;cycle 1.
+          - eapply deq_loop_exited;eauto.
+          - eapply deq_loop_trans;cycle 1.
+            + eapply deq_loop_exiting;eauto.
+            + eapply loop_contains_deq_loop;eauto.
+        }
+        eapply (loop_cutting_elem _ _ l2).
+        -- spot_path.
+        -- simpl_nl. econstructor.
+           instantiate (1 := l' ++ j).
+           eapply splinter_single.
+           unfold Tag in *. find_in_splinter.
+        -- intros h0 k0 Hloop0. eapply Hdeq in Hloop0. eapply exit_cascade in Hunch;eauto.
+           ++ contradict Hunch.
+              simpl_nl' Hunch. instantiate (1 := k0).
+              eapply succ_rt_combine;eauto;[rewrite nlcons_to_list; eauto| | find_succ_rel].
+              eapply (succ_rt_trans _ (e2, l' ++ j) _);eauto;[rewrite nlcons_to_list;eauto| |find_succ_rel].
+              setoid_rewrite nlcons_to_list at 3. eapply tpath_deq_loop_prefix; eauto.
+              eapply prefix_eq. rewrite app_cons_assoc in Hj2. eexists;eauto.
     - exists k.
-      Lemma last_common_ex_succ (A : Type) `{EqDec A eq} (a1 a2 a1' a2' c : A) ll1 ll2 l1 l2
-            (Hpre1 : Prefix (a1 :: l1) ll1)
-            (Hpre2 : Prefix (a2 :: l2) ll2)
-            (Hnin1 : a1' ∉ (a2 :: l2))
-            (Hnin2 : a2' ∉ (a1 :: l1))
-            (Hsucc1 : a1' ≻ a1 | ll1)
-            (Hsucc2 : a2' ≻ a2 | ll2)
-            (Hneq : a1 <> a2)
-            (Hlc : last_common (a1 :: l1) (a2 :: l2) c)
-        : exists (b1 b2 : A), b1 ≻ c | ll1 /\ b2 ≻ c | ll2 /\ b1 <> b2.
-      Proof.
-        unfold last_common in Hlc. destructH.
-        specialize (rcons_destruct l1') as Hl1'.
-        specialize (rcons_destruct l2') as Hl2'.
-        destruct Hl1', Hl2'; subst; cbn in Hlc0,Hlc2.
-        - eapply2' postfix_hd_eq Hlc0 Hlc2 Heq1 Heq2; subst. congruence.
-        - destructH. subst. eapply postfix_hd_eq in Hlc0. subst.
-          exists a1', a. split_conj;eauto.
-          + admit. (* postfix & prefix transport succ *)
-          + contradict Hnin1. eapply postfix_incl;eauto. rewrite In_rcons. rewrite In_rcons. firstorder 0.
-        - admit. (* exactly the same *)
-        - repeat destructH; subst.
-          exists a0, a. split_conj.
-          + admit. (* as above *)
-          + admit. (* as above *)
-          + intro Heq; subst. unfold Disjoint in Hlc1. destruct Hlc1. clear - H0.
-            eapply H0; eapply In_rcons; left; eauto.
-      Admitted.
-
       eapply last_common_ex_succ in Hlc; eauto.
       2: rewrite nlcons_to_list; unfold Tag in *; rewrite <-ηeq1;eauto.
       2: rewrite nlcons_to_list; unfold Tag in *; rewrite <-ηeq2;eauto.
       4: contradict Htag0; inversion Htag0; eauto.
       clear - Hlc Htr1 Htr2. destructH. destruct b1, b2. exists t, t0, l, l0. split_conj;eauto.
-      contradict Hlc3. inversion Hlc3;subst;eauto. f_equal. eapply eff_tag_det. 1,2: admit.
-      1,2: admit.
-       (* we will have to prove that (e1, l' ++ j) does not occur in η2 *)
-      
-        (*
-      destruct η1,η2;cbn in *.
-      + cbn in Hlc.
-        eapply last_common_singleton1 in Hlc as Hleft.
-        eapply last_common_singleton2 in Hlc as Hright.
-        inversion Hleft; inversion Hright; subst. congruence.
-      + exists e1.
-        eapply last_common_singleton1 in Hlc as Hlc'. inversion Hlc'; subst br k. split_conj;eauto.
-        (* br = qe1, thus successor is e1, the successor in l2 is in inside the loop,
-                 thus they are unequal *) admit. 
-      + (* analogous to the one above *) admit. 
-      + (* because successors are inside the last_common *) admit.*)
-  Admitted.
+      contradict Hlc3. inversion Hlc3;subst;eauto. f_equal.
+      eapply eff_tag_det; eapply tpath_succ_eff_tag; simpl_nl; unfold Coord in *; cycle 1; eauto.
+      1: rewrite nlcons_to_list; unfold Tag in *; rewrite <-ηeq2.
+      2: rewrite nlcons_to_list; unfold Tag in *; rewrite <-ηeq1.
+      eapply (tpath_exit_nin h qe2);eauto;clear - Hexit__edge1 Hexit__edge2; unfold exit_edge in *;unfold exited;
+        [|exists qe1]; firstorder 0.
+      eapply (tpath_exit_nin h qe1);eauto;clear - Hexit__edge1 Hexit__edge2; unfold exit_edge in *;unfold exited;
+        [|exists qe2]; firstorder 0.
+      Unshelve. all: eauto.
+  Qed.
   
   Lemma unch_same_tag p u i s1 s2 j1 j2 r1 r2 l1 l2 x uni unch
         (Hunibr : join_andb (map ((uni_branch uni) ∘ fst ∘ fst) (rel_splits p u)) = true)

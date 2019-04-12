@@ -805,6 +805,15 @@ Proof.
   revert a. induction l; cbn; eauto. rewrite IHl. reflexivity.
 Qed.
 
+Lemma nlconc_to_list (A : Type) (l : ne_list A) (l' : list A)
+  : l ++ l' = l :+ l'.
+Proof.
+  destruct l';cbn.
+  - eauto using app_nil_end.
+  - induction l;cbn;[rewrite <-nlcons_to_list|];eauto.
+    rewrite IHl. reflexivity.
+Qed.
+
 Lemma nlcons_front {A : Type} (a : A) l :
   ne_front (nlcons a l) = a.
 Proof.
