@@ -269,11 +269,28 @@ Section uniana.
           cbn;simpl_nl;eauto.
   Qed.
 
+  Definition unch_concr' (unch : Unch) (l : list Conf) :=
+    forall (to : Lab) (i : Tag) (s : State) (u : Lab) (x : Var),
+      (to,i,s) ∈ l ->
+      u ∈ unch to x ->
+      exists (j : Tag) (r : State), Precedes' l (u,j,r) (to,i,s) /\ r x = s x.
+
+  Lemma unch_concr'_pre unch t l
+        (HCunch : unch_concr unch t)
+        (Hpre : Prefix l (`t))
+    : unch_concr' unch l.
+  Proof.
+    unfold unch_concr,unch_concr' in *; eauto.
+  Admitted.
   
-  Lemma unch_dom u p x unch (* TODO: this will need a unch_concr assumption *)
+  Lemma unch_dom u p i s x unch l (* TODO: this will need a unch_concr assumption *)
         (Hunch : u ∈ unch_trans unch p x)
+        (HCunch : unch_concr' (unch_trans unch) l)
+        (Htr : Tr ((p,i,s) :< l))
     : Dom edge root u p.
+  Proof.
     unfold unch_trans,unch_trans_ptw in Hunch. unfold unch_trans_local in Hunch.
+    
   Admitted.
 
   
@@ -545,6 +562,8 @@ Section uniana.
   Lemma unch_same_tag p u i s1 s2 j1 j2 r1 r2 l1 l2 x uni unch
         (Hunibr : join_andb (map ((uni_branch uni) ∘ fst ∘ fst) (rel_splits p u)) = true)
         (Hunch : u ∈ unch_trans unch p x)
+        (HCunch1 : unch_concr' (unch_trans unch) l1)
+        (HCunch2 : unch_concr' (unch_trans unch) l2)
         (Hprec1 : Precedes lab_of l1 (u, j1, r1))
         (Hprec2 : Precedes lab_of l2 (u, j2, r2))
         (HCuni : forall (x : Var) (p : Lab) (i : Tag) (s s' : State),
@@ -711,6 +730,8 @@ Section uniana.
         destruct H as [u H].
         conv_bool.
         destruct H as [Hunch [[Hneq' Huni] Hunibr]].
+        copy HCunch HCunch1.
+        copy HCunch' HCunch2.
         specialize (HCunch p i s u x HIn Hunch).
         specialize (HCunch' p i s' u x HIn' Hunch).
         destruct HCunch as [j [r [Hprec Heq]]]; try eassumption.
@@ -736,6 +757,8 @@ Section uniana.
           rewrite Hteq2 in Hprec'0. simpl_nl' Hprec'0. cbn in Hprec'0.
           eapply prefix_cons_cons in Hprec'0.
           eapply unch_same_tag with (l1:=l').
+          3: eapply (unch_concr'_pre _ t l'); eauto; rewrite Hteq1;cbn;econstructor;eauto.
+          3: eapply (unch_concr'_pre _ t' l'0);eauto;rewrite Hteq2;cbn;econstructor;eauto.
           1,2,6-8: eauto.
           -- inversion Hprec1;subst;eauto;congruence.
           -- inversion Hprec'1;subst;eauto;congruence.
