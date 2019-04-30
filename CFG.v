@@ -157,6 +157,7 @@ Section red_cfg.
   Admitted.
 
   Parameter get_innermost_loop : Lab -> Lab.
+  Parameter get_innermost_loop_spec : forall p h, get_innermost_loop p = h <-> loop_contains h p /\ deq_loop h p.
 
   Parameter exit_edge_b : forall `{redCFG}, Lab -> Lab -> Lab -> bool.
   Parameter exit_edge_b_spec : forall h p q, exit_edge_b h p q = true <-> exit_edge h p q.

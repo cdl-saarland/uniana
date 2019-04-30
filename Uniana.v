@@ -275,22 +275,79 @@ Section uniana.
       u ∈ unch to x ->
       exists (j : Tag) (r : State), Precedes' l (u,j,r) (to,i,s) /\ r x = s x.
 
+ 
+  Lemma prefix_trans_NoDup (A : Type) `{EqDec A eq} (a : A) (l l1 l2 : list A)
+        (Hpre1 : Prefix (a :: l1) l)
+        (Hpre2 : Prefix l2 l)
+        (Hnd : NoDup l)
+        (Hin : a ∈ l2)
+    : Prefix (a :: l1) l2.
+  Proof.
+    induction l;cbn.
+    - eapply prefix_incl in Hin;eauto. cbn in Hin. contradiction.
+    - inversion_clear Hnd;subst. decide' (a == a0).
+      + inversion Hpre1;subst.
+        * inversion Hpre2; subst; [econstructor|].
+          eapply prefix_incl in Hin; eauto. congruence.
+        * exfalso. eapply prefix_incl in H4. firstorder.          
+      + eapply prefix_incl in Hin;eauto. destruct Hin;[congruence|].
+        inversion Hpre1;subst;[congruence|].
+        inversion Hpre2; subst.
+        * econstructor;eauto.
+        * eapply IHl;eauto.
+  Qed.
+  
+  Lemma Tr_NoDup t
+        (Htr : Tr t)
+    : NoDup t.
+  Proof.
+    destruct (ne_front t) eqn:E. destruct c eqn:E'.
+    eapply Tr_EPath in Htr. destructH.
+    - eapply EPath_TPath in Htr. eapply tpath_NoDup in Htr. eapply NoDup_map_inv.
+      rewrite to_list_ne_map. eauto.
+    - rewrite E. reflexivity.
+  Qed.
+
+  Hint Resolve Conf_dec.
+  
+  Lemma precedes_prefix l' p q i j r s (t : ne_list Conf)
+        (Hprec : Precedes' t (q,j,r) (p,i,s))
+        (Hpre  : Prefix l' t)
+        (Hin : (p,i,s) ∈ l')
+        (Htr : Tr t)
+    : Precedes' l' (q,j,r) (p,i,s).
+  Proof.
+    unfold Precedes' in *.
+    destructH. exists l'0. split;eauto.
+    eapply prefix_trans_NoDup;eauto.
+    eapply Tr_NoDup;eauto.
+  Qed.
+
   Lemma unch_concr'_pre unch t l
         (HCunch : unch_concr unch t)
         (Hpre : Prefix l (`t))
     : unch_concr' unch l.
   Proof.
     unfold unch_concr,unch_concr' in *; eauto.
-  Admitted.
+    intros. specialize (HCunch to i s u x). exploit HCunch;[eapply prefix_incl;eauto|].
+    destructH. eexists; eexists; split; [|eauto].
+    eapply precedes_prefix;eauto. destruct t; cbn; eauto.
+  Qed.   
   
-  Lemma unch_dom u p i s x unch l (* TODO: this will need a unch_concr assumption *)
+  Lemma unch_dom u p i s x unch l 
         (Hunch : u ∈ unch_trans unch p x)
         (HCunch : unch_concr' (unch_trans unch) l)
         (Htr : Tr ((p,i,s) :< l))
     : Dom edge root u p.
   Proof.
     unfold unch_trans,unch_trans_ptw in Hunch. unfold unch_trans_local in Hunch.
-    
+    destruct (Lab_dec' p root).
+    - cbn in *. destruct Hunch;[|contradiction]. subst. eapply dominant_self.
+    - assert (exists L, forall r, r ∈ L
+                        <-> forall q, q ∈ preds p
+                               -> r ∈ set_add Lab_dec' p (if is_def x q p then empty_set Lab else unch q x)).
+      admit.
+      
   Admitted.
 
   
@@ -736,7 +793,6 @@ Section uniana.
         specialize (HCunch' p i s' u x HIn' Hunch).
         destruct HCunch as [j [r [Hprec Heq]]]; try eassumption.
         destruct HCunch' as [j' [r' [Hprec' Heq']]]; try eassumption.
-        (* TODO: we'll need HCunch' for unch_dom *)
         rewrite <- Heq. rewrite <- Heq'.
         cut (j = j'); intros.
         * subst j'. eapply HCuni. eapply Hts1. eapply Hts2. 3: eauto.

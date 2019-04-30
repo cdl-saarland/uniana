@@ -63,6 +63,19 @@ Lemma tag_eq_loop_exit `{redCFG} p q i j j'
       (Htag': (q,j') -t> (p,i))
       (Hneq : j <> j')
   : exit_edge (get_innermost_loop q) q p.
+Proof.
+  unfold exit_edge. set (h := get_innermost_loop q).
+  assert (get_innermost_loop q = h) as Heq by (subst;reflexivity).
+  rewrite get_innermost_loop_spec in Heq. destructH.
+  repeat split; eauto.
+  - contradict Hneq. unfold deq_loop in Heq1.
+    unfold tcfg_edge in *.
+    unfold tcfg_edge' in *.
+    conv_bool. destructH. destructH. unfold eff_tag in *.
+    induction all_lab. destruct (back_edge_b p q). 
+
+  
+  
 Admitted.
 
 Definition TPath `{redCFG} := Path tcfg_edge.
@@ -118,7 +131,13 @@ Qed.
 Lemma tpath_NoDup `{redCFG} p q t
       (Hpath : TPath p q t)
   : NoDup t.
-Admitted.
+Proof.
+  induction Hpath.
+  - econstructor; eauto. econstructor.
+  - cbn. econstructor;eauto.
+   destruct c. intro HIn. unfold tcfg_edge,tcfg_edge' in H0. destruct a, b. conv_bool. destruct H0.
+   eapply eff_tag_fresh in HIn;eauto.
+Qed.
 
 Section tagged.
   
