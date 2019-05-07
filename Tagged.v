@@ -9,7 +9,16 @@ Require Import Coq.Logic.Eqdep_dec.
 
 Require Export CFG.
 
-Generalizable Variable edge.
+Ltac destr_let :=
+  match goal with
+  | [ |- context[let (_,_) := fst ?a in _]] => destruct a;unfold fst 
+  | [ |- context[let (_,_) := snd ?a in _]] => destruct a;unfold snd
+  | [ |- context[let (_,_) := ?a in _]] => destruct a
+  end.
+
+Section tagged.
+  
+  Context `{C : redCFG}.
 
 Definition Tag := list nat.
 
@@ -19,6 +28,7 @@ Next Obligation.
 Qed.
 
 Definition start_tag : Tag := nil.
+
 Definition Coord : Type := (Lab * Tag).
 Hint Resolve Tag_dec.
 
@@ -31,29 +41,28 @@ Hint Resolve Coord_dec.
 
 Hint Unfold Coord.
 
-Ltac destr_let :=
-  match goal with
-  | [ |- context[let (_,_) := fst ?a in _]] => destruct a;unfold fst 
-  | [ |- context[let (_,_) := snd ?a in _]] => destruct a;unfold snd
-  | [ |- context[let (_,_) := ?a in _]] => destruct a
-  end.
 
 Definition tcfg_edge' (edge : Lab -> Lab -> bool) (tag : Lab -> Lab -> Tag -> Tag) :=
   (fun c c' : Coord => let (p,i) := c  in
                     let (q,j) := c' in
                     edge p q && ( (tag p q i) ==b j)).
 
-Fixpoint eff_tag `{redCFG} p q i : Tag
-  := if back_edge_b p q
+Definition eff_tag `{redCFG} p q i : Tag
+  := if decision (p ↪ q)
      then match i with
           | nil => nil
           | n :: l => (S n) :: l
           end
-     else 
-       let l' := @iter Tag (@tl nat) i (exit_edge_num p q) in
-       if loop_head_dec q then O :: l' else l'.
+     else
+       if decision (exists h, exit_edge h p q) then
+         tl i
+       else
+         if decision (loop_head q) then
+           O :: i
+         else
+           i.
 
-Definition tcfg_edge `{redCFG} := tcfg_edge' edge eff_tag.
+Definition tcfg_edge := tcfg_edge' edge eff_tag.
 
 Notation "pi -t> qj" := ((fun `(redCFG) => tcfg_edge pi qj = true) _ _ _ _ _)
                           (at level 50).
@@ -62,8 +71,13 @@ Lemma tag_eq_loop_exit `{redCFG} p q i j j'
       (Htag : (q,j ) -t> (p,i))
       (Htag': (q,j') -t> (p,i))
       (Hneq : j <> j')
-  : exit_edge (get_innermost_loop q) q p.
+  : match (get_innermost_loop q) with
+    | Some (exist _ h H) => exit_edge h q p
+    | None => False
+    end.
 Proof.
+Admitted.
+(*
   unfold exit_edge. set (h := get_innermost_loop q).
   assert (get_innermost_loop q = h) as Heq by (subst;reflexivity).
   rewrite get_innermost_loop_spec in Heq. destructH.
@@ -72,11 +86,7 @@ Proof.
     unfold tcfg_edge in *.
     unfold tcfg_edge' in *.
     conv_bool. destructH. destructH. unfold eff_tag in *.
-    induction all_lab. destruct (back_edge_b p q). 
-
-  
-  
-Admitted.
+    induction all_lab. destruct (back_edge_b p q). *)
 
 Definition TPath `{redCFG} := Path tcfg_edge.
 
@@ -139,9 +149,9 @@ Proof.
    eapply eff_tag_fresh in HIn;eauto.
 Qed.
 
-Section tagged.
+(*Section tagged.
   
-  Context `{C : redCFG}.
+  Context `{C : redCFG}.*)
 
   Lemma prec_tpath_pre_tpath p i q j l
         (Hneq : p <> q)
@@ -152,7 +162,7 @@ Section tagged.
     eapply path_to_elem with (r:= (q,j)) in Htr.
     - destructH. exists (tl ϕ).
       assert (ϕ = (q,j) :< tl ϕ) as ϕeq.
-      { inversion Htr0;subst;cbn;simpl_nl;eauto. }
+      { inversion Htr0;subst a;cbn;simpl_nl;eauto. }
       split;eauto.
       + rewrite ϕeq in Htr0;eauto.        
       + rewrite ϕeq in Htr1;simpl_nl' Htr1;eauto.
@@ -174,7 +184,7 @@ Section tagged.
         (Hprec2 : Precedes fst l (p,j))
     : i = j.
   Proof.
-    clear all_lab edge root a_edge C.
+    clear edge root a_edge C.
     dependent induction Hprec1.
     - inversion Hprec2;subst;[reflexivity|]. cbn in H2; contradiction.
     - inversion Hprec2;subst.

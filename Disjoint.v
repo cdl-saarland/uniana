@@ -33,10 +33,60 @@ Parameter splits' : forall `{redCFG}, Lab -> Lab -> list (Lab * Lab * Lab).
 Parameter splits  : forall `{redCFG}, Lab -> list (Lab * Lab * Lab).
 Parameter rel_splits : forall `{redCFG}, Lab -> Lab -> list (Lab * Lab * Lab).
 
-Definition path_splits__imp `{C : redCFG} p
-  := @path_splits _ _ _ _ (local_impl_CFG C (get_innermost_loop p)) p.
-Definition loop_splits__imp `{C : redCFG} h
-  := @loop_splits _ _ _ _ (local_impl_CFG C h) h.
+(*Lemma in_loop_CFG `{C : redCFG} (p h : Lab)
+      (Hhead : loop_head h)
+      (Hinner : get_innermost_loop p = h)
+  : loop_nodes h p.
+Proof.
+  unfold loop_nodes. cbn. 
+  rewrite get_innermost_loop_spec in Hinner.
+  destruct (depth p) eqn:E;[|unfold innermost_loop;eauto].
+  - unfold depth in E. 
+  - unfold innermost_loop in Hinner. firstorder.
+Admitted.
+Set Printing All.
+*)
+
+(* TODO *)
+
+(* proof sketch:
+ * provide construction to get elem of type in opt_loop_CFG
+ * this is the element to instantiate in the path_splits__imp definition. *)
+
+Lemma in_implode_CFG `{C : redCFG} (p : Lab)
+      (Hdeq : deq_loop root p)
+  : implode_nodes p.
+Admitted.
+  
+
+Arguments loop_head {_ _ _ _} _.
+Arguments loop_head_dec {_ _ _ _} _.
+Arguments get_innermost_loop {_ _ _ _} _.
+
+Goal forall `(C : redCFG) p, implode_nodes p -> eqtype (finType_sub_decPred implode_nodes).
+  intros.
+  econstructor. instantiate (1:=p).
+  unfold pure. decide (implode_nodes p);eauto.
+Qed.
+
+Program Definition path_splits__imp `{C : redCFG} p
+  := @path_splits _ _ _ _ (local_impl_CFG C (get_innermost_loop C p)) _.
+Next Obligation.
+  econstructor. unfold pure. (*instantiate (1:=p). (* <-- adjust *)
+  eapply in_implode_CFG.
+  rewrite Hheq. rewrite get_innermost_loop_spec in Hheq.
+  destruct Hheq.
+  
+  unfold get_innermost_loop. C p).
+  
+  lazymatch goal with
+  | *)
+Admitted.
+
+Program Definition loop_splits__imp `{C : redCFG} (h : Lab)
+  := @loop_splits _ _ _ _ (local_impl_CFG C (get_innermost_loop C h)) _.
+Next Obligation.
+Admitted.
 
 Parameter splits'_spec 
   : forall `{redCFG} h e sp, sp ∈ splits' h e
@@ -337,4 +387,4 @@ Proof.
    * * both traces then h is the one. otherwise apply IH on this graph. 
    * * 
    *)    
-Admitted.
+Admitted.y

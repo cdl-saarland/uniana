@@ -193,10 +193,10 @@ Section graph.
       specialize (IHHϕ (l :< l') ϕ). eapply IHHϕ;eauto.
       simpl_nl;reflexivity.
   Qed.
-  
-  Lemma path_NoDup p q : p -->* q -> exists π, Path p q π /\ NoDup π.
+
+  Lemma path_NoDup' p q ϕ : Path p q ϕ -> exists π, Path p q π /\ NoDup π.
   Proof.
-    intros [ϕ Hto].
+    intros Hto.
     induction Hto.
     - exists (ne_single a). split;econstructor;eauto. econstructor.
     - destruct IHHto as [ψ [IHHto IHnodup]].
@@ -207,6 +207,11 @@ Section graph.
           eapply path_prefix_path in H0; eauto; cbn in *; simpl_nl' H0; eauto.
         * eapply prefix_NoDup; eauto. simpl_nl; eauto.
       + exists (c :<: ψ). split;econstructor;eauto.
+  Qed.
+  
+  Lemma path_NoDup p q : p -->* q -> exists π, Path p q π /\ NoDup π.
+  Proof.
+    intros [ϕ Hto]. eapply path_NoDup';eauto.
   Qed.
 
   Lemma in_nlcons {A : Type} `{EqDec A eq} (l : list A) (a b : A)
@@ -453,3 +458,13 @@ Proof.
   eapply subgraph_path';eauto.
   eapply intersection_subgraph1.
 Qed.
+
+Ltac path_simpl' H :=
+  lazymatch type of H with
+  | Path ?edge ?x ?y (?z :<: ?π) => let Q := fresh "Q" in
+                                   eapply path_front in H as Q;
+                                   cbn in Q; subst z
+  | Path ?edge ?x ?y (?π :>: ?z) => let Q := fresh "Q" in
+                                   eapply path_back in H as Q;
+                                   cbn in Q; subst z
+  end.

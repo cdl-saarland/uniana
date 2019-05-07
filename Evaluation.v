@@ -42,7 +42,7 @@ Section eval.
   Parameter State_dec : EqDec State eq.
 
   Definition States := State -> Prop.
-  Definition Conf := prod Coord State.
+  Definition Conf := ((@Coord Lab)* State)%type.
 
   Hint Unfold Conf Coord.
 
@@ -527,7 +527,7 @@ Section eval.
     forall p q x, is_def x q p = false -> forall i j s r, eff (q, j, r) = Some (p, i, s) -> r x = s x.
   Proof.
     intros.
-    specialize (def_spec q p x).
+    specialize (@def_spec q p x).
     cut (forall (a b : Prop), (a -> b) -> (~ b -> ~ a)); intros Hrev; [| eauto].
     assert (Hds := def_spec).
     eapply Hrev in Hds.
