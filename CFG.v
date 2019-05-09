@@ -303,6 +303,14 @@ Section red_cfg.
       destruct H. destruct x.
       econstructor. econstructor. econstructor. destructH. eauto.
   Defined.
+
+  Lemma get_innermost_loop_spec
+    : forall p : Lab,
+      match get_innermost_loop p with
+      | Some (exist _ h _) => innermost_loop h p
+      | None => forall h' : Lab, loop_contains h' p -> False
+      end.
+  Admitted.
   
   Definition exiting (h p : Lab) : Prop :=
     exists q, exit_edge h p q.

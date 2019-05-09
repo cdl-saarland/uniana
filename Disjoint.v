@@ -214,10 +214,13 @@ Parameter splits_spec
 
 Arguments loop_splits : default implicits.
 
-(*Lemma loop_splits_impl_invariant q p x `(C : redCFG)
-      (Hin : x ∈ loop_splits C (get_innermost_loop q) p)
-  : x ∈ loop_splits (local_impl_CFG C (get_innermost_loop q)) (get_innermost_loop q) p.
-Admitted.*)
+
+Lemma loop_splits_loop_splits__imp `{C : redCFG}:
+  forall (p br h : Lab) (Hspec : innermost_loop h br) (qq qq' : Lab) (Hsplits : (br, qq, qq') ∈ loop_splits C h p),
+    (br,qq,qq') ∈ loop_splits__imp h p.
+Proof.
+  intros p br h Hspec qq qq' Hsplits.
+Admitted.
 Arguments loop_splits {_ _ _ _ _}.
 
 Lemma lc_join_path_split_help1 (L : Type) (edge : L -> L -> bool) (x y : L) (l : list L)

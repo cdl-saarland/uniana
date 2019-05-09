@@ -240,14 +240,6 @@ Section uniana.
     copy c Hneq.
     eapply (tag_eq_loop_exit (p:=p) (q:=q) (i:=i)) in c. 2,3: eapply Htcfg;eauto. clear Htcfg.
     eapply tr_lc_lt with (j3:=j1) (j4:=j2) in Htr1 as Hlc;eauto;destructH' Hlc.
-
-    Lemma get_innermost_loop_spec
-     : forall p : Lab,
-       match get_innermost_loop p with
-       | Some (exist _ h _) => innermost_loop h p
-       | None => forall h' : Lab, loop_contains h' p -> False
-       end.
-    Admitted.
     
     specialize (get_innermost_loop_spec q) as Hspec.
     destruct (get_innermost_loop q) ;[destruct s|contradiction].
@@ -255,32 +247,40 @@ Section uniana.
     - spot_path. 
     - spot_path.
     - destructH.
-      eapply join_andb_true_iff in Hsplit;eauto;cycle 1.
-      {
-        rewrite splits_spec. right. left.
-        exists x. split;[unfold exited;eauto|].
-        rewrite splits'_spec. left. unfold loop_splits__imp.
-        instantiate(1:=(br,qq,qq')).
-        admit.
-        (*eapply loop_splits_impl_invariant;eauto.*)
-      }      
       unfold last_common in Hlc. destructH.
       destruct l1',l2'.
       + cbn in *. eapply2 postfix_hd_eq Hlc0 Hlc2.
         subst'. congruence.
-      + cbn in Hlc0.
+      + 
+        cbn in Hlc0.
         destruct p0.
         eapply2' postfix_hd_eq Hlc0 Hlc2 Hlc0' Hlc2'. symmetry in Hlc0'. subst'.
         clear Hlc0 Hlc1 Hlc3 Hlc5.
-        eapply uni_branch_succ_p with (j:=j2);eauto. intros;symmetry;eapply HCuni;eauto.
+        eapply join_andb_true_iff in Hsplit;eauto;cycle 1.
+        {
+          rewrite splits_spec. right. left.
+          exists x. split;[unfold exited;eauto|].
+          rewrite splits'_spec. left.
+          eapply loop_splits_loop_splits__imp;eauto.
+        }
+        eapply uni_branch_succ_p with (j:=j2);eauto.
+        intros;symmetry;eapply HCuni;eauto.
       + cbn in Hlc2.
         destruct p0. 
         eapply2' postfix_hd_eq Hlc0 Hlc2 Hlc0' Hlc2'. subst'.
         clear Hlc2 Hlc1 Hlc3 Hlc5.
-        eapply uni_branch_succ_p with (j:=j1);eauto. 
-      + eapply (uni_branch_non_disj p i br k _ _
-                                    ((q,j1,r1)::l1) ((q,j2,r2)::l2) (p0:<l1') (p1:<l2'));
-          cbn;simpl_nl;eauto.
+        eapply join_andb_true_iff in Hsplit;eauto;cycle 1.
+        {
+          rewrite splits_spec. right. left.
+          exists x. split;[unfold exited;eauto|].
+          rewrite splits'_spec. left.
+          eapply loop_splits_loop_splits__imp;eauto.
+        }
+        eapply uni_branch_succ_p with (j:=j1);eauto.
+      + (* TODO: this lemma has to be applied on the imploded CFG *)
+        admit.
+        (*eapply (uni_branch_non_disj) with (br:=br);eauto;cbn;simpl_nl;eauto.*)
+        
   Admitted.
 
   Definition unch_concr' (unch : Unch) (l : list Conf) :=
@@ -426,7 +426,7 @@ Section uniana.
         (Htr1 : TPath (root, start_tag) (p, i) ((p, i) :< l1))
         (Htr2 : TPath (root, start_tag) (p, i) ((p, i) :< l2))
         (Hneq : p <> u)
-        (Hjneq : j1 =/= j2)
+        (Hjneq : j1 <> j2)
     : exists br qq qq' : Lab,
       (br, qq, qq') ∈ rel_splits p u /\
       (exists (k k1 k2 : Tag) (q1 q2 : Lab),
@@ -649,7 +649,7 @@ Section uniana.
         (Htr2 : Tr ((p, i, s2) :< l2))
         (Hneq : p <> u)
     : j1 = j2.
-  Proof.
+  Proof. 
     assert (forall p i s l (Htr : Tr ((p, i, s) :< l)),
                TPath (root, start_tag) (p, i) ((p, i) :< map fst l)) as Htr_path.
     {
@@ -657,20 +657,18 @@ Section uniana.
       eapply Tr_EPath in Htr;[|simpl_nl;reflexivity]. destructH.
       eapply EPath_TPath' in Htr;simpl_nl;cbn. 2-4: reflexivity. assumption.
     }
-    decide' (j1 == j2);[eauto|exfalso].
+    decide (j1 = j2);[eauto|exfalso].
     specialize (@find_divergent_branch u p (map fst l1) (map fst l2) i j1 j2) as Hwit.
     unfold Tag in *.
     exploit Hwit.
     - eapply unch_dom;eauto.
-      
     - eapply prec_lab_prec_fst;eauto.
     - eapply prec_lab_prec_fst;eauto.
-    - clear - c. admit.
     - destructH.
       eapply join_andb_true_iff in Hunibr;eauto.
       eapply uni_branch_uni_succ 
         with (q1:=q1) (q2:=q2) (uni:=uni) in HCuni;eauto.
-  Admitted.
+  Qed.
 
   Lemma uni_same_lab p q1 q2 i j1 j2 s1 s2 r1 r2 uni l1 l2
         (Htr1 : Tr ((p,i,s1) :<: (q1,j1,r1) :< l1))
