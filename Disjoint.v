@@ -55,38 +55,137 @@ Set Printing All.
 
 Lemma in_implode_CFG `{C : redCFG} (p : Lab)
       (Hdeq : deq_loop root p)
-  : implode_nodes p.
+  : implode_nodes C p.
 Admitted.
   
 
 Arguments loop_head {_ _ _ _} _.
 Arguments loop_head_dec {_ _ _ _} _.
-Arguments get_innermost_loop {_ _ _ _} _.
+Arguments get_innermost_loop_strict {_ _ _ _} _.
 
-Goal forall `(C : redCFG) p, implode_nodes p -> eqtype (finType_sub_decPred implode_nodes).
-  intros.
-  econstructor. instantiate (1:=p).
-  unfold pure. decide (implode_nodes p);eauto.
+Definition loop_containsT_loop_head `(C : redCFG) (p : Lab)
+           (H : {h : Lab | loop_contains h p})
+  : {h : Lab | loop_head C h}.
+Proof.
+  destruct H;exists x. eapply loop_contains_loop_head;eauto.
+Defined.
+
+Open Scope prg.
+
+Lemma loop_containsT_loop_head_same_h `(C : redCFG) (p : Lab)
+      (H : {h : Lab | loop_contains h p})
+  : (`H) = (` (loop_containsT_loop_head H)).
+Proof.
+  unfold loop_containsT_loop_head.
+  destruct H. cbn. reflexivity.
 Qed.
 
-Program Definition path_splits__imp `{C : redCFG} p
-  := @path_splits _ _ _ _ (local_impl_CFG C (get_innermost_loop C p)) _.
-Next Obligation.
-  econstructor. unfold pure. (*instantiate (1:=p). (* <-- adjust *)
-  eapply in_implode_CFG.
-  rewrite Hheq. rewrite get_innermost_loop_spec in Hheq.
-  destruct Hheq.
-  
-  unfold get_innermost_loop. C p).
-  
-  lazymatch goal with
-  | *)
+Local Arguments deq_loop {_ _ _ _} _.
+Local Arguments depth {_ _ _ _} _. 
+Lemma head_exits_head_inv `(C : redCFG) (h : Lab)
+  : loop_head C h <->loop_head (head_exits_CFG C) h.
+Admitted.
+Lemma head_exits_deq_loop_inv `(C : redCFG) (p q : Lab)
+  : deq_loop C p q <-> deq_loop (head_exits_CFG C) p q.
+Admitted.
+Lemma head_exits_depth_inv `(C : redCFG) (p : Lab)
+  : depth C p = depth (head_exits_CFG C) p.
+Admitted.  
+Lemma no_strictly_containting_loop_impl_top_level:
+  forall (Lab : finType) (edge : Lab -> Lab -> bool) (root : Lab) (a_edge : Lab -> Lab -> bool)
+    (C : redCFG edge root a_edge) (p : Lab),
+    (forall h' : Lab, loop_contains h' p -> h' = p) ->
+    deq_loop C root p \/ depth C p = S (depth C root) /\ loop_head C p.
+Proof.
+  intros.
 Admitted.
 
-Program Definition loop_splits__imp `{C : redCFG} (h : Lab)
-  := @loop_splits _ _ _ _ (local_impl_CFG C (get_innermost_loop C h)) _.
+Definition thrice (A B : Type) (f : A -> B) (xyz : A*A*A) : B*B*B
+  := match xyz with (x,y,z) => (f x, f y, f z) end.
+
+Program Definition path_splits__imp' `{C : redCFG} (p : Lab)
+  := let d := (option_map (loop_containsT_loop_head (C:=C) (p:=p))
+                          (get_innermost_loop_strict C p)) in
+     let D := (local_impl_CFG C d) in
+     (@path_splits _ _ _ _ D _).
 Next Obligation.
-Admitted.
+  eapply implode_CFG_elem.
+  Unshelve.
+  all:cycle 1.
+  {
+    set (d:=(option_map (loop_containsT_loop_head (p:=p)) (get_innermost_loop_strict C p))).
+    eapply (opt_loop_CFG_elem).
+    destruct d eqn:E;[|exact I].
+    unfold option_map in *.
+    subst d. destruct (get_innermost_loop_strict C p);inversion E.
+    subst s.
+    destruct s0. cbn in *. eauto.
+  }  
+  unfold implode_nodes. unfold predicate.
+  match goal with [|- deq_loop _ ?rr ?pp \/ _] => set (root':=rr); set (p':=pp) end. cbn in root', p'.
+  specialize (get_innermost_loop_strict_spec p) as Hspec.
+  rewrite <-head_exits_head_inv.
+  rewrite <-head_exits_deq_loop_inv.
+  do 2 rewrite <-head_exits_depth_inv.
+  destruct (get_innermost_loop_strict C p) eqn:E; cbn in root', p'.
+  - unfold option_map, opt_loop_CFG. unfold loop_containsT_loop_head. destruct s. cbn in p'. cbn in root'.
+    eapply (loop_CFG_top_level);eauto. 
+  - unfold option_map, opt_loop_CFG. subst root' p'.
+    eapply no_strictly_containting_loop_impl_top_level;auto.
+Defined.
+
+Definition path_splits__imp `{C : redCFG} (p : Lab)
+  := let d := (option_map (loop_containsT_loop_head (C:=C) (p:=p))
+                          (get_innermost_loop_strict C p)) in
+     map (thrice (original_of_impl (d:=d))) (path_splits__imp' p).
+
+Lemma exited_head `{C : redCFG} (h e : Lab)
+      (H : exited h e)
+  : loop_head C h.
+Proof.
+  unfold exited in H. destructH. unfold exit_edge in H. destructH. eapply loop_contains_loop_head;eauto.
+Qed.
+
+Definition loop_splits__imp' `{C : redCFG} (h e : Lab)
+  := let d := match decision (loop_head C h) with
+              | left H => Some (exist _ h H)
+              | right _ => None
+              end in
+    match impl_of_original d h, impl_of_original d e with
+    | Some h', Some e' => (@loop_splits _ _ _ _ (local_impl_CFG C d)
+                                       h' e')
+    | _,_ => nil
+    end.
+
+Definition loop_splits__imp `{C : redCFG} (h e : Lab)
+  := let d := match decision (loop_head C h) with
+              | left H => Some (exist _ h H)
+              | right _ => None
+              end in
+     map (thrice (original_of_impl (d:=d))) (loop_splits__imp' h e).
+(*Next Obligation.
+  eapply implode_CFG_elem.
+  Unshelve.
+  all:cycle 1.
+  {
+    eapply (opt_loop_CFG_elem). 
+    decide (loop_head C h);[|exact I].
+    eapply loop_contains_self;eauto.
+  } 
+  unfold implode_nodes. unfold predicate.
+  match goal with [|- deq_loop _ ?rr ?pp \/ _] => set (root':=rr); set (p':=pp) end. cbn in root', p'.
+  rewrite <-head_exits_head_inv.
+  rewrite <-head_exits_deq_loop_inv.
+  do 2 rewrite <-head_exits_depth_inv.
+  decide (loop_head C h);cbn in root', p'; subst root' p';unfold opt_loop_CFG.
+  - left. unfold deq_loop. cbn. eauto. admit.
+  - 
+  destruct (get_innermost_loop_strict C h) eqn:E; cbn in root', p'.
+  - unfold option_map, opt_loop_CFG. unfold loop_containsT_loop_head. destruct s. cbn in p'. cbn in root'.
+    eapply (loop_CFG_top_level);eauto. 
+  - unfold option_map, opt_loop_CFG. subst root' p'.
+    eapply no_strictly_containting_loop_impl_top_level;auto.
+Defined.*)
 
 Parameter splits'_spec 
   : forall `{redCFG} h e sp, sp ∈ splits' h e
@@ -114,10 +213,11 @@ Parameter splits_spec
                                        \/ sp ∈ splits' br q').
 
 Arguments loop_splits : default implicits.
-Lemma loop_splits_impl_invariant q p x `(C : redCFG)
+
+(*Lemma loop_splits_impl_invariant q p x `(C : redCFG)
       (Hin : x ∈ loop_splits C (get_innermost_loop q) p)
   : x ∈ loop_splits (local_impl_CFG C (get_innermost_loop q)) (get_innermost_loop q) p.
-Admitted.
+Admitted.*)
 Arguments loop_splits {_ _ _ _ _}.
 
 Lemma lc_join_path_split_help1 (L : Type) (edge : L -> L -> bool) (x y : L) (l : list L)
@@ -135,22 +235,34 @@ Proof.
   - split;intros;intro N;eapply H0;eauto.
 Qed.
 
+Local Arguments deq_loop {_ _ _ _ _}.
+Local Arguments depth {_ _ _ _ _}.
+Arguments loop_head {_ _ _ _ _}.
+Arguments loop_head_dec {_ _ _ _ _}.
+Arguments get_innermost_loop_strict {_ _ _ _ _}. 
+
 Definition impl_list `{redCFG} (h : Lab) :=
-  filter (fun q : Lab => (loop_contains_b h q)
-                        && ((depth q ==b depth h)
-                            || (depth q ==b S (depth h))
-                                && loop_head_b q
+  filter (DecPred (fun q : Lab => (loop_contains h q)
+                        /\ ((depth q = depth h)
+                            \/ (depth q = S (depth h))
+                                /\ loop_head q
                            )
+                  )
          ).
 
-Definition impl_list' `{redCFG} (p : Lab) (i : Tag) (l : list Coord):=
-  map (fun q => (q,i)) (impl_list (get_innermost_loop p) (map fst l)).
+Definition get_innermost_loop_strict' `{C : redCFG} p
+  := match get_innermost_loop_strict p with
+     | Some (exist _ h _) => h
+     | None => root
+     end.
 
+Definition impl_list' `{redCFG} (p : Lab) (i : Tag) (l : list Coord):=
+  map (fun q => (q,i)) (impl_list (get_innermost_loop_strict' p) (map fst l)).
 
 Lemma impl_list_cfg_tpath `{C : redCFG} l p i
-      (Hin : forall q, q ∈ map fst l -> loop_contains (get_innermost_loop p) q)
+      (Hin : forall q, q ∈ map fst l -> loop_contains (get_innermost_loop_strict' p) q)
       (Hpath : TPath' ((p,i) :< l))
-      (D := local_impl_CFG C (get_innermost_loop p))
+      (D := local_impl_CFG C ((option_map (loop_containsT_loop_head (C:=C) (p:=p)) (get_innermost_loop_strict p))))
   : TPath' ((p,i) :< impl_list' p i l).
 Proof.
 Admitted.
@@ -159,8 +271,8 @@ Lemma impl_disj_coord_impl_disj_lab `{redCFG} l1 l2 s p i
       (Hpath1 : TPath' ((p,i) :< l1 :>: (s,i)))
       (Hpath2 : TPath' ((p,i) :< l2 :>: (s,i)))
       (Hdisj : Disjoint (impl_list' p i l1) (impl_list' p i l2))
-  : Disjoint (impl_list (get_innermost_loop p) (map fst l1))
-             (impl_list (get_innermost_loop p) (map fst l2)).
+  : Disjoint (impl_list (get_innermost_loop_strict' p) (map fst l1))
+             (impl_list (get_innermost_loop_strict' p) (map fst l2)).
 Proof.
 (* everything has tag i
  * thus they are disjoint, because of same tag *)
@@ -169,8 +281,8 @@ Admitted.
 Lemma impl_disj_lab_disj_lab `{redCFG} l1 l2 s p i 
       (Hpath1 : TPath' ((p,i) :< l1 :>: (s,i)))
       (Hpath2 : TPath' ((p,i) :< l2 :>: (s,i)))
-      (Hdisj : Disjoint (impl_list (get_innermost_loop p) (map fst l1))
-                        (impl_list (get_innermost_loop p) (map fst l2)))
+      (Hdisj : Disjoint (impl_list (get_innermost_loop_strict' p) (map fst l1))
+                        (impl_list (get_innermost_loop_strict' p) (map fst l2)))
   : Disjoint (map fst l1) (map fst l2).
 Proof.
   (* all new members of "map fst l" are hidden in loop-headers - which are disjoint *)
@@ -183,13 +295,13 @@ Lemma coord_disj_impl_coord `{redCFG} l1 l2 s p i
   : Disjoint (impl_list' p i l1) (impl_list' p i l2).
 Admitted.
 
-Lemma filter_incl `{A : Type} (l : list A) (f : A -> bool) : filter f l ⊆ l.
+(*Lemma filter_incl `{A : Type} (l : list A) (f : A -> bool) : filter f l ⊆ l.
 Proof.
   induction l;cbn;unfold "⊆";eauto.
   intros. destruct (f a);unfold In in *;firstorder.
-Qed.             
+Qed.             *)
 
-Lemma lc_join_path_split_help2 `{redCFG} (p s q1 q2 : Lab) (t1 t2 : ne_list Coord) l1 l2 i
+Lemma lc_join_path_split_help2 `{redCFG} (p s q1 q2 : Lab) (t1 t2 : ne_list (@Coord Lab)) l1 l2 i
       (Hpath1 : TPath' ((p,i) :< l1 :>: (s,i)))
       (Hpath2 : TPath' ((p,i) :< l2 :>: (s,i)))
       (Hdisj : Disjoint l1 l2)
@@ -387,4 +499,4 @@ Proof.
    * * both traces then h is the one. otherwise apply IH on this graph. 
    * * 
    *)    
-Admitted.y
+Admitted.

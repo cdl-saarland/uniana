@@ -38,13 +38,13 @@ Class redCFG
       a_edge_incl : sub_graph a_edge edge
       where "p '-a>*' q" := (exists π, Path a_edge p q π);
       a_edge_acyclic : acyclic a_edge;
-      reachability : forall q, (exists π, Path edge root q π);
+      a_reachability : forall q, (exists π, Path a_edge root q π);
       loop_contains qh q := exists p π, back_edge p qh /\ Path edge q p π /\ qh ∉ tl (rev π);
       exit_edge h p q := loop_contains h p /\ ~ loop_contains h q /\ p --> q;
       single_exit : forall h p q, exit_edge h p q -> forall h', exit_edge h' p q -> h = h';
       loop_head h := exists p, back_edge p h;
       no_exit_head : forall h p q, exit_edge h p q -> ~ loop_head q;
-      (*no_head_split : forall h p q, loop_head h -> h --> p -> h --> q -> p = q*)
+      no_exit_branch : forall h p p' qe e, exit_edge h qe e -> e --> p -> e --> p' -> p = p' (* we need separate exits *)
     }.
     
 Definition loop_containsT `{redCFG} qh q
@@ -122,6 +122,11 @@ Section red_cfg.
     intros x y. destruct (decide_eq x y).
     - left. rewrite e. reflexivity.
     - right. eauto.
+  Qed.
+
+  Lemma reachability (q : Lab) : exists π : ne_list Lab, Path edge root q π.
+  Proof.
+    specialize (a_reachability q) as Hreach. destructH. exists π. eapply subgraph_path';eauto. eapply a_edge_incl.
   Qed.
 
   Definition CPath' π := CPath (ne_back π) (ne_front π) π.
@@ -259,6 +264,8 @@ Section red_cfg.
 
   Definition innermost_loopT h p : Type := loop_containsT h p * deq_loop h p.
 
+  Definition containing_loops (p : Lab) := filter (DecPred (fun h => loop_contains h p)) (elem Lab).
+
   Lemma strong_reachability q
     : { π : ne_list Lab | Path edge root q π }.
   Admitted.
@@ -270,6 +277,20 @@ Section red_cfg.
     - exact Set.
     - specialize (strong_reachability) as [π Hπ].
     (* pick last header, but not if it has an exit, in Hπ, exists because of N *)
+  Admitted.
+
+  Definition get_innermost_loop_strict (p : Lab) : option {h : Lab | loop_contains h p}.
+  Proof.
+  Admitted.
+
+  Definition innermost_loop_strict (h p : Lab)
+    := loop_contains h p /\ h <> p /\ forall h', loop_contains h' p -> (loop_contains h' h \/ h' = p).
+
+  Lemma get_innermost_loop_strict_spec (p : Lab)
+    : match get_innermost_loop_strict p with
+      | Some (exist _ h H) => innermost_loop_strict h p
+      | None => forall h', loop_contains h' p -> h' = p
+      end.
   Admitted.
   
   Definition get_innermost_loop (p : Lab) : option {h : Lab | loop_contains h p}.
@@ -458,7 +479,7 @@ Section red_cfg.
     intros Hl. unfold loop_contains.
     - unfold loop_head in Hl. destruct Hl. 
       eapply loop_head_dom in H as Hdom.
-      eapply back_edge_incl in H as Hreach. specialize (@reachability _ _ _ _ _ x) as Hreach'.
+      eapply back_edge_incl in H as Hreach. specialize (reachability x) as Hreach'.
       destructH.
       eapply Hdom in Hreach' as Hreach''. eapply path_from_elem in Hreach'; eauto.
       destructH; eauto.
@@ -557,12 +578,12 @@ Section red_cfg.
     : let L' := finType_sub_decPred p in L' -> L' -> bool
     := fun x y => (f (`x) (`y)).
 
-  Definition loop_nodes (h : Lab) := DecPred (fun p => loop_contains h p).
+  Definition loop_nodes (h : Lab) := DecPred (fun p => loop_contains h p \/ exited h p).
 
-  Lemma loop_edge_h_invariant (h : Lab) (H : loop_head h) : loop_nodes h h.
+(*  Lemma loop_edge_h_invariant (h : Lab) (H : loop_head h) : loop_nodes h h.
   Proof.
     unfold loop_nodes. cbn. now eapply loop_contains_self. 
-  Qed.
+  Qed.*)
 
 End red_cfg.
 
@@ -576,10 +597,9 @@ Program Instance sub_CFG
         (P : decPred Lab)
         (r : Lab)
         (HP : P r)
-        (Hloop : forall p, P p -> loop_contains r p \/ r = root)
-        (Hreach : forall p, exists π, Path (restrict_edge edge P)
-                                            (finType_sub_elem r P HP) 
-                                            p π)
+        (Hreach : forall p, exists π, Path (restrict_edge a_edge P)
+                                 (finType_sub_elem r P HP) 
+                                 p π)
   : @redCFG (finType_sub_decPred P)
             (restrict_edge edge P)
             (finType_sub_elem r P HP)
@@ -602,33 +622,65 @@ Next Obligation. (* single_exit *)
 Admitted.
 Next Obligation. (* no_head_exit *)
 Admitted.
+Next Obligation. (* no_exit_branch *)
+Admitted.
 
 (** * loop_CFG **)
 
 Instance loop_CFG
-           `{C : redCFG}
+           `(C : redCFG)
            (h : Lab)
            (H : loop_head h)
   : @redCFG (finType_sub_decPred (loop_nodes h))
             (restrict_edge edge (loop_nodes h))
-            (finType_sub_elem h (loop_nodes h) (loop_edge_h_invariant H))
+            (finType_sub_elem h (loop_nodes h) (or_introl (loop_contains_self H)))
             (restrict_edge a_edge (loop_nodes h)).
 Proof.
   eapply sub_CFG; intros.
-  - left. unfold loop_nodes in H0. cbn in H0. eauto. 
-  - admit.
+  admit.
 Admitted.
 
 Lemma loop_CFG_elem `{C : redCFG} (h p : Lab)
-           (Hhead : loop_head h)
-           (Hloop : (loop_nodes h) p)
+           (Hloop : loop_contains h p)
   : finType_sub_decPred (loop_nodes h).
 Proof.
   intros.
   econstructor. instantiate (1:=p).
   unfold pure. decide ((loop_nodes h) p);eauto.
+  contradict n. unfold loop_nodes,predicate. left;auto.
 Defined.
 
+Arguments loop_CFG_elem {_ _ _ _} _.
+
+
+Definition implode_nodes `{C : redCFG}
+  := DecPred (fun p => (deq_loop root p
+                     \/ (depth p = S (depth root)) /\ loop_head p)).
+
+Definition get_root `(C : redCFG) := root.
+
+Lemma loop_CFG_head_root `{C : redCFG} (h : Lab)
+      (Hhead : loop_head h)
+      (D := loop_CFG C h Hhead)
+  : get_root D = loop_CFG_elem C h h (loop_contains_self Hhead).
+Proof.
+  unfold get_root. unfold loop_CFG_elem.
+Admitted.
+
+Lemma loop_CFG_top_level `{C : redCFG} (h p : Lab)
+      (Hloop : loop_contains h p)
+      (Hinner : innermost_loop_strict h p)
+      (D := loop_CFG C h (loop_contains_loop_head Hloop))
+      (p' := loop_CFG_elem C h p Hloop)
+  : implode_nodes (C:=D) p'.
+Proof.
+  set (root' := (finType_sub_elem h
+                                  (loop_nodes h)
+                                  (or_introl (loop_contains_self (loop_contains_loop_head Hloop))))) in *.
+  assert (innermost_loop (C:=D) root' p'). admit. (* this is not true. i need strict innermost loops *)
+  unfold implode_nodes. econstructor.
+  unfold deq_loop.
+Admitted.
 (*
 
 Program Instance loop_CFG
@@ -775,14 +827,16 @@ Next Obligation. (* a_edge_acyclic *)
 Qed.
 
 Next Obligation. (* reachability *)
-  specialize reachability as H0. eapply subgraph_path in H0;eauto.
-  unfold sub_graph,union_edge. firstorder.
+  specialize a_reachability as H0. eapply subgraph_path in H0;eauto.
+  unfold sub_graph,union_edge. firstorder. 
 Qed.
 Next Obligation. (* single_exit *)
   (* new exits don't have new targets, and the source has the same depth *)
 Admitted.
 Next Obligation. (* no_head_exit *)
   (* new exits don't have new targets *)
+Admitted.
+Next Obligation. (* no_exit_branch *)
 Admitted.
 
 Definition head_exits_property `(C : redCFG) := forall h p q, exit_edge h p q -> edge h q = true.
@@ -804,10 +858,6 @@ Arguments exit_edge {_ _ _ _ _}.
 (** implode CFG **)
 (* assuming no exit-to-heads *)
 
-Definition implode_nodes `{C : redCFG}
-  := DecPred (fun p => (deq_loop root p
-                     \/ (depth p = S (depth root)) /\ loop_head p)).
-
 
 Lemma implode_nodes_root_inv `{C : redCFG}
   : implode_nodes root.
@@ -815,7 +865,7 @@ Proof.
   unfold implode_nodes. cbn.
   left.
   unfold deq_loop. firstorder.
-Qed.      
+Qed.
 
 Instance implode_CFG `(H : redCFG) (Hhe : head_exits_property H)
   : @redCFG (finType_sub_decPred implode_nodes)
@@ -823,7 +873,7 @@ Instance implode_CFG `(H : redCFG) (Hhe : head_exits_property H)
             (finType_sub_elem root implode_nodes (implode_nodes_root_inv))
             (restrict_edge a_edge implode_nodes).
 Proof.
-  eapply sub_CFG;intros;[eauto|].
+  eapply sub_CFG;intros.
 Admitted.
 
 Lemma implode_CFG_elem `{C : redCFG} (p : Lab) (Himpl : implode_nodes p)
@@ -934,7 +984,7 @@ Instance opt_loop_CFG' `(C : redCFG) (h : Lab)
             (match d
                    return (eqtype (type (if d then Lab' else Lab))) with
              | left H => (@finType_sub_elem Lab h (@loop_nodes Lab edge root a_edge C h)
-                                           (@loop_edge_h_invariant Lab edge root a_edge C h H))
+                                           (or_introl (@loop_contains_self Lab edge root a_edge C h H)))
              | right _ => root
              end)
             ((if d as d
@@ -946,73 +996,104 @@ Instance opt_loop_CFG' `(C : redCFG) (h : Lab)
 Proof.
   intros.
   destruct (loop_head_dec h); eauto. 
-Qed.
+Defined.
+
+Definition loop_CFG_type `(C : redCFG) (h : Lab) (H : loop_head h)
+  := @finType_sub_decPred Lab (@loop_nodes Lab edge root a_edge C h).
+
+Definition opt_loop_CFG_type `(C : redCFG) (d : option {h : Lab | loop_head h})
+  := (match d with
+      | Some (exist _ h H) => loop_CFG_type H
+      | None => Lab
+      end). 
 
 Instance opt_loop_CFG `(C : redCFG) (d : option {h : Lab | loop_head h})
-  : @redCFG (match d with
-                | Some (exist _ h H) => @finType_sub_decPred Lab (@loop_nodes Lab edge root a_edge C h)
-                | None => Lab
-                end)
+  : @redCFG (opt_loop_CFG_type d)
             (match d
-                   return ((match d with
-                | Some (exist _ h H) => @finType_sub_decPred Lab (@loop_nodes Lab edge root a_edge C h)
-                | None => Lab
-                end) -> (match d with
-                | Some (exist _ h H) => @finType_sub_decPred Lab (@loop_nodes Lab edge root a_edge C h)
-                | None => Lab
-                end) -> bool) with
+                   return ((opt_loop_CFG_type d) -> (opt_loop_CFG_type d) -> bool) with
              | Some (exist _ h H) => (@restrict_edge Lab edge (@loop_nodes Lab edge root a_edge C h))
              | None => edge
              end)
             (match d
-                   return (eqtype (type (match d with
-                | Some (exist _ h H) => @finType_sub_decPred Lab (@loop_nodes Lab edge root a_edge C h)
-                | None => Lab
-                end))) with
+                   return (eqtype (type (opt_loop_CFG_type d))) with
              | Some (exist _ h H) => (@finType_sub_elem Lab h (@loop_nodes Lab edge root a_edge C h)
-                                           (@loop_edge_h_invariant Lab edge root a_edge C h H))
+                                                       (or_introl (@loop_contains_self Lab edge root a_edge C h H)))
              | None => root
              end)
             (match d
-                   return ((match d with
-                | Some (exist _ h H) => @finType_sub_decPred Lab (@loop_nodes Lab edge root a_edge C h)
-                | None => Lab
-                end) -> (match d with
-                | Some (exist _ h H) => @finType_sub_decPred Lab (@loop_nodes Lab edge root a_edge C h)
-                | None => Lab
-                end) -> bool) with
+                   return ((opt_loop_CFG_type d) -> (opt_loop_CFG_type d) -> bool) with
              | Some (exist _ h H) => (@restrict_edge Lab a_edge (@loop_nodes Lab edge root a_edge C h))
              | None => a_edge
              end).
 Proof.
   intros.
   destruct d; [destruct s|]; eauto.
-Qed.
+Defined.
 
 Lemma opt_loop_CFG_elem `{C : redCFG} (p : Lab)
-      (d : option {h : Lab | loop_contains h p})
-  : (match d with
-     | Some (exist _ h H) => @finType_sub_decPred Lab (@loop_nodes Lab edge root a_edge C h)
-     | None => Lab
-     end).
+      (d : option {h : Lab | loop_head h})
+      (Hd : match d with
+            | Some (exist _ h _) => loop_contains h p
+            | None => True
+            end)
+  : opt_loop_CFG_type d.
 Proof.
   destruct d;[|exact p].
-  destruct s. eapply loop_CFG_elem; eauto. unfold loop_contains,loop_head in *.
-  destructH; eauto.
+  destruct s. eapply loop_CFG_elem; eauto.
 Defined.
 
 Definition local_impl_CFG `(C : redCFG) (d : option {h : Lab | loop_head h})
   := let D := opt_loop_CFG C d in
      implode_CFG (head_exits_CFG D) (head_exits_property_satisfied (C:=D)).
 
-Lemma local_impl_CFG_elem `(C : redCFG) (d : option {h : Lab | loop_head h})
-  : match d with
-  | Some (exist _ h _) => finType_sub_decPred (loop_nodes h)
-  | None => Lab
+Arguments redCFG : clear implicits.
+Arguments implode_nodes {_ _ _ _} _.
+Definition local_impl_CFG_type `(C : redCFG) (d : option {h : Lab | loop_head h})
+  := (finType_sub_decPred (implode_nodes (head_exits_CFG (opt_loop_CFG C d)))).
+Arguments redCFG : default implicits.
+Arguments implode_nodes : default implicits.
+
+Definition original_of_impl `(C : redCFG) (d : option {h : Lab | loop_head h})
+  : local_impl_CFG_type d -> Lab.
+Proof.
+  intros. eapply proj1_sig in X.
+  unfold opt_loop_CFG_type in X. destruct d.
+  - destruct s. eapply proj1_sig in X. exact X.
+  - exact X.
+Defined.
+
+Definition loop_CFG_of_original `(C : redCFG) (h : Lab) (H : loop_head h) (p : Lab)
+  : option (loop_CFG_type H).
+Proof.
+  decide (loop_nodes h p).
+  - apply Some. econstructor. eapply purify;eauto.
+  - apply None.
+Defined.
+
+Definition impl_of_original `(C : redCFG) (d : option {h : Lab | loop_head h})
+  : Lab -> option (local_impl_CFG_type d).
+Proof.
+  intro p.
+  destruct d; unfold local_impl_CFG_type, opt_loop_CFG.
+  - destruct s as [h H]. destruct (loop_CFG_of_original H p).
+    + decide (implode_nodes (head_exits_CFG (loop_CFG C h H)) e).
+      * apply Some. econstructor. eapply purify;eauto.
+      * exact None.
+    + exact None.
+  - decide (implode_nodes (head_exits_CFG C) p).
+    + apply Some.
+      econstructor. eapply purify;eauto.
+    + exact None.
+Defined.
+
+(*Program Lemma local_impl_CFG_elem `(C : redCFG) (d : option {h : Lab | loop_head h})
+         : match d with
+  | Some (exist _ h _) => _
+  | None => _
     end.
 Proof.
-  destruct d.
-Admitted.
+  destruct d. destruct s.
+Admitted.*)
 
 Arguments local_impl_CFG {_ _ _ _} _.
 (** more parameters **)
@@ -1022,4 +1103,5 @@ Proof.
   apply Lab_dec.
 Qed.
 
+(* TODO : remove or include in redCFG def *)
 Parameter no_self_loops : forall `(C : redCFG), forall q p, edge q p = true -> q =/= p.

@@ -32,15 +32,16 @@ Section unch.
   Definition unch_trans_ptw (unch : Unch) l x : set Lab :=
     if Lab_dec' l root then set_add Lab_dec' root (empty_set Lab) else
       let t := fun q => unch_trans_local unch q l x in
-      fold_right (set_inter Lab_dec') all_lab (map t (preds l)).
+      fold_right (set_inter Lab_dec') (elem Lab) (map t (preds l)).
   
   Definition unch_trans (unch : Unch) : Unch :=
     fun l x => unch_trans_ptw unch l x.
   
   Lemma in_preds p q : q ∈ preds p <-> q --> p.
   Proof.
-    unfold preds; rewrite filter_In; firstorder.
-    eapply edge_incl1;eauto.
+    unfold preds; rewrite in_filter_iff; firstorder; cbn in *.
+    - destruct (edge q p);eauto.
+    - rewrite H;eauto.
   Qed.
 
   Lemma unch_trans_root : forall unch x, unch_trans unch root x = set_add Lab_dec' root (empty_set Lab).
@@ -53,7 +54,7 @@ Section unch.
       rewrite in_preds. intros H. eapply root_no_pred'; eauto.
   Qed.
 
-  Inductive Front (u : Unch) : Var -> Lab -> Prop :=
+(*  Inductive Front (u : Unch) : Var -> Lab -> Prop :=
   | FrontDef : forall x p, is_def_lab x p -> Front u x p
   | FrontIter : forall x l l' r r' p, l <> r ->
                                  Front u x l ->
@@ -64,7 +65,7 @@ Section unch.
                                  set_In r (u r' x) ->
                                  ~ set_In l (u r' x) ->
                                  ~ set_In r (u l' x) ->
-                                 Front u x p.
+                                 Front u x p.*)
   
   Lemma unch_trans_lem u to x unch :
     set_In u (unch_trans unch to x) ->

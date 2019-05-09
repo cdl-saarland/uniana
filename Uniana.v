@@ -23,14 +23,14 @@ Section uniana.
   Definition is_branch br x := branch br = Some x.
 
   Parameter val_true : Val -> bool.
-
+  
   Parameter branch_spec :
-    forall p, match branch p with
+    forall p : Lab, match branch p with
          | Some x => exists q q', q <> q' /\ forall s,
                         if val_true (s x)
                         then exists r, eff' (p,s) = Some (q, r)
                         else exists r', eff' (p,s) = Some (q',r')                                
-         | None => forall q q', p --> q -> p --> q' -> q = q'
+         | None => forall q q' : Lab, edge p q = true -> p --> q' -> q = q'
          end.
 
   Parameter root_no_pred' : forall p, p --> root -> False.
@@ -170,7 +170,7 @@ Section uniana.
     : False.
   Proof.
     destruct (hd (q, j) (rev ((q, j) :: l2'))) eqn:E.
-    assert ((l, t) ≻ (br, k) | ((q, j) :: map fst l1)) as Hsucc1.
+    assert ((e, t) ≻ (br, k) | ((q, j) :: map fst l1)) as Hsucc1.
     {
       eapply postfix_succ_in;eauto.
       rewrite cons_rcons'.
@@ -179,7 +179,7 @@ Section uniana.
       rewrite E.
       eapply succ_in_rcons2.
     } 
-    eapply uni_branch_uni_succ' with (q1:=l) (q2:=p) (j1:=t) (j2:=i) in HCuni;cbn;eauto.
+    eapply uni_branch_uni_succ' with (q1:=e) (q2:=p) (j1:=t) (j2:=i) in HCuni;cbn;eauto.
     * subst'.
       eapply2 tr_tpath_cons2 Htr1 Htr2;eauto.
       eapply tpath_NoDup in Htr1.
@@ -214,6 +214,7 @@ Section uniana.
         eapply ne_back_E_rcons in Heq1; eapply ne_back_E_rcons in Heq2; destructH; destructH;
           simpl_nl; only 1: rewrite <- Heq1; only 2: rewrite <- Heq2; eapply succ_in_rcons2.
   Qed.
+  Arguments uni_branch_non_disj : clear implicits.
   
   Lemma uni_same_tag p q i j1 j2 s1 s2 r1 r2 uni l1 l2
         (Htr1 : Tr ((p,i,s1) :<: (q,j1,r1) :< l1))
@@ -237,8 +238,19 @@ Section uniana.
       + simpl_nl' H4; cbn in H4. destruct l; cbn in H4;[congruence|]. inversion H4;subst;eauto.
     }
     copy c Hneq.
-    eapply (tag_eq_loop_exit p q i) in c. 2,3: eapply Htcfg;eauto. clear Htcfg.
+    eapply (tag_eq_loop_exit (p:=p) (q:=q) (i:=i)) in c. 2,3: eapply Htcfg;eauto. clear Htcfg.
     eapply tr_lc_lt with (j3:=j1) (j4:=j2) in Htr1 as Hlc;eauto;destructH' Hlc.
+
+    Lemma get_innermost_loop_spec
+     : forall p : Lab,
+       match get_innermost_loop p with
+       | Some (exist _ h _) => innermost_loop h p
+       | None => forall h' : Lab, loop_contains h' p -> False
+       end.
+    Admitted.
+    
+    specialize (get_innermost_loop_spec q) as Hspec.
+    destruct (get_innermost_loop q) ;[destruct s|contradiction].
     eapply lc_disj_exit_lsplits in c as Hsplits;eauto; cycle 1.
     - spot_path. 
     - spot_path.
@@ -246,9 +258,11 @@ Section uniana.
       eapply join_andb_true_iff in Hsplit;eauto;cycle 1.
       {
         rewrite splits_spec. right. left.
-        exists (get_innermost_loop q). split;[unfold exited;eauto|].
+        exists x. split;[unfold exited;eauto|].
         rewrite splits'_spec. left. unfold loop_splits__imp.
-        eapply loop_splits_impl_invariant;eauto.
+        instantiate(1:=(br,qq,qq')).
+        admit.
+        (*eapply loop_splits_impl_invariant;eauto.*)
       }      
       unfold last_common in Hlc. destructH.
       destruct l1',l2'.
@@ -267,7 +281,7 @@ Section uniana.
       + eapply (uni_branch_non_disj p i br k _ _
                                     ((q,j1,r1)::l1) ((q,j2,r2)::l2) (p0:<l1') (p1:<l2'));
           cbn;simpl_nl;eauto.
-  Qed.
+  Admitted.
 
   Definition unch_concr' (unch : Unch) (l : list Conf) :=
     forall (to : Lab) (i : Tag) (s : State) (u : Lab) (x : Var),
@@ -519,7 +533,8 @@ Section uniana.
       + rewrite ηeq2 in Hη2. replace (ne_back (_ :< tl η2)) with (root,start_tag);eauto.
         symmetry. eapply path_back;eauto.
       + eapply succ_in_path_edge;cycle 1;eauto.
-    } 
+    }
+    1,2: eapply tpath_NoDup;eauto.
     destructH.
     repeat match goal with
            | [H : context C [ne_to_list (_ :< _)] |- _] => simpl_nl' H
@@ -527,6 +542,7 @@ Section uniana.
     repeat splice_splinter.
     2-4: rewrite nlcons_to_list;eauto.
     exists br, qq, qq';split.
+    3-5: eapply tpath_NoDup;eauto.
     - eapply rel_splits_spec. exists h.
       eapply in_app_or in Hsplit. destruct Hsplit as [Hsplit|Hsplit].
       + exists e1.
@@ -546,7 +562,7 @@ Section uniana.
             + eapply deq_loop_exiting;eauto.
             + eapply loop_contains_deq_loop;eauto.
         }
-        eapply (loop_cutting_elem _ _ l1).
+        eapply (loop_cutting_elem (t:=l1)).
         -- spot_path.
         -- simpl_nl. econstructor.
            instantiate (1 := l' ++ j).
@@ -556,7 +572,9 @@ Section uniana.
            ++ contradict Hunch.
               simpl_nl' Hunch. instantiate (1 := k0).
               eapply succ_rt_combine;eauto;[rewrite nlcons_to_list; eauto| | find_succ_rel].
-              eapply (succ_rt_trans _ (e1, l' ++ j) _);eauto;[rewrite nlcons_to_list;eauto| |find_succ_rel].
+              eapply tpath_NoDup. eauto.
+              eapply (succ_rt_trans) with  (b:=(e1, l' ++ j));eauto;[rewrite nlcons_to_list;eauto| |find_succ_rel].
+              eapply tpath_NoDup;eauto.
               setoid_rewrite nlcons_to_list at 3. eapply tpath_deq_loop_prefix; eauto.
               eapply prefix_eq. rewrite app_cons_assoc in Hj1. eexists;eauto.
       (* (h0, k0) ≻* (u, j1) | (p, i) :: l1 *)
@@ -586,7 +604,7 @@ Section uniana.
             + eapply deq_loop_exiting;eauto.
             + eapply loop_contains_deq_loop;eauto.
         }
-        eapply (loop_cutting_elem _ _ l2).
+        eapply (loop_cutting_elem (t:=l2)).
         -- spot_path.
         -- simpl_nl. econstructor.
            instantiate (1 := l' ++ j).
@@ -596,7 +614,9 @@ Section uniana.
            ++ contradict Hunch.
               simpl_nl' Hunch. instantiate (1 := k0).
               eapply succ_rt_combine;eauto;[rewrite nlcons_to_list; eauto| | find_succ_rel].
-              eapply (succ_rt_trans _ (e2, l' ++ j) _);eauto;[rewrite nlcons_to_list;eauto| |find_succ_rel].
+              eauto. eapply tpath_NoDup;eauto.
+              eapply (succ_rt_trans) with (b:=(e2, l' ++ j));eauto;[rewrite nlcons_to_list;eauto| |find_succ_rel].
+              eapply tpath_NoDup;eauto.
               setoid_rewrite nlcons_to_list at 3. eapply tpath_deq_loop_prefix; eauto.
               eapply prefix_eq. rewrite app_cons_assoc in Hj2. eexists;eauto.
     - exists k.
@@ -604,14 +624,14 @@ Section uniana.
       2: rewrite nlcons_to_list; unfold Tag in *; rewrite <-ηeq1;eauto.
       2: rewrite nlcons_to_list; unfold Tag in *; rewrite <-ηeq2;eauto.
       4: contradict Htag0; inversion Htag0; eauto.
-      clear - Hlc Htr1 Htr2. destructH. destruct b1, b2. exists t, t0, l, l0. split_conj;eauto.
+      clear - Hlc Htr1 Htr2. destructH. destruct b1, b2. exists t, t0, e, e0. split_conj;eauto.
       contradict Hlc3. inversion Hlc3;subst;eauto. f_equal.
       eapply eff_tag_det; eapply tpath_succ_eff_tag; simpl_nl; unfold Coord in *; cycle 1; eauto.
       1: rewrite nlcons_to_list; unfold Tag in *; rewrite <-ηeq2.
       2: rewrite nlcons_to_list; unfold Tag in *; rewrite <-ηeq1.
-      eapply (tpath_exit_nin h qe2);eauto;clear - Hexit__edge1 Hexit__edge2; unfold exit_edge in *;unfold exited;
+      eapply (tpath_exit_nin (h:=h) (q:=qe2));eauto;clear - Hexit__edge1 Hexit__edge2; unfold exit_edge in *;unfold exited;
         [|exists qe1]; firstorder 0.
-      eapply (tpath_exit_nin h qe1);eauto;clear - Hexit__edge1 Hexit__edge2; unfold exit_edge in *;unfold exited;
+      eapply (tpath_exit_nin (h:=h) (q:=qe1));eauto;clear - Hexit__edge1 Hexit__edge2; unfold exit_edge in *;unfold exited;
         [|exists qe2]; firstorder 0.
       Unshelve. all: eauto.
   Qed.
@@ -638,15 +658,19 @@ Section uniana.
       eapply EPath_TPath' in Htr;simpl_nl;cbn. 2-4: reflexivity. assumption.
     }
     decide' (j1 == j2);[eauto|exfalso].
-    eapply find_divergent_branch with (l1:=map fst l1) in c as Hwit;eauto.
+    specialize (@find_divergent_branch u p (map fst l1) (map fst l2) i j1 j2) as Hwit.
+    unfold Tag in *.
+    exploit Hwit.
+    - eapply unch_dom;eauto.
+      
+    - eapply prec_lab_prec_fst;eauto.
+    - eapply prec_lab_prec_fst;eauto.
+    - clear - c. admit.
     - destructH.
       eapply join_andb_true_iff in Hunibr;eauto.
       eapply uni_branch_uni_succ 
         with (q1:=q1) (q2:=q2) (uni:=uni) in HCuni;eauto.
-    - eapply unch_dom;eauto.
-    - eapply prec_lab_prec_fst;eauto.
-    - eapply prec_lab_prec_fst;eauto.
-  Qed.
+  Admitted.
 
   Lemma uni_same_lab p q1 q2 i j1 j2 s1 s2 r1 r2 uni l1 l2
         (Htr1 : Tr ((p,i,s1) :<: (q1,j1,r1) :< l1))
@@ -684,7 +708,7 @@ Section uniana.
         destruct p0.
         eapply2' postfix_hd_eq LC_lt0 LC_lt2 LC_lt0' LC_lt2'. symmetry in LC_lt2'. subst'.
         clear LC_lt2 LC_lt1 LC_lt3 LC_lt5.
-        eapply (uni_branch_succ_p p q1 br i j1 k s1 s2 r1 r2);eauto.
+        eapply (@uni_branch_succ_p p q1 br i j1 k s1 s2 r1 r2);eauto.
       + (* successor of br is the same because of uniformity and in l1' & l2', 
            thus l1' & l2' are not disjoint --> contradiction *)
         eapply (uni_branch_non_disj p i br k _ _ ((q1,j1,r1)::l1)
@@ -769,7 +793,7 @@ Section uniana.
         specialize (HCuni t1 t2 Hts1 Hts2).          
         cut (q' = q); intros; subst.
         * cut (j' = j); intros; subst.
-          -- eapply (local_uni_corr (uni q) q j p i r r' s s'); try eassumption.
+          -- eapply (@local_uni_corr (uni q) q j p i r r' s s'); try eassumption.
              ** unfold uni_state_concr. intros.
                 unfold uni_concr in HCuni .
                 eapply (HCuni x0 q j); eassumption.
@@ -813,8 +837,8 @@ Section uniana.
           rewrite Hteq2 in Hprec'0. simpl_nl' Hprec'0. cbn in Hprec'0.
           eapply prefix_cons_cons in Hprec'0.
           eapply unch_same_tag with (l1:=l').
-          3: eapply (unch_concr'_pre _ t l'); eauto; rewrite Hteq1;cbn;econstructor;eauto.
-          3: eapply (unch_concr'_pre _ t' l'0);eauto;rewrite Hteq2;cbn;econstructor;eauto.
+          3: eapply (@unch_concr'_pre _ t l'); eauto; rewrite Hteq1;cbn;econstructor;eauto.
+          3: eapply (@unch_concr'_pre _ t' l'0);eauto;rewrite Hteq2;cbn;econstructor;eauto.
           1,2,6-8: eauto.
           -- inversion Hprec1;subst;eauto;congruence.
           -- inversion Hprec'1;subst;eauto;congruence.
