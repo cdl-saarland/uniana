@@ -285,9 +285,6 @@ Qed.
     : (q,j) ≻* (a,k) | (p,i) :: l.
   Admitted. 
 
-  Lemma prefix_eq:
-    forall (A : Type) (l1 l2 : list A), Prefix l1 l2 <-> (exists l2' : list A, l2 = l2' ++ l1).
-  Admitted.
 
   Lemma tag_prefix_same_head p h1 h2 i1 i2 j1 j2 t1 t2
         (Hpath1 : TPath (root,start_tag) (p,i1) t1)

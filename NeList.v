@@ -1068,19 +1068,92 @@ Proof.
   - inversion H; eauto using In; cbn; eauto.
 Qed.
 
-Lemma prefix_length_eq {A : Type} (l1 l2 l : list A)
+
+Lemma prefix_eq:
+  forall (A : Type) (l1 l2 : list A), Prefix l1 l2 <-> (exists l2' : list A, l2 = l2' ++ l1).
+Proof.
+  intros.
+  split;intros.
+  - induction H.
+    + exists nil; cbn; eauto.
+    + destructH. exists (a :: l2'). cbn. f_equal;eauto.
+  - destructH. rewrite H.
+    revert dependent l2.
+    induction l2'; intros;cbn;econstructor;eauto.
+Qed.
+
+Lemma prefix_length {A : Type} `{EqDec A eq} (l1 l2 : list A)
+      (Hpre : Prefix l1 l2)
+      (Hlen : length l1 = length l2)
+  : l1 = l2.
+Proof.
+  eapply prefix_eq in Hpre. destructH. subst l2.
+  destruct l2';cbn in *; eauto.
+  exfalso.
+  rewrite app_length in Hlen. omega.
+Qed.
+
+Lemma prefix_rev_postfix (A : Type) (l l' : list A)
+      (Hpre : Prefix l l')
+  : Postfix (rev l) (rev l').
+Proof.
+  induction Hpre.
+  - econstructor.
+  - rewrite rev_cons. econstructor;eauto.
+Qed.
+
+Lemma prefix_rev_postfix' (A : Type) (l l' : list A)
+      (Hpre : Prefix (rev l) (rev l'))
+  : Postfix l l'.
+Proof.
+  rewrite <-(rev_involutive l).
+  rewrite <-(rev_involutive l').
+  eapply prefix_rev_postfix;eauto.
+Qed.
+  
+Lemma postfix_rev_prefix (A : Type) (l l' : list A)
+      (Hpost : Postfix l l')
+  : Prefix (rev l) (rev l').
+Proof.
+  induction Hpost.
+  - econstructor.
+  - rewrite rev_rcons. econstructor;eauto.
+Qed.
+  
+Lemma postfix_rev_prefix' (A : Type) (l l' : list A)
+      (Hpost : Postfix (rev l) (rev l'))
+  : Prefix l l'.
+Proof.
+  rewrite <-(rev_involutive l).
+  rewrite <-(rev_involutive l').
+  eapply postfix_rev_prefix;eauto.
+Qed.
+
+Lemma prefix_order_destruct (A : Type)
+  : forall l3 l4 l5 : list A, Prefix l3 l5 -> Prefix l4 l5 -> Prefix l3 l4 \/ Prefix l4 l3.
+Proof.
+  intros.
+  eapply prefix_rev_postfix in H. eapply prefix_rev_postfix in H0.
+  eapply postfix_order_destruct in H;eauto.
+  destruct H;[right|left]; eapply postfix_rev_prefix';eauto.
+Qed.
+
+Lemma prefix_length_eq {A : Type} `{EqDec A eq} (l1 l2 l : list A)
       (Hlen : length l1 = length l2)
       (Hpre1 : Prefix l1 l)
       (Hpre2 : Prefix l2 l)
   : l1 = l2.
-Admitted.
+Proof.
+  eapply prefix_order_destruct in Hpre1 as Hor;eauto.
+  destruct Hor as [Hor|Hor]; eapply prefix_length in Hor; eauto; symmetry; eauto.
+Qed.
 
 Lemma first_diff {A : Type} (l1 l2 : list A)
       (Hneq : l1 <> l2)
       (Hnnil1 : l1 <> nil)
       (Hnnil2 : l2 <> nil)
   : exists a1 a2 l' l1' l2', a1 <> a2 /\ l1 = l1' ++ a1 :: l' /\ l2 = l2' ++ a2 :: l'.
-Proof.
+Proof.  
 Admitted.
 
 (* TODO : tidy up this file *)
