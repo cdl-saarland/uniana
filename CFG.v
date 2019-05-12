@@ -204,30 +204,6 @@ Section red_cfg.
     unfold deq_loop;firstorder.
   Qed.
 
-  Lemma deq_loop_exited h qe e
-        (Hexit : exit_edge h qe e)
-    : deq_loop qe e.
-  Proof.
-  Admitted.
-  
-  Lemma deq_loop_exiting h qe e
-        (Hexit : exit_edge h qe e)
-    : deq_loop h qe.
-  Admitted.
-  
-  Lemma deq_loop_trans p q r
-        (H1 : deq_loop p q)
-        (H2 : deq_loop q r)
-    : deq_loop p r.
-  Proof.
-    unfold deq_loop in *. intros. eapply H1,H2;eauto.
-  Qed.
-  
-  Lemma loop_contains_deq_loop h p
-        (Hloop : loop_contains h p)
-    : deq_loop p h.
-  Admitted.
-
   Global Instance exit_edge_dec : forall h p q, dec (exit_edge h p q).
   Proof.
     eauto.
@@ -310,6 +286,46 @@ Section red_cfg.
       | Some (exist _ h _) => innermost_loop h p
       | None => forall h' : Lab, loop_contains h' p -> False
       end.
+  Admitted.
+  
+  Lemma deq_loop_trans p q r
+        (H1 : deq_loop p q)
+        (H2 : deq_loop q r)
+    : deq_loop p r.
+  Proof.
+    unfold deq_loop in *. intros. eapply H1,H2;eauto.
+  Qed.
+
+  Lemma loop_contains_trans h h' p
+        (Hloop : loop_contains h h')
+        (Hloop' : loop_contains h' p)
+    : loop_contains h p.
+  Proof.
+    unfold loop_contains in *. destructH. destructH.
+  Admitted
+  .  
+  Lemma innermost_loop_deq_loop h p q
+        (Hinner : innermost_loop h p)
+        (Hloop : loop_contains h q)
+    : deq_loop q p.
+  Proof.
+  Admitted.
+
+  Lemma deq_loop_exited h qe e
+        (Hexit : exit_edge h qe e)
+    : deq_loop qe e.
+  Proof.
+    unfold exit_edge in *. unfold deq_loop. intros.
+  Admitted.
+  
+  Lemma deq_loop_exiting h qe e
+        (Hexit : exit_edge h qe e)
+    : deq_loop h qe.
+  Admitted.
+  
+  Lemma loop_contains_deq_loop h p
+        (Hloop : loop_contains h p)
+    : deq_loop p h.
   Admitted.
   
   Definition exiting (h p : Lab) : Prop :=

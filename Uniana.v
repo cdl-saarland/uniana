@@ -470,7 +470,10 @@ Section uniana.
     eapply Pr_cont with (c:=(p,i)) in Hprec1;[|cbn;eauto].
     eapply Pr_cont with (c:=(p,i)) in Hprec2;[|cbn;eauto].
     (* find the first difference in the tag suffices *)
-    eapply first_diff in c'. 
+    eapply first_diff in c'.
+    2: assert (| j1 | = | j2 |) as Hlen;
+      [(eapply (tpath_tag_len_eq_elem (l1:=(p,i):<l1)) ;eauto;eapply precedes_in;simpl_nl;eauto)|].
+    Focus 2. subst j1 j2. repeat rewrite app_length in Hlen. clear - Hlen. omega.
     2,3: intro N; eapply c'; subst;
       eapply precedes_in in Hprec1;eapply precedes_in in Hprec2;
         rewrite nlcons_to_list in Hprec1; rewrite nlcons_to_list in Hprec2;

@@ -379,12 +379,6 @@ End splinter.
 Hint Constructors splinter : splinter.
 Hint Resolve splinter_nil splinter_in splinter_incl : splinter.
 
-Ltac fold_rcons H :=
-  match type of H with
-  | context C [?a :: ?b :: nil] => fold (app (a :: nil) (b :: nil)) in H;
-                                  fold (rcons (a :: nil) b) in H;
-                                  repeat rewrite <-cons_rcons_assoc in H
-  end.
 
 Ltac splice_splinter :=
   match goal with
