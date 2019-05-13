@@ -2,6 +2,10 @@
 .\#*
 *.glob
 *.vo
+*.v.d
 *~
 .*.aux
 finiteTypes/*
+html
+Makefile.coq
+Makefile.coq.conf

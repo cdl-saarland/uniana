@@ -1,1 +1,2 @@
--R finiteTypes fin
+-R ./ UniAna
+

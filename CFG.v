@@ -12,7 +12,7 @@ Require Import Coq.Program.Utils.
 (*Require Import finiteTypes.External.
 Require Import finiteTypes.BasicDefinitions.*)
 
-Require Export fin.FinTypes.
+Require Export FinTypes.
 
 Require Export Graph.
 
