@@ -91,7 +91,7 @@ Admitted.
 Lemma head_exits_depth_inv `(C : redCFG) (p : Lab)
   : depth C p = depth (head_exits_CFG C) p.
 Admitted.  
-Lemma no_strictly_containting_loop_impl_top_level:
+Lemma no_strictly_containing_loop_impl_top_level:
   forall (Lab : finType) (edge : Lab -> Lab -> bool) (root : Lab) (a_edge : Lab -> Lab -> bool)
     (C : redCFG edge root a_edge) (p : Lab),
     (forall h' : Lab, loop_contains h' p -> h' = p) ->
@@ -130,8 +130,8 @@ Next Obligation.
   destruct (get_innermost_loop_strict C p) eqn:E; cbn in root', p'.
   - unfold option_map, opt_loop_CFG. unfold loop_containsT_loop_head. destruct s. cbn in p'. cbn in root'.
     eapply (loop_CFG_top_level);eauto. 
-  - unfold option_map, opt_loop_CFG. subst root' p'.
-    eapply no_strictly_containting_loop_impl_top_level;auto.
+  - clear Hspec. unfold option_map, opt_loop_CFG. subst root' p'.
+    eapply no_strictly_containing_loop_impl_top_level;auto.
 Defined.
 
 Definition path_splits__imp `{C : redCFG} (p : Lab)
