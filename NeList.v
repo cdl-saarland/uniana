@@ -514,9 +514,11 @@ Ltac congruence' :=
   | [ H : ?l ++ (?a :: ?l') = nil |- _ ] => destruct l; cbn in H; congruence
   | [ H : (?l ++ ?l') :: ?a :: ?l'' = nil |- _ ] => destruct l; cbn in H; congruence
   | [ H : ?l :r: ?a |- _ ] => eapply rcons_not_nil in H; contradiction
+  | [ H : ne_to_list ?l = nil |- _ ] => destruct l; cbn in H; congruence
   | [ H : nil = ?l ++ (?a :: ?l') |- _ ] => destruct l; cbn in H; congruence
   | [ H : nil = (?l ++ ?l') :: ?a :: ?l'' |- _ ] => destruct l; cbn in H; congruence
   | [ H : nil = ?l :r: ?a |- _ ] => symmetry in H; eapply rcons_not_nil in H; contradiction
+  | [ H : nil = ne_to_list ?l |- _ ] => destruct l; cbn in H; congruence
   end.
 
 Lemma rcons_eq {A : Type} (a a' : A) l l' :

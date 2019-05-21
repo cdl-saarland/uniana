@@ -326,7 +326,7 @@ Section graph.
   Definition sub_graph := forall p q, edge1 p q = true -> edge2 p q = true.
 
   Definition acyclic := forall p q, p --> q -> ~ q -->* p.
-
+  
   Lemma path_path_acyclic p q π ϕ : Path p q π -> Path q p ϕ -> p <> q -> ~ acyclic.
   Proof.
     intros Hpath1 Hpath2 Hneq Hacy.
@@ -335,6 +335,18 @@ Section graph.
     specialize (Hacy b q H0). eapply Hacy. exists (π0 :+: π1).
     eapply path_app_conc;eauto.
   Qed.
+  
+  Lemma path_path_acyclic' p q π ϕ : Path p q π -> Path q p ϕ -> acyclic -> p = q.
+  Proof.
+    intros Hpath1 Hpath2 Hacy.
+    destruct (L_dec p q);[auto|]. eapply path_path_acyclic in c;eauto. contradiction.
+  Qed.
+
+  Lemma acyclic_path_path : (forall p q π ϕ, p <> q -> Path p q π -> ~ Path q p ϕ) -> (forall p, p -> p -> False) -> acyclic.
+  Proof.
+    intros. unfold acyclic. intros p q Hedge Hpath.
+    destruct (L_dec p q);[rewrite e in *|];eauto.
+  Qed.    
 
   Lemma postfix_front {A : Type} (l l' : ne_list A) :
     Postfix l l'

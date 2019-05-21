@@ -130,7 +130,7 @@ Next Obligation.
   destruct (get_innermost_loop_strict C p) eqn:E; cbn in root', p'.
   - unfold option_map, opt_loop_CFG. unfold loop_containsT_loop_head. destruct s. cbn in p'. cbn in root'.
     eapply (loop_CFG_top_level);eauto. 
-  - clear Hspec. unfold option_map, opt_loop_CFG. subst root' p'.
+  - unfold option_map, opt_loop_CFG. subst root' p'.
     eapply no_strictly_containing_loop_impl_top_level;auto.
 Defined.
 
