@@ -93,6 +93,7 @@ Notation "p '-a>*' q" := ((fun (Lab : finType)
 
 Infix "↪" := back_edge (at level 55).
 
+
 Local Ltac prove_spec :=
   intros;
   let tac :=
@@ -370,12 +371,6 @@ Section red_cfg.
 
   Definition loop_chain_of (p : Lab) l := loop_chain l /\ p = ne_back l.*)
 
-  Inductive loop_chain : Lab -> Lab -> Prop :=
-  | LoopChainSingle (h p : Lab)
-    : innermost_loop_strict h p -> loop_chain h p
-  | LoopChainCons (h h' p : Lab)
-    : innermost_loop_strict h h' -> loop_chain h' p -> loop_chain h p.
-
   Definition LPath := Path (fun h p => decision (innermost_loop_strict h p)).
 
   Lemma loop_contains_trans h h' p
@@ -386,14 +381,6 @@ Section red_cfg.
     unfold loop_contains in *. destructH. destructH.
   Admitted.
 
-  Lemma loop_chain_loop_contains h p
-    : loop_chain h p -> loop_contains h p.
-  Proof.
-    intros. induction H; unfold innermost_loop_strict in *;[destructH;eauto|].
-    destructH.
-    eapply loop_contains_trans;eauto.
-  Qed.
-  
   Lemma nin_tl_iff (A : Type) `{EqDec A eq} (a : A) (l : ne_list A)
     : a ∉ tl (rev l) -> a ∉ l \/ a = ne_back l.
   Proof.
@@ -557,8 +544,7 @@ Section red_cfg.
     destruct Hq2;[contradiction|]. clear - H0. destruct π; cbn in *; eauto.
   Qed.
 
-  (* TODO : this is wrong as it is stated *)
-  Lemma find_some_strong (A : Type) (f : A -> bool) (l : list A) (x : A)
+  Lemma find_some_strong (A : Type) `{Q:EqDec A eq} (f : A -> bool) (l : list A) (x : A) (Hnd : NoDup l)
     : find f l = Some x -> x ∈ l /\ f x = true /\ forall y, y ≻* x | l -> f y = true -> x = y.
   Proof.
     repeat split. 1,2: eapply find_some in H; firstorder.
@@ -566,9 +552,12 @@ Section red_cfg.
     induction l;intros.
     - inversion H0.
     - cbn in H.
-      destruct (f a).
+      destruct (f a) eqn:E.
       + inversion H; subst. inversion H0;subst;auto.
-  Admitted.
+        inversion Hnd; subst. exfalso; contradict H5. eapply splinter_incl;[eapply H4|]. firstorder 0.
+      + destruct (a == y);[rewrite e in E;congruence|].
+        inversion Hnd; subst. eapply IHl;eauto. inversion H0;subst;auto. congruence.
+  Qed.
 
   Lemma loop_contains_either h1 h2 h3
         (Hloop1 : loop_contains h1 h3)
@@ -576,182 +565,7 @@ Section red_cfg.
     : loop_contains h1 h2 \/ loop_contains h2 h1.
   Admitted.
 
-  Lemma loop_LPath_helper p h π
-        (Hpath : Path a_edge root p (p :<: π))
-        (Hloop : loop_contains h p)
-        (Hin : h ∈ π)
-        (Hnolo : forall q : Lab, q ≻* h | π -> toBool _ (D:=decision (loop_contains q p)) = true -> h = q)
-    : (forall h' : Lab, loop_contains h' p -> loop_contains h' h \/ h' = p).
-  Proof.
-    intros. eapply loop_contains_either in H as H';[|apply Hloop].
-    destruct H';[right|left;auto].
-    specialize (Hnolo h'). decide (h' = p);[auto|exfalso]. exploit Hnolo.
-    - (* use dom_loop_contains *) admit. 
-    - decide (loop_contains h' p); cbn in *;[congruence|contradiction].
-    - admit. (* BROKEN *)
-    
-  Admitted.
-  
-  Lemma acyclic_path_NoDup p q π
-        (Hπ : Path a_edge p q π)
-    : NoDup π.
-  Admitted.
-  
-  Lemma loop_LPath h p
-        (Hloop : loop_contains h p)
-    : exists π, LPath h p π.
-  Proof.
-    specialize (a_reachability p) as Hreach.
-    destructH. revert dependent p. revert dependent π. 
-    specialize (well_founded_ind (R:=(@StrictPrefix' Lab)) (@StrictPrefix_well_founded Lab)
-                                 (fun π : ne_list Lab => forall p, loop_contains h p
-                                                           -> Path a_edge root p π
-                                                           -> exists (π0 : ne_list Lab), LPath h p π0))
-      as WFind.
-    eapply WFind.
-    intros;clear WFind.
-    destruct x.
-    - inversion H1; subst p a e.
-      eapply root_loop_root in H0. subst. repeat econstructor.
-    - remember (find (fun h' => decision (loop_contains h' p)) x) as S.
-      destruct S; symmetry in HeqS.
-      + eapply find_some_strong in HeqS. destructH. decide (loop_contains e0 p);cbn in *;[|congruence].
-        inversion H1;subst.
-        decide (h = e).
-        { subst;eexists;econstructor. }
-        specialize (path_to_elem _ a_edge _ _ e0 x H6 HeqS0) as [ϕ [Hϕ0 Hϕ1]].
-        specialize (H ϕ). exploit' H.
-        { cbn. clear - Hϕ1.
-          eapply prefix_strictPrefix;auto.
-        } 
-        specialize (H e0). exploit H.
-        { clear - l H0 n HeqS0 HeqS3 H1.
-          decide (e0 = h);[subst;eapply loop_contains_self;unfold loop_contains in H0;firstorder|].
-          eapply loop_contains_either in H0 as H0'; eauto.
-          destruct H0';[exfalso|auto].
-          eapply (loop_LPath_helper) in HeqS3;auto. 2:exact H0. destruct HeqS3;[|contradiction].
-          eapply loop_contains_Antisymmetric in H. exploit H. contradiction.
-        } 
-        destructH.        
-        exists (e :<: π0).
-        econstructor;cycle 1.
-        * instantiate (1:=e0). decide (innermost_loop_strict e0 e);cbn;[auto|exfalso;contradict n0].
-          unfold innermost_loop_strict. split;auto. split.
-          -- eapply acyclic_path_NoDup in H1. clear - HeqS0 H1. inversion H1; subst.
-             contradict H2. subst. auto.
-          -- eapply loop_LPath_helper;eauto.
-        * auto.
-      + decide (h = e); subst.
-        { inversion H1. subst. repeat econstructor. }
-        eapply find_none in HeqS;cycle 1.
-        * instantiate (1:=h).
-          enough (h ∈ (e :<: x)) as Hex.
-          { destruct Hex;[symmetry in H2;contradiction|auto]. }
-          eapply dom_dom_acyclic;eauto. eapply dom_loop;auto.
-        * exfalso. decide (loop_contains h p); cbn in *; [congruence|contradiction].
-  Qed.    
-  
-  Lemma loop_contains_innermost (h p : Lab)
-        (Hloop : loop_contains h p)
-    : exists h', innermost_loop h' p.
-  Proof.
-    unfold innermost_loop.
-    eapply loop_LPath in Hloop as Hloop'. destructH.
-    decide (loop_head p).
-    + exists p. split;eauto using loop_contains_self. unfold deq_loop; firstorder.
-    + inversion Hloop'. subst.
-      * exists p. split;eauto using loop_contains_self. unfold deq_loop; firstorder.
-      * subst. exists b.
-        decide (innermost_loop_strict b p);cbn in *;[|congruence]. unfold innermost_loop_strict in i.
-        clear - i n. destructH. unfold deq_loop.
-        split;auto. intros. exploit i3. destruct i3;auto.
-        subst. eapply loop_contains_loop_head in H. contradiction.
-  Qed.
 
-  Lemma loop_contains_innermost_strict (h p : Lab)
-        (Hloop : loop_contains h p)
-        (Hneq : h <> p)
-    : exists h', innermost_loop_strict h' p.
-  Proof.
-    eapply loop_LPath in Hloop as Hloop'. destructH.
-    inversion Hloop';subst;eauto;[contradiction|].
-    exists b. decide (innermost_loop_strict b p);cbn in *;[auto|congruence].
-  Qed.
-  
-  Lemma get_innermost_loop_spec
-    : forall p : Lab,
-      match get_innermost_loop p with
-      | Some (exist _ h _) => innermost_loop h p
-      | None => forall h' : Lab, loop_contains h' p -> False
-      end.
-  Proof.
-    unfold get_innermost_loop.
-    intro. destruct (ex_innermost_loop p).
-    - destruct s;eauto.
-    - cbn in n. unfold innermost_loop in n. intros.
-      eapply loop_contains_innermost in H. clear h'. destructH.
-      specialize (n h'). eapply dec_DM_and in n;eauto.
-      destruct n;unfold innermost_loop in H;firstorder.
-  Qed.
-
-  Lemma get_innermost_loop_strict_spec (p : Lab)
-    : match get_innermost_loop_strict p with
-      | Some (exist _ h H) => innermost_loop_strict h p
-      | None => forall h', loop_contains h' p -> h' = p
-      end.
-  Proof.
-    unfold get_innermost_loop_strict.
-    destruct (ex_innermost_loop_strict p); cbn.
-    - destruct s. eauto.
-    - intros. 
-      decide (h' = p);[eauto|].
-      eapply loop_contains_innermost_strict in H;eauto.
-      destructH. specialize (n h'0); contradiction.
-  Qed. 
-  
-  Lemma deq_loop_trans p q r
-        (H1 : deq_loop p q)
-        (H2 : deq_loop q r)
-    : deq_loop p r.
-  Proof.
-    unfold deq_loop in *. intros. eapply H1,H2;eauto.
-  Qed.
-
-  Program Instance deq_loop_PreOrder : PreOrder deq_loop.
-  Next Obligation.
-    unfold Reflexive. eapply deq_loop_refl.
-  Qed.
-  Next Obligation.
-    unfold Transitive; eapply deq_loop_trans.
-  Qed.
-  
-  Lemma innermost_loop_deq_loop h p q
-        (Hinner : innermost_loop h p)
-        (Hloop : loop_contains h q)
-    : deq_loop q p.
-  Proof.
-  Admitted.
-
-  Lemma deq_loop_exited h qe e
-        (Hexit : exit_edge h qe e)
-    : deq_loop qe e.
-  Proof.
-    unfold exit_edge in *. unfold deq_loop. intros.
-  Admitted.
-  
-  Lemma deq_loop_exiting h qe e
-        (Hexit : exit_edge h qe e)
-    : deq_loop h qe.
-  Proof.
-    unfold exit_edge, deq_loop. intros. eapply single_exit in Hexit.
-  Admitted.
-  
-  Lemma loop_contains_deq_loop h p
-        (Hloop : loop_contains h p)
-    : deq_loop p h.
-  Proof.
-    unfold deq_loop. intros. eapply loop_contains_trans;eauto.
-  Qed.
   
   Definition exiting (h p : Lab) : Prop :=
     exists q, exit_edge h p q.
@@ -914,6 +728,210 @@ Section red_cfg.
         eapply NoDup_nin_rcons; eauto. rewrite rcons_nl_rcons. assumption.
   Qed.
 
+  Lemma loop_contains_splinter h1 h2 p π
+        (Hloop1 : loop_contains h1 h2)
+        (Hloop2 : loop_contains h2 p)
+        (Hpath : Path edge root p π)
+    : h2 ≻* h1 | π.
+  Proof.
+    eapply dom_loop in Hloop2. eapply Hloop2 in Hpath as Hin.
+    eapply path_to_elem in Hin;eauto. destructH.
+    eapply splinter_prefix;eauto.
+    inversion Hin0;subst h2 a.
+    - eapply dom_loop in Hloop1. eapply Hloop1 in Hin0. rewrite <-H1 in Hin0. inversion Hin0;subst;[|contradiction].
+      econstructor. econstructor. econstructor. econstructor.
+    - cbn in *. econstructor. eapply dom_loop in Hloop1. eapply Hloop1 in Hin0. rewrite <-H3 in Hin0.
+      eapply splinter_single. cbn in *; eauto.
+  Qed.
+  
+  Lemma loop_LPath_helper p h π
+        (Hpath : Path a_edge root p (p :<: π))
+        (Hloop : loop_contains h p)
+        (Hin : h ∈ π)
+        (Hnolo : forall q : Lab, q ≻* h | π -> toBool _ (D:=decision (loop_contains q p)) = true -> h = q)
+    : (forall h' : Lab, loop_contains h' p -> loop_contains h' h \/ h' = p).
+  Proof.
+    intros. eapply loop_contains_either in H as H';[|apply Hloop].
+    destruct H';[|left;auto].
+    decide (h' = p);[right;auto|]. 
+    specialize (Hnolo h'). exploit Hnolo.
+    - eapply subgraph_path' in Hpath;eauto using a_edge_incl.
+      eapply loop_contains_splinter in Hpath;eauto.
+      cbn in Hpath. inversion Hpath;subst;auto. inversion H2;subst;contradiction.
+    - decide (loop_contains h' p); cbn in *;[congruence|contradiction].
+    - subst. left. eapply loop_contains_self. eapply loop_contains_loop_head;eauto.
+  Qed.
+      
+  Lemma acyclic_path_NoDup p q π
+        (Hπ : Path a_edge p q π)
+    : NoDup π.
+  Proof.
+    induction Hπ.
+    - econstructor;eauto. econstructor.
+    - cbn. econstructor;auto.
+      intro N. specialize a_edge_acyclic as Hacy. unfold acyclic in Hacy.
+      simpl_dec' Hacy.
+      specialize (Hacy _ _ H).
+      eapply path_from_elem in N;eauto. destructH. apply Hacy in N0. contradiction.
+  Qed.
+  
+  Lemma loop_LPath h p
+        (Hloop : loop_contains h p)
+    : exists π, LPath h p π.
+  Proof.
+    specialize (a_reachability p) as Hreach.
+    destructH. revert dependent p. revert dependent π. 
+    specialize (well_founded_ind (R:=(@StrictPrefix' Lab)) (@StrictPrefix_well_founded Lab)
+                                 (fun π : ne_list Lab => forall p, loop_contains h p
+                                                           -> Path a_edge root p π
+                                                           -> exists (π0 : ne_list Lab), LPath h p π0))
+      as WFind.
+    eapply WFind.
+    intros;clear WFind.
+    destruct x.
+    - inversion H1; subst p a e.
+      eapply root_loop_root in H0. subst. repeat econstructor.
+    - remember (find (fun h' => decision (loop_contains h' p)) x) as S.
+      destruct S; symmetry in HeqS.
+      + eapply find_some_strong in HeqS. destructH. decide (loop_contains e0 p);cbn in *;[|congruence].
+        inversion H1;subst.
+        decide (h = e).
+        { subst;eexists;econstructor. }
+        specialize (path_to_elem _ a_edge _ _ e0 x H6 HeqS0) as [ϕ [Hϕ0 Hϕ1]].
+        specialize (H ϕ). exploit' H.
+        { cbn. clear - Hϕ1.
+          eapply prefix_strictPrefix;auto.
+        } 
+        specialize (H e0). exploit H.
+        { clear - l H0 n HeqS0 HeqS3 H1.
+          decide (e0 = h);[subst;eapply loop_contains_self;unfold loop_contains in H0;firstorder|].
+          eapply loop_contains_either in H0 as H0'; eauto.
+          destruct H0';[exfalso|auto].
+          eapply (loop_LPath_helper) in HeqS3;auto. 2:exact H0. destruct HeqS3;[|contradiction].
+          eapply loop_contains_Antisymmetric in H. exploit H. contradiction.
+        } 
+        destructH.        
+        exists (e :<: π0).
+        econstructor;cycle 1.
+        * instantiate (1:=e0). decide (innermost_loop_strict e0 e);cbn;[auto|exfalso;contradict n0].
+          unfold innermost_loop_strict. split;auto. split.
+          -- eapply acyclic_path_NoDup in H1. clear - HeqS0 H1. inversion H1; subst.
+             contradict H2. subst. auto.
+          -- eapply loop_LPath_helper;eauto.
+        * auto.
+        * auto.
+        * inversion H1;subst. eapply acyclic_path_NoDup; eauto.
+      + decide (h = e); subst.
+        { inversion H1. subst. repeat econstructor. }
+        eapply find_none in HeqS;cycle 1.
+        * instantiate (1:=h).
+          enough (h ∈ (e :<: x)) as Hex.
+          { destruct Hex;[symmetry in H2;contradiction|auto]. }
+          eapply dom_dom_acyclic;eauto. eapply dom_loop;auto.
+        * exfalso. decide (loop_contains h p); cbn in *; [congruence|contradiction].
+  Qed.    
+  
+  Lemma loop_contains_innermost (h p : Lab)
+        (Hloop : loop_contains h p)
+    : exists h', innermost_loop h' p.
+  Proof.
+    unfold innermost_loop.
+    eapply loop_LPath in Hloop as Hloop'. destructH.
+    decide (loop_head p).
+    + exists p. split;eauto using loop_contains_self. unfold deq_loop; firstorder.
+    + inversion Hloop'. subst.
+      * exists p. split;eauto using loop_contains_self. unfold deq_loop; firstorder.
+      * subst. exists b.
+        decide (innermost_loop_strict b p);cbn in *;[|congruence]. unfold innermost_loop_strict in i.
+        clear - i n. destructH. unfold deq_loop.
+        split;auto. intros. exploit i3. destruct i3;auto.
+        subst. eapply loop_contains_loop_head in H. contradiction.
+  Qed.
+
+  Lemma loop_contains_innermost_strict (h p : Lab)
+        (Hloop : loop_contains h p)
+        (Hneq : h <> p)
+    : exists h', innermost_loop_strict h' p.
+  Proof.
+    eapply loop_LPath in Hloop as Hloop'. destructH.
+    inversion Hloop';subst;eauto;[contradiction|].
+    exists b. decide (innermost_loop_strict b p);cbn in *;[auto|congruence].
+  Qed.
+  
+  Lemma get_innermost_loop_spec
+    : forall p : Lab,
+      match get_innermost_loop p with
+      | Some (exist _ h _) => innermost_loop h p
+      | None => forall h' : Lab, loop_contains h' p -> False
+      end.
+  Proof.
+    unfold get_innermost_loop.
+    intro. destruct (ex_innermost_loop p).
+    - destruct s;eauto.
+    - cbn in n. unfold innermost_loop in n. intros.
+      eapply loop_contains_innermost in H. clear h'. destructH.
+      specialize (n h'). eapply dec_DM_and in n;eauto.
+      destruct n;unfold innermost_loop in H;firstorder.
+  Qed.
+
+  Lemma get_innermost_loop_strict_spec (p : Lab)
+    : match get_innermost_loop_strict p with
+      | Some (exist _ h H) => innermost_loop_strict h p
+      | None => forall h', loop_contains h' p -> h' = p
+      end.
+  Proof.
+    unfold get_innermost_loop_strict.
+    destruct (ex_innermost_loop_strict p); cbn.
+    - destruct s. eauto.
+    - intros. 
+      decide (h' = p);[eauto|].
+      eapply loop_contains_innermost_strict in H;eauto.
+      destructH. specialize (n h'0); contradiction.
+  Qed. 
+  
+  Lemma deq_loop_trans p q r
+        (H1 : deq_loop p q)
+        (H2 : deq_loop q r)
+    : deq_loop p r.
+  Proof.
+    unfold deq_loop in *. intros. eapply H1,H2;eauto.
+  Qed.
+
+  Program Instance deq_loop_PreOrder : PreOrder deq_loop.
+  Next Obligation.
+    unfold Reflexive. eapply deq_loop_refl.
+  Qed.
+  Next Obligation.
+    unfold Transitive; eapply deq_loop_trans.
+  Qed.
+
+  Lemma innermost_loop_deq_loop h p q
+        (Hinner : innermost_loop h p)
+        (Hloop : loop_contains h q)
+    : deq_loop q p.
+  Proof.
+  Admitted.
+
+  Lemma deq_loop_exited h qe e
+        (Hexit : exit_edge h qe e)
+    : deq_loop qe e.
+  Proof.
+    unfold exit_edge in *. unfold deq_loop. intros.
+  Admitted.
+  
+  Lemma deq_loop_exiting h qe e
+        (Hexit : exit_edge h qe e)
+    : deq_loop h qe.
+  Proof.
+    unfold exit_edge, deq_loop. intros. eapply single_exit in Hexit.
+  Admitted.
+  
+  Lemma loop_contains_deq_loop h p
+        (Hloop : loop_contains h p)
+    : deq_loop p h.
+  Proof.
+    unfold deq_loop. intros. eapply loop_contains_trans;eauto.
+  Qed.
   (** ancestors **)
 
   Definition ancestor a p q :=
