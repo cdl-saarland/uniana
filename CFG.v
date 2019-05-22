@@ -183,7 +183,7 @@ Section red_cfg.
     intro. congruence.
   Qed.*)
 
-  Lemma back_edge_incl (p q : Lab) (Hback : p ↪ q) : p --> q.
+  Lemma back_edge_incl (p q : Lab) (Hback : p ↪ q) : edge p q = true.
   Proof. 
     unfold back_edge,back_edge_b in Hback. eapply minus_subgraph. eauto.
   Qed.
@@ -1061,6 +1061,8 @@ Definition implode_nodes `{C : redCFG}
 
 Definition get_root `(C : redCFG) := root.
 
+Arguments loop_CFG {_ _ _ _} _.
+
 Lemma loop_CFG_head_root `{C : redCFG} (h : Lab)
       (Hhead : loop_head h)
       (D := loop_CFG C h Hhead)
@@ -1426,6 +1428,10 @@ Proof.
   destruct d;[|exact p].
   destruct s. eapply loop_CFG_elem; eauto.
 Defined.
+
+Arguments opt_loop_CFG {_ _ _ _} _.
+Arguments head_exits_CFG {_ _ _ _} _.
+Arguments implode_CFG {_ _ _ _} _.
 
 Definition local_impl_CFG `(C : redCFG) (d : option {h : Lab | loop_head h})
   := let D := opt_loop_CFG C d in

@@ -10,6 +10,8 @@ Open Scope prg.
 Section unch.
   Context `{C : redCFG}.
   
+  Notation "p --> q" := (edge p q = true) (at level 55,right associativity).
+  
   Variable root_no_pred' : forall p, p --> root -> False.
 
   Definition Unch := Lab -> Var -> set Lab.

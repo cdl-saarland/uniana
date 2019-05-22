@@ -101,22 +101,6 @@ Ltac conv_bool := repeat match goal with
                          | [ |- context[to_bool _ = false]] => rewrite to_bool_false
                          end.
 
-Instance : forall A, EqDec A _ -> EqDec (option A) _ :=
-  {
-    equiv_dec x y := match x, y with
-                     | None, None => in_left
-                     | Some a, Some b => if equiv_dec a b then in_left else in_right
-                     | _, _ => in_right
-                     end
-                       
-  }.
-+ rewrite e0. reflexivity.
-+ intro. eapply c. inversion H. reflexivity.
-+ intro. inversion H.
-+ intro. inversion H.
-+ reflexivity.
-Qed.
-
   Definition join_andb (l : list bool) := fold_right andb true l.
 
   Lemma join_andb_true_iff {A : Type} : 

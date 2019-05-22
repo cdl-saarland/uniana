@@ -12,6 +12,8 @@ Require Export Tagged.
 Section eval.
 
   Context `{C : redCFG}.
+
+  Notation "p --> q" := (edge p q = true) (at level 55,right associativity).
   
   Parameter root_no_pred' : forall p, p --> root -> False.
 
@@ -24,14 +26,15 @@ Section eval.
 
   Definition is_def_lab x p := exists q, is_def x q p = true.
 
-  Lemma Lab_var_dec :
+(*  Lemma Lab_var_dec :
     forall (x y : (Lab * Var)), { x = y } + { x <> y }.
   Proof.
     intros.
     destruct x as [xa xb], y as [ya yb].
-    destruct ((xa, xb) == (ya, yb)); firstorder.
+    
+    decide ((xa, xb) = (ya, yb)); firstorder.
   Qed.
-  Program Instance lab_var_eq_eqdec : EqDec (Lab * Var) eq := Lab_var_dec.
+  Program Instance lab_var_eq_eqdec : EqDec (Lab * Var) eq := Lab_var_dec.*)
   
   Parameter Val : Type.
 
@@ -40,6 +43,11 @@ Section eval.
   Parameter Val_dec : EqDec Val eq.
   Parameter Tag_dec : EqDec Tag eq.
   Parameter State_dec : EqDec State eq.
+
+  Global Existing Instance Val_dec.
+  Global Existing Instance Tag_dec.
+  Global Existing Instance State_dec.
+  
 
   Definition States := State -> Prop.
   Definition Conf := ((@Coord Lab)* State)%type.
@@ -65,6 +73,7 @@ Section eval.
   Next Obligation.
     intros.
     destruct x as [[p i] s], y as [[q j] r].
+    
     destruct ((p, i, s) == (q, j, r)); firstorder.
   Qed.
   Definition Conf_dec := conf_eq_eqdec.

@@ -17,6 +17,7 @@ Section uniana.
 
   Context `(C : redCFG).    
   
+  Notation "p --> q" := (edge p q = true) (at level 55,right associativity).
   (** definitions **)
   Parameter branch: Lab -> option Var.
 
