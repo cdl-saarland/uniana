@@ -74,7 +74,7 @@ Notation "p '-->b' q" := ((fun (Lab : finType)
                            (a_edge : Lab -> Lab -> bool)
                            (_ : @redCFG Lab edge _ _) => edge) _ _ _ _ _ p q) (at level 55).
 
-Notation "p '-->' q" := (p -->b q = true) (at level 55, right associativity).
+(*Notation "p '-->' q" := (p -->b q = true) (at level 55, right associativity).*)
 
 Notation "p '-->*' q" := ((fun (Lab : finType)
                              (edge : Lab -> Lab -> bool)
@@ -119,6 +119,8 @@ Section red_cfg.
   Definition CPath `{redCFG} := Path edge.
 
   Context `{C : redCFG}.
+  
+  Notation "p --> q" := (edge p q = true) (at level 55,right associativity).
   
   Global Instance Lab_dec : EqDec Lab eq.
   Proof.
@@ -510,13 +512,6 @@ Section red_cfg.
     eapply no_exit_head in Hhead;[contradiction|].
   Admitted.
 
-  Lemma edge_innermost:
-    forall a b : Lab,
-      edge b a = true -> loop_head a -> forall h' : Lab, loop_contains h' a -> loop_contains h' b \/ h' = a.
-  Proof.
-    intros a b Hedge Hhead. intros.  
-  Admitted.
-
   Lemma prefix_induction (* unused *){A : Type} {P : list A -> Prop}
     : P nil
       -> (forall (a : A) (l : list A) (l' : list A), P l' -> Prefix (a :: l') l -> P l)
@@ -605,9 +600,13 @@ Section red_cfg.
   
   Lemma root_loop_root h
     : loop_contains h root -> h = root.
-  Admitted.
-
-
+  Proof.
+    intros H.
+    eapply dom_loop in H.
+    assert (Path edge root root (ne_single root)) as Hpath;[econstructor|].
+    eapply H in Hpath. destruct Hpath;[subst;auto|contradiction].
+  Qed.
+  
   Lemma find_some_strong (A : Type) `{Q:EqDec A eq} (f : A -> bool) (l : list A) (x : A) (Hnd : NoDup l)
     : find f l = Some x -> x ∈ l /\ f x = true /\ forall y, y ≻* x | l -> f y = true -> x = y.
   Proof.
@@ -1043,19 +1042,43 @@ Section red_cfg.
   Proof.
   Admitted.
 
+  Lemma preds_in_same_loop h p q
+        (Hl : loop_contains h p)
+        (Hneq : h <> p)
+        (Hedge : q --> p)
+    : loop_contains h q.
+  Proof.
+    unfold loop_contains in Hl.
+    destructH.
+    eapply path_rcons in Hl2 as Hl2';eauto.
+    exists p0, (π :>: q). repeat (split;eauto).
+    simpl_nl. rewrite rev_rcons. cbn. eapply nin_tl_iff in Hl3;auto.
+    destruct Hl3 as [Hl3|Hl3];[contradict Hl3;eapply in_rev;auto|eapply path_back in Hl2;subst;auto].
+  Qed.
+
   Lemma deq_loop_exited h qe e
         (Hexit : exit_edge h qe e)
     : deq_loop qe e.
   Proof.
-    unfold exit_edge in *. unfold deq_loop. intros.
-  Admitted.
+    eapply no_exit_head in Hexit as Hneh.
+    unfold exit_edge in *. destructH.
+    unfold deq_loop. intros. 
+    eapply preds_in_same_loop in H;eauto.
+    intro N. eapply loop_contains_loop_head in H. subst. contradiction.
+  Qed.
   
   Lemma deq_loop_exiting h qe e
         (Hexit : exit_edge h qe e)
     : deq_loop h qe.
   Proof.
-    unfold exit_edge, deq_loop. intros. eapply single_exit in Hexit.
-  Admitted.
+    unfold deq_loop;intros. copy Hexit Hexit'.
+    unfold exit_edge in Hexit. destructH. eapply loop_contains_either in Hexit0;eauto.
+    destruct Hexit0;[auto|].
+    enough (h = h0) by (subst;eauto using loop_contains_self,loop_contains_loop_head).
+    eapply single_exit;eauto.
+    unfold exit_edge. repeat (split;eauto).
+    contradict Hexit2. eapply loop_contains_trans;eauto.
+  Qed.
   
   Lemma loop_contains_deq_loop h p
         (Hloop : loop_contains h p)
@@ -1069,10 +1092,86 @@ Section red_cfg.
     loop_contains a p /\ loop_contains a q \/ a = root .
 
   Definition near_ancestor  a p q :=
-    ancestor a p q /\ forall a', ancestor a p q -> deq_loop a a'.
+    ancestor a p q /\ forall a', ancestor a' p q -> deq_loop a a'.
+
+  Definition outermost_loop h p := loop_contains h p /\ forall h', loop_contains h' p -> loop_contains h h'.
+  
+  Definition ex_outermost_loop p
+    := finType_sig_or_never (DecPred (fun h => outermost_loop h p)).
+
+  Definition get_outermost_loop p : option Lab
+    := match ex_outermost_loop p with
+       | inleft (exist _ h H) => Some h
+       | inright _ => None
+       end.
+
+  Lemma LPath_loop_contains h h' p π
+        (Hpath : LPath h p π)
+        (Hin : h' ∈ tl π)
+    : loop_contains h p.
+  Proof.
+    revert dependent p. revert dependent h'.
+    induction π;intros;inversion Hpath;subst;cbn in *;[contradiction|].
+    destruct π;inversion H3;subst;cbn in *;[destruct Hin;[subst|contradiction]|].
+    - decide (innermost_loop_strict h' a);cbn in *;[|congruence]. unfold innermost_loop_strict in i. destructH;auto.
+    - destruct Hin.
+      + admit.
+      + eapply IHπ;auto. inversion Hpath; subst; eauto.
+        admit.
+  Admitted.
+    
+    
+
+  Lemma LPath_leq_depth h p π
+        (Hpath : LPath h p π)
+    : length π <= S (depth p).
+  Proof.
+    unfold depth.
+    remember (depth p) as n.
+    induction n.
+    -
+  Admitted.
+
+  Lemma loop_contains_outermost h p
+        (H : loop_contains h p)
+    : exists h', outermost_loop h' p.
+  Proof.
+    remember (ex_outermost_loop p) as H'.
+    destruct H'.
+    - destruct s; cbn in *. eexists. eauto.
+    - cbn in *. exfalso. eapply (n h). unfold outermost_loop. split;eauto.
+      
+      unfold outermost_loop.
+      admit.
+  Admitted.
+    
+
+  Lemma no_outermost_no_loop p
+        (Hno : forall h, ~ outermost_loop h p)
+    : forall h, ~ loop_contains h p.
+  Proof.
+    intros. intros N. eapply loop_LPath in N. destructH.
+  Admitted.
+  
+  Lemma ex_LPath p
+    : exists h, forall h', loop_contains h' p -> loop_contains h h' /\ exists π, LPath h p π.
+  Proof.
+    remember (get_outermost_loop p) as oh.
+    unfold get_outermost_loop in Heqoh.
+    destruct (ex_outermost_loop p); cbn in *.
+    - destruct s. exists x. split; destruct o.
+      + firstorder 0.
+      + eapply loop_LPath;eauto.
+    - exists root. split; unfold outermost_loop in n; simpl_dec' n.
+      + destruct (n h');[contradiction|]. simpl_dec' H0. simpl_dec' H0.
+        admit.
+      + admit.
+  Admitted.
+    
 
   Lemma ex_near_ancestor p q
     : exists a, near_ancestor a p q.
+  Proof.
     (* choose either a common head or root if there is no such head *)
   Admitted.
   
