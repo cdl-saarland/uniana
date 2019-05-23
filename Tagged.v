@@ -67,7 +67,7 @@ Definition tcfg_edge := tcfg_edge' edge eff_tag.
 Notation "pi -t> qj" := ((fun `(redCFG) => tcfg_edge pi qj = true) _ _ _ _ _)
                           (at level 50).
 
-Lemma tag_eq_loop_exit `{redCFG} p q i j j'
+Lemma tag_eq_loop_exit (* unused *)`{redCFG} p q i j j'
       (Htag : (q,j ) -t> (p,i))
       (Htag': (q,j') -t> (p,i))
       (Hneq : j <> j')
@@ -90,7 +90,7 @@ Admitted.
 
 Definition TPath `{redCFG} := Path tcfg_edge.
 
-Lemma tag_depth `{redCFG} p i q j t
+Lemma tag_depth (* unused *)`{redCFG} p i q j t
       (Hpath : TPath (root,start_tag) (p,i) t)
       (Hin : (q,j) ∈ t)
   : length j = depth q.
@@ -179,7 +179,7 @@ Qed.
     - eapply prec_tpath_pre_tpath in Htr;eauto. destructH. eauto.
   Qed.
 
-  Lemma precedes_fst_same_tag {A B : Type} `{EqDec B} (p : A) (i j : B) l
+  Lemma precedes_fst_same_tag (* unused *){A B : Type} `{EqDec B} (p : A) (i j : B) l
         (Hprec1 : Precedes fst l (p,i))
         (Hprec2 : Precedes fst l (p,j))
     : i = j.
@@ -249,7 +249,7 @@ Qed.
   Proof.   
   Admitted.
 
-  Lemma first_occ_tag j j1 j2 p t
+  Lemma first_occ_tag (* unused *)j j1 j2 p t
         (Htag : j = j1 ++ j2)
         (Hpath : TPath (root,start_tag) (p,j) t)
     : exists h, loop_contains h p /\ Precedes fst t (h,j2).
@@ -262,13 +262,13 @@ Qed.
     : exists h, loop_contains h q /\ Precedes fst t (h,j2) /\ (q,j) ≻* (h, j2) | t.
   Admitted.
 
-  Lemma prec_prec_eq l (q : Lab) (j j' : Tag)
+  Lemma prec_prec_eq (* unused *)l (q : Lab) (j j' : Tag)
         (Hprec1 : Precedes fst l (q,j))
         (Hprec2 : Precedes fst l (q,j'))
     : j = j'.
   Admitted.
   
-  Lemma prefix_prec_prec_eq l l' (p q : Lab) (i j j' : Tag)
+  Lemma prefix_prec_prec_eq (* unused *)l l' (p q : Lab) (i j j' : Tag)
         (Hpre : Prefix ((p,i) :: l') l)
         (Hprec1 : Precedes fst l (q,j))
         (Hprec2 : Precedes fst ((p,i) :: l') (q,j'))
@@ -277,7 +277,7 @@ Qed.
     : j' = j.
   Admitted.
 
-  Lemma ancestor_in_before_dominating a p q (i j k : Tag) l
+  Lemma ancestor_in_before_dominating (* unused *)a p q (i j k : Tag) l
         (Hdom : Dom edge root q p)
         (Hanc : ancestor a q p) 
         (Hprec__a: Precedes fst ((p,i) :: l) (a,k))
@@ -286,7 +286,7 @@ Qed.
   Admitted. 
 
 
-  Lemma tag_prefix_same_head p h1 h2 i1 i2 j1 j2 t1 t2
+  Lemma tag_prefix_same_head (* unused *)p h1 h2 i1 i2 j1 j2 t1 t2
         (Hpath1 : TPath (root,start_tag) (p,i1) t1)
         (Hpath2 : TPath (root,start_tag) (p,i2) t2)
         (Hloop1 : loop_contains h1 p)
@@ -353,7 +353,7 @@ Qed.
     : (p,i) ≻* (q,j) ≻* (r,k) | l.
   Admitted.
   
-  Lemma loop_cutting q p t
+  Lemma loop_cutting (* unused *)q p t
         (Hpath : CPath q p t)
         (Hnoh : forall h, loop_contains h q -> h ∉ t)
     : exists t', Path a_edge q p t'.

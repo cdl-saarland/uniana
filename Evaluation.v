@@ -18,13 +18,13 @@ Section eval.
   Parameter root_no_pred' : forall p, p --> root -> False.
 
   Parameter Var : Type.
-  Parameter Var_dec : EqDec Var eq.
+  Parameter Var_dec (* unused *): EqDec Var eq.
   Parameter is_def : Var -> Lab -> Lab -> bool.
 
-  Parameter def_edge :
+  Parameter def_edge (* unused *):
     forall p q x, is_def x p q = true -> p --> q.
 
-  Definition is_def_lab x p := exists q, is_def x q p = true.
+  Definition is_def_lab (* unused *)x p := exists q, is_def x q p = true.
 
 (*  Lemma Lab_var_dec :
     forall (x y : (Lab * Var)), { x = y } + { x <> y }.
@@ -49,7 +49,7 @@ Section eval.
   Global Existing Instance State_dec.
   
 
-  Definition States := State -> Prop.
+  Definition States (* unused *):= State -> Prop.
   Definition Conf := ((@Coord Lab)* State)%type.
 
   Hint Unfold Conf Coord.
@@ -80,7 +80,7 @@ Section eval.
 
   Definition is_effect_on (p q : Lab) :=
     exists i i' s s', eff ((p, i), s) = Some ((q, i'), s').
-  Parameter zero : State.
+  Parameter zero (* unused *): State.
 
   Parameter edge_spec :
     forall p q, is_effect_on p q -> p --> q.
@@ -121,7 +121,7 @@ Section eval.
 
   Hint Unfold Conf Coord.
   
-  Lemma EPath_Tr s0 p i s π :
+  Lemma EPath_Tr (* unused *)s0 p i s π :
     EPath (root,start_tag,s0) (p,i,s) π -> Tr π.
   Proof.
     intro H. remember (root, start_tag, s0) as start_c.
@@ -195,7 +195,7 @@ Section eval.
   Definition sem_hyper (T : Hyper) : Hyper :=
     fun ts' => exists ts, T ts /\ ts' = sem_trace ts.
 
-  Lemma ne_hd_hd {A : Type} (a : A) l : a = ne_front l -> Some a = hd_error l.
+  Lemma ne_hd_hd (* unused *){A : Type} (a : A) l : a = ne_front l -> Some a = hd_error l.
   Proof.
     intros H.
     induction l; cbn in *; subst a; reflexivity.
@@ -248,7 +248,7 @@ Section eval.
     - eapply ne_map_in with (f:=fst) in H0. eauto.
   Qed.
   
-  Lemma ivec_det : forall q j r r' p i i' s s',
+  Lemma ivec_det (* unused *): forall q j r r' p i i' s s',
       eff (q, j, r) = Some (p, i, s) ->
       eff (q, j, r') = Some (p, i', s') ->
       i = i'.
@@ -486,7 +486,7 @@ Section eval.
       rewrite <-nlcons_to_list. eauto.
   Qed.
   
-  Lemma precedes_step l q j r p i s :
+  Lemma precedes_step (* unused *)l q j r p i s :
     forall k, In (q, j, r) l ->
          p =/= q ->
          eff (q, j, r) = Some (p, i, s) ->
@@ -565,7 +565,7 @@ Section eval.
     -> eff k' = Some k.
    *)
   
-  Lemma Tr_CPath l :
+  Lemma Tr_CPath (* unused *)l :
     Tr l -> CPath root (fst (fst (ne_front l))) (ne_map fst (ne_map fst l)).
   Proof.
     intro H. eapply Tr_EPath in H;[| repeat rewrite <-surjective_pairing; reflexivity].
@@ -573,13 +573,13 @@ Section eval.
     eapply EPath_TPath in H. cbn in H. eapply TPath_CPath in H. eauto.
   Qed.
 
-  Definition Tr' (l : ne_list Conf) :=
+  Definition Tr' (* unused *)(l : ne_list Conf) :=
     exists l', Tr l' /\ Postfix l l'.
   
 
   Definition EPath' π := EPath (ne_back π) (ne_front π) π.
 
-  Lemma epath_epath' r i0 s0 p i s t
+  Lemma epath_epath' (* unused *)r i0 s0 p i s t
         (Hpath : EPath (r,i0,s0) (p,i,s) t)
     : EPath' t.
   Proof.
@@ -666,7 +666,7 @@ Section eval.
     eapply step_conf_implies_edge in Heff. conv_bool; firstorder.
   Qed.
 
-  Lemma tr_tpath_cons1 (l : list Conf) c
+  Lemma tr_tpath_cons1 (* unused *)(l : list Conf) c
         (Htr : Tr (c :< l))
     : TPath' ((fst c) :< map fst l).
   Proof.
@@ -752,7 +752,7 @@ Section test.
       end
     end.
   
-  Lemma test3 : A -> B.
+  Lemma test3 (* unused *): A -> B.
     intro a. xapply test2 test1.
   Qed.
 
@@ -792,26 +792,26 @@ Section test.
   
   Ltac rapply H := lazymatch type of H with ?Q => rapply' H Q end.
   
-  Lemma test4 : P y.
+  Lemma test4 (* unused *): P y.
     rapply H1. eapply Heq.
   Qed.
 
   Parameter Q : X -> X -> Prop.
   Parameter HQ : Q x x.
 
-  Lemma test5 : Q y x.
+  Lemma test5 (* unused *): Q y x.
     rapply HQ. eapply Heq.
   Qed.
 
-  Lemma test6 : forall R, R x y x y -> R x y y x.
+  Lemma test6 (* unused *): forall R, R x y x y -> R x y y x.
     intros. rapply X0. 2: symmetry. 1,2: eapply Heq.
   Qed.
 
-  Lemma test7 : (forall z:X, P x) -> P y.
+  Lemma test7 (* unused *): (forall z:X, P x) -> P y.
     intros. rapply H. exact x. exact Heq.
   Qed.
 
-  Lemma test8 : forall z, P z -> (P z -> P z -> P x) -> P y.
+  Lemma test8 (* unused *): forall z, P z -> (P z -> P z -> P x) -> P y.
     intros. rapply H0;eauto. eapply Heq.
   Qed.
 

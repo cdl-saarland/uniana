@@ -31,7 +31,7 @@ Section graph.
 
   Definition Dom r p q := forall π, Path r q π -> p ∈ π.
 
-  Lemma dominant_root r p : Dom r r p.
+  Lemma dominant_root (* unused *)r p : Dom r r p.
   Proof.
     intros π Hpath. induction Hpath;cbn;eauto.
   Qed.
@@ -109,7 +109,7 @@ Section graph.
       + econstructor 2; eauto. eapply IHl1. inversion Huq; [contradiction|eauto].
   Qed.
   
-  Lemma path_glue_loop p r (π0 π1 : ne_list L) :
+  Lemma path_glue_loop (* unused *)p r (π0 π1 : ne_list L) :
     Path p r π0
     -> uniqueIn r π0 -> uniqueIn r π1
     -> uniqueIn r (π1 ++ tl π0).
@@ -121,7 +121,7 @@ Section graph.
     inversion Huq0; eauto.
   Qed.
 
-  Lemma uniqueIn_NoDup {A : Type} `{EqDec A eq} (l : list A)
+  Lemma uniqueIn_NoDup (* unused *){A : Type} `{EqDec A eq} (l : list A)
     : NoDup l <-> forall a, a ∈ l -> uniqueIn a l.
   Proof.
     rename H into Hed.
@@ -137,7 +137,7 @@ Section graph.
   Qed.
   (* } *)
 
-  Lemma prefix_single {A : Type} (a : A) (l : ne_list A)
+  Lemma prefix_single (* unused *){A : Type} (a : A) (l : ne_list A)
     : Prefix (ne_single a) l -> ne_back l = a.
   Proof.
     intro H. induction l; inversion H; cbn; eauto; subst. inversion H2.
@@ -158,7 +158,7 @@ Section graph.
         * reflexivity.
   Qed.
 
-  Lemma path_rcons p q r π
+  Lemma path_rcons (* unused *)p q r π
         (Hπ : Path p q π)
         (Hedge : r --> p)
     : Path r q (π :>: r).
@@ -272,7 +272,7 @@ Section graph.
     intros. eexists;eapply path_from_elem';eauto.
   Qed.
   
-  Lemma path_from_elem_to_elem (p q r1 r2 : L) (π : ne_list L)
+  Lemma path_from_elem_to_elem (* unused *)(p q r1 r2 : L) (π : ne_list L)
         (Hπ : Path p q π)
         (Hprec : r2 ≻* r1 | π)
     : exists ϕ : ne_list L, Path r1 r2 ϕ. 
@@ -304,7 +304,7 @@ Section graph.
     induction l; cbn; eauto.
   Qed.
   
-  Lemma dom_trans r h p q : r -->* h -> Dom r h p -> Dom r p q -> Dom h p q.
+  Lemma dom_trans (* unused *)r h p q : r -->* h -> Dom r h p -> Dom r p q -> Dom h p q.
   Proof.
     intros Hϕ Hdom_h Hdom_p π Hπ.
     eapply path_NoDup in Hϕ as [ϕ [Hϕ Hndup]].
@@ -342,13 +342,13 @@ Section graph.
     destruct (L_dec p q);[auto|]. eapply path_path_acyclic in c;eauto. contradiction.
   Qed.
 
-  Lemma acyclic_path_path : (forall p q π ϕ, p <> q -> Path p q π -> ~ Path q p ϕ) -> (forall p, p -> p -> False) -> acyclic.
+  Lemma acyclic_path_path (* unused *): (forall p q π ϕ, p <> q -> Path p q π -> ~ Path q p ϕ) -> (forall p, p -> p -> False) -> acyclic.
   Proof.
     intros. unfold acyclic. intros p q Hedge Hpath.
     destruct (L_dec p q);[rewrite e in *|];eauto.
   Qed.    
 
-  Lemma postfix_front {A : Type} (l l' : ne_list A) :
+  Lemma postfix_front (* unused *){A : Type} (l l' : ne_list A) :
     Postfix l l'
     -> ne_front l = ne_front l'.
   Proof.
@@ -389,7 +389,7 @@ Section graph.
       + eapply IHHpath. exists l1, l2. inversion Hsucc; subst; eauto.
   Qed.
 
-  Definition Path' π := Path (ne_back π) (ne_front π) π.
+  Definition Path' (* unused *)π := Path (ne_back π) (ne_front π) π.
 
 End graph.
 
@@ -420,7 +420,7 @@ Proof.
   - econstructor; eauto. 
 Qed.
 
-Lemma acyclic_subgraph_acyclic {L : Type} (edge1 edge2 : L -> L -> bool) :
+Lemma acyclic_subgraph_acyclic (* unused *){L : Type} (edge1 edge2 : L -> L -> bool) :
   sub_graph edge1 edge2 -> acyclic edge2 -> acyclic edge1.
 Proof.
   intros Hsub Hacy p q Hedge N. unfold acyclic, sub_graph in *. 
@@ -440,13 +440,13 @@ Proof.
   intros p q Hinter. unfold intersection_edge in Hinter. conv_bool. firstorder.
 Qed.
 
-Lemma intersection_subgraph2 {L : Type} (edge1 edge2 : L -> L -> bool) :
+Lemma intersection_subgraph2 (* unused *){L : Type} (edge1 edge2 : L -> L -> bool) :
   sub_graph (edge1 ∩ edge2) edge2.
 Proof.
   intros p q Hinter. unfold intersection_edge in Hinter. conv_bool. firstorder.
 Qed.
 
-Lemma intersection2_subgraph {L : Type} (edge edge1 edge2 : L -> L -> bool) :
+Lemma intersection2_subgraph (* unused *){L : Type} (edge edge1 edge2 : L -> L -> bool) :
   sub_graph edge1 edge2
   -> sub_graph (edge1 ∩ edge) (edge2 ∩ edge).
 Proof.
@@ -462,7 +462,7 @@ Proof.
   conv_bool. destruct Hu as [Hu|Hu];firstorder 1.
 Qed.    
 
-Lemma dom_intersection {L : Type} (edge1 edge2 : L -> L -> bool) r p q :
+Lemma dom_intersection (* unused *){L : Type} (edge1 edge2 : L -> L -> bool) r p q :
   Dom edge1 r p q -> Dom (edge1 ∩ edge2) r p q.
 Proof.
   intros Hdom.

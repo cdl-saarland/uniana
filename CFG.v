@@ -52,7 +52,7 @@ Class redCFG
 Definition loop_containsT `{redCFG} qh q
   := {(p,π) : Lab * (ne_list Lab) | back_edge p qh /\ Path edge q p π /\ qh ∉ tl (rev π)}.
 
-Lemma loop_containsT_inh `{C : redCFG} q qh
+Lemma loop_containsT_inh (* unused *)`{C : redCFG} q qh
   : loop_contains qh q <-> inhabited (loop_containsT qh q).
 Proof.
   split;intros.
@@ -134,7 +134,7 @@ Section red_cfg.
 
   Definition CPath' π := CPath (ne_back π) (ne_front π) π.
 
-  Lemma cpath_cpath' r p t
+  Lemma cpath_cpath' (* unused *)r p t
         (Hpath : CPath r p t)
     : CPath' t.
   Proof.
@@ -168,7 +168,7 @@ Section red_cfg.
       + right. intro N; inversion N. congruence.
   Qed.
 
-  Definition EqNeList (X : eqType) := EqType (ne_list X).
+  Definition EqNeList (* unused *)(X : eqType) := EqType (ne_list X).
 
   Global Instance loop_contains_dec qh q : dec (loop_contains qh q).
     unfold loop_contains. eauto.
@@ -251,7 +251,7 @@ Section red_cfg.
   Definition deq_loop_b h p
     := to_bool (deq_loop_dec h p).
   
-  Lemma deq_loop_spec : forall h p, deq_loop_b h p = true <-> deq_loop h p.  
+  Lemma deq_loop_spec (* unused *): forall h p, deq_loop_b h p = true <-> deq_loop h p.  
   Proof.
     prove_spec.
   Qed.
@@ -296,9 +296,9 @@ Section red_cfg.
   
   Definition innermost_loop h p : Prop := loop_contains h p /\ deq_loop h p.
 
-  Definition innermost_loopT h p : Type := loop_containsT h p * deq_loop h p.
+  Definition innermost_loopT (* unused *)h p : Type := loop_containsT h p * deq_loop h p.
 
-  Definition containing_loops (p : Lab) := filter (DecPred (fun h => loop_contains h p)) (elem Lab).
+  Definition containing_loops (* unused *)(p : Lab) := filter (DecPred (fun h => loop_contains h p)) (elem Lab).
 
   
   Definition finType_sig_or_never (X : finType) (P : decPred X) : {x : X | P x} + {forall x : X, ~ P x}.
@@ -317,7 +317,7 @@ Section red_cfg.
   Definition innermost_loop_strict (h p : Lab)
     := loop_contains h p /\ h <> p /\ forall h', loop_contains h' p -> (loop_contains h' h \/ h' = p).
   
-  Definition innermost_loop_strictT (h p : Lab) 
+  Definition innermost_loop_strictT (* unused *)(h p : Lab) 
     := (loop_containsT h p * (h <> p) * forall h', loop_containsT h' p -> (loop_containsT h' h + (h' = p)))%type.
     
   Definition ex_innermost_loop_strict (p : Lab)
@@ -338,16 +338,16 @@ Section red_cfg.
     | inright _ => None
     end.
   
-  Lemma dec_DM_and_iff (X Y : Prop) : dec X -> ~ (X /\ Y) <-> ~ X \/ ~ Y.
+  Lemma dec_DM_and_iff (* unused *)(X Y : Prop) : dec X -> ~ (X /\ Y) <-> ~ X \/ ~ Y.
     split;[now eapply dec_DM_and|firstorder].
   Qed.
-  Lemma dec_DM_and_iff' (X Y : Prop) : dec Y -> ~ (X /\ Y) <-> ~ X \/ ~ Y.
+  Lemma dec_DM_and_iff' (* unused *)(X Y : Prop) : dec Y -> ~ (X /\ Y) <-> ~ X \/ ~ Y.
     split;[now eapply dec_DM_and'|firstorder].
   Qed.
-  Lemma dec_DN_iff (X : Prop) : dec X -> ~ ~ X <-> X.
+  Lemma dec_DN_iff (* unused *)(X : Prop) : dec X -> ~ ~ X <-> X.
     split;[now eapply dec_DN|firstorder].
   Qed.
-  Lemma dec_DM_impl_iff (X Y : Prop) : dec X -> dec Y -> ~ (X -> Y) <-> X /\ ~ Y.
+  Lemma dec_DM_impl_iff (* unused *)(X Y : Prop) : dec X -> dec Y -> ~ (X -> Y) <-> X /\ ~ Y.
     split;[now eapply dec_DM_impl|firstorder].
   Qed.
 
@@ -486,7 +486,7 @@ Section red_cfg.
         eapply loop_contains_Antisymmetric in Hloop_save. exploit Hloop_save. contradiction.
   Qed.
   
-  Lemma loop_reachs_member (h q : Lab)
+  Lemma loop_reachs_member (* unused *)(h q : Lab)
     : loop_contains h q -> h -->* q.
   Proof.
     intros Hloop. unfold loop_contains in Hloop.
@@ -501,7 +501,7 @@ Section red_cfg.
     eapply path_from_elem in H1;eauto. firstorder. 
   Qed.
 
-  Lemma edge_head_same_loop p h h'
+  Lemma edge_head_same_loop (* unused *)p h h'
         (Hedge : edge p h = true)
         (Hhead : loop_head h)
         (Hloop : loop_contains h' p)
@@ -517,7 +517,7 @@ Section red_cfg.
     intros a b Hedge Hhead. intros.  
   Admitted.
 
-  Lemma prefix_induction {A : Type} {P : list A -> Prop}
+  Lemma prefix_induction (* unused *){A : Type} {P : list A -> Prop}
     : P nil
       -> (forall (a : A) (l : list A) (l' : list A), P l' -> Prefix (a :: l') l -> P l)
       -> forall l : list A, P l.
@@ -540,7 +540,7 @@ Section red_cfg.
     eapply Hstep;eauto. econstructor.
   Qed.*)
 
-  Lemma find_some' (A : Type) (f : A -> bool) (l : list A) (x : A)
+  Lemma find_some' (* unused *)(A : Type) (f : A -> bool) (l : list A) (x : A)
         (Hl : x ∈ l)
         (Hf : f x = true)
     : exists y, Some y = find f l.
@@ -551,21 +551,21 @@ Section red_cfg.
     - destruct (f a);eauto.
   Qed.
 
-  Lemma path_contains_front {L : Type} (x y : L) e l
+  Lemma path_contains_front (* unused *){L : Type} (x y : L) e l
         (Hpath : Path e x y l)
     : y ∈ l.
   Proof.
     induction Hpath; cbn; eauto.
   Qed.
   
-  Lemma path_contains_back {L : Type} (x y : L) e l
+  Lemma path_contains_back (* unused *){L : Type} (x y : L) e l
         (Hpath : Path e x y l)
     : x ∈ l.
   Proof.
     induction Hpath; cbn; eauto.
   Qed.
 
-  Lemma innermost_loop_strict_unique (h h' p : Lab)
+  Lemma innermost_loop_strict_unique (* unused *)(h h' p : Lab)
         (H : innermost_loop_strict h p)
         (Q : innermost_loop_strict h' p)
     : h = h'.
@@ -711,7 +711,7 @@ Section red_cfg.
           rewrite rev_rcons in Hr0. inversion Hr0;subst. eapply in_rev in N; contradiction.
   Qed.
   
-  Definition exiting (h p : Lab) : Prop :=
+  Definition exiting (* unused *)(h p : Lab) : Prop :=
     exists q, exit_edge h p q.
 
   Definition exited (h q : Lab) : Prop :=
@@ -724,7 +724,7 @@ Section red_cfg.
 
   Definition preds `{redCFG Lab edge} p : list Lab := filter (decPred_bool (fun q => edge q p)) (elem Lab). 
 
-  Definition In_b {A : Type} `{H : EqDec A eq} (a : A) (l : list A)
+  Definition In_b (* unused *){A : Type} `{H : EqDec A eq} (a : A) (l : list A)
     := if in_dec H a l then true else false.
 
 
@@ -757,7 +757,7 @@ Section red_cfg.
   Qed.*)
 
 
-  Lemma minus_back_edge edge' p q
+  Lemma minus_back_edge (* unused *)edge' p q
     : ((edge ∩ edge') ∖ (a_edge ∩ edge')) p q = true -> p ↪ q.
   Proof.
     intros Q.
@@ -767,7 +767,7 @@ Section red_cfg.
     rewrite Q2 in H; cbn in H; congruence.
   Qed.
 
-  Lemma dom_path p q
+  Lemma dom_path (* unused *)p q
     : Dom edge root p q -> p -->* q.
   Proof.
     intros Hdom.
@@ -775,7 +775,7 @@ Section red_cfg.
     eapply path_from_elem in Hπ; eauto using Lab_dec. firstorder.
   Qed.
 
-  Lemma loop_contains_not_dom h q 
+  Lemma loop_contains_not_dom (* unused *)h q 
     : loop_contains h q -> h <> q -> exists p, p ↪ h /\ ~ Dom edge q h p.
   Proof.
     intros Hloop Hneq. unfold loop_contains in Hloop. destructH.
@@ -829,7 +829,7 @@ Section red_cfg.
       Unshelve. all:eauto. (*TODO: remove *)
   Qed.
   
-  Lemma NoDup_rcons (A : Type) (x : A) (l : list A)
+  Lemma NoDup_rcons (* unused *)(A : Type) (x : A) (l : list A)
     : x ∉ l -> NoDup l -> NoDup (l :r: x).
   Proof.
     intros Hnin Hnd. revert x Hnin.
@@ -851,7 +851,7 @@ Section red_cfg.
       + eapply IHl; eauto.
   Qed.
   
-  Lemma loop_contains_path h q π
+  Lemma loop_contains_path (* unused *)h q π
     : CPath h q π -> loop_contains h q -> NoDup π -> forall p, p ∈ π -> loop_contains h p.
   Proof.
     intros Hπ Hin Hnd p Hp. 
@@ -1005,7 +1005,7 @@ Section red_cfg.
       destruct n;unfold innermost_loop in H;firstorder.
   Qed.
 
-  Lemma get_innermost_loop_strict_spec (p : Lab)
+  Lemma get_innermost_loop_strict_spec (* unused *)(p : Lab)
     : match get_innermost_loop_strict p with
       | Some (exist _ h H) => innermost_loop_strict h p
       | None => forall h', loop_contains h' p -> h' = p
@@ -1036,7 +1036,7 @@ Section red_cfg.
     unfold Transitive; eapply deq_loop_trans.
   Qed.
 
-  Lemma innermost_loop_deq_loop h p q
+  Lemma innermost_loop_deq_loop (* unused *)h p q
         (Hinner : innermost_loop h p)
         (Hloop : loop_contains h q)
     : deq_loop q p.
@@ -1095,7 +1095,7 @@ Section red_cfg.
   (** loop_CFG: remove everything outside the loop **)
 
 
-  Lemma loop_contains_ledge_head h h' p
+  Lemma loop_contains_ledge_head (* unused *)h h' p
     : loop_contains h p -> p ↪ h' -> loop_contains h h'.
   Proof.
   Admitted.
@@ -1194,7 +1194,7 @@ Definition get_root `(C : redCFG) := root.
 
 Arguments loop_CFG {_ _ _ _} _.
 
-Lemma loop_CFG_head_root `{C : redCFG} (h : Lab)
+Lemma loop_CFG_head_root (* unused *)`{C : redCFG} (h : Lab)
       (Hhead : loop_head h)
       (D := loop_CFG C h Hhead)
   : get_root D = loop_CFG_elem C h h (loop_contains_self Hhead).
@@ -1202,7 +1202,7 @@ Proof.
   unfold get_root. unfold loop_CFG_elem.
 Admitted.
 
-Lemma loop_CFG_top_level `{C : redCFG} (h p : Lab)
+Lemma loop_CFG_top_level (* unused *)`{C : redCFG} (h p : Lab)
       (Hloop : loop_contains h p)
       (Hinner : innermost_loop_strict h p)
       (D := loop_CFG C h (loop_contains_loop_head Hloop))
@@ -1299,7 +1299,7 @@ Next Obligation. (* no_head_exit *)
 Admitted.  
 *)
 
-Definition top_level `{redCFG} q := forall h, loop_contains h q -> (h = root \/ h = q).
+Definition top_level (* unused *)`{redCFG} q := forall h, loop_contains h q -> (h = root \/ h = q).
 
 Arguments loop_CFG {_ _ _ _} (_).
 
@@ -1308,7 +1308,7 @@ Arguments loop_CFG {_ _ _ _} (_).
 Definition head_exits_edge `{redCFG} h q : bool
   := if decision (exited h q) then true else false. 
 
-Lemma head_exits_edge_spec :
+Lemma head_exits_edge_spec (* unused *):
   forall `{redCFG} h q, head_exits_edge h q = true <-> exists p, exit_edge h p q.
 Proof.
   intros. unfold head_exits_edge. decide (exited h q); split;cbn;eauto.
@@ -1411,7 +1411,7 @@ Proof.
   eapply sub_CFG;intros.
 Admitted.
 
-Lemma implode_CFG_elem `{C : redCFG} (p : Lab) (Himpl : implode_nodes p)
+Lemma implode_CFG_elem (* unused *)`{C : redCFG} (p : Lab) (Himpl : implode_nodes p)
   : finType_sub_decPred implode_nodes.
 Proof.
   econstructor. unfold pure. instantiate (1:=p).
@@ -1481,7 +1481,7 @@ Goal forall `(C : redCFG) (h:Lab), (match decision (@loop_head _ _ _ _ C h) with
 intros. decide (loop_head h);eauto. Show Proof.
 Abort.
 
-Definition if_transfm : forall (X Y : Type) (A B : Prop) (b : {A} + {B}), (if b then X -> X -> bool else Y -> Y -> bool)
+Definition if_transfm (* unused *): forall (X Y : Type) (A B : Prop) (b : {A} + {B}), (if b then X -> X -> bool else Y -> Y -> bool)
                              -> (if b then X else Y)
                              -> (if b then X else Y)
                              -> bool.
@@ -1548,7 +1548,7 @@ Proof.
   destruct d; [destruct s|]; eauto.
 Defined.
 
-Lemma opt_loop_CFG_elem `{C : redCFG} (p : Lab)
+Lemma opt_loop_CFG_elem (* unused *)`{C : redCFG} (p : Lab)
       (d : option {h : Lab | loop_head h})
       (Hd : match d with
             | Some (exist _ h _) => loop_contains h p
@@ -1564,7 +1564,7 @@ Arguments opt_loop_CFG {_ _ _ _} _.
 Arguments head_exits_CFG {_ _ _ _} _.
 Arguments implode_CFG {_ _ _ _} _.
 
-Definition local_impl_CFG `(C : redCFG) (d : option {h : Lab | loop_head h})
+Definition local_impl_CFG (* unused *)`(C : redCFG) (d : option {h : Lab | loop_head h})
   := let D := opt_loop_CFG C d in
      implode_CFG (head_exits_CFG D) (head_exits_property_satisfied (C:=D)).
 
@@ -1575,7 +1575,7 @@ Definition local_impl_CFG_type `(C : redCFG) (d : option {h : Lab | loop_head h}
 Arguments redCFG : default implicits.
 Arguments implode_nodes : default implicits.
 
-Definition original_of_impl `(C : redCFG) (d : option {h : Lab | loop_head h})
+Definition original_of_impl (* unused *)`(C : redCFG) (d : option {h : Lab | loop_head h})
   : local_impl_CFG_type d -> Lab.
 Proof.
   intros. eapply proj1_sig in X.
@@ -1592,7 +1592,7 @@ Proof.
   - apply None.
 Defined.
 
-Definition impl_of_original `(C : redCFG) (d : option {h : Lab | loop_head h})
+Definition impl_of_original (* unused *)`(C : redCFG) (d : option {h : Lab | loop_head h})
   : Lab -> option (local_impl_CFG_type d).
 Proof.
   intro p.
@@ -1626,4 +1626,4 @@ Proof.
 Qed.
 
 (* TODO : remove or include in redCFG def *)
-Parameter no_self_loops : forall `(C : redCFG), forall q p, edge q p = true -> q =/= p.
+Parameter no_self_loops (* unused *): forall `(C : redCFG), forall q p, edge q p = true -> q =/= p.

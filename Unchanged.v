@@ -25,7 +25,7 @@ Section unch.
   
   Definition unch_join_ptw (d d' : set Lab) := set_inter Lab_dec' d d'. 
 
-  Definition unch_join (u u' : Unch) : Unch :=
+  Definition unch_join (* unused *)(u u' : Unch) : Unch :=
     fun l x => unch_join_ptw (u l x) (u' l x).
 
   Definition unch_trans_local (unch : Unch) (q p : Lab) (x : Var) : set Lab :=
@@ -46,7 +46,7 @@ Section unch.
     - rewrite H;eauto.
   Qed.
 
-  Lemma unch_trans_root : forall unch x, unch_trans unch root x = set_add Lab_dec' root (empty_set Lab).
+  Lemma unch_trans_root (* unused *): forall unch x, unch_trans unch root x = set_add Lab_dec' root (empty_set Lab).
   Proof.
     intros.
     cut (preds root = nil); intros.

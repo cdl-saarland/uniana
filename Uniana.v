@@ -21,7 +21,7 @@ Section uniana.
   (** definitions **)
   Parameter branch: Lab -> option Var.
 
-  Definition is_branch br x := branch br = Some x.
+  Definition is_branch (* unused *)br x := branch br = Some x.
 
   Parameter val_true : Val -> bool.
   
@@ -81,7 +81,7 @@ Section uniana.
                                                             (rel_splits p q)))
                                  (unch_trans unch p x)).
 
-  Lemma uni_trans_root_inv :
+  Lemma uni_trans_root_inv (* unused *):
     forall uni unch x, uni_trans uni unch root x = uni root x.
   Proof.
     intros.
@@ -724,7 +724,7 @@ Section uniana.
   Ltac reduce_uni_concr HCuni Hpre1 Hpre2 :=
     clear - HCuni Hpre1 Hpre2; eapply2 prefix_incl Hpre1 Hpre2; intros; eapply HCuni;eauto.
   
-  Lemma uni_correct :
+  Lemma uni_correct (* unused *):
     forall uni unch ts,
       sem_hyper (red_prod (uni_concr uni) (lift (unch_concr unch))) ts ->
       uni_concr (uni_trans uni unch) ts.
