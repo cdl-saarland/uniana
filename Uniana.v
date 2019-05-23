@@ -498,6 +498,7 @@ Section uniana.
     (* find node on ancestor-depth that is between u & p *)
     eapply2 ancestor_level_connector Hanc21 Hanc22.
     4,8: split;[eapply ancestor_sym|];eauto. all: simpl_nl;eauto.
+    2,3: clear - Ha_near;intros;destructH;eauto.
     destruct Hanc21 as [a1' [Hanc21 Hanc11]]. destruct Hanc22 as [a2' [Hanc22 Hanc12]].
     assert (Prefix j (l' ++ j)) as Hexit1.
     { eapply prefix_eq. eexists;reflexivity. }

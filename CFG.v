@@ -1091,8 +1091,8 @@ Section red_cfg.
   Definition ancestor a p q :=
     loop_contains a p /\ loop_contains a q \/ a = root .
 
-  Definition near_ancestor  a p q :=
-    ancestor a p q /\ forall a', ancestor a' p q -> deq_loop a a'.
+  Definition near_ancestor  a p q := (* we cannot allow root for the other ancestor *)
+    ancestor a p q /\ forall a', loop_contains a' p /\ loop_contains a' q -> deq_loop a a'.
 
   Definition outermost_loop h p := loop_contains h p /\ forall h', loop_contains h' p -> loop_contains h h'.
   
@@ -1105,6 +1105,60 @@ Section red_cfg.
        | inright _ => None
        end.
 
+  Definition strict_incl (A : Type) (l l' : list A)
+    := l ⊆ l' /\ exists a, a ∈ l' /\ a ∉ l.
+
+  Infix "⊂" := strict_incl (at level 55).
+
+(*  Lemma strict_incl_well_founded (A : Type) : well_founded (@strict_incl A).
+  Admitted.*)
+
+  Lemma loop_contains_outermost h p
+        (Hl : loop_contains h p)
+    : exists h', outermost_loop h' p.
+  Proof.
+    remember (elem Lab).
+    specialize (@elementIn Lab) as Hin.
+    rewrite <-Heql in Hin.
+    clear Heql.
+    unfold outermost_loop.
+    enough (forall l', l' ⊆ l
+                  -> exists h' : Lab, loop_contains h' p /\ (forall h'0 : Lab, h'0 ∈ l'
+                                                                   -> loop_contains h'0 p
+                                                                   -> loop_contains h' h'0)).
+    {
+      specialize (H l).
+      exploit H.
+      destructH. eexists; eauto.
+    }
+    induction l';intros.
+    - exists h. split;eauto. intros. cbn in H0. contradiction.
+    - exploit IHl'.
+      + eapply incl_cons;eauto.
+      + destructH. decide (loop_contains a h').
+        * exists a. split;[eapply loop_contains_trans;eauto|].
+          intros. destruct H0.
+          -- subst. eauto using loop_contains_self, loop_contains_loop_head.
+          -- exploit IHl'1. eapply loop_contains_trans;eauto.
+        * exists h'. split;[auto|]. intros.
+          destruct H0;[subst|eapply IHl'1;eauto].
+          eapply loop_contains_either in IHl'0;eauto.
+          destruct IHl'0; [contradiction|auto].
+  Qed.
+
+  Lemma get_outermost_loop_spec p
+    : match get_outermost_loop p with
+      | Some h => outermost_loop h p
+      | None => forall h, loop_contains h p -> False
+      end.
+  Proof.
+    unfold get_outermost_loop.
+    destruct (ex_outermost_loop p).
+    - destruct s. cbn in *. auto.
+    - cbn in *. intros. eapply loop_contains_outermost in H. destructH.
+      eapply n;eauto.
+  Qed.                  
+  
   Lemma LPath_loop_contains h h' p π
         (Hpath : LPath h p π)
         (Hin : h' ∈ tl π)
@@ -1119,59 +1173,83 @@ Section red_cfg.
       + eapply IHπ;auto. inversion Hpath; subst; eauto.
         admit.
   Admitted.
-    
-    
-
-  Lemma LPath_leq_depth h p π
-        (Hpath : LPath h p π)
-    : length π <= S (depth p).
-  Proof.
-    unfold depth.
-    remember (depth p) as n.
-    induction n.
-    -
-  Admitted.
-
-  Lemma loop_contains_outermost h p
-        (H : loop_contains h p)
-    : exists h', outermost_loop h' p.
-  Proof.
-    remember (ex_outermost_loop p) as H'.
-    destruct H'.
-    - destruct s; cbn in *. eexists. eauto.
-    - cbn in *. exfalso. eapply (n h). unfold outermost_loop. split;eauto.
-      
-      unfold outermost_loop.
-      admit.
-  Admitted.
-    
-
-  Lemma no_outermost_no_loop p
-        (Hno : forall h, ~ outermost_loop h p)
-    : forall h, ~ loop_contains h p.
-  Proof.
-    intros. intros N. eapply loop_LPath in N. destructH.
-  Admitted.
   
   Lemma ex_LPath p
-    : exists h, forall h', loop_contains h' p -> loop_contains h h' /\ exists π, LPath h p π.
+    : exists h, (forall h', loop_contains h' p -> loop_contains h h') /\ exists π, LPath h p π.
   Proof.
     remember (get_outermost_loop p) as oh.
-    unfold get_outermost_loop in Heqoh.
-    destruct (ex_outermost_loop p); cbn in *.
-    - destruct s. exists x. split; destruct o.
-      + firstorder 0.
-      + eapply loop_LPath;eauto.
-    - exists root. split; unfold outermost_loop in n; simpl_dec' n.
-      + destruct (n h');[contradiction|]. simpl_dec' H0. simpl_dec' H0.
-        admit.
-      + admit.
+    specialize (get_outermost_loop_spec p) as Hspec.
+    destruct (get_outermost_loop p).
+    - unfold outermost_loop in Hspec. destructH.
+      exists e. split;eauto. eapply loop_LPath;eauto.
+    - exists p. split; [intros h' Hh'; eapply Hspec in Hh';contradiction|].
+      eexists. econstructor.
+  Qed.
+
+  Definition ex_near_ancestor_opt p q
+    := finType_sig_or_never (DecPred (fun a => near_ancestor a p q)).
+
+  Lemma near_ancestor_same h p q a
+        (Hloop : innermost_loop h p)
+        (Hanc1 : near_ancestor a h q)
+    : near_ancestor a p q.
   Admitted.
-    
 
   Lemma ex_near_ancestor p q
     : exists a, near_ancestor a p q.
   Proof.
+    specialize (ex_LPath p) as HL.
+    destructH.
+    enough (forall p', loop_contains p' p -> exists a, near_ancestor a p' q).
+    {
+      remember (get_innermost_loop p) as x.
+      specialize (get_innermost_loop_spec p) as Hspec.
+      rewrite <-Heqx in Hspec. destruct x.
+      - destruct s. 
+        specialize (H x). exploit H. destructH.
+        exists a. eapply near_ancestor_same;eauto.
+      - exists root. split.
+        * right. reflexivity.
+        * intros; destructH. unfold deq_loop. intros.
+          exfalso. eapply Hspec. eapply loop_contains_trans;eauto.
+    } 
+    revert dependent p.
+    induction π;intros; inversion HL1;subst.
+    - decide (loop_contains a q).
+      + exists a. unfold near_ancestor. split.
+        * unfold ancestor. left.
+          split;[eauto using loop_contains_loop_head, loop_contains_self|auto].
+        * intros. unfold deq_loop.
+          destructH. intros. apply (@loop_contains_trans _ p' _);[eapply loop_contains_trans|];eauto.
+      + exists root. split.
+        * right. reflexivity.
+        * intros; destructH. unfold deq_loop. intros.
+          exfalso. apply n. eapply HL0 in H as H'.
+          eapply loop_contains_Antisymmetric in H';eauto. exploit H'. subst.
+          eapply HL0 in H1 as H'. eapply loop_contains_Antisymmetric in H';eauto.
+          exploit H'. subst. auto.
+    - decide (innermost_loop_strict b a);cbn in *;[clear H5|congruence].
+      rename a into p.
+      unfold innermost_loop_strict in i.
+      destructH.
+      decide (loop_contains p' q).
+      + exists p'. 
+        split;[left;split;eauto using loop_contains_loop_head, loop_contains_self, loop_contains_trans|].
+        unfold deq_loop. 
+        intros. destructH. eapply loop_contains_trans;eauto.
+      + decide (loop_contains b q). 
+        * exists b. split.
+        -- left. split;eauto. admit.
+        -- unfold deq_loop. intros. destructH.
+          edestruct i3;eauto.
+          ++ eapply loop_contains_trans;eauto. admit.
+          ++ subst. contradiction.
+        * eapply IHπ;auto. 2: eapply H4.
+          -- intros. eapply HL0. eapply loop_contains_trans;eauto.
+          -- eapply i3 in H. destruct H;auto. subst.
+             admit. 
+             (* this case is broken ! *)
+               
     (* choose either a common head or root if there is no such head *)
   Admitted.
   
