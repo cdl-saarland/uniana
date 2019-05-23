@@ -623,33 +623,93 @@ Section red_cfg.
         inversion Hnd; subst. eapply IHl;eauto. inversion H0;subst;auto. congruence.
   Qed.
 
+  Ltac destr_r x :=
+    let Q := fresh "Q" in
+    specialize (ne_list_nlrcons x) as Q;
+    let a := fresh "a" in
+    let l := fresh "l" in
+    destruct Q as [a [l Q]];
+    rewrite Q in *.
+      
+  Lemma acyclic_path_NoDup p q π
+        (Hπ : Path a_edge p q π)
+    : NoDup π.
+  Proof.
+    induction Hπ.
+    - econstructor;eauto. econstructor.
+    - cbn. econstructor;auto.
+      intro N. specialize a_edge_acyclic as Hacy. unfold acyclic in Hacy.
+      simpl_dec' Hacy.
+      specialize (Hacy _ _ H).
+      eapply path_from_elem in N;eauto. destructH. apply Hacy in N0. contradiction.
+  Qed.
+  
   Lemma loop_contains_either h1 h2 p
         (Hloo : loop_contains h1 p)
         (Hlop : loop_contains h2 p)
     : loop_contains h1 h2 \/ loop_contains h2 h1.
   Proof.
-    specialize (reachability p) as Hr. destructH.
-    eapply dom_loop in Hloo as Hdom1. eapply Hdom1 in Hr as Hr1.
-    eapply dom_loop in Hlop as Hdom2. eapply Hdom2 in Hr as Hr2.
+    specialize (a_reachability p) as Hr. destructH.
+    eapply dom_loop in Hloo as Hdom1. eapply dom_dom_acyclic in Hdom1. eapply Hdom1 in Hr as Hr1. 
+    eapply dom_loop in Hlop as Hdom2. eapply dom_dom_acyclic in Hdom2. eapply Hdom2 in Hr as Hr2.
     eapply path_from_elem in Hr1;eauto.
     eapply path_from_elem in Hr2;eauto.
     do 2 destructH.
+    decide (h1 = p);[subst;right;auto|].
+    decide (h2 = p);[subst;left ;auto|].
+    decide (h1 = h2);[subst;left;eauto using loop_contains_self,loop_contains_loop_head|].
     eapply postfix_order_destruct in Hr4;eauto.
     destruct Hr4.
     - left. unfold loop_contains in *. do 2 destructH.
-      exists p1. eapply path_app in Hloo2;eauto. exists (π1 :+ tl ϕ).
-      repeat (split;auto).
+      exists p1. eapply path_app in Hloo2 as Happ;eauto. exists (π1 :+ tl ϕ).
+      repeat (split;eauto). 2:eauto using subgraph_path',a_edge_incl.
       enough (h1 ∉ tl ϕ).
       + contradict Hloo3. eapply tl_incl in Hloo3. eapply in_rev in Hloo3.
-        admit.
-      (* use acyclic paths instead, then you have NoDup on π, and now it suffices to show h1 ∉ tl ϕ *)
-      + admit.      
-    - right.
-      (* analogous to the case above *)
-      admit.
-  Admitted.
-
-
+        eapply in_nl_conc in Hloo3. destruct Hloo3;[|contradiction].
+        destr_r π1. simpl_nl. rewrite rev_rcons. cbn. rewrite <-in_rev.
+        simpl_nl' H1. eapply In_rcons in H1. destruct H1;[|auto]. subst a.
+        clear - Hloo2 n.
+        exfalso. contradict n. revert dependent p1.
+        induction l;cbn in *;intros;inversion Hloo2;subst;auto.
+        eapply IHl;eauto.
+      + eapply path_back in Hr2 as Hr2'.
+        eapply path_back in Hr0 as Hr0'.
+        destr_r ϕ0. cbn in Hr2'. simpl_nl' Hr2'. subst a.
+        destr_r ϕ. cbn in Hr0'. simpl_nl' Hr0'. subst a.
+        simpl_nl' H. simpl_nl.
+        eapply acyclic_path_NoDup in Hr2. simpl_nl' Hr2. eapply NoDup_rev in Hr2.
+        inversion H;subst.
+        * eapply rev_rev_eq in H2;repeat rewrite rev_rcons in H2. inversion H2;subst. contradiction.
+        * eapply rev_rev_eq in H0;repeat rewrite rev_rcons in H0. inversion H0;subst.
+          eapply rev_rev_eq in H4. subst l'.
+          intro N. eapply tl_incl in N. eapply postfix_incl in N;[|eauto].
+          rewrite rev_rcons in Hr2. inversion Hr2;subst. eapply in_rev in N; contradiction.
+    - right. unfold loop_contains in *. do 2 destructH.
+      exists p0. eapply path_app in Hlop2 as Happ;eauto. 2: clear Hr0;eauto using subgraph_path',a_edge_incl.
+      exists (π0 :+ tl ϕ0).
+      repeat (split;eauto). 
+      enough (h2 ∉ tl ϕ0).
+      + contradict Hlop3. eapply tl_incl in Hlop3. eapply in_rev in Hlop3.
+        eapply in_nl_conc in Hlop3. destruct Hlop3;[|contradiction].
+        destr_r π0. simpl_nl. rewrite rev_rcons. cbn. rewrite <-in_rev.
+        simpl_nl' H1. eapply In_rcons in H1. destruct H1;[|auto]. subst a.
+        clear - Hlop2 n0.
+        exfalso. contradict n0. revert dependent p0.
+        induction l;cbn in *;intros;inversion Hlop2;subst;auto.
+        eapply IHl;eauto.
+      + eapply path_back in Hr2 as Hr2'.
+        eapply path_back in Hr0 as Hr0'.
+        destr_r ϕ0. cbn in Hr2'. simpl_nl' Hr2'. subst a.
+        destr_r ϕ. cbn in Hr0'. simpl_nl' Hr0'. subst a.
+        simpl_nl' H. simpl_nl.
+        eapply acyclic_path_NoDup in Hr0. simpl_nl' Hr0. eapply NoDup_rev in Hr0.
+        inversion H;subst.
+        * eapply rev_rev_eq in H2;repeat rewrite rev_rcons in H2. inversion H2;subst. contradiction.
+        * eapply rev_rev_eq in H0;repeat rewrite rev_rcons in H0. inversion H0;subst.
+          eapply rev_rev_eq in H4. subst l'.
+          intro N. eapply tl_incl in N. eapply postfix_incl in N;[|eauto].
+          rewrite rev_rcons in Hr0. inversion Hr0;subst. eapply in_rev in N; contradiction.
+  Qed.
   
   Definition exiting (h p : Lab) : Prop :=
     exists q, exit_edge h p q.
@@ -844,19 +904,6 @@ Section red_cfg.
       cbn in Hpath. inversion Hpath;subst;auto. inversion H2;subst;contradiction.
     - decide (loop_contains h' p); cbn in *;[congruence|contradiction].
     - subst. left. eapply loop_contains_self. eapply loop_contains_loop_head;eauto.
-  Qed.
-      
-  Lemma acyclic_path_NoDup p q π
-        (Hπ : Path a_edge p q π)
-    : NoDup π.
-  Proof.
-    induction Hπ.
-    - econstructor;eauto. econstructor.
-    - cbn. econstructor;auto.
-      intro N. specialize a_edge_acyclic as Hacy. unfold acyclic in Hacy.
-      simpl_dec' Hacy.
-      specialize (Hacy _ _ H).
-      eapply path_from_elem in N;eauto. destructH. apply Hacy in N0. contradiction.
   Qed.
   
   Lemma loop_LPath h p
