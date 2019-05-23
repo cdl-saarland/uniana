@@ -9,3 +9,6 @@ finiteTypes/*
 html
 Makefile.coq
 Makefile.coq.conf
+.coqdeps.d
+*.dpd
+unused.dump
