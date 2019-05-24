@@ -1092,7 +1092,7 @@ Section red_cfg.
     loop_contains a p /\ loop_contains a q \/ a = root .
 
   Definition near_ancestor  a p q := (* we cannot allow root for the other ancestor *)
-    ancestor a p q /\ forall a', loop_contains a' p /\ loop_contains a' q -> deq_loop a a'.
+    ancestor a p q /\ forall a', loop_contains a' p /\ loop_contains a' q -> loop_contains a' a.
 
   Definition outermost_loop h p := loop_contains h p /\ forall h', loop_contains h' p -> loop_contains h h'.
   
@@ -1195,67 +1195,70 @@ Section red_cfg.
     : near_ancestor a p q.
   Admitted.
 
+  (* show:
+   * ancestors are exactly LPath p ∩ LPath q ∪ {root}
+   * if x ∈ LPath p ∩ LPath q -> lpath to x is prefix of both lpaths
+   * thus the nearest ancestor is the last such x
+   *)
+
   Lemma ex_near_ancestor p q
     : exists a, near_ancestor a p q.
   Proof.
-    specialize (ex_LPath p) as HL.
-    destructH.
-    enough (forall p', loop_contains p' p -> exists a, near_ancestor a p' q).
+    remember (elem Lab).
+    specialize (@elementIn Lab) as Hin.
+    rewrite <-Heql in Hin.
+    clear Heql.
+    unfold near_ancestor.
+    enough (forall l', l' ⊆ l
+                  -> exists a : Lab, ancestor a p q /\ (forall a' : Lab, a' ∈ l'
+                                                             -> loop_contains a' p /\ loop_contains a' q
+                                                             -> loop_contains a' a)).
     {
-      remember (get_innermost_loop p) as x.
-      specialize (get_innermost_loop_spec p) as Hspec.
-      rewrite <-Heqx in Hspec. destruct x.
-      - destruct s. 
-        specialize (H x). exploit H. destructH.
-        exists a. eapply near_ancestor_same;eauto.
-      - exists root. split.
-        * right. reflexivity.
-        * intros; destructH. unfold deq_loop. intros.
-          exfalso. eapply Hspec. eapply loop_contains_trans;eauto.
-    } 
-    revert dependent p.
-    induction π;intros; inversion HL1;subst.
-    - decide (loop_contains a q).
-      + exists a. unfold near_ancestor. split.
-        * unfold ancestor. left.
-          split;[eauto using loop_contains_loop_head, loop_contains_self|auto].
-        * intros. unfold deq_loop.
-          destructH. intros. apply (@loop_contains_trans _ p' _);[eapply loop_contains_trans|];eauto.
-      + exists root. split.
-        * right. reflexivity.
-        * intros; destructH. unfold deq_loop. intros.
-          exfalso. apply n. eapply HL0 in H as H'.
-          eapply loop_contains_Antisymmetric in H';eauto. exploit H'. subst.
-          eapply HL0 in H1 as H'. eapply loop_contains_Antisymmetric in H';eauto.
-          exploit H'. subst. auto.
-    - decide (innermost_loop_strict b a);cbn in *;[clear H5|congruence].
-      rename a into p.
-      unfold innermost_loop_strict in i.
+      specialize (H l).
+      exploit H.
+      destructH. eexists; eauto.
+    }
+    induction l';intros.
+    - exists root. split;[right;auto|].
+      intros;cbn in *;contradiction.
+    - exploit IHl';[eapply incl_cons;eauto|].
       destructH.
-      decide (loop_contains p' q).
-      + exists p'. 
-        split;[left;split;eauto using loop_contains_loop_head, loop_contains_self, loop_contains_trans|].
-        unfold deq_loop. 
-        intros. destructH. eapply loop_contains_trans;eauto.
-      + decide (loop_contains b q). 
-        * exists b. split.
-        -- left. split;eauto. admit.
-        -- unfold deq_loop. intros. destructH.
-          edestruct i3;eauto.
-          ++ eapply loop_contains_trans;eauto. admit.
-          ++ subst. contradiction.
-        * eapply IHπ;auto. 2: eapply H4.
-          -- intros. eapply HL0. eapply loop_contains_trans;eauto.
-          -- eapply i3 in H. destruct H;auto. subst.
-             admit. 
-             (* this case is broken ! *)
-               
-    (* choose either a common head or root if there is no such head *)
-  Admitted.
+      decide (loop_contains a p /\ loop_contains a q).
+      + destructH. decide (loop_contains a0 a).
+        * exists a. split;[left;auto|].
+          intros. destruct H0;[subst;eauto using loop_contains_self, loop_contains_loop_head|].
+          specialize (IHl'1 a'). exploit IHl'1.
+          eapply loop_contains_trans;eauto.
+        * destruct IHl'0.
+          -- exists a0. split;[left;auto|].
+             intros. 
+             destruct H1.
+             ++ subst. eapply loop_contains_either in a2;[|destruct H0 as [H0 _];apply H0].
+                destruct a2;[|eauto].
+                contradict n. eauto.
+             ++ eapply IHl'1;eauto.
+          -- subst a0. exists a. split;[left;auto|].
+             intros. destruct H0;[subst;eauto using loop_contains_self, loop_contains_loop_head|].
+             specialize (IHl'1 a'). exploit IHl'1.
+             eapply root_loop_root in IHl'1. subst.
+             destructH. eapply loop_contains_either in H2. 2: apply a2.
+             destruct H2;[|auto]. eapply root_loop_root in H1. subst.
+             eauto using loop_contains_loop_head, loop_contains_self.
+      + simpl_dec' n.
+        destruct n.
+        1,2 : exists a0; split;[auto|];
+                  intros; destruct H1;[subst;destruct H2;contradiction|eapply IHl'1;eauto].
+  Qed.
   
   Lemma ancestor_dom1 a p q
     : ancestor a p q -> Dom edge root a p.
-  Admitted.
+  Proof.
+    intros.
+    destruct H.
+    - destruct H.
+      eapply dom_loop;eauto.
+    - subst. eapply dominant_root.
+  Qed.
 
   Lemma ancestor_sym a p q
     : ancestor a p q -> ancestor a q p.
@@ -1284,7 +1287,7 @@ Section red_cfg.
 
   Open Scope prg.
 
-  Definition restrict_edge (f : Lab -> Lab -> bool) (p : decPred Lab)
+  Definition restrict_edge (A : finType) (f : A -> A -> bool) (p : decPred A)
     : let L' := finType_sub_decPred p in L' -> L' -> bool
     := fun x y => (f (`x) (`y)).
 
@@ -1302,6 +1305,35 @@ Arguments restrict_edge {_}.
 
 (** * sub_CFG **)
 
+Open Scope prg.
+
+Lemma original_path (L : Type) (P : decPred L) f π (r p : @subtype _ P (decide_pred P))
+      (Hpath : Path (fun x y : subtype P => f (`x) (`y)) r p π)
+  : Path f (`r) (`p) (ne_map (@proj1_sig L _) π).
+Proof.
+  induction Hpath.
+  - cbn. econstructor.
+  - cbn. econstructor;eauto.
+Qed.
+
+Lemma subtype_ne_map (A : Type) (P : decPred A) (x : @subtype _ P (decide_pred P))
+      (l : ne_list (@subtype _ P (decide_pred P)))
+      (Hin : (` x) ∈ ne_map (proj1_sig (P:=fun x => pure P x)) l)
+  : x ∈ l.
+Proof.
+  induction l.
+  - cbn in *. destruct Hin;[left;eapply subtype_extensionality;auto|contradiction].
+  - cbn in *. destruct Hin;[left;eapply subtype_extensionality;auto|].
+    auto.
+Qed.
+
+Lemma restrict_edge_subgraph (A : finType) (f g : A -> A -> bool) P
+      (Hsub : sub_graph f g)
+  : sub_graph (restrict_edge f P) (restrict_edge g P).
+Proof.
+  unfold sub_graph in *. intros. unfold restrict_edge in *. eapply Hsub; auto.
+Qed.
+
 Program Instance sub_CFG
         `{C : redCFG}
         (P : decPred Lab)
@@ -1310,12 +1342,34 @@ Program Instance sub_CFG
         (Hreach : forall p, exists π, Path (restrict_edge a_edge P)
                                  (finType_sub_elem r P HP) 
                                  p π)
+        (*(HDom : forall p, Dom root r p) this is not possible, since loop_CFG's exits are not neccessrly
+                                             dominated in the source CFG *)
   : @redCFG (finType_sub_decPred P)
             (restrict_edge edge P)
             (finType_sub_elem r P HP)
             (restrict_edge a_edge P).
 
 Next Obligation. (* loop_head_dom *)
+  (*
+  eapply dom_trans with (r:=root) (h:=(finType_sub_elem r P HP));auto.
+  {
+    edestruct Hreach. eapply subgraph_path' in H0;eauto. eapply restrict_edge_subgraph. eapply a_edge_incl.
+  }
+  eapply dominant_root.*)
+  unfold Dom. intros.
+  eapply original_path in H0. cbn in *.
+  destruct qh as [qh Qh]. destruct ql as [ql Ql].
+  specialize (loop_head_dom (ql:=ql) (qh:=qh)) as Hdom.
+  exploit Hdom.
+  apply dom_trans with (r:=root) (h:=r) in Hdom;auto.
+  2: eapply reachability.
+  2: admit.
+  eapply Hdom in H0 as H0'.
+(*  eapply loop_head_dom with (qh0:=qh) in H0 as H0'.*)
+  - assert (` (exist (fun x => pure P x) qh Qh) = qh) as Heqqh by (cbn;auto).
+    rewrite <- Heqqh in H0'.
+    eapply subtype_ne_map in H0';auto.
+    Grab Existential Variables.
   (* eapply dom_intersection,loop_head_dom,minus_back_edge;eauto. *)
 Admitted.
 Next Obligation. (* a_edge_incl *)
