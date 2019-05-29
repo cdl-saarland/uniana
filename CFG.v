@@ -493,19 +493,15 @@ Section red_cfg.
         eapply loop_contains_Antisymmetric in Hloop_save. exploit Hloop_save. contradiction.
   Qed.
   
-  Lemma loop_reachs_member (* unused *)(h q : Lab)
-    : loop_contains h q -> h -->* q.
+  Lemma loop_reachs_member (h q : Lab)
+    : loop_contains h q -> h -a>* q.
   Proof.
-    intros Hloop. unfold loop_contains in Hloop.
-    destructH. eapply nin_tl_iff in Hloop3;[|eauto].
-    erewrite path_back in Hloop3;eauto.
-    destruct Hloop3;[|subst q; eexists; econstructor].
-    specialize (reachability q) as H'. destructH. eapply loop_head_dom in Hloop0.
-    eapply path_app in Hloop2;eauto. eapply Hloop0 in Hloop2. eapply in_nl_conc in Hloop2.
-    destruct Hloop2;[contradiction|].
-    assert (h ∈ π0).
-    { destruct π0; cbn in *;[contradiction|right;eauto]. }
-    eapply path_from_elem in H1;eauto. firstorder. 
+    intros Hloop. cbn.
+    specialize (a_reachability q) as Hπ. destructH.
+    eapply dom_loop in Hloop. eapply dom_dom_acyclic in Hloop.
+    eapply Hloop in Hπ as Hin.
+    eapply path_from_elem in Hπ;eauto. destructH.
+    eexists;eauto.
   Qed.
 
   Lemma edge_head_same_loop (* unused *)p h h'
@@ -1792,6 +1788,50 @@ Proof.
       right. eapply path_contains_front;eauto.
 Qed.
 
+Lemma exit_a_edge `{redCFG} h p q
+      (Hexit : exit_edge h p q)
+  : a_edge p q = true.
+Proof.
+  destruct (a_edge p q) eqn:E;[auto|exfalso].
+  eapply no_exit_head;eauto.
+  unfold exit_edge in Hexit. destructH.
+  exists p. unfold back_edge, back_edge_b. unfold_edge_op. split; auto.
+  rewrite negb_true_iff; auto.
+Qed.
+
+Lemma acyclic_path_stays_in_loop `{C : redCFG} (h p q : Lab) π
+      (Hpath : Path a_edge p q π)
+      (Hp : loop_contains h p)
+      (Hq : loop_contains h q)
+  : forall x, x ∈ π -> loop_contains h x.
+Proof.
+  enough (h ∉ tl (rev π)) as Hnin.
+  - intros.
+    eapply subgraph_path' in Hpath;eauto.
+    eapply (path_from_elem) in Hpath as Hϕ;eauto. destructH.
+    unfold loop_contains in Hq.
+    destructH.
+    exists p0, (π0 :+ tl ϕ); split_conj; auto.
+    + eapply path_app;eauto.
+    + destruct ϕ;cbn;[auto|].
+      rewrite <-nlconc_neconc.
+      Lemma neconc_app (A : Type) (l l' : ne_list A)
+        : l ++ l' = l :+: l'.
+      Proof.
+        induction l;cbn;eauto.
+        rewrite IHl. reflexivity.
+      Qed.
+
+      rewrite <-neconc_app. rewrite rev_app_distr.
+      replace (tl (rev ϕ ++ rev π0)) with ((tl (rev ϕ)) ++ rev π0).
+      * contradict Hnin. eapply in_app_or in Hnin. admit.
+      * admit.
+        
+      
+  (* h ∉ tl (rev π), thus we can construct the path to the ledge from any x ∈ π
+   * by appending the q's path to the ledge to the path_from_elem x π  *)
+Admitted.
+
 Instance loop_CFG
            `(C : redCFG)
            (h : Lab)
@@ -1803,7 +1843,28 @@ Instance loop_CFG
 Proof.
   unfold purify_head. 
   eapply sub_CFG; intros.
-  - admit.
+  - assert (forall p, loop_contains h p -> exists π : ne_list Lab, Path (restrict_edge' a_edge (loop_nodes h)) h p π) as Hloo.
+    {
+      clear.
+      intros.
+      specialize (a_reachability p) as [π Hπ].
+      eapply dom_loop with (h0:=h) in H as Hdom;eauto.
+      eapply dom_dom_acyclic in Hdom.
+      eapply Hdom in Hπ as Hϕ.
+      eapply path_from_elem in Hϕ;eauto. destructH.
+      exists ϕ. eapply all_sat_restrict_edge';auto.
+      intros. left.
+      eapply acyclic_path_stays_in_loop;eauto.
+      eapply loop_contains_self. eapply loop_contains_loop_head;eauto.
+    }
+    destruct H0;auto.
+    unfold exited in H0. destructH. 
+    copy H0 Hexit.
+    unfold exit_edge in H0. destructH. exploit Hloo.
+    destructH.
+    exists (p :<: π). econstructor;eauto.
+    unfold_edge_op.
+    split_conj;[eapply exit_a_edge;eauto|left;auto|right;eexists;eauto].
   - enough (loop_contains h h0).
     + unfold loop_contains' in *.
       destructH' H1.
@@ -1834,7 +1895,7 @@ Proof.
       unfold_edge_op' H0. destruct H0. destruct H0 as [_ [_ H0]]. destruct H0;auto.
       unfold exited in H0. destructH.
       eapply no_exit_head in H0;contradiction.
-Admitted.
+Qed.
 
 Lemma loop_CFG_elem `{C : redCFG} (h p : Lab)
            (Hloop : loop_contains h p)
@@ -1878,89 +1939,6 @@ Proof.
   unfold deq_loop.
 Admitted.
 
-(*
-
-Program Instance loop_CFG
-        `{C : redCFG}
-        (h : Lab)
-        (H : loop_head h)
-  : @redCFG (finType_sub_decPred (loop_nodes h))
-            (restrict_edge (edge ∩ loop_edge h) (loop_nodes h))
-            (finType_sub_elem h (loop_nodes h) (loop_edge_h_invariant H))
-            (restrict_edge (a_edge ∩ loop_edge h) (loop_nodes h)).
-(*  Next Obligation.
-    eapply in_filter_iff.
-    split; [eapply intersection_subgraph1 in H|eapply intersection_subgraph2 in H].
-    - eapply edge_incl1;eauto.
-    - unfold loop_edge in H. eapply intersection_subgraph1 in H. unfold decPred_bool. cbn. rewrite H. exact I.
-  Qed.
-  Next Obligation.
-    eapply in_filter_iff.
-    split; [eapply intersection_subgraph1 in H|eapply intersection_subgraph2 in H].
-    - eapply edge_incl2;eauto.
-    - unfold loop_edge in H. eapply intersection_subgraph2 in H. cbn. rewrite H. exact I.
-  Qed.*)
-Next Obligation. (* loop_head_dom *)
-Admitted. (*
-    destruct (loop_head_dec h) as [H0|H0];[|admit].
-    eapply dom_intersection.
-    eapply dom_trans ; eauto.
-    - eapply reachability. eapply loop_head_in_graph;eauto. 
-    - eapply dom_loop;eauto. 
-      eapply loop_contains_ledge_head.
-      + eapply minus_subgraph in H. eapply intersection_subgraph2 in H.
-        unfold loop_edge in H.
-        eapply intersection_subgraph1 in H; eapply loop_contains_spec;eauto.
-      + eapply minus_back_edge;eauto. 
-    - eapply loop_head_dom. eapply minus_back_edge; eauto.
-  Admitted.*)
-Next Obligation. (* subgraph *)
-  eapply intersection2_subgraph. eapply a_edge_incl.
-
-Admitted.
-Next Obligation. (* acyclic *)
-  eapply acyclic_subgraph_acyclic.
-  - eapply intersection_subgraph1.
-  - eapply a_edge_acyclic.
-Admitted.
-
-(*
-  Lemma loop_contains_in_alllab h p :
-    loop_contains h p -> p ∈ all_lab.
-  Proof.
-    intros Hloop. destruct Hloop. destructH.
-    decide (x = p);subst.
-    - eapply edge_incl1; eapply back_edge_incl; eauto.
-    - eapply path_in_alllab1;eauto.
-  Qed.*)
-
-(*  Lemma loop_edge_reach_help `{C : redCFG} h p (*q*)
-        (Hhead : loop_head h)
-        (*        (Hedge : (edge ∩ loop_edge h) p q = true)*)
-        (Hloop : loop_contains h p)
-    : exists π, Path (edge ∩ loop_edge h) h p π.
-  Proof.
-    (*assert (p ∈ all_lab) as Hin by (eapply loop_contains_in_alllab;eauto).*) (* TODO *)
-    specialize (dom_path h) as [π Hπ];[|eapply dom_loop;eauto].
-    assert (EqDec Lab eq) as HHeq by eauto.
-    specialize (path_NoDup _ _ _ _ _ (ex_intro _ π Hπ)) as [φ [Hφ Hnd]].
-    exists φ. eapply path_loop_edge;eauto. eapply loop_contains_path; eauto.
-  Qed. *)
-
-Next Obligation. (* reachability *)
-(*
-    eapply in_filter_iff in H. destructH.
-    destruct (loop_head_dec h) as [H|H];[|admit].
-    eapply loop_edge_reach_help;eauto;eapply loop_contains_spec;eauto.*)
-Admitted.
-Next Obligation. (* single_exit *)
-  (* since the original has single exits intersecting doesn't change anything *)
-Admitted.
-Next Obligation. (* no_head_exit *)
-  (* there are neither new heads nor new edges -> property follows *)
-Admitted.  
-*)
-
 Definition top_level (* unused *)`{redCFG} q := forall h, loop_contains h q -> (h = root \/ h = q).
 
 Arguments loop_CFG {_ _ _ _} (_).
@@ -1980,21 +1958,61 @@ Qed.
 Program Instance head_exits_CFG `(redCFG)
   : redCFG (edge ∪ head_exits_edge) root (a_edge ∪ head_exits_edge).
 
+Lemma head_exits_path `{redCFG} p q :
+  head_exits_edge p q = true -> p -a>* q.
+Proof.
+  intros. cbn.
+  eapply head_exits_edge_spec in H0.
+  destructH.
+  copy H0 Hexit.
+  unfold exit_edge in H0. destructH.
+  eapply loop_reachs_member in H1.
+  destructH.
+  exists (q :<: π).
+  eapply exit_a_edge in Hexit.
+  econstructor;eauto.
+Qed.
 
 Lemma head_exits_in_path_head_incl `{redCFG} ql π
       (Hpath : Path (edge ∪ head_exits_edge) root ql π)
-  : exists ϕ, Path edge root ql ϕ /\ forall h, loop_head h -> h ∈ ϕ -> h ∈ π.
-Admitted.
+  : exists ϕ, Path edge root ql ϕ /\ forall h, loop_contains h ql -> h ∈ ϕ -> h ∈ π.
+Proof.
+(*  remember ql as ql'.
+  setoid_rewrite Heqql' at 2.
+  clear Heqql'. *)
+  induction Hpath;cbn;eauto.
+  - eexists;split;econstructor;eauto. inversion H1;subst;auto. inversion H2.
+  - unfold_edge_op' H0. destruct H0.
+    + destructH. exists (c :<: ϕ). split;[econstructor;eauto|].
+      intros. cbn in H2. destruct H2;eauto. admit.
+    + eapply head_exits_path in H0. 
+      do 2 destructH. assert (forall h, h ∈ π0 -> loop_contains h c -> False) by admit.
+      eexists. split;[eauto using path_app,subgraph_path'|].
+      intros. eapply in_nl_conc in H3. destruct H3;[exploit H1;contradiction|right;eauto using tl_incl]. 
+Admitted. 
 
 Lemma head_exits_back_edge `{redCFG} ql qh :
-  ((edge ∪ head_exits_edge) ∖ (a_edge ∪ head_exits_edge)) ql qh = true <-> ql ↪ qh.
-Admitted.
+  ((edge ∪ head_exits_edge) ∖ (a_edge ∪ head_exits_edge)) ql qh = true -> ql ↪ qh.
+Proof.
+  unfold back_edge,back_edge_b.
+  unfold_edge_op. intros.
+  - destructH. destruct H1;[eauto|].
+    destruct (head_exits_edge ql qh);cbn in *;congruence.
+    (* the other direction could be proven by first showing head_exits_edge ⊆ a_edge *)
+Qed.
+
+Lemma loop_contains_ledge `{C : redCFG} qh ql
+  : ql ↪ qh -> loop_contains qh ql.
+Proof.
+  intros. exists ql, (ne_single ql). split_conj;[auto|constructor|cbn]. exact (fun x => x).
+Qed.
 
 Next Obligation. (* loop_head_dom *)
   unfold Dom. intros π Hpath.
-  rewrite head_exits_back_edge in H0.
-  eapply head_exits_in_path_head_incl in Hpath. destructH. unfold loop_head in Hpath1.
-  eapply loop_head_dom in Hpath0;eauto.
+  eapply head_exits_back_edge in H0.
+  eapply head_exits_in_path_head_incl in Hpath. destructH.
+  eapply loop_contains_ledge in H0.      
+  eapply dom_loop in Hpath0 as Hpath';eauto.
 Qed.
 Next Obligation. (* a_edge_incl *)
   eapply union_subgraph.
@@ -2003,17 +2021,28 @@ Next Obligation. (* a_edge_incl *)
 Qed.
 
 Lemma head_exits_no_self_loop `{redCFG} p q : head_exits_edge p q = true -> p <> q.
-Admitted.
-
-
-Lemma head_exits_path `{redCFG} p q :
-  head_exits_edge p q = true -> p -a>* q.
-Admitted.
+Proof.
+  intros. eapply head_exits_edge_spec in H0.
+  destructH.
+  unfold exit_edge in H0. destructH.
+  eapply loop_contains_loop_head in H1.
+  eapply loop_contains_self in H1.
+  intro N;subst.
+  contradiction.
+Qed.
 
 Lemma head_exits_same_connected `{redCFG} p q π
       (Hpath : Path (a_edge ∪ head_exits_edge) p q π)
   : exists ϕ, Path a_edge p q ϕ.
-Admitted.
+Proof.
+  induction Hpath;cbn;eauto.
+  - eexists. econstructor.
+  - destructH. unfold_edge_op' H0. destruct H0.
+    + eexists. econstructor;eauto.
+    + eapply head_exits_path in H0. destructH.
+      eexists; eauto using path_app.
+Qed.
+
 Next Obligation. (* a_edge_acyclic *)
   unfold acyclic. intros p q π Hedge Hπ. eapply head_exits_same_connected in Hπ. destructH.
   unfold union_edge in Hedge; conv_bool. destruct Hedge as [Hedge|Hedge].
@@ -2027,6 +2056,7 @@ Next Obligation. (* reachability *)
   unfold sub_graph,union_edge. firstorder. 
 Qed.
 Next Obligation. (* single_exit *)
+  
   (* new exits don't have new targets, and the source has the same depth *)
 Admitted.
 Next Obligation. (* no_head_exit *)
