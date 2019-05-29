@@ -89,6 +89,8 @@ Ltac conv_bool := repeat match goal with
                          | [ H: context[_ && _ = false] |- _ ] => rewrite andb_false_iff in H
                          | [ H: context[to_bool _ = true] |- _ ] => rewrite to_bool_true in H
                          | [ H: context[to_bool _ = false] |- _ ] => rewrite to_bool_false in H
+                         | [ H: context[negb (_ && _)] |- _ ] => rewrite negb_andb in H
+                         | [ H: context[negb (_ || _ )] |- _ ] => rewrite negb_orb in H
                          | [ |- context[_ ==b _ = true]] => rewrite beq_true
                          | [ |- context[_ ==b _ = false]] => rewrite beq_false
                          | [ |- context[_ <>b _ = true]] => rewrite bne_true
@@ -99,6 +101,8 @@ Ltac conv_bool := repeat match goal with
                          | [ |- context[_ && _ = false]] => rewrite andb_false_iff
                          | [ |- context[to_bool _ = true]] => rewrite to_bool_true
                          | [ |- context[to_bool _ = false]] => rewrite to_bool_false
+                         | [ |- context[negb (_ && _)]] => rewrite negb_andb
+                         | [ |- context[negb (_ || _ )]] => rewrite negb_orb
                          end.
 
   Definition join_andb (l : list bool) := fold_right andb true l.
