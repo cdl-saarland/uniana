@@ -7,7 +7,7 @@ Require Import Nat.
 Require Import Bool.Bool.
 Require Import Coq.Logic.Eqdep_dec.
 
-Require Import Tagged.
+Require Import Tagged Evaluation.
 
 Parameter path_splits : forall `{redCFG}, Lab -> list (Lab * Lab * Lab).
 
@@ -223,12 +223,33 @@ Proof.
 Admitted.
 Arguments loop_splits {_ _ _ _ _}.
 
-Lemma lc_join_path_split_help1 (L : Type) (edge : L -> L -> bool) (x y : L) (l : list L)
-  : @Path L edge x y (y :<: l >: x)
-    -> exists z l', Path edge x y ((l' >: z) :>: x)
+Lemma neconc_nercons (A : Type) (l : ne_list A) (a : A)
+  : l :+: ne_single a = l :>: a.
+Proof.
+  induction l;cbn;auto.
+Qed.
+
+Lemma lc_join_path_split_help1 (L : Type) (edge : L -> L -> bool) (x y : L) (l : ne_list L)
+  : @Path L edge x y (y :<: l :>: x)
+    -> exists z l', Path edge x y ((l' :>: z) :>: x)
               /\ z ∈ l /\ (tl l') ⊆ l.
 Proof.
-Admitted.
+  intros.
+  revert dependent x. revert y.
+  induction l;cbn;eauto;intros.
+  - exists a, (ne_single y). cbn.
+    split_conj;[auto|left;reflexivity|firstorder].
+  - inversion H;subst. rewrite neconc_nercons in H1.
+    assert (b = a) by (inversion H1;subst;auto);subst.
+    specialize (IHl a x). exploit IHl.
+    destructH.
+    exists z, (y :<: l'). cbn.
+    split_conj;[cbn;econstructor;[repeat rewrite neconc_nercons;eauto|eauto]|right;auto|cbn].
+    destruct l'.
+    + cbn in IHl0. inversion IHl0;subst. clear. intros ? ? . cbn in H. left. firstorder.
+    + intros ? ? . cbn in H0. destruct H0;[subst;cbn in IHl0;inversion IHl0;subst;left;auto|].
+      cbn in IHl3. right. firstorder.
+Qed.
 
 Lemma disjoint2 {A : Type} `{EqDec A} (l1 l2 : list A)
   : Disjoint l1 l2 <-> forall x y, x ∈ l1 -> y ∈ l2 -> x <> y.
@@ -346,6 +367,19 @@ Proof.
   cbn in Hpath1,Hpath2.                                  
   eapply TPath_CPath in Hpath1. eapply TPath_CPath in Hpath2. cbn in Hpath2,Hpath1.
   rewrite ne_map_nl_rcons in Hpath1, Hpath2. cbn in *.
+(*  destruct l1';[eapply postfix_hd_eq in Hlc0; inversion Hlc0; subst q1; cbn in *|].
+  all: destruct l2';[eapply postfix_hd_eq in Hlc2; inversion Hlc2; subst q2; cbn in *|].
+  - contradiction.
+  - unfold map in Hpath2. rewrite nlcons_to_list in Hpath2. fold (map fst l2') in Hpath2.
+    rewrite <-nercons_nlrcons in Hpath2.
+    eapply lc_join_path_split_help1 in Hpath2.
+    destructH.
+    exists s, z, nil.
+
+    cbn in *. eapply postfix_hd_eq in Hlc0; eapply postfix_hd_eq in Hlc2.
+    inversion Hlc0; inversion Hlc2; subst; contradiction.
+  - cbn in *. eapply postfix_hd_eq in Hlc0; eapply postfix_hd_eq in Hlc2. *)
+Admitted. (*
   let help := lc_join_path_split_help1 in eapply help in Hpath1;eauto; eapply help in Hpath2;eauto.
   destructH. destructH.
   exists z0, z, l'0, l'.
@@ -353,7 +387,7 @@ Proof.
   - split_conj;eauto;[|eapply disjoint_subset;eauto]. eapply disjoint2;eauto.
   - admit.
   - admit.
-Admitted.
+Admitted. *)
 
 Definition lc_disj_exit_lsplits_def (d : nat)
   := forall `{redCFG} (s e q1 q2 h : Lab) (i j1 j2 k : Tag) (t1 t2 : list Coord)
