@@ -1506,6 +1506,9 @@ Ltac fold_lp_cont' :=
          | [H : context [exists _ _, (?edge ∖ ?a_edge) _ ?h = true /\ Path ?edge ?q _ _ /\ ?h ∉ tl (rev _) ] |- _]
            => unfold finType_sub_decPred in H;
              fold (loop_contains' edge a_edge h q) in H
+         | |- context [exists _ _, (?edge ∖ ?a_edge) _ ?h = true /\ Path ?edge ?q _ _ /\ ?h ∉ tl (rev _)]
+           => unfold finType_sub_decPred;
+             fold (loop_contains' edge a_edge h q)
          end.
 
 
@@ -1752,17 +1755,20 @@ econstructor.
 { (* exit_pred_loop *)
   intros ? ? ? ? [HloopA [HnloopA HedgeA]] Hedge1.
   destruct h,q,qe,e.
-  fold_lp_cont'.
-  admit. (*
-  eapply subtype_extensionality. cbn.
-  push_purify p0. push_purify p3. push_purify p2. 
-  eapply no_exit_branch.
-  - eapply restrict_exit_edge;eauto.
-    rewrite restrict_edge_intersection in HedgeA. cbn in *. eauto. 
-  - rewrite restrict_edge_intersection in Hedge1. eapply intersection_subgraph1;eauto.
-  - rewrite restrict_edge_intersection in Hedge2. eapply intersection_subgraph1;eauto.*)
+  fold_lp_cont'. 
+  push_purify p0. push_purify p1. push_purify p2. push_purify p.
+  eapply loop_contains_restrict'.
+  eapply Hloop.
+  - clear - HloopA. destruct HloopA as [x3 [_ [Hthis _]]].
+    destruct x3. push_purify p.
+    exists x0. cstr_subtype H. cstr_subtype H2. rewrite <-restrict_back_edge_intersection. eauto.
+  - eapply exit_pred_loop with (h:=x).
+    eapply (restrict_exit_edge (p:=x1) (Hp:=H0) (q:=x2)(Hq:=H1)(Hh:=H2));eauto.
+    + rewrite restrict_edge_intersection in HedgeA;eauto.
+    + rewrite restrict_edge_intersection in Hedge1.
+      eapply intersection_subgraph1;eauto.
 }
-Admitted.
+Qed.
 
 (** * loop_CFG **)
 
@@ -2035,15 +2041,21 @@ Lemma acyclic_parallel_exit_path `{redCFG} h p q π
 Proof.
   destruct π;cbn in *;[contradiction|].
   assert (e = q) by (inversion Hπ;cbn in *;subst;auto);subst.
-  revert dependent q.
-  induction π; intros; cbn in *.
+  inversion Hπ;subst.
+  revert dependent q. revert dependent p.
+  induction H1;intros;cbn in *.
   - destruct H0;[|contradiction].
-    inversion Hπ;subst. inversion H2; subst. eapply loop_contains_self. unfold exit_edge in Hexit.
+    subst. apply loop_contains_self. unfold exit_edge in Hexit.
     destructH. eauto using loop_contains_loop_head.
-  - destruct H0.
-    + subst. unfold exit_edge in Hexit. destructH.
-      eapply preds_in_same_loop; eauto. admit. admit.
-    + eapply IHπ;eauto. admit.  
+  - destruct H2.
+    + subst. unfold exit_edge in Hexit. destructH. clear IHPath.
+      eapply exit_pred_loop;[unfold exit_edge;split_conj;eauto|eapply a_edge_incl;eauto].
+    + inversion Hπ;subst.
+      eapply acyclic_path_stays_in_loop.
+      1: eapply H5.
+      1: eapply loop_contains_self;unfold exit_edge in Hexit; destructH ;eauto using loop_contains_loop_head.
+      2: cbn;right;eauto.
+      admit.      
 Admitted.
 
 Lemma head_exits_in_path_head_incl `{redCFG} ql π
