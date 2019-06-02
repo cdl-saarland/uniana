@@ -2042,21 +2042,12 @@ Proof.
   destruct π;cbn in *;[contradiction|].
   assert (e = q) by (inversion Hπ;cbn in *;subst;auto);subst.
   inversion Hπ;subst.
-  revert dependent q. revert dependent p.
-  induction H1;intros;cbn in *.
-  - destruct H0;[|contradiction].
-    subst. apply loop_contains_self. unfold exit_edge in Hexit.
-    destructH. eauto using loop_contains_loop_head.
-  - destruct H2.
-    + subst. unfold exit_edge in Hexit. destructH. clear IHPath.
-      eapply exit_pred_loop;[unfold exit_edge;split_conj;eauto|eapply a_edge_incl;eauto].
-    + inversion Hπ;subst.
-      eapply acyclic_path_stays_in_loop.
-      1: eapply H5.
-      1: eapply loop_contains_self;unfold exit_edge in Hexit; destructH ;eauto using loop_contains_loop_head.
-      2: cbn;right;eauto.
-      admit.      
-Admitted.
+  intros.
+  eapply acyclic_path_stays_in_loop;eauto.
+  - eapply loop_contains_self;unfold exit_edge in Hexit; destructH ;eauto using loop_contains_loop_head.
+  - eapply exit_pred_loop;eauto.
+    eapply a_edge_incl;eauto.
+Qed.
 
 Lemma head_exits_in_path_head_incl `{redCFG} ql π
       (Hπ : Path (edge ∪ head_exits_edge) root ql π)
@@ -2162,13 +2153,17 @@ Next Obligation. (* reachability *)
   unfold sub_graph,union_edge. firstorder. 
 Qed.
 Next Obligation. (* single_exit *)
-  
+  fold_lp_cont'.
+  eapply single_exit;admit.
   (* new exits don't have new targets, and the source has the same depth *)
 Admitted.
 Next Obligation. (* no_head_exit *)
+  eapply no_exit_head;admit.
   (* new exits don't have new targets *)
 Admitted.
-Next Obligation. (* no_exit_branch *)
+Next Obligation. (* exit_pred_loop *)
+  fold_lp_cont'.
+  eapply exit_pred_loop;eauto. 2: eapply H1.
 Admitted.
 
 Definition head_exits_property `(C : redCFG) := forall h p q, exit_edge h p q -> edge h q = true.
