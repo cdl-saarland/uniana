@@ -23,6 +23,56 @@ Reserved Infix "-->b" (at level 55).
 Reserved Infix "-a>" (at level 55).
 Reserved Infix "-a>*" (at level 55).
 
+
+Lemma dec_DM_and_iff (* unused *)(X Y : Prop) : dec X -> ~ (X /\ Y) <-> ~ X \/ ~ Y.
+  split;[now eapply dec_DM_and|firstorder].
+Qed.
+Lemma dec_DM_and_iff' (* unused *)(X Y : Prop) : dec Y -> ~ (X /\ Y) <-> ~ X \/ ~ Y.
+  split;[now eapply dec_DM_and'|firstorder].
+Qed.
+Lemma dec_DN_iff (* unused *)(X : Prop) : dec X -> ~ ~ X <-> X.
+  split;[now eapply dec_DN|firstorder].
+Qed.
+Lemma dec_DM_impl_iff (* unused *)(X Y : Prop) : dec X -> dec Y -> ~ (X -> Y) <-> X /\ ~ Y.
+  split;[now eapply dec_DM_impl|firstorder].
+Qed.
+
+Ltac simpl_dec' H :=
+  (first [(setoid_rewrite (DM_notAll _) in H;eauto)|
+          (setoid_rewrite (dec_DM_and_iff _ _) in H;eauto)|
+          (setoid_rewrite (dec_DM_and_iff' _ _) in H;eauto)|
+          setoid_rewrite DM_not_exists in H|
+          setoid_rewrite DM_or in H|
+          (setoid_rewrite (dec_DN_iff _) in H;eauto)|
+          (setoid_rewrite (dec_DM_impl_iff _ _) in H;eauto)]).
+Ltac simpl_dec :=
+  (try (setoid_rewrite DM_notAll;[|eauto]);
+   try (setoid_rewrite (dec_DM_and_iff _ _);[|eauto]);
+   try (setoid_rewrite (dec_DM_and_iff' _ _);[|eauto]);
+   try setoid_rewrite DM_not_exists;
+   try setoid_rewrite DM_or;
+   try (setoid_rewrite (dec_DN_iff _);[|eauto]);
+   try (setoid_rewrite (dec_DM_impl_iff _ _);eauto)).
+
+(*Ltac collapse H :=
+  lazymatch type of H with
+  | ?a /\ ?b => let H1 := fresh "H" in
+              let H2 := fresh "H" in
+              destruct H as [H1 H2];
+              collapse H1;
+              collapse H2
+  | ?a \/ ?b => destruct H as [H|H]; collapse H
+  | ~ ?x => simpl_dec' H; collapse H
+  | _ => idtac
+  end.*)
+
+
+
+Goal forall (X : finType) (P Q : X -> Prop), (forall x, dec (P x)) -> (forall x, dec (Q x)) -> ~ (forall x, P x \/ Q x) -> False.
+  intros. (*setoid_rewrite (DM_notAll _) in H.*) (*evar (forall x, P x \/ Q x).*)
+  simpl_dec' H.
+Abort.
+
 Class redCFG
       (Lab : finType)
       (edge : Lab -> Lab -> bool)
@@ -340,55 +390,7 @@ Section red_cfg.
                                               end))
     | inright _ => None
     end.
-  
-  Lemma dec_DM_and_iff (* unused *)(X Y : Prop) : dec X -> ~ (X /\ Y) <-> ~ X \/ ~ Y.
-    split;[now eapply dec_DM_and|firstorder].
-  Qed.
-  Lemma dec_DM_and_iff' (* unused *)(X Y : Prop) : dec Y -> ~ (X /\ Y) <-> ~ X \/ ~ Y.
-    split;[now eapply dec_DM_and'|firstorder].
-  Qed.
-  Lemma dec_DN_iff (* unused *)(X : Prop) : dec X -> ~ ~ X <-> X.
-    split;[now eapply dec_DN|firstorder].
-  Qed.
-  Lemma dec_DM_impl_iff (* unused *)(X Y : Prop) : dec X -> dec Y -> ~ (X -> Y) <-> X /\ ~ Y.
-    split;[now eapply dec_DM_impl|firstorder].
-  Qed.
 
-  Ltac simpl_dec' H :=
-     (first [(setoid_rewrite (DM_notAll _) in H;eauto)|
-             (setoid_rewrite (dec_DM_and_iff _ _) in H;eauto)|
-              (setoid_rewrite (dec_DM_and_iff' _ _) in H;eauto)|
-              setoid_rewrite DM_not_exists in H|
-              setoid_rewrite DM_or in H|
-              (setoid_rewrite (dec_DN_iff _) in H;eauto)|
-              (setoid_rewrite (dec_DM_impl_iff _ _) in H;eauto)]).
-  Ltac simpl_dec :=
-    (try (setoid_rewrite DM_notAll;[|eauto]);
-     try (setoid_rewrite (dec_DM_and_iff _ _);[|eauto]);
-     try (setoid_rewrite (dec_DM_and_iff' _ _);[|eauto]);
-     try setoid_rewrite DM_not_exists;
-     try setoid_rewrite DM_or;
-     try (setoid_rewrite (dec_DN_iff _);[|eauto]);
-     try (setoid_rewrite (dec_DM_impl_iff _ _);eauto)).
-
-  Ltac collapse H :=
-    lazymatch type of H with
-    | ?a /\ ?b => let H1 := fresh "H" in
-                let H2 := fresh "H" in
-                destruct H as [H1 H2];
-                collapse H1;
-                collapse H2
-    | ?a \/ ?b => destruct H as [H|H]; collapse H
-    | ~ ?x => simpl_dec' H; collapse H
-    | _ => idtac
-    end.
-
-(*  Require Import Coq.Classes.Morphisms_Prop.*)
-
-  Goal forall (X : finType) (P Q : X -> Prop), (forall x, dec (P x)) -> (forall x, dec (Q x)) -> ~ (forall x, P x \/ Q x) -> False.
-    intros. (*setoid_rewrite (DM_notAll _) in H.*) (*evar (forall x, P x \/ Q x).*)
-    simpl_dec' H.
-  Abort.
 
   
   Definition get_innermost_loop (p : Lab) : option {h : Lab | loop_contains h p} :=
@@ -909,7 +911,7 @@ Section red_cfg.
     : exists π, LPath h p π.
   Proof.
     specialize (a_reachability p) as Hreach.
-    destructH. revert dependent p. revert dependent π. 
+    destructH. revert dependent p. revert dependent π.
     specialize (well_founded_ind (R:=(@StrictPrefix' Lab)) (@StrictPrefix_well_founded Lab)
                                  (fun π : ne_list Lab => forall p, loop_contains h p
                                                            -> Path a_edge root p π
@@ -1501,16 +1503,25 @@ Ltac to_loop_contains' :=
       fold (loop_contains' edge a_edge h p)
   end.
 
+Definition exit_edge' (L : finType) (edge a_edge : L -> L -> bool) (h p q : L)
+  := loop_contains' edge a_edge h p /\ ~ loop_contains' edge a_edge h q /\ edge p q = true.
+
 Ltac fold_lp_cont' :=
   repeat lazymatch goal with
          | [H : context [exists _ _, (?edge ∖ ?a_edge) _ ?h = true /\ Path ?edge ?q _ _ /\ ?h ∉ tl (rev _) ] |- _]
            => unfold finType_sub_decPred in H;
              fold (loop_contains' edge a_edge h q) in H
+         | [H : context [loop_contains' ?edge ?a_edge ?h ?p
+                         /\ ~ loop_contains' ?edge ?a_edge ?h ?q /\ ?edge ?p ?q = true] |- _]
+           => fold (exit_edge' edge a_edge h p q) in H
+         | [ |- context [loop_contains' ?edge ?a_edge ?h ?p
+                        /\ ~ loop_contains' ?edge ?a_edge ?h ?q
+                        /\ ?edge ?p ?q = true]]
+           => fold (exit_edge' edge a_edge h p q)
          | |- context [exists _ _, (?edge ∖ ?a_edge) _ ?h = true /\ Path ?edge ?q _ _ /\ ?h ∉ tl (rev _)]
            => unfold finType_sub_decPred;
              fold (loop_contains' edge a_edge h q)
          end.
-
 
 Ltac unfold_edge_op := repeat unfold intersection_edge,restrict_edge',minus_edge,union_edge; conv_bool.
 Ltac unfold_edge_op' H := repeat (unfold intersection_edge,restrict_edge',minus_edge,union_edge in H);
@@ -1577,9 +1588,6 @@ Proof.
   replace (purify H) with p0;auto.
   eapply pure_eq.
 Qed.
-
-Definition exit_edge' (L : finType) (edge a_edge : L -> L -> bool) (P : decPred L) (h p q : L)
-  := loop_contains' edge a_edge h p /\ ~ loop_contains' edge a_edge h q /\ edge p q = true.
 
 Lemma toSubList_rcons (A : Type) (l : list A) (P : decPred A) (a : A)
   : toSubList (l ++ [a]) P (D:=decide_pred P) = toSubList l P ++ match decision (P a) with
@@ -2016,8 +2024,6 @@ Proof.
   intros;congruence.
 Qed.
 
-Program Instance head_exits_CFG `(redCFG)
-  : redCFG (edge ∪ head_exits_edge) root (a_edge ∪ head_exits_edge).
 
 Lemma head_exits_path `{redCFG} p q :
   head_exits_edge p q = true -> p -a>* q.
@@ -2088,33 +2094,25 @@ Proof.
 Qed.
 
 Lemma head_exits_back_edge `{redCFG} ql qh :
-  ((edge ∪ head_exits_edge) ∖ (a_edge ∪ head_exits_edge)) ql qh = true -> ql ↪ qh.
+  ((edge ∪ head_exits_edge) ∖ (a_edge ∪ head_exits_edge)) ql qh = true <-> ql ↪ qh.
 Proof.
   unfold back_edge,back_edge_b.
-  unfold_edge_op. intros.
+  unfold_edge_op. split;intros. 
   - destructH. destruct H1;[eauto|].
     destruct (head_exits_edge ql qh);cbn in *;congruence.
-    (* the other direction could be proven by first showing head_exits_edge ⊆ a_edge *)
+  - split_conj;[firstorder|firstorder|].
+    unfold head_exits_edge. decide (exited ql qh);[|cbn;auto].
+    exfalso.
+    unfold exited in e.
+    destructH' e.
+    eapply no_exit_head;eauto.
+    exists ql. unfold back_edge,back_edge_b;conv_bool. unfold_edge_op. eauto.
 Qed.
 
 Lemma loop_contains_ledge `{C : redCFG} qh ql
   : ql ↪ qh -> loop_contains qh ql.
 Proof.
   intros. exists ql, (ne_single ql). split_conj;[auto|constructor|cbn]. exact (fun x => x).
-Qed.
-
-Next Obligation. (* loop_head_dom *)
-  unfold Dom. intros π Hpath.
-  eapply head_exits_back_edge in H0.
-  eapply loop_contains_ledge in H0.
-  eapply head_exits_in_path_head_incl in Hpath;eauto.
-  destructH.
-  eapply dom_loop in Hpath0 as Hpath';eauto.
-Qed.
-Next Obligation. (* a_edge_incl *)
-  eapply union_subgraph.
-  - exact a_edge_incl.
-  - firstorder.
 Qed.
 
 Lemma head_exits_no_self_loop `{redCFG} p q : head_exits_edge p q = true -> p <> q.
@@ -2128,7 +2126,7 @@ Proof.
   contradiction.
 Qed.
 
-Lemma head_exits_same_connected `{redCFG} p q π
+Lemma head_exits_same_connected `{redCFG}  p q π
       (Hpath : Path (a_edge ∪ head_exits_edge) p q π)
   : exists ϕ, Path a_edge p q ϕ.
 Proof.
@@ -2140,31 +2138,244 @@ Proof.
       eexists; eauto using path_app.
 Qed.
 
-Next Obligation. (* a_edge_acyclic *)
+Lemma head_exits_same_connected' `{redCFG}  p q π
+      (Hpath : Path (edge ∪ head_exits_edge) p q π)
+  : exists ϕ, Path edge p q ϕ.
+Proof.
+  induction Hpath;cbn;eauto.
+  - eexists. econstructor.
+  - destructH. unfold_edge_op' H0. destruct H0.
+    + eexists. econstructor;eauto.
+    + eapply head_exits_path in H0. destructH.
+      eapply subgraph_path' in H0;eauto.
+      eexists; eauto using path_app.
+Qed.
+
+
+Ltac ne_r_destruct l :=
+  let H := fresh "H" in
+  specialize (ne_list_nlrcons l) as H;
+  destruct H as [? [? ?]]; subst l.
+
+Lemma union_subgraph1 (L : Type) (f g : L -> L -> bool)
+  : sub_graph f (f ∪ g).
+Proof.
+  unfold sub_graph, union_edge. intros. rewrite H. cbn. reflexivity.
+Qed.
+
+Lemma head_exits_loop_equivalence `{redCFG} h p
+  : loop_contains h p <-> loop_contains' (edge ∪ head_exits_edge) (a_edge ∪ head_exits_edge) h p.
+Proof.
+  split;intros.
+  - unfold loop_contains'. unfold loop_contains in H0.
+    destructH.
+    exists p0, π.
+    split_conj.
+    + eapply head_exits_back_edge;eauto.
+    + clear - H0.
+      induction H0;econstructor;eauto. unfold_edge_op. left;auto.
+    + auto.
+  - copy H0 H0'.
+    unfold loop_contains. unfold loop_contains' in H0.
+    destructH.
+    assert (Path (edge ∪ head_exits_edge) p p0 π -> h ∉ tl (rev π)
+            -> loop_contains h p0
+            -> exists π0, Path edge p p0 π0 /\ h ∉ tl (rev π0)).
+    {
+      clear. intros.
+      induction H0.
+      - exists (ne_single a). split;eauto. econstructor.
+      - exploit' IHPath.
+        + cbn in *. contradict H1.
+          specialize (ne_list_nlrcons π) as Hπ. destructH. subst π.
+          simpl_nl. rewrite rev_rcons. cbn. simpl_nl' H1. rewrite rev_rcons in H1. cbn in *.
+          eapply in_or_app. left;auto.
+        + unfold_edge_op' H3. destruct H3.
+          * exploit IHPath.
+            {
+              eapply preds_in_same_loop;eauto.
+              contradict H1. subst.
+              cbn. ne_r_destruct π. simpl_nl. rewrite rev_rcons. cbn. eapply in_or_app. right;firstorder.
+            }
+            destructH.
+            exists (c :<: π0). split;[econstructor;eauto|].
+            contradict IHPath1.
+            ne_r_destruct π0.
+            simpl_nl. cbn. rewrite rev_rcons. cbn. simpl_nl' IHPath1.
+            rewrite nl_cons_lr_shift in IHPath1. simpl_nl' IHPath1.  rewrite rev_rcons in IHPath1. cbn in *.
+            fold (rcons (rev x0) c) in IHPath1. eapply In_rcons in IHPath1. destruct IHPath1;auto.
+            subst h. exfalso. contradict H1. fold (rcons (rev π) c).
+            ne_r_destruct π.
+            simpl_nl. cbn. rewrite rev_rcons. cbn. eapply in_or_app. right;firstorder.
+          * eapply head_exits_edge_spec in H3 as Hexit. destruct Hexit as [qe Hexit].
+            assert (loop_contains h b) as Hloop.
+            {
+              eapply deq_loop_exiting;eauto.
+              eapply deq_loop_exited;eauto.
+            }
+            exploit IHPath.
+            destructH.
+            eapply head_exits_path in H3. destructH.
+            exists (π1 :+ tl π0).
+            split.
+            -- eapply subgraph_path' in H3; [eapply path_app|];eauto.
+            -- rewrite <-nlconc_to_list.
+               intro N. rewrite rev_app_distr in N.
+               enough (h ∉ rev π1).
+               {
+                 destruct π0;cbn in N;eapply H4;[eapply tl_incl;auto|].
+                 ne_r_destruct π0. cbn in *. simpl_nl' IHPath1. simpl_nl' N. rewrite rev_rcons in N,IHPath1.
+                 cbn in *.
+                 eapply in_app_or in N. destruct N;[exfalso;apply IHPath1|contradiction].
+                 eapply in_or_app. left;auto.
+               }
+               rewrite <-in_rev.
+               clear - H3 Hexit H2 Hloop.
+               decide (h = c).
+               {
+                 subst.
+                 exfalso.
+                 eapply no_exit_head;eauto using loop_contains_loop_head.
+               }      
+               inversion H3;subst.
+               ++ cbn. firstorder.
+               ++ cbn. simpl_dec. split;[auto|].
+                  intro Hin.
+                  eapply acyclic_path_stays_in_loop in Hin;auto;cycle 1.
+                  ** eauto.
+                  ** unfold exit_edge in Hexit. destructH. eapply loop_contains_self.
+                     eapply loop_contains_loop_head;eauto.
+                  ** eapply a_edge_incl in H1.
+                     eapply exit_pred_loop;eauto.
+                  ** eapply loop_contains_Antisymmetric in Hin. exploit Hin. subst.
+                     unfold exit_edge in Hexit; destructH; contradiction.
+    }
+    exists p0.
+    exploit H2.
+    {
+      rewrite head_exits_back_edge in H1. eapply loop_contains_ledge;eauto.
+    }
+    destructH.
+    eexists;split;eauto.
+    eapply head_exits_back_edge;eauto.
+Qed.
+
+Lemma exit_edge_pred_exiting `{redCFG} h p q
+      (Hexit : exit_edge h p q)
+      (p' : Lab)
+      (Hedge : edge p' q = true)
+  : exit_edge h p' q.
+Proof.
+  copy Hexit Hexit'.
+  unfold exit_edge; unfold exit_edge in Hexit. destructH.
+  split_conj;eauto.
+  eapply exit_pred_loop;eauto.
+Qed.
+  
+(*Lemma head_exits_exit_edge_destruct `{redCFG} h p q
+      (Hexit : exit_edge' (edge ∪ head_exits_edge) (a_edge ∪ head_exits_edge) h p q)
+  : exit_edge h p q \/ h = p /\ exists p', *)
+
+Lemma head_exits_exit_edge `{redCFG} h p q
+      (Hexit : exit_edge' (edge ∪ head_exits_edge) (a_edge ∪ head_exits_edge) h p q)
+  : exists p', exit_edge h p' q.
+Proof.
+  unfold exit_edge' in *. destructH.
+  unfold_edge_op' Hexit3.
+  destruct Hexit3.
+  - exists p. unfold exit_edge. split_conj.
+    1,2: rewrite head_exits_loop_equivalence;eauto.
+    auto.
+  - unfold head_exits_edge in H0. decide (exited p q);[|congruence].
+    unfold exited in e. destructH. exists p0.
+    unfold exit_edge in *. destructH.
+    split_conj;eauto.
+    + eapply loop_contains_trans;eauto. eapply head_exits_loop_equivalence;eauto.
+    + rewrite head_exits_loop_equivalence;eauto.
+Qed.
+
+Instance head_exits_CFG `(redCFG)
+  : redCFG (edge ∪ head_exits_edge) root (a_edge ∪ head_exits_edge).
+econstructor;intros.
+{ (* loop_head_dom *)
+  unfold Dom. intros π Hpath.
+  rewrite head_exits_back_edge in H0.
+  eapply loop_contains_ledge in H0.
+  eapply head_exits_in_path_head_incl in Hpath;eauto.
+  destructH.
+  eapply dom_loop in Hpath0 as Hpath';eauto.
+}
+{ (* a_edge_incl *)
+  eapply union_subgraph.
+  - exact a_edge_incl.
+  - firstorder.
+}
+{ (* a_edge_acyclic *)
   unfold acyclic. intros p q π Hedge Hπ. eapply head_exits_same_connected in Hπ. destructH.
   unfold union_edge in Hedge; conv_bool. destruct Hedge as [Hedge|Hedge].
   - eapply a_edge_acyclic; eauto.
   - eapply head_exits_no_self_loop in Hedge as Hnself.
     eapply head_exits_path in Hedge. destructH. eapply path_path_acyclic;eauto.
-Qed.
-
-Next Obligation. (* reachability *)
+}
+{ (* reachability *)
   specialize a_reachability as H0. eapply subgraph_path in H0;eauto.
   unfold sub_graph,union_edge. firstorder. 
+}
+{ (* single_exit *)
+  fold_lp_cont'.
+  assert (loop_contains h p /\ loop_contains h' p) as [Hloop Hloop'].
+  {
+    unfold exit_edge' in *. do 2 destructH.
+    split; eapply head_exits_loop_equivalence; eauto.
+  }
+  eapply loop_contains_either in Hloop;eauto.
+  destruct Hloop.
+  - eapply head_exits_exit_edge in H0.
+    eapply head_exits_exit_edge in H1.
+    do 2 destructH.
+    eapply single_exit;eauto.
+    unfold exit_edge in *.
+    do 2 destructH.
+    split;auto.
+    eapply loop_contains_trans;eauto.
+  - eapply head_exits_exit_edge in H0.
+    eapply head_exits_exit_edge in H1.
+    do 2 destructH.
+    eapply single_exit;cycle 1; eauto.
+    unfold exit_edge in *.
+    do 2 destructH.
+    split;auto.
+    eapply loop_contains_trans;eauto.
+}
+{ (* no_head_exit *)
+  fold_lp_cont'.
+  intro N. destructH.
+  eapply head_exits_exit_edge in H0. destructH.
+  eapply no_exit_head;eauto.
+  unfold loop_head.
+  exists p0.
+  eapply head_exits_back_edge;eauto.
+}
+{ (* exit_pred_loop *)
+  fold_lp_cont'.
+  eapply head_exits_exit_edge in H0. destructH.
+  unfold_edge_op' H1.
+  destruct H1.
+  - copy H1 Hedge. eapply exit_edge_pred_exiting in H1;eauto.
+    apply (exit_pred_loop (q:=q)) in H1;eauto.
+    rewrite <-head_exits_loop_equivalence;eauto.
+  - unfold head_exits_edge in H1. unfold_edge_op' H1.
+    decide (exited q e);[clear H1|congruence].
+    unfold exited in e0. destructH.
+    copy e0 Hexit.
+    unfold exit_edge in e0.
+    destructH.
+    eapply exit_edge_pred_exiting in H0;eauto.
+    eapply single_exit in Hexit;eauto. subst.
+    rewrite <-head_exits_loop_equivalence. 
+    eauto using loop_contains_self, loop_contains_loop_head.
+}
 Qed.
-Next Obligation. (* single_exit *)
-  fold_lp_cont'.
-  eapply single_exit;admit.
-  (* new exits don't have new targets, and the source has the same depth *)
-Admitted.
-Next Obligation. (* no_head_exit *)
-  eapply no_exit_head;admit.
-  (* new exits don't have new targets *)
-Admitted.
-Next Obligation. (* exit_pred_loop *)
-  fold_lp_cont'.
-  eapply exit_pred_loop;eauto. 2: eapply H1.
-Admitted.
 
 Definition head_exits_property `(C : redCFG) := forall h p q, exit_edge h p q -> edge h q = true.
 
@@ -2174,11 +2385,10 @@ Lemma head_exits_property_satisfied `(C : redCFG) : head_exits_property (head_ex
 Proof.
   unfold head_exits_property. 
   intros h p q Hexit. unfold union_edge. conv_bool.
-  unfold exit_edge in Hexit. destructH. unfold union_edge in Hexit3. conv_bool.
-  destruct Hexit3.
-  - right. eapply head_exits_edge_spec. exists p. admit. (* loop_contains <-> loop_contains *)
-  - eapply head_exits_edge_spec in H. destructH. admit.
-Admitted.
+  eapply head_exits_exit_edge in Hexit. 
+  right.
+  rewrite head_exits_edge_spec. eauto.
+Qed.
 
 Arguments exit_edge {_ _ _ _ _}.
 
@@ -2194,6 +2404,14 @@ Proof.
   unfold deq_loop. firstorder.
 Qed.
 
+Lemma prefix_ex_cons (A : Type) (l l' : list A) (a : A)
+  : Prefix l l' -> exists a', Prefix (a' :: l) (a :: l').
+Proof.
+  intros Hpre. revert a. induction Hpre; intros b.
+  - exists b. econstructor.
+  - specialize (IHHpre a). destructH. eexists. econstructor. eauto.
+Qed.
+
 Definition purify_implode `{redCFG} :=
   purify (implode_nodes_root_inv) (D:=decide_pred _).
 
@@ -2204,6 +2422,48 @@ Instance implode_CFG `(H : redCFG) (Hhe : head_exits_property H)
             (restrict_edge a_edge implode_nodes).
 Proof.
   eapply sub_CFG;intros.
+  - specialize (a_reachability p) as [π Hπ].
+    revert dependent p. revert dependent π.
+    specialize (well_founded_ind (R:=(@StrictPrefix' Lab)) (@StrictPrefix_well_founded Lab)
+                                 (fun π : ne_list Lab => forall (p : Lab),
+                                      implode_nodes p ->
+                                      Path a_edge root p π
+                                      -> exists π0 : ne_list Lab, Path (restrict_edge' a_edge implode_nodes) root p π0))
+      as WFind.
+    eapply WFind.
+    intros ? IHwf ? ? ?. clear WFind.
+    destruct H1.
+    + eexists; econstructor.
+    + decide (implode_nodes b).
+      * specialize (IHwf π). exploit IHwf;[econstructor;econstructor|].
+        destructH.
+        eexists; econstructor;eauto.
+        unfold_edge_op. split_conj;auto.
+      * unfold implode_nodes in n. cbn in n. simpl_dec' n. simpl_dec' n. simpl_dec' n. simpl_dec' n. simpl_dec' n.
+        destructH.
+        enough (exit_edge x b c).
+        {
+          eapply Hhe in H3.
+          eapply dom_loop in n2.
+          eapply dom_dom_acyclic in n2. eapply n2 in H1 as Hin.
+          eapply path_to_elem in Hin;eauto. destructH.
+          specialize (IHwf ϕ).
+          eapply prefix_ex_cons with (a:=c) in Hin1. destructH.
+          exploit' IHwf; [econstructor;cbn;eauto|].
+          specialize (IHwf x). exploit IHwf.
+          - admit.
+          - destructH. exists (c :<: π0). econstructor;eauto. unfold_edge_op. split_conj;eauto.
+            admit. admit.
+        }
+        unfold exit_edge;split_conj;eauto.
+        2: eapply a_edge_incl;auto.
+        contradict n3.
+        unfold implode_nodes in H0. cbn in H0.
+        destruct H0.
+        -- eapply H0;auto.
+        -- 
+        admit.
+  -  
 Admitted.
 
 Lemma implode_CFG_elem (* unused *)`{C : redCFG} (p : Lab) (Himpl : implode_nodes p)
