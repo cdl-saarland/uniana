@@ -81,9 +81,13 @@ Proof.
 Qed.
 
 Local Arguments deq_loop {_ _ _ _} _.
-Local Arguments depth {_ _ _ _} _. 
+Local Arguments depth {_ _ _ _} _.
+Local Arguments exited {_ _ _ _} _.
 Lemma head_exits_head_inv `(C : redCFG) (h : Lab)
   : loop_head C h <->loop_head (head_exits_CFG C) h.
+Admitted.
+Lemma head_exits_exited_inv `(C : redCFG) (h p : Lab)
+  : exited C h p <-> exited (head_exits_CFG C) h p.
 Admitted.
 Lemma head_exits_deq_loop_inv `(C : redCFG) (p q : Lab)
   : deq_loop C p q <-> deq_loop (head_exits_CFG C) p q.
@@ -95,7 +99,7 @@ Lemma no_strictly_containing_loop_impl_top_level:
   forall (Lab : finType) (edge : Lab -> Lab -> bool) (root : Lab) (a_edge : Lab -> Lab -> bool)
     (C : redCFG edge root a_edge) (p : Lab),
     (forall h' : Lab, loop_contains h' p -> h' = p) ->
-    deq_loop C root p \/ depth C p = S (depth C root) /\ loop_head C p.
+    implode_nodes C p.
 Proof.
   intros.
 Admitted.
@@ -124,15 +128,17 @@ Next Obligation.
   unfold implode_nodes. unfold predicate.
   match goal with [|- deq_loop _ ?rr ?pp \/ _] => set (root':=rr); set (p':=pp) end. cbn in root', p'.
   specialize (get_innermost_loop_strict_spec p) as Hspec.
-  rewrite <-head_exits_head_inv.
   rewrite <-head_exits_deq_loop_inv.
-  do 2 rewrite <-head_exits_depth_inv.
+  setoid_rewrite <-head_exits_deq_loop_inv.
+  setoid_rewrite <-head_exits_exited_inv.
   destruct (get_innermost_loop_strict C p) eqn:E; cbn in root', p'.
   - unfold option_map, opt_loop_CFG. unfold loop_containsT_loop_head. destruct s. cbn in p'. cbn in root'.
     eapply (loop_CFG_top_level);eauto. 
   - unfold option_map, opt_loop_CFG. subst root' p'.
     eapply no_strictly_containing_loop_impl_top_level;auto.
 Defined.
+
+Arguments exited {_ _ _ _ _} _.
 
 Definition path_splits__imp `{C : redCFG} (p : Lab)
   := let d := (option_map (loop_containsT_loop_head (C:=C) (p:=p))
@@ -454,6 +460,21 @@ Proof.
   eapply lc_disj_exits_lsplits';eauto.
   replace (depth e2) with (depth e1);eauto using exit_edge_dep_eq.
 Qed.
+
+(* TODO: turn this around *)
+(*
+Corollary lc_disj_exit_lsplits'' `{redCFG} (s e q1 q2 h : Lab) (i j1 j2 k : Tag) (t1 t2 : list Coord)
+          (Hlc : last_common ((q1,j1) :: t1) ((q2,j2) :: t2) (s,k))
+          (Hexit1 : exit_edge h q1 e)
+          (Hexit2 : exit_edge h q2 e)
+          (Hpath1 : TPath' ((e,i) :<: (q1, j1) :< t1))
+          (Hpath2 : TPath' ((e,i) :<: (q2, j2) :< t2))
+  : exists (qq qq' : Lab), (s,qq,qq') ∈ loop_splits h e.
+Proof.
+  eapply lc_disj_exits_lsplits in Hlc;eauto.
+  destructH. eexists;eexists. eapply in_app_or in Hlc. destruct Hlc;eauto.
+Qed.
+ *)
 
 Theorem lc_join_split `{redCFG} t1 t2 (p q1 q2 s : Lab) (i j1 j2 k : Tag)
         (* it is important to cons qj's in front of the t's *)

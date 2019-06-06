@@ -1657,6 +1657,7 @@ Lemma restrict_exit_edge `{C : redCFG} (P : decPred Lab)
       (Hh : P h)
       (Hloop : forall h p : Lab, (exists x, (restrict_edge' edge P ∖ restrict_edge' a_edge P) x h = true)
                             -> loop_contains' edge a_edge h p
+                            -> P p
                             -> loop_contains' (restrict_edge' edge P) (restrict_edge' a_edge P) h p)
       (HloopB : loop_contains' (restrict_edge edge P) (restrict_edge a_edge P) (↓ (purify Hh)) (↓ (purify Hp)))
       (HnloopB : ~ loop_contains' (restrict_edge edge P) (restrict_edge a_edge P) (↓ (purify Hh)) (↓ (purify Hq)))
@@ -1686,7 +1687,7 @@ Instance sub_CFG
         (Hreach : forall p, P p -> exists π, Path (restrict_edge' a_edge P) r p π)
         (Hloop : forall h p, (exists x, (restrict_edge' edge P ∖ restrict_edge' a_edge P) x h = true)
                         -> loop_contains' edge a_edge h p
-                                         (* -> P p  we need this additional condition *)
+                        -> P p
                         -> loop_contains' (restrict_edge' edge P) (restrict_edge' a_edge P) h p)
   : @redCFG (finType_sub_decPred P)
             (restrict_edge edge P)
@@ -1776,6 +1777,7 @@ econstructor.
     + rewrite restrict_edge_intersection in HedgeA;eauto.
     + rewrite restrict_edge_intersection in Hedge1.
       eapply intersection_subgraph1;eauto.
+  - auto.
 }
 Qed.
 
@@ -1935,7 +1937,8 @@ Proof.
     exists (p :<: π). econstructor;eauto.
     unfold_edge_op.
     split_conj;[eapply exit_a_edge;eauto|left;auto|right;eexists;eauto].
-  - enough (loop_contains h h0).
+  - clear H2.
+    enough (loop_contains h h0). 
     + unfold loop_contains' in *.
       destructH' H1.
       exists p0, π. split_conj;[| |apply H5].
@@ -2549,7 +2552,7 @@ Proof.
               ** exact N.
               ** contradict n3. eapply H4;eauto.
               ** contradiction.
-  - admit.
+  - destruct H2;admit.
     (* show that only the root may be a loop after implosion.
      * this won't work !! nodes in inner loops are also contained in the root loop, but they vanish completely *)
 Admitted.
