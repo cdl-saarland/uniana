@@ -296,9 +296,11 @@ Section red_cfg.
   Definition deq_loop q p : Prop :=
     forall h, loop_contains h p -> loop_contains h q.
 
+  Definition eq_loop q p : Prop :=
+    deq_loop q p /\ deq_loop p q.
+
   Global Instance deq_loop_dec h p : dec( deq_loop h p).
-    unfold deq_loop. eapply finType_forall_dec. intros.
-    eapply impl_dec; eapply loop_contains_dec.
+  eauto.
   Qed.
 
   Definition deq_loop_b h p
@@ -2484,6 +2486,86 @@ Proof.
       contradict Hnloop. eapply loop_contains_trans;eauto.
 Qed.
 
+Definition impl_list `{redCFG} (h : Lab) :=
+  filter (DecPred (fun q : Lab => (loop_contains h q \/ exited h q)
+                        /\ (deq_loop h q
+                            \/ exists e, exited q e
+                                   /\ deq_loop h e
+                           )
+                  )
+         ).
+
+Lemma head_exits_property_impl_list `{C : redCFG} (p q h : Lab) π
+      (Hhe : head_exits_property C)
+      (Hpath : Path edge p q (q :< π))
+      (Hloop : eq_loop h p)
+  : exists p', Path edge p' q (q :< impl_list h π).
+Admitted.
+
+Definition back_edge'  (L : Type) (edge a_edge : L -> L-> bool) (p q : L)
+  := (edge ∖ a_edge) p q = true.
+
+Definition loop_head' (L : Type) (edge a_edge : L -> L-> bool) (h : L)
+  := exists p, (edge ∖ a_edge) p h = true.
+
+Lemma implode_nodes_back_edge `{redCFG} p q
+      (Hhead : back_edge' (restrict_edge' edge implode_nodes) (restrict_edge' a_edge implode_nodes) p q)
+  : p ↪ q.
+Proof.
+  unfold back_edge' in *.
+  unfold_edge_op' Hhead. destructH.
+  decide (implode_nodes p);[|contradiction].
+  decide (implode_nodes q);[|contradiction].
+  destruct Hhead1 as [Hhead1|[Hhead1|Hhead1]];cbn in *.
+  2,3:congruence.
+  unfold back_edge,back_edge_b. unfold_edge_op. split;auto.
+Qed.
+
+Lemma loop_contains'_basic `{redCFG} h p
+  : loop_contains' edge a_edge h p = loop_contains h p.
+Proof.
+  reflexivity.
+Qed.
+
+Lemma exit_not_deq `{redCFG} h p q
+      (Hexit : exit_edge h p q)
+      (Hdeq : deq_loop q h)
+  : False.
+Proof.
+  unfold exit_edge in Hexit. destructH.
+  apply Hexit2.
+  eapply Hdeq.
+  eapply loop_contains_self. eapply loop_contains_loop_head;eauto.
+Qed.
+
+Lemma deq_loop_exited' : forall (Lab : finType) (edge : Lab -> Lab -> bool) (root : Lab) (a_edge : Lab -> Lab -> bool)
+                           (C : redCFG edge root a_edge) (h qe e : Lab), exit_edge h qe e -> deq_loop h e.
+Proof.
+  intros.
+  eapply deq_loop_exited in H as H'.
+  eapply deq_loop_exiting in H as H''.
+  eapply deq_loop_trans;eauto.
+Qed.
+
+Lemma exit_edge_in_loop `{redCFG} (h1 h2 p1 p2 e1 e2 : Lab)
+      (Hexit : exit_edge h1 p1 e1)
+      (Hexit' : exit_edge h2 p2 e2)
+      (Hloop : loop_contains h1 h2)
+      (Hneq : h1 <> h2)
+  : loop_contains h1 e2.
+  decide (loop_contains h1 e2);[auto|].
+  copy Hexit' Hexit''.
+  unfold exit_edge in Hexit'. destructH.
+  assert (exit_edge h1 p2 e2).
+  {
+    unfold exit_edge. split_conj;cycle 1.
+    + eauto.
+    + eauto.
+    + eauto using loop_contains_trans.
+  }
+  eapply single_exit in Hexit'';eauto. contradiction.
+Qed.
+
 Instance implode_CFG `(H : redCFG) (Hhe : head_exits_property H)
   : @redCFG (finType_sub_decPred implode_nodes)
             (restrict_edge edge implode_nodes)
@@ -2552,9 +2634,28 @@ Proof.
               ** exact N.
               ** contradict n3. eapply H4;eauto.
               ** contradiction.
-  - destruct H2;admit.
-    (* show that only the root may be a loop after implosion.
-     * this won't work !! nodes in inner loops are also contained in the root loop, but they vanish completely *)
+  - rewrite loop_contains'_basic in H1.
+    replace h with root.
+    2: {
+      destructH.
+      eapply implode_nodes_back_edge in H0 as Hbe.
+      unfold_edge_op' H0. destruct H0 as [[Hedge [Hx Hh]] _].
+      destruct Hh.
+      - symmetry. eapply root_loop_root. eapply H0. eauto using loop_contains_self, loop_contains_loop_head.
+      - eapply loop_contains_ledge in Hbe.
+        destructH.
+        destruct Hx.
+        + eapply H0 in Hbe. symmetry. eapply root_loop_root;auto.
+        + destructH. unfold exited in H5,H3. destructH. destructH.
+          enough (loop_contains h e0) as Hin.
+          * eapply H6 in Hin. symmetry. eapply root_loop_root;auto.
+          * 
+            eapply exit_edge_in_loop;eauto.
+            assert (h <> x) by admit. auto. (* we need to disallow self loops *)
+    }
+    unfold loop_contains' in H1. rename H1 into Hloop.
+    destructH.
+    admit.
 Admitted.
 
 Lemma implode_CFG_elem (* unused *)`{C : redCFG} (p : Lab) (Himpl : implode_nodes p)
