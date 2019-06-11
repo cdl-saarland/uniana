@@ -216,6 +216,7 @@ Section uniana.
           simpl_nl; only 1: rewrite <- Heq1; only 2: rewrite <- Heq2; eapply succ_in_rcons2.
   Qed.
   Arguments uni_branch_non_disj : clear implicits.
+
   
   Lemma uni_same_tag p q i j1 j2 s1 s2 r1 r2 uni l1 l2
         (Htr1 : Tr ((p,i,s1) :<: (q,j1,r1) :< l1))
@@ -241,7 +242,6 @@ Section uniana.
     copy c Hneq.
     eapply (tag_eq_loop_exit (p:=p) (q:=q) (i:=i)) in c. 2,3: eapply Htcfg;eauto. clear Htcfg.
     eapply tr_lc_lt with (j3:=j1) (j4:=j2) in Htr1 as Hlc;eauto;destructH' Hlc.
-    
     specialize (get_innermost_loop_spec q) as Hspec.
     destruct (get_innermost_loop q) ;[destruct s|contradiction].
     eapply lc_disj_exit_lsplits in c as Hsplits;eauto; cycle 1.
@@ -260,9 +260,7 @@ Section uniana.
         eapply join_andb_true_iff in Hsplit;eauto;cycle 1.
         {
           rewrite splits_spec. right. left.
-          exists x. split;[unfold exited;eauto|].
-          rewrite splits'_spec. left.
-          eapply loop_splits_loop_splits__imp;eauto.
+          exists x. split;[unfold exited|];eauto. 
         }
         eapply uni_branch_succ_p with (j:=j2);eauto.
         intros;symmetry;eapply HCuni;eauto.
@@ -273,16 +271,20 @@ Section uniana.
         eapply join_andb_true_iff in Hsplit;eauto;cycle 1.
         {
           rewrite splits_spec. right. left.
-          exists x. split;[unfold exited;eauto|].
-          rewrite splits'_spec. left.
-          eapply loop_splits_loop_splits__imp;eauto.
+          exists x. split;[unfold exited|];eauto.
         }
         eapply uni_branch_succ_p with (j:=j1);eauto.
-      + (* TODO: this lemma has to be applied on the imploded CFG *)
-        admit.
-        (*eapply (uni_branch_non_disj) with (br:=br);eauto;cbn;simpl_nl;eauto.*)
-        
-  Admitted.
+      + eapply (uni_branch_non_disj) with (br:=br);eauto;cbn;simpl_nl;eauto.
+        * rewrite nlcons_to_list in Hlc0. eapply Hlc0.
+        * rewrite nlcons_to_list in Hlc2. eapply Hlc2.
+        * simpl_nl. auto.
+        * eapply join_andb_true_iff with (x0:=(br,qq,qq')) in Hsplit.
+          unfold "∘" in Hsplit. cbn in Hsplit. auto.
+          rewrite splits_spec. right. left.
+          exists x. split;[unfold exited|];eauto.
+    (* THIS v property does not hold ! the node may vanish in implosion 
+     * (br, qq, qq') ∈ loop_splits x p -> (br, qq, qq') ∈ loop_splits__imp x p. *)    
+  Qed.
 
   Definition unch_concr' (unch : Unch) (l : list Conf) :=
     forall (to : Lab) (i : Tag) (s : State) (u : Lab) (x : Var),
@@ -419,6 +421,11 @@ Section uniana.
       + intro Heq; subst. unfold Disjoint in Hlc1. destruct Hlc1. clear - H0.
         eapply H0; eapply In_rcons; left; eauto.
   Qed.
+
+  Lemma ex_loop_splits_loop_splits__imp :
+    forall (p br h : Lab) (qq qq' : Lab) (Hsplits : (br, qq, qq') ∈ loop_splits__imp h p),
+    exists br' pp pp', (br',pp,pp') ∈ loop_splits h p.
+  Admitted.
   
   Lemma find_divergent_branch u p l1 l2 i j1 j2 
         (Hunch : Dom edge root u p)
@@ -474,7 +481,7 @@ Section uniana.
     eapply first_diff in c'.
     2: assert (| j1 | = | j2 |) as Hlen;
       [(eapply (tpath_tag_len_eq_elem (l1:=(p,i):<l1)) ;eauto;eapply precedes_in;simpl_nl;eauto)|].
-    Focus 2. subst j1 j2. repeat rewrite app_length in Hlen. clear - Hlen. omega.
+    2: { subst j1 j2. repeat rewrite app_length in Hlen. clear - Hlen. omega. }
     2,3: intro N; eapply c'; subst;
       eapply precedes_in in Hprec1;eapply precedes_in in Hprec2;
         rewrite nlcons_to_list in Hprec1; rewrite nlcons_to_list in Hprec2;
@@ -525,7 +532,10 @@ Section uniana.
     2,3: let f := fun Q => clear - Q; inversion Q;subst;cbn;simpl_nl;eauto in
          only 2:f Hη1; f Hη2.
     simpl_nl' Hlc.
+    (* I should use a fine-tuned version of the base case of this lemma here instead of the lemma itself *)
+    (* Now take the paths br -->* qe1 -> e1 and br --> qe2 -> ledge. These construct a loop_split *)
     eapply lc_disj_exits_lsplits with (h0:=h) (e3:=e1) (e4:=e2) (i0:=l'++j) in Hlc as Hsplit;eauto.
+    replace splits' with loop_splits in Hsplit by admit.
     all: cycle 1.
     {
       clear - ηeq1 Hη1 Hexit__edge1 Hexit__succ1 Htr1. unfold TPath'. econstructor. cbn.
@@ -540,12 +550,25 @@ Section uniana.
       + eapply succ_in_path_edge;cycle 1;eauto.
     }
     1,2: eapply tpath_NoDup;eauto.
-    destructH.
     repeat match goal with
            | [H : context C [ne_to_list (_ :< _)] |- _] => simpl_nl' H
            end.
     repeat splice_splinter.
     2-4: rewrite nlcons_to_list;eauto.
+    destructH.
+    (*Set Nested Proofs Allowed.
+    Lemma splits'_loop_splits br qq qq' h e 
+          (Hsplit : (br, qq, qq') ∈ splits' h e)
+      : exists h' e', (br, qq, qq') ∈ loop_splits h' e'.
+    Admitted.
+    assert (exists h e1 e2, (br,qq,qq') ∈ (loop_splits h e1 ++ loop_splits h e2)) as Hsplit'.
+    {
+      clear - Hsplit.
+      eapply in_app_or in Hsplit. destruct Hsplit; eapply splits'_loop_splits in H.
+      - destructH. exists h', e', e'. eapply in_or_app. auto.
+      - destructH. exists h', e', e'. eapply in_or_app. auto.
+    }
+    clear Hsplit. rename Hsplit' into Hsplit. destructH.*)
     exists br, qq, qq';split.
     3-5: eapply tpath_NoDup;eauto.
     - eapply rel_splits_spec. exists h.
@@ -639,7 +662,7 @@ Section uniana.
       eapply (tpath_exit_nin (h:=h) (q:=qe1));eauto;clear - Hexit__edge1 Hexit__edge2; unfold exit_edge in *;unfold exited;
         [|exists qe2]; firstorder 0.
       Unshelve. all: eauto.
-  Qed.
+  Admitted.
   
   Lemma unch_same_tag p u i s1 s2 j1 j2 r1 r2 l1 l2 x uni unch
         (Hunibr : join_andb (map ((uni_branch uni) ∘ fst ∘ fst) (rel_splits p u)) = true)

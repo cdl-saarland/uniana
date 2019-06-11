@@ -271,14 +271,15 @@ Arguments loop_head {_ _ _ _ _}.
 Arguments loop_head_dec {_ _ _ _ _}.
 Arguments get_innermost_loop_strict {_ _ _ _ _}. 
 
-Definition impl_list `{redCFG} (h : Lab) :=
-  filter (DecPred (fun q : Lab => (loop_contains h q)
-                        /\ ((depth q = depth h)
-                            \/ (depth q = S (depth h))
-                                /\ loop_head q
-                           )
-                  )
-         ).
+Fixpoint impl_list' `{redCFG} (h : Lab) (l : list Coord) :=
+  match l with
+  | nil => nil
+  | (q,j) :: l => if decision ((loop_contains h q \/ exited h q) /\ deq_loop h q)
+                 then (q,j) :: impl_list' h l
+                 else if decision (exists e : Lab, exited q e /\ deq_loop h e)
+                      then (q,tl j) :: impl_list' h l
+                      else impl_list' h l
+  end.
 
 Definition get_innermost_loop_strict' `{C : redCFG} p
   := match get_innermost_loop_strict p with
@@ -286,21 +287,18 @@ Definition get_innermost_loop_strict' `{C : redCFG} p
      | None => root
      end.
 
-Definition impl_list' `{redCFG} (p : Lab) (i : Tag) (l : list Coord):=
-  map (fun q => (q,i)) (impl_list (get_innermost_loop_strict' p) (map fst l)).
-
 Lemma impl_list_cfg_tpath (* unused *)`{C : redCFG} l p i
       (Hin : forall q, q ∈ map fst l -> loop_contains (get_innermost_loop_strict' p) q)
       (Hpath : TPath' ((p,i) :< l))
       (D := local_impl_CFG C ((option_map (loop_containsT_loop_head (C:=C) (p:=p)) (get_innermost_loop_strict p))))
-  : TPath' ((p,i) :< impl_list' p i l).
+  : TPath' ((p,i) :< impl_list' p l).
 Proof.
 Admitted.
 
 Lemma impl_disj_coord_impl_disj_lab `{redCFG} l1 l2 s p i
       (Hpath1 : TPath' ((p,i) :< l1 :>: (s,i)))
       (Hpath2 : TPath' ((p,i) :< l2 :>: (s,i)))
-      (Hdisj : Disjoint (impl_list' p i l1) (impl_list' p i l2))
+      (Hdisj : Disjoint (impl_list' p l1) (impl_list' p l2))
   : Disjoint (impl_list (get_innermost_loop_strict' p) (map fst l1))
              (impl_list (get_innermost_loop_strict' p) (map fst l2)).
 Proof.
@@ -322,7 +320,7 @@ Lemma coord_disj_impl_coord `{redCFG} l1 l2 s p i
       (Hpath1 : TPath' ((p,i) :< l1 :>: (s,i)))
       (Hpath2 : TPath' ((p,i) :< l2 :>: (s,i)))
       (Hdisj : Disjoint l1 l2)
-  : Disjoint (impl_list' p i l1) (impl_list' p i l2).
+  : Disjoint (impl_list' p l1) (impl_list' p l2).
 Admitted.
 
 (*Lemma filter_incl `{A : Type} (l : list A) (f : A -> bool) : filter f l ⊆ l.
@@ -354,13 +352,13 @@ Qed.
 (* implode list *)
 
 
-Theorem lc_join_path_split (* unused *)`{redCFG} t1 t2 (p q1 q2 s : Lab) (i : Tag)
-        (Hlc : last_common ((q1,i) :<: t1) ((q2,i) :<: t2) (s,i))
-        (Hneq : q1 <> q2)
-        (Hpath1 : TPath' ((p,i) :<: (q1,i) :<: t1))
-        (Hpath2 : TPath' ((p,i) :<: (q2,i) :<: t2))
-  : exists qq qq', (s,qq,qq') ∈ path_splits p.
-Proof.
+Theorem lc_join_path_split (* unused *)`{redCFG} t1 t2 (p q1 q2 s : Lab) (i j1 j2 : Tag)                          
+        (Hlc : last_common ((q1,j1) :: t1) ((q2,j2) :: t2) (s,i))
+        (Hneq : q1 <> q2 \/ j1 <> j2)
+        (Hpath1 : TPath' ((p,i) :<: (q1,j1) :< t1))
+        (Hpath2 : TPath' ((p,i) :<: (q2,j2) :< t2))
+  : exists qq qq', (s,qq,qq') ∈ path_splits__imp p.
+Proof. (*
   setoid_rewrite <-path_splits_spec. unfold pl_split.
   unfold TPath' in *;cbn in *. unfold last_common in Hlc; destructH.
   eapply id in Hpath1 as Hpath1'; eapply id in Hpath2 as Hpath2'.
@@ -372,7 +370,7 @@ Proof.
     rewrite <-cons_rcons_assoc in Hlc2; simpl_nl; eassumption.
   cbn in Hpath1,Hpath2.                                  
   eapply TPath_CPath in Hpath1. eapply TPath_CPath in Hpath2. cbn in Hpath2,Hpath1.
-  rewrite ne_map_nl_rcons in Hpath1, Hpath2. cbn in *.
+  rewrite ne_map_nl_rcons in Hpath1, Hpath2. cbn in *. *)
 (*  destruct l1';[eapply postfix_hd_eq in Hlc0; inversion Hlc0; subst q1; cbn in *|].
   all: destruct l2';[eapply postfix_hd_eq in Hlc2; inversion Hlc2; subst q2; cbn in *|].
   - contradiction.
@@ -395,53 +393,6 @@ Admitted. (*
   - admit.
 Admitted. *)
 
-Definition lc_disj_exit_lsplits_def (d : nat)
-  := forall `{redCFG} (s e q1 q2 h : Lab) (i j1 j2 k : Tag) (t1 t2 : list Coord)
-       (Hdep : d = depth s - depth e)
-       (Hlc : last_common ((q1,j1) :: t1) ((q2,j2) :: t2) (s,k))
-       (Hexit1 : exit_edge h q1 e)
-       (Hexit2 : exit_edge h q2 e)
-       (Hpath1 : TPath' ((e,i) :<: (q1, j1) :< t1))
-       (Hpath2 : TPath' ((e,i) :<: (q2, j2) :< t2)),
-    exists (qq qq' : Lab), (s,qq,qq') ∈ loop_splits h e.
-
-Definition lc_disj_exits_lsplits_def (d : nat)
-  := forall `{redCFG} (s e1 e2 q1 q2 h : Lab) (i j1 j2 k : Tag) (t1 t2 : list Coord)
-       (Hdep : d >= depth s - depth e1)
-       (Hdep : d >= depth s - depth e2)
-       (Hlc : last_common ((q1,j1) :: t1) ((q2,j2) :: t2) (s,k))
-       (Hexit1 : exit_edge h q1 e1)
-       (Hexit2 : exit_edge h q2 e2)
-       (Hpath1 : TPath' ((e1,i) :<: (q1,j1) :< t1))
-       (Hpath2 : TPath' ((e2,i) :<: (q2,j2) :< t2)),
-    exists (qq qq' : Lab), (s,qq,qq') ∈ (loop_splits h e1 ++ loop_splits h e2).
-
-Theorem lc_disj_exit_to_exits_lsplits d : lc_disj_exit_lsplits_def d -> lc_disj_exits_lsplits_def d.
-Proof.
-  unfold lc_disj_exit_lsplits_def, lc_disj_exits_lsplits_def. intro Hlc_disj. intros.
-Admitted.
-
-Theorem lc_disj_exit_lsplits' d : lc_disj_exit_lsplits_def d.
-Proof.
-  unfold lc_disj_exit_lsplits_def;intros.
-Admitted.
-
-Corollary lc_disj_exit_lsplits (* unused *)`{redCFG} (s e q1 q2 h : Lab) (i j1 j2 k : Tag) (t1 t2 : list Coord)
-          (Hlc : last_common ((q1,j1) :: t1) ((q2,j2) :: t2) (s,k))
-          (Hexit1 : exit_edge h q1 e)
-          (Hexit2 : exit_edge h q2 e)
-          (Hpath1 : TPath' ((e,i) :<: (q1, j1) :< t1))
-          (Hpath2 : TPath' ((e,i) :<: (q2, j2) :< t2))
-  : exists (qq qq' : Lab), (s,qq,qq') ∈ loop_splits h e.
-Proof.
-  eapply lc_disj_exit_lsplits';eauto.
-Qed.
-
-Theorem lc_disj_exits_lsplits' d : lc_disj_exits_lsplits_def d.
-Proof.
-  apply lc_disj_exit_to_exits_lsplits,lc_disj_exit_lsplits'.
-Qed.      
-
 Lemma exit_edge_dep_eq `{redCFG} h qe1 qe2 e1 e2
       (Hexit1 : exit_edge h qe1 e1)
       (Hexit2 : exit_edge h qe2 e2)
@@ -455,26 +406,33 @@ Corollary lc_disj_exits_lsplits `{redCFG}
           (Hexit2 : exit_edge h q2 e2)
           (Hpath1 : TPath' ((e1,i) :<: (q1,j1) :< t1))
           (Hpath2 : TPath' ((e2,i) :<: (q2,j2) :< t2))
-  : exists (qq qq' : Lab), (s,qq,qq') ∈ (loop_splits h e1 ++ loop_splits h e2).
+  : exists (qq qq' : Lab), (s,qq,qq') ∈ (splits' h e1 ++ splits' h e2).
 Proof.
-  eapply lc_disj_exits_lsplits';eauto.
-  replace (depth e2) with (depth e1);eauto using exit_edge_dep_eq.
-Qed.
+Admitted.
 
-(* TODO: turn this around *)
-(*
-Corollary lc_disj_exit_lsplits'' `{redCFG} (s e q1 q2 h : Lab) (i j1 j2 k : Tag) (t1 t2 : list Coord)
+Corollary lc_disj_exit_lsplits `{redCFG} (s e q1 q2 h : Lab) (i j1 j2 k : Tag) (t1 t2 : list Coord)
           (Hlc : last_common ((q1,j1) :: t1) ((q2,j2) :: t2) (s,k))
           (Hexit1 : exit_edge h q1 e)
           (Hexit2 : exit_edge h q2 e)
           (Hpath1 : TPath' ((e,i) :<: (q1, j1) :< t1))
           (Hpath2 : TPath' ((e,i) :<: (q2, j2) :< t2))
-  : exists (qq qq' : Lab), (s,qq,qq') ∈ loop_splits h e.
+  : exists (qq qq' : Lab), (s,qq,qq') ∈ splits' h e.
 Proof.
   eapply lc_disj_exits_lsplits in Hlc;eauto.
   destructH. eexists;eexists. eapply in_app_or in Hlc. destruct Hlc;eauto.
 Qed.
- *)
+
+Lemma lc_implode_in `{redCFG} p q1 q2 h s i j1 j2 k t1 t2
+      (Hpath1 : TPath' ((p,i) :<: (q1,j1) :< t1))
+      (Hpath2 : TPath' ((p,i) :<: (q2,j2) :< t2))
+      (Hlc : last_common ((q1,j1) :: t1) ((q2,j2) :: t2) (s,k))
+      (Hinner : innermost_loop h p)
+      (Hdep : depth p < depth s)
+  : exists h', loop_contains h' s
+          /\ last_common (impl_list' h ((q1,j1) :: t1))
+                        (impl_list' h ((q2,j2) :: t2))
+                        (h', i).
+Admitted.
 
 Theorem lc_join_split `{redCFG} t1 t2 (p q1 q2 s : Lab) (i j1 j2 k : Tag)
         (* it is important to cons qj's in front of the t's *)
@@ -484,8 +442,20 @@ Theorem lc_join_split `{redCFG} t1 t2 (p q1 q2 s : Lab) (i j1 j2 k : Tag)
         (Hpath2 : TPath' ((p,i) :<: (q2,j2) :< t2))
   : exists qq qq', (s,qq,qq') ∈ splits p.
 Proof.
+  destruct (Nat.lt_trichotomy (depth s) (depth p)) as [Htri|[Htri|Htri]].
+  - exfalso.
+    (* the tag k is shorter than i
+     * some head has to be visited from outside on the way from s to p
+     * this head has the same tag on both traces 0 :: k, contradiction to last_common *)
+    admit.
+  - (* k = i, bc otherwise we would visit the head of p in both traces with the same tag,
+     * which contradicts Hlc *)
+    replace k with i in * by admit.
+    eapply lc_join_path_split in Hlc;eauto.
+    destructH.
+    eexists; eexists. eapply splits_spec. left. eauto.
+  -  
 Admitted.
-
 
 
 (*Lemma head_diff
