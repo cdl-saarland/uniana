@@ -95,7 +95,8 @@ Class redCFG
       single_exit : forall h p q, exit_edge h p q -> forall h', exit_edge h' p q -> h = h';
       loop_head h := exists p, back_edge p h;
       no_exit_head : forall h p q, exit_edge h p q -> ~ loop_head q;
-      exit_pred_loop : forall h q qe e, exit_edge h qe e -> q --> e -> loop_contains h q
+      exit_pred_loop : forall h q qe e, exit_edge h qe e -> q --> e -> loop_contains h q;
+      no_self_loops : forall q p, edge q p = true -> q <> p
     }.
 
 Hint Resolve loop_head_dom a_edge_incl a_edge_acyclic a_reachability.
@@ -1781,6 +1782,12 @@ econstructor.
       eapply intersection_subgraph1;eauto.
   - auto.
 }
+{ (* no_self_loops *)
+  intros.
+  destruct q. destruct p.
+  intro Heq. eapply subtype_extensionality in Heq.
+  eapply no_self_loops;eauto.
+}  
 Qed.
 
 (** * loop_CFG **)
@@ -2390,6 +2397,13 @@ econstructor;intros.
     rewrite <-head_exits_loop_equivalence. 
     eauto using loop_contains_self, loop_contains_loop_head.
 }
+{
+  intro Heq.
+  eapply no_self_loops;eauto. subst. unfold_edge_op' H0. destruct H0;[auto|].
+  eapply head_exits_edge_spec in H0. destructH.
+  unfold exit_edge in H0. destructH.
+  exfalso. contradict H0. eauto using loop_contains_loop_head,loop_contains_self.
+}
 Qed.
 
 Definition head_exits_property `(C : redCFG) := forall h p q, exit_edge h p q -> edge h q = true.
@@ -2495,13 +2509,6 @@ Definition impl_list `{redCFG} (h : Lab) :=
                   )
          ).
 
-Lemma head_exits_property_impl_list `{C : redCFG} (p q h : Lab) π
-      (Hhe : head_exits_property C)
-      (Hpath : Path edge p q (q :< π))
-      (Hloop : eq_loop h p)
-  : exists p', Path edge p' q (q :< impl_list h π).
-Admitted.
-
 Definition back_edge'  (L : Type) (edge a_edge : L -> L-> bool) (p q : L)
   := (edge ∖ a_edge) p q = true.
 
@@ -2565,6 +2572,24 @@ Lemma exit_edge_in_loop `{redCFG} (h1 h2 p1 p2 e1 e2 : Lab)
   }
   eapply single_exit in Hexit'';eauto. contradiction.
 Qed.
+
+
+Lemma impl_list_imploded_path:
+  forall (Lab : finType) (edge : Lab -> Lab -> bool) (root : Lab) (a_edge f : Lab -> Lab -> bool)
+    (H : redCFG edge root a_edge),
+    (forall h p q : Lab, exit_edge h p q -> f h q = true) ->
+    forall h p : Lab,
+      implode_nodes p ->
+      forall π : ne_list Lab,
+        Path f root p π ->
+        innermost_loop h p ->
+        exists π0, Path (restrict_edge' f implode_nodes) root p π0 /\ impl_list h π = π0.
+Proof.
+  intros Lab edge root a_edge f H Hhe h p H0 π Hπ Hinner.
+  (* this lemma should replace the proof (a) in implode_CFG and should suffice to prove case (b)
+   * to this end modifications are necessary that are dependent on whether loop_CFG is dropped entirely *)
+  
+Admitted.  
 
 Instance implode_CFG `(H : redCFG) (Hhe : head_exits_property H)
   : @redCFG (finType_sub_decPred implode_nodes)
@@ -2635,7 +2660,7 @@ Proof.
               ** contradict n3. eapply H4;eauto.
               ** contradiction.
   - rewrite loop_contains'_basic in H1.
-    replace h with root.
+    replace h with root in *.
     2: {
       destructH.
       eapply implode_nodes_back_edge in H0 as Hbe.
@@ -2649,12 +2674,20 @@ Proof.
         + destructH. unfold exited in H5,H3. destructH. destructH.
           enough (loop_contains h e0) as Hin.
           * eapply H6 in Hin. symmetry. eapply root_loop_root;auto.
-          * 
-            eapply exit_edge_in_loop;eauto.
-            assert (h <> x) by admit. auto. (* we need to disallow self loops *)
+          * eapply exit_edge_in_loop;eauto.
+            eapply no_self_loops in Hedge. eauto.
     }
-    unfold loop_contains' in H1. rename H1 into Hloop.
+    unfold loop_contains in H1. rename H1 into Hloop.
     destructH.
+    exists p0.
+    revert dependent p.
+    induction π;intros;inversion Hloop2;subst.
+    + exists (ne_single a). split_conj;eauto.
+      * unfold_edge_op. split_conj;eauto using back_edge_incl.
+        -- left;eapply deq_loop_refl.
+        -- left. unfold back_edge,back_edge_b in Hloop0. unfold_edge_op' Hloop0. firstorder.
+      * econstructor.
+    + 
     admit.
 Admitted.
 
@@ -2873,5 +2906,3 @@ Proof.
   apply Lab_dec.
 Qed.
 
-(* TODO : remove or include in redCFG def *)
-Parameter no_self_loops (* unused *): forall `(C : redCFG), forall q p, edge q p = true -> q =/= p.
