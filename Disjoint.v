@@ -20,11 +20,11 @@ Definition pl_split `{redCFG} (qh qe q1 q2 br : Lab) :=
           /\ q1 <> q2
           /\ Disjoint (tl π) (tl ϕ)).
 
-Parameter path_splits_spec : forall `{redCFG} p q1 q2 br,
+Parameter path_splits_spec (* unused *): forall `{redCFG} p q1 q2 br,
     pl_split p p q1 q2 br <->
     (br, q1, q2) ∈ path_splits p.
 
-Parameter loop_splits_spec : forall `{redCFG} qh qe q1 q2 br,
+Parameter loop_splits_spec (* unused *): forall `{redCFG} qh qe q1 q2 br,
     loop_contains qh br /\ (* otherwise some splits would be considered as loop splits *)
     pl_split qh qe q1 q2 br <->
     (br, q1, q2) ∈ loop_splits qh qe.
@@ -53,7 +53,7 @@ Set Printing All.
  * provide construction to get elem of type in opt_loop_CFG
  * this is the element to instantiate in the path_splits__imp definition. *)
 
-Lemma in_implode_CFG `{C : redCFG} (p : Lab)
+Lemma in_implode_CFG (* unused *)`{C : redCFG} (p : Lab)
       (Hdeq : deq_loop root p)
   : implode_nodes C p.
 Admitted.
@@ -72,7 +72,7 @@ Defined.
 
 Open Scope prg.
 
-Lemma loop_containsT_loop_head_same_h `(C : redCFG) (p : Lab)
+Lemma loop_containsT_loop_head_same_h (* unused *)`(C : redCFG) (p : Lab)
       (H : {h : Lab | loop_contains h p})
   : (`H) = (` (loop_containsT_loop_head H)).
 Proof.
@@ -83,7 +83,7 @@ Qed.
 Local Arguments deq_loop {_ _ _ _} _.
 Local Arguments depth {_ _ _ _} _.
 Local Arguments exited {_ _ _ _} _.
-Lemma head_exits_head_inv `(C : redCFG) (h : Lab)
+Lemma head_exits_head_inv (* unused *)`(C : redCFG) (h : Lab)
   : loop_head C h <->loop_head (head_exits_CFG C) h.
 Admitted.
 Lemma head_exits_exited_inv `(C : redCFG) (h p : Lab)
@@ -92,7 +92,7 @@ Admitted.
 Lemma head_exits_deq_loop_inv `(C : redCFG) (p q : Lab)
   : deq_loop C p q <-> deq_loop (head_exits_CFG C) p q.
 Admitted.
-Lemma head_exits_depth_inv `(C : redCFG) (p : Lab)
+Lemma head_exits_depth_inv (* unused *)`(C : redCFG) (p : Lab)
   : depth C p = depth (head_exits_CFG C) p.
 Admitted.  
 Lemma no_strictly_containing_loop_impl_top_level:
@@ -145,7 +145,7 @@ Definition path_splits__imp `{C : redCFG} (p : Lab)
                           (get_innermost_loop_strict C p)) in
      map (thrice (original_of_impl (d:=d))) (path_splits__imp' p).
 
-Lemma exited_head `{C : redCFG} (h e : Lab)
+Lemma exited_head (* unused *)`{C : redCFG} (h e : Lab)
       (H : exited h e)
   : loop_head C h.
 Proof.
@@ -193,7 +193,7 @@ Definition loop_splits__imp `{C : redCFG} (h e : Lab)
     eapply no_strictly_containting_loop_impl_top_level;auto.
 Defined.*)
 
-Parameter splits'_spec 
+Parameter splits'_spec (* unused *)
   : forall `{redCFG} h e sp, sp ∈ splits' h e
                         <-> sp ∈ loop_splits__imp h e
                           \/ exists br q q', (br,q,q') ∈ loop_splits__imp h e
@@ -221,7 +221,7 @@ Parameter splits_spec
 Arguments loop_splits : default implicits.
 
 
-Lemma loop_splits_loop_splits__imp `{C : redCFG}:
+Lemma loop_splits_loop_splits__imp (* unused *)`{C : redCFG}:
   forall (p br h : Lab) (Hspec : innermost_loop h br) (qq qq' : Lab) (Hsplits : (br, qq, qq') ∈ loop_splits C h p),
     (br,qq,qq') ∈ loop_splits__imp h p.
 Proof.
@@ -235,7 +235,7 @@ Proof.
   induction l;cbn;auto.
 Qed.
 
-Lemma lc_join_path_split_help1 (L : Type) (edge : L -> L -> bool) (x y : L) (l : ne_list L)
+Lemma lc_join_path_split_help1 (* unused *)(L : Type) (edge : L -> L -> bool) (x y : L) (l : ne_list L)
   : @Path L edge x y (y :<: l :>: x)
     -> exists z l', Path edge x y ((l' :>: z) :>: x)
               /\ z ∈ l /\ (tl l') ⊆ l.
@@ -257,7 +257,7 @@ Proof.
       cbn in IHl3. right. firstorder.
 Qed.
 
-Lemma disjoint2 {A : Type} `{EqDec A} (l1 l2 : list A)
+Lemma disjoint2 (* unused *){A : Type} `{EqDec A} (l1 l2 : list A)
   : Disjoint l1 l2 <-> forall x y, x ∈ l1 -> y ∈ l2 -> x <> y.
 Proof.
   split;unfold Disjoint;intros.
@@ -289,7 +289,7 @@ Definition get_innermost_loop_strict' `{C : redCFG} p
 Definition impl_list' `{redCFG} (p : Lab) (i : Tag) (l : list Coord):=
   map (fun q => (q,i)) (impl_list (get_innermost_loop_strict' p) (map fst l)).
 
-Lemma impl_list_cfg_tpath `{C : redCFG} l p i
+Lemma impl_list_cfg_tpath (* unused *)`{C : redCFG} l p i
       (Hin : forall q, q ∈ map fst l -> loop_contains (get_innermost_loop_strict' p) q)
       (Hpath : TPath' ((p,i) :< l))
       (D := local_impl_CFG C ((option_map (loop_containsT_loop_head (C:=C) (p:=p)) (get_innermost_loop_strict p))))
@@ -331,7 +331,7 @@ Proof.
   intros. destruct (f a);unfold In in *;firstorder.
 Qed.             *)
 
-Lemma lc_join_path_split_help2 `{redCFG} (p s q1 q2 : Lab) (t1 t2 : ne_list (@Coord Lab)) l1 l2 i
+Lemma lc_join_path_split_help2 (* unused *)`{redCFG} (p s q1 q2 : Lab) (t1 t2 : ne_list (@Coord Lab)) l1 l2 i
       (Hpath1 : TPath' ((p,i) :< l1 :>: (s,i)))
       (Hpath2 : TPath' ((p,i) :< l2 :>: (s,i)))
       (Hdisj : Disjoint l1 l2)
@@ -354,7 +354,7 @@ Qed.
 (* implode list *)
 
 
-Theorem lc_join_path_split `{redCFG} t1 t2 (p q1 q2 s : Lab) (i : Tag)
+Theorem lc_join_path_split (* unused *)`{redCFG} t1 t2 (p q1 q2 s : Lab) (i : Tag)
         (Hlc : last_common ((q1,i) :<: t1) ((q2,i) :<: t2) (s,i))
         (Hneq : q1 <> q2)
         (Hpath1 : TPath' ((p,i) :<: (q1,i) :<: t1))
@@ -426,7 +426,7 @@ Proof.
   unfold lc_disj_exit_lsplits_def;intros.
 Admitted.
 
-Corollary lc_disj_exit_lsplits `{redCFG} (s e q1 q2 h : Lab) (i j1 j2 k : Tag) (t1 t2 : list Coord)
+Corollary lc_disj_exit_lsplits (* unused *)`{redCFG} (s e q1 q2 h : Lab) (i j1 j2 k : Tag) (t1 t2 : list Coord)
           (Hlc : last_common ((q1,j1) :: t1) ((q2,j2) :: t2) (s,k))
           (Hexit1 : exit_edge h q1 e)
           (Hexit2 : exit_edge h q2 e)
@@ -495,7 +495,7 @@ Admitted.
 Definition sub_list {A : Type} (l l' : list A) : Prop :=
   exists l1 l2, Postfix (l1 ++ l') l /\ Prefix (l ++ l2) l.  
 
-Lemma common_tag_prefix_head `{redCFG} h p q i j k t
+Lemma common_tag_prefix_head (* unused *)`{redCFG} h p q i j k t
       (Hloop__p : loop_contains h p) (* what if h is root ? *)
       (Hloop__q : loop_contains h q)
       (Hdom : Dom edge root q p)
@@ -506,7 +506,7 @@ Lemma common_tag_prefix_head `{redCFG} h p q i j k t
 Admitted.
 
 (* TODO: we need a variant of this lemma where we refer to (h,i) h dominating q *)   
-Lemma common_tag_prefix_qq `{redCFG} p q (i j1 j2 : Tag) t1 t2
+Lemma common_tag_prefix_qq (* unused *)`{redCFG} p q (i j1 j2 : Tag) t1 t2
       (Hdeq : deq_loop q p)
       (Hdom : Dom edge root q p)
       (Hpath1 : TPath (root,start_tag) (p,i) t1)
@@ -516,7 +516,7 @@ Lemma common_tag_prefix_qq `{redCFG} p q (i j1 j2 : Tag) t1 t2
   : exists j, Prefix j j1 /\ Prefix j j2 /\ length j = depth p.
 Admitted.
 
-Lemma common_tag_prefix_pq `{redCFG} p q i j t
+Lemma common_tag_prefix_pq (* unused *)`{redCFG} p q i j t
       (Hdeq : deq_loop q p)
       (Hdom : Dom edge root q p)
       (Hpath : TPath (root,start_tag) (p,i) t)
@@ -524,7 +524,7 @@ Lemma common_tag_prefix_pq `{redCFG} p q i j t
   : Prefix i j.
 Admitted.
 
-Lemma first_sync_exit `{redCFG} p q l1 l2 i j1 j2 r0 i0
+Lemma first_sync_exit (* unused *)`{redCFG} p q l1 l2 i j1 j2 r0 i0
       (Hneq : j1 <> j2)
       (Hdom : Dom edge r0 q p)
       (Hl1 : TPath (r0,i0) (p,i) l1) (* p is possibly the exit *)

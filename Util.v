@@ -20,7 +20,7 @@ induction l.
     simpl in H. auto.
 Qed.
 
-Lemma in_fst {A B : Type} a (l : list (A * B)) :
+Lemma in_fst (* unused *){A B : Type} a (l : list (A * B)) :
   In a (map fst l)
   -> exists b, In (a,b) l.
 Proof.
@@ -48,7 +48,7 @@ Proof.
   unfold equiv_decb; destruct (a == c); firstorder.
 Qed.
 
-Lemma beq_false {A : Type} `{EqDec A} (a b : A) :
+Lemma beq_false (* unused *){A : Type} `{EqDec A} (a b : A) :
   (a ==b b) = false <-> (a =/= b).
 Proof.
   unfold equiv_decb; destruct (a == b); firstorder.
@@ -60,7 +60,7 @@ Proof.
   unfold nequiv_decb, equiv_decb. rewrite negb_true_iff. destruct (a == c); firstorder.
 Qed.
 
-Lemma bne_false {A : Type} `{EqDec A} (a b : A) :
+Lemma bne_false (* unused *){A : Type} `{EqDec A} (a b : A) :
   (a <>b b) = false <-> (a === b).
 Proof.
   unfold nequiv_decb, equiv_decb. rewrite negb_false_iff. destruct (a == b); firstorder.
@@ -146,7 +146,7 @@ Ltac conv_bool := repeat match goal with
     unfold incl. cbn. firstorder.
   Qed.
 
-  Lemma eq_incl {A : Type} (l l':list A) :
+  Lemma eq_incl (* unused *){A : Type} (l l':list A) :
     l = l' -> incl l l'.
   Proof.
     intros Heql; rewrite Heql;unfold incl; tauto.
@@ -198,13 +198,13 @@ Ltac conv_bool := repeat match goal with
     intros. exploit H. exact I.
   Qed.
   
-  Definition option_fst {A B : Type} (ab : option (A*B)) : option A :=
+  Definition option_fst (* unused *){A B : Type} (ab : option (A*B)) : option A :=
     match ab with
     | Some ab => Some (fst ab)
     | _ => None
     end.
   
-  Definition option_prod {A B : Type} (a : option A) (b : option B) : option (A*B) :=
+  Definition option_prod (* unused *){A B : Type} (a : option A) (b : option B) : option (A*B) :=
     match a,b with
     | Some a, Some b => Some (a,b)
     | _,_ => None
@@ -212,7 +212,7 @@ Ltac conv_bool := repeat match goal with
 
   Infix "⊆" := incl (at level 50).
   
-  Definition set_eq {A : Type} (a b : list A) := a ⊆ b /\ b ⊆ a.
+  Definition set_eq (* unused *){A : Type} (a b : list A) := a ⊆ b /\ b ⊆ a.
   
   Infix "='" := (set_eq) (at level 50).
 
@@ -236,7 +236,7 @@ Ltac conv_bool := repeat match goal with
     end.
 
   
-  Definition concat {A B C : Type} (f : B -> C) (g : A -> B) := fun a => f (g a).
+  Definition concat (* unused *){A B C : Type} (f : B -> C) (g : A -> B) := fun a => f (g a).
   
   Infix "∘" := Basics.compose (at level 70).
 

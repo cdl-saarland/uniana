@@ -24,7 +24,7 @@ Reserved Infix "-a>" (at level 55).
 Reserved Infix "-a>*" (at level 55).
 
 
-Lemma dec_DM_and_iff (* unused *)(X Y : Prop) : dec X -> ~ (X /\ Y) <-> ~ X \/ ~ Y.
+Lemma dec_DM_and_iff (X Y : Prop) : dec X -> ~ (X /\ Y) <-> ~ X \/ ~ Y.
   split;[now eapply dec_DM_and|firstorder].
 Qed.
 Lemma dec_DM_and_iff' (* unused *)(X Y : Prop) : dec Y -> ~ (X /\ Y) <-> ~ X \/ ~ Y.
@@ -297,7 +297,7 @@ Section red_cfg.
   Definition deq_loop q p : Prop :=
     forall h, loop_contains h p -> loop_contains h q.
 
-  Definition eq_loop q p : Prop :=
+  Definition eq_loop (* unused *)q p : Prop :=
     deq_loop q p /\ deq_loop p q.
 
   Global Instance deq_loop_dec h p : dec( deq_loop h p).
@@ -552,7 +552,7 @@ Section red_cfg.
     - destruct (f a);eauto.
   Qed.
 
-  Lemma path_contains_front (* unused *){L : Type} (x y : L) e l
+  Lemma path_contains_front {L : Type} (x y : L) e l
         (Hpath : Path e x y l)
     : y ∈ l.
   Proof.
@@ -1008,7 +1008,7 @@ Section red_cfg.
       destruct n;unfold innermost_loop in H;firstorder.
   Qed.
 
-  Lemma get_innermost_loop_strict_spec (* unused *)(p : Lab)
+  Lemma get_innermost_loop_strict_spec (p : Lab)
     : match get_innermost_loop_strict p with
       | Some (exist _ h H) => innermost_loop_strict h p
       | None => forall h', loop_contains h' p -> h' = p
@@ -1109,7 +1109,7 @@ Section red_cfg.
        | inright _ => None
        end.
 
-  Definition strict_incl (A : Type) (l l' : list A)
+  Definition strict_incl (* unused *)(A : Type) (l l' : list A)
     := l ⊆ l' /\ exists a, a ∈ l' /\ a ∉ l.
 
   Infix "⊂" := strict_incl (at level 55).
@@ -1178,7 +1178,7 @@ Section red_cfg.
         admit.
   Admitted.
   
-  Lemma ex_LPath p
+  Lemma ex_LPath (* unused *)p
     : exists h, (forall h', loop_contains h' p -> loop_contains h h') /\ exists π, LPath h p π.
   Proof.
     remember (get_outermost_loop p) as oh.
@@ -1190,7 +1190,7 @@ Section red_cfg.
       eexists. econstructor.
   Qed.
 
-  Definition ex_near_ancestor_opt p q
+  Definition ex_near_ancestor_opt (* unused *)p q
     := finType_sig_or_never (DecPred (fun a => near_ancestor a p q)).
 
   Lemma near_ancestor_same (* unused *) h p q a
@@ -1286,7 +1286,7 @@ Section red_cfg.
   Proof.
   Admitted.
   
-  Definition finType_sub_elem (h : Lab) (p : decPred Lab) (H : p h)
+  Definition finType_sub_elem (* unused *)(h : Lab) (p : decPred Lab) (H : p h)
     := (exist (fun x : Lab => pure p x) h (purify H)).
 
   Open Scope prg.
@@ -1352,7 +1352,7 @@ Proof.
     unfold restrict_edge. auto.
 Qed.
 
-Definition list_to_ne (A : Type) (l : list A) : option (ne_list A)
+Definition list_to_ne (* unused *)(A : Type) (l : list A) : option (ne_list A)
   := match l with
      | [] => None
      | a :: l => Some (a :< l)
@@ -2018,7 +2018,7 @@ Proof.
 Admitted.
 
 
-Lemma loop_CFG_top_level (* unused *)`{C : redCFG} (h p : Lab)
+Lemma loop_CFG_top_level `{C : redCFG} (h p : Lab)
       (Hloop : loop_contains h p)
       (Hinner : innermost_loop_strict h p)
       (D := loop_CFG C h (loop_contains_loop_head Hloop))
@@ -2039,7 +2039,7 @@ Arguments loop_CFG {_ _ _ _} (_).
 Definition head_exits_edge `{redCFG} h q : bool
   := if decision (exited h q) then true else false. 
 
-Lemma head_exits_edge_spec (* unused *):
+Lemma head_exits_edge_spec :
   forall `{redCFG} h q, head_exits_edge h q = true <-> exists p, exit_edge h p q.
 Proof.
   intros. unfold head_exits_edge. decide (exited h q); split;cbn;eauto.
@@ -2160,7 +2160,7 @@ Proof.
       eexists; eauto using path_app.
 Qed.
 
-Lemma head_exits_same_connected' `{redCFG}  p q π
+Lemma head_exits_same_connected' (* unused *)`{redCFG}  p q π
       (Hpath : Path (edge ∪ head_exits_edge) p q π)
   : exists ϕ, Path edge p q ϕ.
 Proof.
@@ -2179,7 +2179,7 @@ Ltac ne_r_destruct l :=
   specialize (ne_list_nlrcons l) as H;
   destruct H as [? [? ?]]; subst l.
 
-Lemma union_subgraph1 (L : Type) (f g : L -> L -> bool)
+Lemma union_subgraph1 (* unused *)(L : Type) (f g : L -> L -> bool)
   : sub_graph f (f ∪ g).
 Proof.
   unfold sub_graph, union_edge. intros. rewrite H. cbn. reflexivity.
@@ -2433,7 +2433,7 @@ Proof.
   unfold deq_loop. firstorder.
 Qed.
 
-Lemma prefix_ex_cons (A : Type) (l l' : list A) (a : A)
+Lemma prefix_ex_cons (* unused *)(A : Type) (l l' : list A) (a : A)
   : Prefix l l' -> exists a', Prefix (a' :: l) (a :: l').
 Proof.
   intros Hpre. revert a. induction Hpre; intros b.
@@ -2441,7 +2441,7 @@ Proof.
   - specialize (IHHpre a). destructH. eexists. econstructor. eauto.
 Qed.
 
-Lemma head_exits_property_a_edge `{C : redCFG}
+Lemma head_exits_property_a_edge (* unused *)`{C : redCFG}
   : head_exits_property C -> forall h p q : Lab, exit_edge h p q -> a_edge h q = true.
 Proof.
   intros.
@@ -2481,7 +2481,7 @@ Proof.
   split;eauto. eapply negb_true_iff. auto.
 Qed.
   
-Lemma exit_edge_unique_diff_head `{redCFG} h qe e
+Lemma exit_edge_unique_diff_head (* unused *)`{redCFG} h qe e
       (Hexit : exit_edge h qe e)
       h'
       (Hloop : loop_contains h' h)
@@ -2512,10 +2512,10 @@ Definition impl_list `{redCFG} (h : Lab) :=
 Definition back_edge'  (L : Type) (edge a_edge : L -> L-> bool) (p q : L)
   := (edge ∖ a_edge) p q = true.
 
-Definition loop_head' (L : Type) (edge a_edge : L -> L-> bool) (h : L)
+Definition loop_head' (* unused *)(L : Type) (edge a_edge : L -> L-> bool) (h : L)
   := exists p, (edge ∖ a_edge) p h = true.
 
-Lemma implode_nodes_back_edge `{redCFG} p q
+Lemma implode_nodes_back_edge (* unused *)`{redCFG} p q
       (Hhead : back_edge' (restrict_edge' edge implode_nodes) (restrict_edge' a_edge implode_nodes) p q)
   : p ↪ q.
 Proof.
@@ -2528,13 +2528,13 @@ Proof.
   unfold back_edge,back_edge_b. unfold_edge_op. split;auto.
 Qed.
 
-Lemma loop_contains'_basic `{redCFG} h p
+Lemma loop_contains'_basic (* unused *)`{redCFG} h p
   : loop_contains' edge a_edge h p = loop_contains h p.
 Proof.
   reflexivity.
 Qed.
 
-Lemma exit_not_deq `{redCFG} h p q
+Lemma exit_not_deq (* unused *)`{redCFG} h p q
       (Hexit : exit_edge h p q)
       (Hdeq : deq_loop q h)
   : False.
@@ -2545,7 +2545,7 @@ Proof.
   eapply loop_contains_self. eapply loop_contains_loop_head;eauto.
 Qed.
 
-Lemma deq_loop_exited' : forall (Lab : finType) (edge : Lab -> Lab -> bool) (root : Lab) (a_edge : Lab -> Lab -> bool)
+Lemma deq_loop_exited' (* unused *): forall (Lab : finType) (edge : Lab -> Lab -> bool) (root : Lab) (a_edge : Lab -> Lab -> bool)
                            (C : redCFG edge root a_edge) (h qe e : Lab), exit_edge h qe e -> deq_loop h e.
 Proof.
   intros.
@@ -2554,7 +2554,7 @@ Proof.
   eapply deq_loop_trans;eauto.
 Qed.
 
-Lemma exit_edge_in_loop `{redCFG} (h1 h2 p1 p2 e1 e2 : Lab)
+Lemma exit_edge_in_loop (* unused *)`{redCFG} (h1 h2 p1 p2 e1 e2 : Lab)
       (Hexit : exit_edge h1 p1 e1)
       (Hexit' : exit_edge h2 p2 e2)
       (Hloop : loop_contains h1 h2)
@@ -2691,7 +2691,7 @@ Proof.
     admit.
 Admitted.
 
-Lemma implode_CFG_elem (* unused *)`{C : redCFG} (p : Lab) (Himpl : implode_nodes p)
+Lemma implode_CFG_elem `{C : redCFG} (p : Lab) (Himpl : implode_nodes p)
   : finType_sub_decPred implode_nodes.
 Proof.
   econstructor. unfold pure. instantiate (1:=p).
@@ -2829,7 +2829,7 @@ Proof.
   destruct d; [destruct s|]; eauto.
 Defined.
 
-Lemma opt_loop_CFG_elem (* unused *)`{C : redCFG} (p : Lab)
+Lemma opt_loop_CFG_elem `{C : redCFG} (p : Lab)
       (d : option {h : Lab | loop_head h})
       (Hd : match d with
             | Some (exist _ h _) => loop_contains h p
@@ -2845,7 +2845,7 @@ Arguments opt_loop_CFG {_ _ _ _} _.
 Arguments head_exits_CFG {_ _ _ _} _.
 Arguments implode_CFG {_ _ _ _} _.
 
-Definition local_impl_CFG (* unused *)`(C : redCFG) (d : option {h : Lab | loop_head h})
+Definition local_impl_CFG `(C : redCFG) (d : option {h : Lab | loop_head h})
   := let D := opt_loop_CFG C d in
      implode_CFG (head_exits_CFG D) (head_exits_property_satisfied (C:=D)).
 
@@ -2856,7 +2856,7 @@ Definition local_impl_CFG_type `(C : redCFG) (d : option {h : Lab | loop_head h}
 Arguments redCFG : default implicits.
 Arguments implode_nodes : default implicits.
 
-Definition original_of_impl (* unused *)`(C : redCFG) (d : option {h : Lab | loop_head h})
+Definition original_of_impl `(C : redCFG) (d : option {h : Lab | loop_head h})
   : local_impl_CFG_type d -> Lab.
 Proof.
   intros. eapply proj1_sig in X.
@@ -2873,7 +2873,7 @@ Proof.
   - apply None.
 Defined.
 
-Definition impl_of_original (* unused *)`(C : redCFG) (d : option {h : Lab | loop_head h})
+Definition impl_of_original `(C : redCFG) (d : option {h : Lab | loop_head h})
   : Lab -> option (local_impl_CFG_type d).
 Proof.
   intro p.

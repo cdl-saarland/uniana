@@ -193,7 +193,7 @@ Ltac rem_cons_rcons a l H :=
   let l' := fresh l in
   specialize (cons_rcons a l) as [a' [l' H]].
 
-Lemma rev_nil {A : Type} (l : list A) : rev l = nil <-> l = nil.
+Lemma rev_nil (* unused *){A : Type} (l : list A) : rev l = nil <-> l = nil.
 Proof.
   split; induction l; cbn in *; eauto; intros.
   - exfalso. induction (rev l); cbn in *; congruence.
@@ -209,7 +209,7 @@ Proof.
   - right. apply cons_rcons.
 Qed.
 
-Lemma rcons_not_nil {A : Type} (l : list A) a : l :r: a <> nil.
+Lemma rcons_not_nil (* unused *){A : Type} (l : list A) a : l :r: a <> nil.
 Proof.
   intro N. induction l; cbn in *; congruence.
 Qed.
@@ -283,7 +283,7 @@ Proof.
   exists l1'. inversion leq. reflexivity.
 Qed.
 
-Lemma postfix_app {A : Type} (l1 l2 l' : list A) :
+Lemma postfix_app (* unused *){A : Type} (l1 l2 l' : list A) :
   Postfix (l' ++ l1) (l' ++ l2) -> Postfix l1 l2.
   revert l1 l2. induction l'; intros; cbn; eauto.
   apply IHl'. cbn in H. inversion H. 
@@ -302,7 +302,7 @@ Qed.
       + left. econstructor; eauto.
       + admit. *)
 
-Lemma postfix_nincl_postfix {A : Type} `{EqDec A eq} a l : Postfix (postfix_nincl a l) l.
+Lemma postfix_nincl_postfix (* unused *){A : Type} `{EqDec A eq} a l : Postfix (postfix_nincl a l) l.
 Proof.
   induction l; cbn; [econstructor; reflexivity|].
   destruct (a == a0); cbn; eauto using postfix_nil, postfix_cons.
@@ -314,7 +314,7 @@ Proof.
   intro H. inversion H; eauto. destruct l'; cbn in H0; congruence.
 Qed.
 
-Lemma prefix_nil_nil {A : Type} (l : list A) :
+Lemma prefix_nil_nil (* unused *){A : Type} (l : list A) :
   Prefix l nil -> l = nil.
 Proof.
   intro H. inversion H; eauto. 
@@ -521,7 +521,7 @@ Ltac congruence' :=
   | [ H : nil = ne_to_list ?l |- _ ] => destruct l; cbn in H; congruence
   end.
 
-Lemma rcons_eq {A : Type} (a a' : A) l l' :
+Lemma rcons_eq (* unused *){A : Type} (a a' : A) l l' :
   a = a' /\ l = l' <-> l :r: a = l' :r: a'.
 Proof.
   split.
@@ -861,7 +861,7 @@ Proof.
   induction l; cbn; eauto.
 Qed.
 
-Lemma ne_rcons_back {A : Type} (a : A) l :
+Lemma ne_rcons_back (* unused *){A : Type} (a : A) l :
   ne_back (l :>: a) = a.
 Proof.
   induction l; cbn; eauto.
@@ -873,7 +873,7 @@ Proof.
   intros. induction l;cbn;eauto. unfold rcons in IHl. rewrite IHl. reflexivity.
 Qed.
 
-Lemma postfix_map {A B : Type} (f : A -> B) :
+Lemma postfix_map (* unused *){A B : Type} (f : A -> B) :
   forall l l', Postfix l l' -> Postfix (map f l) (map f l').
 Proof.
   intros ? ? Hpost.
@@ -904,7 +904,7 @@ Proof.
     Unset Printing Coercions.
 Qed.
 
-Lemma incl_cons_hd (A : Type) (a : A) l l'
+Lemma incl_cons_hd (* unused *)(A : Type) (a : A) l l'
       (Hincl : (a :: l) ⊆ l')
   : a ∈ l'.
 Proof.
@@ -921,13 +921,13 @@ Proof.
     + right. eauto.
 Qed.
 
-Lemma ne_map_nl_rcons {A B : Type} (l : list A) a (f : A -> B)
+Lemma ne_map_nl_rcons (* unused *){A B : Type} (l : list A) a (f : A -> B)
   : ne_map f (l >: a) = (map f l) >: (f a).
 Proof.
   induction l;cbn;eauto. rewrite IHl. reflexivity.
 Qed.
 
-Lemma disjoint_subset {A : Type} (l1 l1' l2 l2' : list A)
+Lemma disjoint_subset (* unused *){A : Type} (l1 l1' l2 l2' : list A)
   : l1 ⊆ l1' -> l2 ⊆ l2' -> Disjoint l1' l2' -> Disjoint l1 l2.
 Proof.
   intros Hsub1 Hsub2 Hdisj.
@@ -946,7 +946,7 @@ Proof.
   intro N. induction l; cbn in *; congruence.
 Qed.
 
-Lemma nercons_nlrcons {A : Type} l (a : A)
+Lemma nercons_nlrcons (* unused *){A : Type} l (a : A)
   : l :>: a = l >: a.
 Proof.
   induction l;cbn;eauto. rewrite <-IHl. destruct l;eauto.
@@ -1029,27 +1029,27 @@ Definition prefix_incl : forall (A : Type) (l l' : list A), Prefix l l' -> l ⊆
                   (fun (a : A) (l0 l'0 : list A) (_ : Prefix l0 l'0) (IHpost : l0 ⊆ l'0) =>
                      incl_appr (a :: nil) IHpost) l l' post.      
 
-Lemma prefix_NoDup {A : Type} (l l' : list A) : Prefix l l' -> NoDup l' -> NoDup l.
+Lemma prefix_NoDup (* unused *){A : Type} (l l' : list A) : Prefix l l' -> NoDup l' -> NoDup l.
 Proof.
   intros Hpre Hnd. induction Hpre; eauto.
   inversion Hnd; subst; eauto.
 Qed.
 
-Lemma last_common_singleton1 {A : Type} `{EqDec A eq} (s a : A) l
+Lemma last_common_singleton1 (* unused *){A : Type} `{EqDec A eq} (s a : A) l
       (Hlc : last_common (a :: nil) l s)
   : a = s.
 Proof.
   unfold last_common in Hlc. destructH. eapply postfix_rcons_nil_eq in Hlc0. firstorder.
 Qed.
 
-Lemma last_common_singleton2 {A : Type} `{EqDec A eq} (s a : A) l
+Lemma last_common_singleton2 (* unused *){A : Type} `{EqDec A eq} (s a : A) l
       (Hlc : last_common l (a :: nil) s)
   : a = s.
 Proof.
   unfold last_common in Hlc. destructH. eapply postfix_rcons_nil_eq in Hlc2. firstorder.
 Qed.
 
-Lemma ne_list_nlcons (A : Type) (l : ne_list A)
+Lemma ne_list_nlcons (* unused *)(A : Type) (l : ne_list A)
   : exists a l', l = a :< l'.
 Proof.
   destruct l as [a | a l'];exists a;[exists nil|exists l'];cbn;simpl_nl;reflexivity.
@@ -1104,7 +1104,7 @@ Proof.
   - rewrite rev_cons. econstructor;eauto.
 Qed.
 
-Lemma prefix_rev_postfix' (A : Type) (l l' : list A)
+Lemma prefix_rev_postfix' (* unused *)(A : Type) (l l' : list A)
       (Hpre : Prefix (rev l) (rev l'))
   : Postfix l l'.
 Proof.
