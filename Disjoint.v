@@ -84,18 +84,20 @@ Qed.
 Local Arguments deq_loop {_ _ _ _} _.
 Local Arguments depth {_ _ _ _} _.
 Local Arguments exited {_ _ _ _} _.
-Lemma head_exits_head_inv (* unused *)`(C : redCFG) (h : Lab)
+(*Lemma head_exits_head_inv (* unused *)`(C : redCFG) (h : Lab)
   : loop_head C h <->loop_head (head_exits_CFG C) h.
 Admitted.
 Lemma head_exits_exited_inv `(C : redCFG) (h p : Lab)
   : exited C h p <-> exited (head_exits_CFG C) h p.
+Admitted.*)
+Lemma head_exits_deq_loop_inv1 `(C : redCFG) (h p q : Lab)
+  : deq_loop C p q -> deq_loop (head_exits_CFG C h) p q.
 Admitted.
-Lemma head_exits_deq_loop_inv1 `(C : redCFG) (p q : Lab)
-  : deq_loop C p q -> deq_loop (head_exits_CFG C) p q.
-Admitted.
+(*
 Lemma head_exits_depth_inv (* unused *)`(C : redCFG) (p : Lab)
   : depth C p = depth (head_exits_CFG C) p.
 Admitted.
+*)
 (*
 Lemma no_strictly_containing_loop_impl_top_level:
   forall (Lab : finType) (edge : Lab -> Lab -> bool) (root : Lab) (a_edge : Lab -> Lab -> bool)
