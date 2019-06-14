@@ -2835,40 +2835,38 @@ Definition local_impl_CFG_type `(C : redCFG) (h : Lab)
 Arguments redCFG : default implicits.
 Arguments implode_nodes : default implicits.
 
-
-(*
-Definition loop_CFG_of_original `(C : redCFG) (h : Lab) (H : loop_head h) (p : Lab)
-  : option (loop_CFG_type H).
-Proof.
-  decide (loop_nodes h p).
-  - apply Some. econstructor. eapply purify;eauto.
-  - apply None.
-Defined.
-
-Definition impl_of_original `(C : redCFG) (d : option {h : Lab | loop_head h})
-  : Lab -> option (local_impl_CFG_type d).
+Definition impl_of_original `(C : redCFG) (h : Lab)
+  : Lab -> option (local_impl_CFG_type C h).
 Proof.
   intro p.
-  destruct d; unfold local_impl_CFG_type, opt_loop_CFG.
-  - destruct s as [h H]. destruct (loop_CFG_of_original H p).
-    + decide (implode_nodes (head_exits_CFG (loop_CFG C h H)) e).
-      * apply Some. econstructor. eapply purify;eauto.
-      * exact None.
-    + exact None.
-  - decide (implode_nodes (head_exits_CFG C) p).
-    + apply Some.
-      econstructor. eapply purify;eauto.
-    + exact None.
+  decide (implode_nodes (head_exits_CFG C h) h p).
+  - apply Some. econstructor. eapply purify;eauto.
+  - exact None.
 Defined.
-*)
-(*Program Lemma local_impl_CFG_elem `(C : redCFG) (d : option {h : Lab | loop_head h})
-         : match d with
-  | Some (exist _ h _) => _
-  | None => _
-    end.
+
+Lemma head_exits_deq_loop_inv1 `(C : redCFG) (h p q : Lab)
+  : deq_loop (C:=C) p q -> deq_loop (C:=head_exits_CFG C h) p q.
+Admitted.
+
+Lemma head_exits_exited_inv1 `(C : redCFG) (qh h p : Lab)
+  : exited (C:=C) h p -> exited (C:=head_exits_CFG C qh) h p.
+Admitted.
+
+Lemma head_exits_implode_nodes_inv1 `(C : redCFG) (h p : Lab)
+  : implode_nodes C h p -> implode_nodes (head_exits_CFG C h) h p.
 Proof.
-  destruct d. destruct s.
-Admitted.*)
+  intro Himpl.
+  cbn in Himpl. destruct Himpl.
+  - left. eapply head_exits_deq_loop_inv1. eauto.
+  - right. destructH. exists e. split; eauto using head_exits_exited_inv1, head_exits_deq_loop_inv1.
+Qed.      
+
+Definition impl_of_original' `(C : redCFG) (h p : Lab) (H : implode_nodes C h p)
+  : local_impl_CFG_type C h.
+Proof.
+  econstructor. eapply purify;eauto.
+  eapply head_exits_implode_nodes_inv1;eauto.
+Defined.
 
 Arguments local_impl_CFG {_ _ _ _} _.
 (** more parameters **)

@@ -1,3 +1,4 @@
+Global Set Nested Proofs Allowed.
 
 Require Import List.
 Require Import Coq.Bool.Bool.
