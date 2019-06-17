@@ -473,6 +473,15 @@ Proof.
   exists (`q), (`q'). eapply path_splits_in_imp. auto.
 Qed.
 
+Lemma pred_ndeq_exit `{redCFG} (p q : Lab)
+      (Hedge : edge q p = true)
+      (Hndeq : ~ deq_loop p q)
+  : exists h, exit_edge h q p.
+Proof.
+  do 2 simpl_dec' Hndeq. destructH.
+  exists x. unfold exit_edge. split_conj;eauto.
+Qed.
+
 Theorem lc_join_split `{redCFG} t1 t2 (p q1 q2 s : Lab) (i j1 j2 k : Tag)
         (* it is important to cons qj's in front of the t's *)
         (Hlc : last_common ((q1,j1) :: t1) ((q2,j2) :: t2) (s,k))
@@ -483,13 +492,19 @@ Theorem lc_join_split `{redCFG} t1 t2 (p q1 q2 s : Lab) (i j1 j2 k : Tag)
 Proof.
   decide (deq_loop s p) as [Hdeq|Hndeq].
   decide (deq_loop p s) as [Hdeq'|Hndeq'].
-  - enough (exists qq qq', (s, qq, qq') ∈ path_splits__imp p).
-    { destructH. eexists; eexists. eapply splits_spec. left. eauto. }
-    (* cut last_common such that (s,k) is the back of the list 
-     * eapply lc_implode_out
-     * then use tpath lemma on TPath (s,k) (p,i) t gives us TPath (C:=implCFG) (s,k) (p,i) (impl_list' h t)
-     *)
-    
+  - decide (exists h, exit_edge h q1 p /\ exit_edge h q2 p) as [e|Hnexit].
+    {
+      destructH.
+      enough (exists qq qq', exited h p /\ (s,qq,qq') ∈ splits' h p).
+      { destructH. eexists; eexists. eapply splits_spec. right. left. eauto. }
+      eapply lc_disj_exits_lsplits in Hlc;eauto.
+      destructH. do 2 eexists.
+      eapply in_app_or in Hlc.
+      unfold exited.
+      destruct Hlc;eauto.
+    }    
+    enough (exists qq qq', (s, qq, qq') ∈ path_splits__imp p).
+    { destructH. eexists; eexists. eapply splits_spec. left. eauto. }    
     eapply lc_implode_out in Hlc;eauto.
     destructH.
     unfold last_common in Hlc1. destructH.
@@ -520,7 +535,43 @@ Proof.
       * simpl_nl. eapply postfix_cons. eapply Hlc2.
       * simpl_nl' Hpath1'. clear - Hpath1'. admit. (* some path reasoning (easy) *)
     + admit. (* as above *)
-    + admit. (* Show that p is not in l1' & l2' (possibly difficult) *)
+    + do 2 simpl_dec' Hnexit.
+      assert (p' ∉ map fst l1') as Hnin1 by admit.
+      assert (p' ∉ map fst l2') as Hnin2 by admit.
+      (* because then there would be the header of p (it may be p itself) in l'
+       * thus on visiting this header the tag changes -> contradiction to Hsame *)
+      enough (l1' <> nil \/ l2' <> nil).
+      {
+        destruct H0.
+        - destruct l1';[congruence|]. cbn. cbn in Hlc3.
+          destruct l2';cbn.
+          + contradict Hnin1. rewrite <-Hnin1. unfold map at 2. fold (map fst l1').
+            rewrite nlcons_to_list. eapply in_ne_back.
+          + cbn in Hlc3. intro N.
+            eapply Hlc3. 1,2:rewrite nlcons_to_list. eapply in_ne_back. rewrite <-N. eapply in_ne_back.
+        - admit. (* analogous *)
+      }
+      cbn in Hlc2,Hlc1.
+      decide (deq_loop p q1) as [Hdeq1|Hndeq1]; decide (deq_loop p q2) as [Hdeq2|Hndeq2].
+      -- destruct l1'.
+         ++ right. intro N. subst. cbn in Hlc2, Hlc1.
+            eapply2 postfix_hd_eq Hlc2 Hlc1.
+            rewrite Hlc2 in Hlc1.
+            clear - Hneq Hlc1. inversion Hlc1. (* this may cause problems (shelved goals), no it's somewhere else *)
+            destruct Hneq; contradiction.
+         ++ left. congruence.
+      -- exfalso.
+         eapply pred_ndeq_exit in Hndeq2 as Hexit.
+         ++ destructH. eapply exit_pred_loop in Hexit as Hloop.
+            ** eapply Hdeq1 in Hloop.
+               unfold exit_edge in Hexit. destructH. contradiction.
+            ** eapply TPath_CPath in Hpath1. cbn in Hpath1. simpl_nl' Hpath1.
+               inversion Hpath1. replace b with q1 in *. eauto. destruct t1;cbn in H1; inversion H1;eauto.
+         ++ eapply TPath_CPath in Hpath2. cbn in Hpath2. simpl_nl' Hpath2.
+            inversion Hpath2. replace b with q2 in *. eauto. destruct t2;cbn in H1; inversion H1;eauto.
+      -- admit. (* analogous *)
+      -- admit.
+    (* Show that p is not in l1' & l2' (possibly difficult) *)
     + simpl_nl. cbn. auto. 
   (* this gives disjoint cpaths *)
     
