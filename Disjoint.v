@@ -160,14 +160,12 @@ Parameter splits'_spec (* unused *)
   : forall `{redCFG} h e sp, sp ∈ splits' h e
                         <-> sp ∈ loop_splits__imp h e
                           \/ exists br q q', (br,q,q') ∈ loop_splits__imp h e
-                                       /\ exited br q /\ exited br q'
                                        /\ (sp ∈ splits' br q
                                           \/ sp ∈ splits' br q').
 
 Parameter rel_splits_spec 
   : forall `{redCFG} p q sp, sp ∈ rel_splits p q
-                        <-> exists h e, exited h e
-                                 /\ e -a>* p (* acyclic, bc. otw. path could use back_edge of outer loop *)
+                        <-> exists h e, e -a>* p (* acyclic, bc. otw. path could use back_edge of outer loop *)
                                  /\ loop_contains h q
                                  /\ sp ∈ loop_splits h e.
 (* sp ∈ splits' h e. <--- deprecated *)
@@ -176,9 +174,8 @@ Parameter splits_spec
   : forall `{redCFG} p sp, sp ∈ splits p
                       <-> sp ∈ path_splits__imp p (* usual split *)
                         \/ (exists h, (* lsplits of exited loops: *)
-                              exited h p /\ sp ∈ splits' h p)
+                              sp ∈ splits' h p)
                         \/ exists br q q',(br,q,q') ∈ path_splits__imp p
-                                    /\ exited br q /\ exited br q'
                                     (* loop_split of splitting heads *)
                                     /\ (sp ∈ splits' br q
                                        \/ sp ∈ splits' br q').
@@ -322,13 +319,13 @@ Qed.
 (* implode list *)
 
 
-Theorem lc_join_path_split (* unused *)`{redCFG} t1 t2 (p q1 q2 s : Lab) (i j1 j2 : Tag)                          
+(*Theorem lc_join_path_split (* unused *)`{redCFG} t1 t2 (p q1 q2 s : Lab) (i j1 j2 : Tag)                          
         (Hlc : last_common ((q1,j1) :: t1) ((q2,j2) :: t2) (s,i))
         (Hneq : q1 <> q2 \/ j1 <> j2)
         (Hpath1 : TPath' ((p,i) :<: (q1,j1) :< t1))
         (Hpath2 : TPath' ((p,i) :<: (q2,j2) :< t2))
   : exists qq qq', (s,qq,qq') ∈ path_splits__imp p.
-Proof. (*
+Proof.*) (*
   setoid_rewrite <-path_splits_spec. unfold pl_split.
   unfold TPath' in *;cbn in *. unfold last_common in Hlc; destructH.
   eapply id in Hpath1 as Hpath1'; eapply id in Hpath2 as Hpath2'.
@@ -353,7 +350,7 @@ Proof. (*
     cbn in *. eapply postfix_hd_eq in Hlc0; eapply postfix_hd_eq in Hlc2.
     inversion Hlc0; inversion Hlc2; subst; contradiction.
   - cbn in *. eapply postfix_hd_eq in Hlc0; eapply postfix_hd_eq in Hlc2. *)
-Admitted. (*
+(*
   let help := lc_join_path_split_help1 in eapply help in Hpath1;eauto; eapply help in Hpath2;eauto.
   destructH. destructH.
   exists z0, z, l'0, l'.
@@ -369,14 +366,14 @@ Lemma exit_edge_dep_eq `{redCFG} h qe1 qe2 e1 e2
   : depth e1 = depth e2. 
 Admitted.
 
-Corollary lc_disj_exits_lsplits `{redCFG}
+Theorem lc_disj_exits_lsplits `{redCFG}
           (s e1 e2 q1 q2 h : Lab) (i j1 j2 k : Tag) (t1 t2 : list Coord)
           (Hlc : last_common ((q1,j1) :: t1) ((q2,j2) :: t2) (s,k))
           (Hexit1 : exit_edge h q1 e1)
           (Hexit2 : exit_edge h q2 e2)
           (Hpath1 : TPath' ((e1,i) :<: (q1,j1) :< t1))
           (Hpath2 : TPath' ((e2,i) :<: (q2,j2) :< t2))
-  : exists (qq qq' : Lab), (s,qq,qq') ∈ (splits' h e1 ++ splits' h e2).
+  : exists (qq qq' : Lab), (s,qq,qq') ∈ splits' h e1 \/ (s,qq,qq') ∈ splits' h e2.
 Proof.
 Admitted.
 
@@ -389,22 +386,13 @@ Corollary lc_disj_exit_lsplits `{redCFG} (s e q1 q2 h : Lab) (i j1 j2 k : Tag) (
   : exists (qq qq' : Lab), (s,qq,qq') ∈ splits' h e.
 Proof.
   eapply lc_disj_exits_lsplits in Hlc;eauto.
-  destructH. eexists;eexists. eapply in_app_or in Hlc. destruct Hlc;eauto.
+  destructH. eexists;eexists. destruct Hlc;eauto.
 Qed.
 
 Lemma impl_list'_tpath `{C:redCFG} p i h t
       (Hpath : TPath' ((p,i) :< t))
       (Hp : deq_loop h p)
   : TPath' (C:=local_impl_CFG C h) ((impl_of_original' (or_introl Hp),i) :< impl_list' h t).
-Admitted.
-
-Lemma lc_implode_in `{redCFG} p s i k t1 t2
-      (Hpath1 : TPath' ((p,i) :< t1))
-      (Hpath2 : TPath' ((p,i) :< t2))
-      (Hlc : last_common t1 t2 (s,k))
-      (Hdep : depth p < depth s) (*TODO*)
-  : exists h', loop_contains (`h') s
-          /\ last_common (impl_list' p t1) (impl_list' p t2) (h', i).
 Admitted.
 
 Lemma lc_implode_out `{redCFG} p s i k t1 t2
@@ -433,9 +421,18 @@ Lemma lc_same_tags `{C:redCFG} s k l1 l2 t1 t2
       p i
       (Hpath1 : TPath' ((p, i) :< t1))
       (Hpath2 : TPath' ((p, i) :< t2))
-      (Heq  : eq_loop p s)
       (Hdeq : forall q, deq_loop p q)
   : forall q j, (q,j) ∈ l1 -> j = k.
+  (* if there are no headers in t1 & t2 then there can be no exits, because p is deeper than every other node,
+   * and even if p is a header itself and the loop p was exited, we would need another header in t1/t2 to reach
+   * p again.
+   * assume there is a head h in l1, w.l.o.g. pick the latest
+   * * if h is not exited in l1, then it has to occur in l2 too with the same tag, because i = i.
+   * * if h is exited, then it has to be revisited, because p is in h (since it is a global sink),
+   *   revisiting requires another outer header that is not left, i.e. we have the first case again.
+   * contradiction
+   *)
+
 Admitted.
 
 Lemma disj_fst {A B : Type} `{EqDec A eq} `{Q:EqDec B eq} (l1 l2 : list (A * B)) k
@@ -482,126 +479,324 @@ Proof.
   exists x. unfold exit_edge. split_conj;eauto.
 Qed.
 
+Instance subtype_EqDec (A : eqType) (P : decPred A)
+  : EqDec (@subtype _ P (@decide_pred A P)) eq.
+Proof.
+  intros x y.
+  destruct x,y. decide (x = x0). 
+  - subst x0. left. eapply subtype_extensionality. cbn. reflexivity.
+  - right. intro N. inversion N. contradiction.
+Qed.
+
+Lemma postfix_impl_list' `{redCFG} p q s i j k t l
+      (Hpath : TPath' ((p,i) :< ((q,j) :: t)))
+      (Hpost : Postfix (l :r: (s,k)) (impl_list' p ((q,j) :: t)))
+      (Hndeq : ~ deq_loop p q)
+  : exists h t', Postfix (l :r: (s,k)) ((h,tl j) :: impl_list' p t') /\ exit_edge (`h) q p.
+Proof.
+  do 2 simpl_dec' Hndeq. destructH.
+  enough (exit_edge x q p).
+  {
+    assert (implode_nodes (head_exits_CFG H p) p x).
+    - right. exists p. split;[|eapply deq_loop_refl].
+      eapply head_exits_exited_inv1. eexists;eauto.
+    - cstr_subtype H1. set (h':=(↓ purify H1)) in *.
+      exists h'. destruct h' as [h Hh].
+      cbn in Hndeq0,Hndeq1.
+      Lemma head_precedes_tpath `{C : redCFG} p h i t
+            (Hpath : TPath (root,start_tag) (p,i) t)
+            (Hloop : loop_contains h p)
+        : exists k, Precedes fst t (h,k).
+      Admitted.
+      eapply head_precedes_tpath in Hndeq0;[admit|inversion Hpath;subst;simpl_nl' H3;eauto].
+      Admitted. 
+
+Lemma impl_deq_loop `{C : redCFG} (p q r : Lab) (p' q' : local_impl_CFG_type C r)
+      (Heqp : p = `p')
+      (Heqq : q = `q')
+      (Hdeq : deq_loop (C:=C) p q)
+  : deq_loop (C:=local_impl_CFG C r) p' q'.
+Proof.
+  destruct p' as [p' Hp]; destruct q' as [q' Hq]. push_purify Hp;push_purify Hq. rename H into Hp;rename H0 into Hq.
+  cbn in Heqp,Heqq, Hp, Hq. subst p' q'. intro. intro.
+Admitted.
+
+Lemma impl_deepest_node `{C : redCFG} p
+      (p' q : local_impl_CFG_type C p)
+      (Hdeqp : p = `p')
+  : deq_loop (C:=local_impl_CFG C p) p' q.
+Proof.
+  destruct q as [q Q]. eapply pure_equiv in Q as Hq.
+  destruct Hq.
+  - eapply impl_deq_loop; eauto. cbn.
+    eapply head_exits_deq_loop_inv2. eauto.
+  - admit.
+Admitted.
+
+Lemma p_not_in `{C : redCFG} (p s : Lab) (i j k : Tag) (t l : list Coord)
+      (Hpath1' : TPath' ((p, i) :< t))
+      (Hpost : Postfix (l :r: (s, k)) t)
+      (Hsame : forall q j, (q, j) ∈ l -> j = k)
+      (Hdeq : eq_loop p s \/ loop_head p)
+  : p ∉ map fst l.
+Admitted.
+
+
+Lemma lc_join_path_split' `{H : redCFG}
+      (t1 t2 : list (Lab * Tag))
+      (p q1 q2 : Lab)
+      (i j1 j2 k : Tag)
+      (Hneq : q1 <> q2)
+      (Hpath1 : TPath (root, start_tag) (p, i) ((p, i) :<: (q1, j1) :< t1))
+      (Hpath2 : TPath (root, start_tag) (p, i) ((p, i) :<: (q2, j2) :< t2))
+      (Hnexit : ~ (exists h : Lab, exit_edge h q1 p /\ exit_edge h q2 p))
+      (s' : local_impl_CFG_type H p)
+      (l1' l2' : list (local_impl_CFG_type H p * Tag))
+      (Hlc0 : Postfix (l1' :r: (s', k)) (impl_list' p ((q1, j1) :: t1)))
+      (Hlc1 : Postfix (l2' :r: (s', k)) (impl_list' p ((q2, j2) :: t2)))
+      (Hlc2 : Disjoint l1' l2')
+      (Hlc3 : (s', k) ∉ l1')
+      (Hlc5 : (s', k) ∉ l2')
+      (p' := (impl_of_original' (or_introl (deq_loop_refl (l:=p)))))
+  : (` s', ` (ne_back (p' :< map fst l1')), ` (ne_back (p' :< map fst l2'))) ∈ path_splits__imp p.
+Proof.
+  specialize (@lc_same_tags _ _ _ _ (local_impl_CFG H p) s' k l1' l2') as Hsame.
+  fold (local_impl_CFG_type H p) in *.
+  specialize (Hsame _ _ Hlc0 Hlc1 Hlc2).
+  replace ((p,i) :<: (q1, j1) :< t1) with ((p,i) :< ((q1,j1) :: t1)) in Hpath1 by (cbn;auto).
+  eapply tpath_tpath' in Hpath1 as Hpath1'.
+  eapply impl_list'_tpath in Hpath1'.
+  replace ((p,i) :<: (q2, j2) :< t2) with ((p,i) :< ((q2,j2) :: t2)) in Hpath2 by (cbn;auto).
+  eapply tpath_tpath' in Hpath2 as Hpath2'.
+  eapply impl_list'_tpath in Hpath2'.
+  specialize (Hsame _ i Hpath1' Hpath2').
+  Unshelve. 2: { eapply deq_loop_refl. }
+  exploit' Hsame.
+  {
+    intros.
+    eapply impl_deepest_node. cbn;eauto.
+  }
+  assert (forall q j, (q,j) ∈ l2' -> j = k) as Hsame' by admit. (* analogous *)
+
+  eapply disj_fst in Hlc2;eauto.
+  destruct s' as [s Hs].
+  rewrite path_splits_in_imp.
+  eapply path_splits_spec.
+  unfold pl_split.
+  exists (p' :< (map fst l1')), (p' :< (map fst l2')).
+  set (s' := (↓ Hs)) in *.
+  split_conj;eauto.
+  + eapply path_postfix_path in Hpath1';cycle 1.
+    * simpl_nl. eapply postfix_cons. eapply Hlc0.
+    * simpl_nl' Hpath1'. clear - Hpath1' s'. simpl_nl' Hpath1'.
+      replace (ne_back _) with (s',k) in Hpath1'.
+      -- rewrite <-nl_cons_lr_shift. rewrite rcons_nl_rcons in Hpath1'. simpl_nl' Hpath1'.
+         eapply TPath_CPath in Hpath1'. cbn in Hpath1'. rewrite ne_map_nl_rcons in Hpath1'.
+         cbn in Hpath1'. exact Hpath1'.
+      -- rewrite rcons_nl_rcons. simpl_nl. rewrite nl_cons_lr_shift. simpl_nl. reflexivity.
+  + admit. (* analogous *)
+  + do 2 simpl_dec' Hnexit.
+    assert (p' ∉ map fst l1') as Hnin1 by admit.
+(*    {
+      eapply (p_not_in (C:=local_impl_CFG H p));cycle 2;eauto;left.
+      split;cbn in Hdeq;eauto using impl_deq_loop,impl_deepest_node.
+    }*)
+    assert (p' ∉ map fst l2') as Hnin2 by admit.
+(*    {
+      eapply (p_not_in (C:=local_impl_CFG H p));cycle 2;eauto;left.
+      split;cbn in Hdeq;eauto using impl_deq_loop,impl_deepest_node.
+    } *)
+    (* because then there would be the header of p (it may be p itself) in l'
+     * thus on visiting this header the tag changes -> contradiction to Hsame *)
+    enough (l1' <> nil \/ l2' <> nil).
+    {
+      destruct H0.
+      - destruct l1';[congruence|]. cbn. cbn in Hlc3.
+        destruct l2';cbn.
+        + contradict Hnin1. rewrite <-Hnin1. unfold map at 2. fold (map fst l1').
+          rewrite nlcons_to_list. eapply in_ne_back.
+        + cbn in Hlc2. intro N.
+          eapply Hlc2. 1,2:rewrite nlcons_to_list. eapply in_ne_back. rewrite <-N. eapply in_ne_back.
+      - admit. (* analogous *)
+        Unshelve. all: eauto;clear.
+        1,2: intros x y; destruct x,y; decide (x = x0);
+          [subst x0; left; eapply subtype_extensionality; cbn; reflexivity
+          |right; intro N; inversion N; contradiction].
+    }
+    copy Hlc0 Hlc0'. copy Hlc1 Hlc1'.
+    cbn in Hlc0,Hlc1.
+    assert (edge q1 p = true) as Hedge1.
+    {
+      eapply TPath_CPath in Hpath1. cbn in Hpath1. simpl_nl' Hpath1.
+      inversion Hpath1. replace b with q1 in *. eauto. destruct t1;cbn in H1; inversion H1;eauto.
+    }
+    assert (edge q2 p = true) as Hedge2.
+    {
+      eapply TPath_CPath in Hpath2. cbn in Hpath2. simpl_nl' Hpath2.
+      inversion Hpath2. replace b with q2 in *. eauto. destruct t2;cbn in H1; inversion H1;eauto.
+    }
+    decide (deq_loop p q1) as [Hdeq1|Hndeq1]; decide (deq_loop p q2) as [Hdeq2|Hndeq2].
+    -- destruct l1'.
+       ++ right. intro N. subst. cbn in Hlc0, Hlc1.
+          eapply2 postfix_hd_eq Hlc0 Hlc1.
+          rewrite Hlc0 in Hlc1.
+          clear - Hneq Hlc1. inversion Hlc1. 
+          contradiction.
+       ++ left. congruence.
+    -- exfalso.
+       eapply pred_ndeq_exit in Hndeq2 as Hexit;auto.
+       destructH. eapply exit_pred_loop in Hexit as Hloop;[|eapply Hedge1].
+       eapply Hdeq1 in Hloop.
+       unfold exit_edge in Hexit. destructH. contradiction.
+    -- admit. (* analogous *)
+    -- (*assert (q1 <> q2) as Hneqq.
+         {
+           clear - Hndeq1 Hnexit Hedge1.
+           intro N.
+           subst q2. eapply pred_ndeq_exit in Hndeq1;eauto.
+           destructH. destruct (Hnexit h);contradiction.
+         }*)
+      clear Hlc1 Hlc0.
+      eapply postfix_impl_list' in Hlc0';eauto. 
+      eapply postfix_impl_list' in Hlc1';eauto. 2,3: spot_path.
+      do 2 destructH.
+      destruct l1'.
+      ++ right. intro N. subst. cbn in Hlc0'0, Hlc1'0.
+         eapply2 postfix_hd_eq Hlc0'0 Hlc1'0.
+         rewrite Hlc0'0 in Hlc1'0.
+         clear - Hneq Hlc1'0 Hlc1'1 Hlc0'1 Hnexit. inversion Hlc1'0.
+         subst h0. destruct h as [h Hh]. cbn in Hlc1'1,Hlc0'1. destruct (Hnexit h);contradiction.
+      ++ left. congruence.
+  + simpl_nl. cbn. auto. 
+Admitted.
+
+Lemma lc_join_path_split `{H : redCFG}
+      (t1 t2 : list (Lab * Tag))
+      (p q1 q2 : Lab)
+      (i j1 j2 k : Tag)
+      (Hneq : q1 <> q2)
+      (Hpath1 : TPath (root, start_tag) (p, i) ((p, i) :<: (q1, j1) :< t1))
+      (Hpath2 : TPath (root, start_tag) (p, i) ((p, i) :<: (q2, j2) :< t2))
+      (Hnexit : ~ (exists h : Lab, exit_edge h q1 p /\ exit_edge h q2 p))
+      (s' : local_impl_CFG_type H p)
+      (Hlc1 : last_common (impl_list' p ((q1, j1) :: t1)) (impl_list' p ((q2, j2) :: t2)) (s', k))
+  :
+    exists qq qq' : Lab, (` s', qq, qq') ∈ path_splits__imp p.
+Proof.
+  unfold last_common in Hlc1. destructH.
+  eapply lc_join_path_split' in Hlc2;eauto.
+Qed.
+
+
+Lemma lc_sub {A : Type} `{EqDec A eq} (l1 l2 l1' l2' ll1 ll2 : list A) s
+      (Hpost1 : Postfix (l1' :r: s) l1)
+      (Hpost2 : Postfix (l2' :r: s) l2)
+      (Hdisj : Disjoint l1' l2')
+      (Hnin1 : s ∉ l1')
+      (Hnin2 : s ∉ l2')
+      (Hpre1 : Prefix ll1 l1')
+      (Hpre2 : Prefix ll2 l2')
+  : last_common (ll1 :r: s) (ll2 :r: s) s.
+Proof.
+  exists ll1, ll2. split_conj.
+  1,2: econstructor.
+  all: eapply prefix_incl in Hpre1; eapply prefix_incl in Hpre2.
+  2,3: firstorder.
+  1: eapply disjoint_subset;eauto.
+Qed.
+
+Lemma lc_continue {A : Type} `{EqDec A eq} (l1 l2 l1' l2' : list A) s
+      (Hpost1 : Postfix (l1' :r: s) l1)
+      (Hpost2 : Postfix (l2' :r: s) l2)
+      (Hlc : last_common (l1' :r: s) (l2' :r: s) s)
+  : last_common l1 l2 s.
+Proof.
+  unfold last_common in Hlc.
+  destructH.
+  exists l1'0, l2'0. split_conj; eauto.
+  1,2: eapply postfix_trans;eauto.
+Qed.
+
+Lemma lc_implode_in `{redCFG} p s i k t1 t2
+      (Hpath1 : TPath' ((p,i) :< t1))
+      (Hpath2 : TPath' ((p,i) :< t2))
+      (Hlc : last_common t1 t2 (s,k))
+      (Hndeq : ~ deq_loop p s)
+  : exists h', loop_contains (`h') s
+          /\ last_common (impl_list' p t1) (impl_list' p t2) (h', i).
+Admitted.
+
+
+Definition edge' `(C : redCFG) := edge.
+
+Lemma head_exit_in_impl `{C : redCFG} (p q h : Lab) (h' q' : local_impl_CFG_type C p)
+      (Hloop : loop_head h)
+      (Hh : h = ` h')
+      (Hq : q = ` q')
+      (Hedge : edge' (local_impl_CFG C p) h' q' = true)
+  : exited h q.
+  
+    (* h is a head in the original graph, and qq is a successor of h in the imploded graph, 
+     * thus qq is a an exit of h in the original graph
+     *)
+Admitted.
+
 Theorem lc_join_split `{redCFG} t1 t2 (p q1 q2 s : Lab) (i j1 j2 k : Tag)
         (* it is important to cons qj's in front of the t's *)
         (Hlc : last_common ((q1,j1) :: t1) ((q2,j2) :: t2) (s,k))
-        (Hneq : q1 <> q2 \/ j1 <> j2)
-        (Hpath1 : TPath' ((p,i) :<: (q1,j1) :< t1))
-        (Hpath2 : TPath' ((p,i) :<: (q2,j2) :< t2))
+        (Hneq : q1 <> q2)
+        (Hpath1 : TPath (root,start_tag) (p,i) ((p,i) :<: (q1,j1) :< t1))
+        (Hpath2 : TPath (root,start_tag) (p,i) ((p,i) :<: (q2,j2) :< t2))
   : exists qq qq', (s,qq,qq') ∈ splits p.
 Proof.
-  decide (deq_loop s p) as [Hdeq|Hndeq].
-  decide (deq_loop p s) as [Hdeq'|Hndeq'].
-  - decide (exists h, exit_edge h q1 p /\ exit_edge h q2 p) as [e|Hnexit].
-    {
+  decide (exists h, exit_edge h q1 p /\ exit_edge h q2 p) as [e|Hnexit].
+  {
       destructH.
       enough (exists qq qq', exited h p /\ (s,qq,qq') ∈ splits' h p).
       { destructH. eexists; eexists. eapply splits_spec. right. left. eauto. }
       eapply lc_disj_exits_lsplits in Hlc;eauto.
+      2,3: spot_path.
       destructH. do 2 eexists.
-      eapply in_app_or in Hlc.
       unfold exited.
       destruct Hlc;eauto.
-    }    
-    enough (exists qq qq', (s, qq, qq') ∈ path_splits__imp p).
-    { destructH. eexists; eexists. eapply splits_spec. left. eauto. }    
-    eapply lc_implode_out in Hlc;eauto.
+  }
+(*  decide (deq_loop s p) as [Hdeq|Hndeq].*)
+  decide (deq_loop p s) as [Hdeq'|Hndeq'].
+  - enough (exists qq qq', (s, qq, qq') ∈ path_splits__imp p).
+    { destructH. eexists; eexists. eapply splits_spec. left. eauto. }
+    eapply lc_implode_out in Hlc;eauto. 2,3: spot_path.
     destructH.
-    unfold last_common in Hlc1. destructH.
-    specialize (@lc_same_tags _ _ _ _ (local_impl_CFG H p) s' k l1' l2') as Hsame.
-    fold (local_impl_CFG_type H p) in *.
-    specialize (Hsame _ _ Hlc2 Hlc1 Hlc3).
-    replace ((p,i) :<: (q1, j1) :< t1) with ((p,i) :< ((q1,j1) :: t1)) in Hpath1 by (cbn;auto).
-    eapply impl_list'_tpath in Hpath1 as Hpath1'.
-    replace ((p,i) :<: (q2, j2) :< t2) with ((p,i) :< ((q2,j2) :: t2)) in Hpath2 by (cbn;auto).
-    eapply impl_list'_tpath in Hpath2 as Hpath2'.
-    specialize (Hsame _ i Hpath1' Hpath2').
-    Unshelve. 2: { eapply deq_loop_refl. }
-    exploit' Hsame. admit.
-    exploit' Hsame. admit.
-    assert (forall q j, (q,j) ∈ l2' -> j = k) as Hsame' by admit.
-
-    eapply disj_fst in Hlc3;eauto.
-    rewrite <-Hlc0.
-    eapply ex_path_splits__imp. fold (local_impl_CFG_type H p).
-    set (p' := (impl_of_original' (or_introl (deq_loop_refl (l:=p))))) in *.
-    exists (ne_back (p' :< map fst l1')).
-    exists (ne_back (p' :< map fst l2')).
-    eapply path_splits_spec.
-    unfold pl_split.
-    exists (p' :< (map fst l1')), (p' :< (map fst l2')).
-    split_conj;eauto.
-    + eapply path_postfix_path in Hpath1';cycle 1.
-      * simpl_nl. eapply postfix_cons. eapply Hlc2.
-      * simpl_nl' Hpath1'. clear - Hpath1'. admit. (* some path reasoning (easy) *)
-    + admit. (* as above *)
-    + do 2 simpl_dec' Hnexit.
-      assert (p' ∉ map fst l1') as Hnin1 by admit.
-      assert (p' ∉ map fst l2') as Hnin2 by admit.
-      (* because then there would be the header of p (it may be p itself) in l'
-       * thus on visiting this header the tag changes -> contradiction to Hsame *)
-      enough (l1' <> nil \/ l2' <> nil).
-      {
-        destruct H0.
-        - destruct l1';[congruence|]. cbn. cbn in Hlc3.
-          destruct l2';cbn.
-          + contradict Hnin1. rewrite <-Hnin1. unfold map at 2. fold (map fst l1').
-            rewrite nlcons_to_list. eapply in_ne_back.
-          + cbn in Hlc3. intro N.
-            eapply Hlc3. 1,2:rewrite nlcons_to_list. eapply in_ne_back. rewrite <-N. eapply in_ne_back.
-        - admit. (* analogous *)
-      }
-      cbn in Hlc2,Hlc1.
-      decide (deq_loop p q1) as [Hdeq1|Hndeq1]; decide (deq_loop p q2) as [Hdeq2|Hndeq2].
-      -- destruct l1'.
-         ++ right. intro N. subst. cbn in Hlc2, Hlc1.
-            eapply2 postfix_hd_eq Hlc2 Hlc1.
-            rewrite Hlc2 in Hlc1.
-            clear - Hneq Hlc1. inversion Hlc1. (* this may cause problems (shelved goals), no it's somewhere else *)
-            destruct Hneq; contradiction.
-         ++ left. congruence.
-      -- exfalso.
-         eapply pred_ndeq_exit in Hndeq2 as Hexit.
-         ++ destructH. eapply exit_pred_loop in Hexit as Hloop.
-            ** eapply Hdeq1 in Hloop.
-               unfold exit_edge in Hexit. destructH. contradiction.
-            ** eapply TPath_CPath in Hpath1. cbn in Hpath1. simpl_nl' Hpath1.
-               inversion Hpath1. replace b with q1 in *. eauto. destruct t1;cbn in H1; inversion H1;eauto.
-         ++ eapply TPath_CPath in Hpath2. cbn in Hpath2. simpl_nl' Hpath2.
-            inversion Hpath2. replace b with q2 in *. eauto. destruct t2;cbn in H1; inversion H1;eauto.
-      -- admit. (* analogous *)
-      -- admit.
-    (* Show that p is not in l1' & l2' (possibly difficult) *)
-    + simpl_nl. cbn. auto. 
-  (* this gives disjoint cpaths *)
-    
-    
-      
-    
-    (* k = i, bc otherwise we would visit the head of p in both traces with the same tag,
-     * which contradicts Hlc *)
-    (* this is not true for p being a head. 
-     * instead I need something that all tags from s to p (excluding p) are equal k to *)
+    subst s. clear Hdeq'.
+    eapply lc_join_path_split;eauto.
   - enough (exists br q q' : Lab, (br, q, q') ∈ path_splits__imp p
                              /\ (exists qq qq', (s, qq, qq') ∈ splits' br q \/ (s, qq, qq') ∈ splits' br q')).
-    { destructH. exists qq, qq'. eapply splits_spec. right. right. repeat eexists.
-      all: admit. (* new goals because of modification to the splits_spec *)
-    }
-(*    eapply lc_implode_in in Htri;cycle 2;eauto.
-    + instantiate (1:=h). admit.
-    + destructH. cbn in Htri1.*)
-    admit.
-  - simpl_dec' Hndeq. simpl_dec' Hndeq. destructH.
-    decide (x = p).
-    + subst. decide (deq_loop p s) as [Hdeq'|Hndeq'].
-      * admit. (* Attention! special case where loop_head p *)
-      * admit. 
-    + exfalso.
-      (* the tag k is shorter than i
-       * some head has to be visited from outside on the way from s to p
-       * this head has the same tag on both traces 0 :: k, contradiction to last_common *)
-      admit.
-      
+    { destructH. exists qq, qq'. eapply splits_spec. right. right. do 3 eexists. split_conj;eauto. } 
+
+    eapply lc_implode_in in Hlc as Hlc';eauto. 2,3: spot_path.
+    destructH.
+    unfold last_common in Hlc'1. destructH.
+    eapply lc_join_path_split' in Hlc'3 ;eauto.
+    do 3 eexists. split;[eapply Hlc'3|].
+    unfold last_common in Hlc. destructH.
+    set (p' := impl_of_original' (or_introl (deq_loop_refl (l:=p)))) in *.
+    set (qq := (ne_back (p' :< map fst l1'))) in *.
+    set (qq' := (ne_back (p' :< map fst l2'))) in *.
+    eapply loop_contains_loop_head in Hlc'0. eapply head_exit_in_impl in Hlc'0;cycle 1.
+    * reflexivity.
+    * instantiate (1:=qq). reflexivity.
+    * admit. (* I need to construct the imploded tpaths *)
+    * destruct Hlc'0 as [q1' Hlc'0].
+      eapply lc_disj_exits_lsplits;auto.
+      -- eapply lc_continue;cycle 2.
+         ++ eapply lc_sub. 3: eauto. all: eauto.
+            (* I need to have already constructed the path_to_elems to qq & qq' *)
+            admit. admit.
+         ++ admit. (* eauto initializes the wrong list *)
+         ++ admit. (* there is a lemmma where postfix l l' -> prefix l1 l -> exists l2, postfix l1 l2 *)
+      -- eapply exit_edge_pred_exiting; [exact Hlc'0|]. admit. (*this can be derived from the furthernext subcase*)
+      -- (* analogous *) admit.
+      -- (* using path_to_elem *) admit.
+      -- (* using path_to_elem (analogous) *) admit.
 Admitted.
 
 

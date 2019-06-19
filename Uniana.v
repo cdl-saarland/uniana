@@ -260,7 +260,7 @@ Section uniana.
         eapply join_andb_true_iff in Hsplit;eauto;cycle 1.
         {
           rewrite splits_spec. right. left.
-          exists x. split;[unfold exited|];eauto. 
+          exists x. eauto. 
         }
         eapply uni_branch_succ_p with (j:=j2);eauto.
         intros;symmetry;eapply HCuni;eauto.
@@ -271,7 +271,7 @@ Section uniana.
         eapply join_andb_true_iff in Hsplit;eauto;cycle 1.
         {
           rewrite splits_spec. right. left.
-          exists x. split;[unfold exited|];eauto.
+          exists x. eauto. 
         }
         eapply uni_branch_succ_p with (j:=j1);eauto.
       + eapply (uni_branch_non_disj) with (br:=br);eauto;cbn;simpl_nl;eauto.
@@ -281,7 +281,7 @@ Section uniana.
         * eapply join_andb_true_iff with (x0:=(br,qq,qq')) in Hsplit.
           unfold "∘" in Hsplit. cbn in Hsplit. auto.
           rewrite splits_spec. right. left.
-          exists x. split;[unfold exited|];eauto.
+          exists x. eauto.
     (* THIS v property does not hold ! the node may vanish in implosion 
      * (br, qq, qq') ∈ loop_splits x p -> (br, qq, qq') ∈ loop_splits__imp x p. *)    
   Qed.
@@ -572,7 +572,7 @@ Section uniana.
     exists br, qq, qq';split.
     3-5: eapply tpath_NoDup;eauto.
     - eapply rel_splits_spec. exists h.
-      eapply in_app_or in Hsplit. destruct Hsplit as [Hsplit|Hsplit].
+      destruct Hsplit as [Hsplit|Hsplit].
       + exists e1.
         repeat lazymatch goal with
                | [H : context C [l2] |- _ ] => clear H
@@ -740,7 +740,7 @@ Section uniana.
         eapply (uni_branch_non_disj p i br k _ _ ((q1,j1,r1)::l1)
                                     ((q2,j2,r2)::l2) (p0:<l1') (p1:<l2'));
           cbn;simpl_nl;eauto.
-    - spot_path. 
+    - spot_path.
     - spot_path. 
   Qed.
 

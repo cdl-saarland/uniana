@@ -700,6 +700,7 @@ Ltac spot_path_e :=
   let i := fresh "i" in
   let s := fresh "s" in
   lazymatch goal with 
+  | [ H : Tr ((?p,?i,?s) :<: ?t) |- _ ] => eapply Tr_EPath in H;[|cbn;reflexivity]; destructH' H; cbn_nl' H
   | [ H : Tr ?t |- _ ] => destruct (ne_front t) as [[p i] s] eqn:Q;
                         eapply Tr_EPath in H;[clear Q|apply Q]; destructH' H; cbn_nl' H
   end.

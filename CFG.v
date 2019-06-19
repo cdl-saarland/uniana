@@ -2848,6 +2848,10 @@ Lemma head_exits_deq_loop_inv1 `(C : redCFG) (h p q : Lab)
   : deq_loop (C:=C) p q -> deq_loop (C:=head_exits_CFG C h) p q.
 Admitted.
 
+Lemma head_exits_deq_loop_inv2 `(C : redCFG) (h p q : Lab)
+  : deq_loop (C:=head_exits_CFG C h) p q -> deq_loop (C:=C) p q.
+Admitted.
+
 Lemma head_exits_exited_inv1 `(C : redCFG) (qh h p : Lab)
   : exited (C:=C) h p -> exited (C:=head_exits_CFG C qh) h p.
 Admitted.
