@@ -167,6 +167,22 @@ Local Ltac prove_spec :=
     => unfold f; tac 0
   end.
 
+  
+  Lemma ne_list_nlrcons: forall (A : Type) (l : ne_list A), exists (a : A) (l' : list A), l = l' >: a.
+  Proof.
+    induction l.
+    - exists a, nil. eauto.
+    - destructH. rewrite IHl. exists a0, (a :: l'). cbn. reflexivity.
+  Qed.
+
+  Ltac destr_r x :=
+    let Q := fresh "Q" in
+    specialize (ne_list_nlrcons x) as Q;
+    let a := fresh "a" in
+    let l := fresh "l" in
+    destruct Q as [a [l Q]];
+    rewrite Q in *.
+
 Section red_cfg.
 
   Definition CPath `{redCFG} := Path edge.
@@ -250,13 +266,6 @@ Section red_cfg.
   Proof.
     intro Q. unfold loop_head, loop_contains in *. destruct Q as [p [_ [Q _]]].
     eexists; eauto.
-  Qed.
-  
-  Lemma ne_list_nlrcons: forall (A : Type) (l : ne_list A), exists (a : A) (l' : list A), l = l' >: a.
-  Proof.
-    induction l.
-    - exists a, nil. eauto.
-    - destructH. rewrite IHl. exists a0, (a :: l'). cbn. reflexivity.
   Qed.
 
   
@@ -628,14 +637,6 @@ Section red_cfg.
       + destruct (a == y);[rewrite e in E;congruence|].
         inversion Hnd; subst. eapply IHl;eauto. inversion H0;subst;auto. congruence.
   Qed.
-
-  Ltac destr_r x :=
-    let Q := fresh "Q" in
-    specialize (ne_list_nlrcons x) as Q;
-    let a := fresh "a" in
-    let l := fresh "l" in
-    destruct Q as [a [l Q]];
-    rewrite Q in *.
       
   Lemma acyclic_path_NoDup p q π
         (Hπ : Path a_edge p q π)
