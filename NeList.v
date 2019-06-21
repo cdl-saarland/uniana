@@ -513,7 +513,7 @@ Ltac congruence' :=
   lazymatch goal with
   | [ H : ?l ++ (?a :: ?l') = nil |- _ ] => destruct l; cbn in H; congruence
   | [ H : (?l ++ ?l') :: ?a :: ?l'' = nil |- _ ] => destruct l; cbn in H; congruence
-  | [ H : ?l :r: ?a |- _ ] => eapply rcons_not_nil in H; contradiction
+  | [ H : ?l :r: ?a = nil |- _ ] => eapply rcons_not_nil in H; contradiction
   | [ H : ne_to_list ?l = nil |- _ ] => destruct l; cbn in H; congruence
   | [ H : nil = ?l ++ (?a :: ?l') |- _ ] => destruct l; cbn in H; congruence
   | [ H : nil = (?l ++ ?l') :: ?a :: ?l'' |- _ ] => destruct l; cbn in H; congruence

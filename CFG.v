@@ -2857,6 +2857,10 @@ Lemma head_exits_exited_inv1 `(C : redCFG) (qh h p : Lab)
   : exited (C:=C) h p -> exited (C:=head_exits_CFG C qh) h p.
 Admitted.
 
+Lemma head_exits_exited_inv2 `(C : redCFG) (qh h p : Lab)
+  : exited (C:=head_exits_CFG C qh) h p -> exited (C:=C) h p.
+Admitted.
+
 Lemma head_exits_implode_nodes_inv1 `(C : redCFG) (h p : Lab)
   : implode_nodes C h p -> implode_nodes (head_exits_CFG C h) h p.
 Proof.

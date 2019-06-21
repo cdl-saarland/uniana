@@ -796,6 +796,53 @@ Lemma in_cons_succ_in_rcons {A : Type} (a b c : A) l
   : exists d, c ≻ d | b :: l :r: a.
 Admitted.
 
+Lemma path_nlrcons_edge {A : Type} (a b c : A) l f
+      (Hpath : Path f b c (l :>: a))
+  : f a (ne_back l) = true.
+Admitted.
+
+Lemma exits_eq_loop `{C:redCFG} q1 q2 h
+      (Hexit1 : exited h q1)
+      (Hexit2 : exited h q2)
+  : eq_loop q1 q2.
+Admitted.
+
+Lemma exited_deq_p `{C:redCFG} p q (h : local_impl_CFG_type C p)
+      (Hexit : exited (` h) q)
+  : deq_loop p q.
+Proof.
+  destruct h.
+  eapply pure_equiv in p0 as p0'.
+  destruct p0'. destruct Hexit as [qe Hexit].
+  - cbn in *. eapply deq_loop_exited' in Hexit.
+    eapply head_exits_deq_loop_inv2 in H.
+    eapply deq_loop_trans;eauto.
+  - destructH. cbn in *.
+    eapply exits_eq_loop in Hexit. 2: { eapply head_exits_exited_inv2. eauto. }
+    eapply eq_loop2;eauto. eapply head_exits_deq_loop_inv2. eauto.
+Qed.
+
+Lemma postfix2_impl_list'_incl `{C:redCFG}
+      (l : list Coord) (t : ne_list Coord) (p : Lab) (q : local_impl_CFG_type C p) j x
+      (l' : list (local_impl_CFG_type C p * Tag))
+      (x' : local_impl_CFG_type C p * Tag)
+      (Hpath : TPath' t)
+      (Hpost : Postfix (l :r: x) t)
+      (Hpost' : Postfix (l' :r: x') (impl_list' p t))
+      (Hdeq : deq_loop p (` q))
+      (Hin : (q,j) ∈ l')
+  : (` q,j) ∈ l.
+Admitted.
+
+Lemma post_prefix_cut {A : Type} (l0 l1 l2 l3 : list A)
+      (Hnd : NoDup l0)
+      (Hpost : Postfix l1 l0)
+      (Hpre : Prefix l2 l1)
+      (Hpre' : Prefix l3 l0)
+      (Heq : hd_error l2 = hd_error l3)
+  : Postfix l2 l3.
+Admitted.
+
 Theorem lc_join_split `{redCFG} t1 t2 (p q1 q2 s : Lab) (i j1 j2 k : Tag)
         (* it is important to cons qj's in front of the t's *)
         (Hlc : last_common ((q1,j1) :: t1) ((q2,j2) :: t2) (s,k))
@@ -836,6 +883,35 @@ Proof.
     set (qq' := (ne_back (p' :< map fst l2'))) in *.
     do 3 eexists. split;[eapply Hlc'3|].
     unfold last_common in Hlc. destructH.
+    (* Show that qq is an exit *)
+    assert (exited (` h') (` qq)) as Hexit1.
+    {
+      eapply loop_contains_loop_head in Hlc'0. eapply head_exit_in_impl in Hlc'0;cycle 1.
+      - reflexivity.
+      - instantiate (1:=qq). reflexivity.
+      - clear - Hlc'2 Hpath1. 
+        eapply impl_list'_tpath1 in Hpath1.
+        set (π':=impl_list' p ((q1,j1) :: t1)) in *.
+        destruct π' eqn:E.
+        + destruct l1'; cbn in Hlc'2; inversion Hlc'2; congruence'.
+        + unfold nlcons in Hpath1. fold (nlcons p0 l) in Hpath1.
+          unfold TPath' in Hpath1. inversion Hpath1. 
+          eapply postfix_path in H1.
+          2 : simpl_nl;eauto.
+          eapply PathCons in H1;eauto.
+          clear - H1.
+          eapply TPath_CPath in H1. cbn in H1.
+          destruct l1'.
+          * cbn in *. inversion H1. unfold edge'. subst p'. inversion H2; subst. eauto.
+          * rewrite ne_map_nl_rcons in H1. cbn in *.
+            rewrite nl_cons_lr_shift in H1.
+            inversion H1.
+            eapply path_nlrcons_edge in H2. eauto.
+      - auto.
+    }
+    assert (exited (` h') (` qq')) as Hexit2 by admit. (* analogous *)
+    destruct Hexit1 as [qe1' Hexit1].
+    destruct Hexit2 as [qe2' Hexit2].
     (* find the tag of qq *)
     assert (exists jj, (` qq, jj) ∈ ((p, i) :: l1'0)) as [jj Hqq].
     {
@@ -844,30 +920,28 @@ Proof.
       destruct Htag.
       - left. subst qq. inversion H0. setoid_rewrite <-H2. f_equal.
       - right. simpl_nl.
-        assert ((qq,j0) ∈ (l1' :r: (h',j))) as H0' by (eapply In_rcons;eauto).
-        admit. (* qq is an exit of h', and s ∈ h, thus qq ∈ l1'0 *)
+        eapply postfix2_impl_list'_incl ;eauto.
+        + inversion Hpath1. eapply tpath_tpath'.
+          replace b with (q1,j1) in H2 by (destruct t1;inversion H2;subst;eauto). eauto.
+        + rewrite nlcons_to_list in Hlc0. eapply Hlc0.
+        + rewrite nlcons_to_list in Hlc'2. eapply Hlc'2.
+        + eapply exited_deq_p.
+          eexists;eauto.
     }
     assert (exists jj', (` qq', jj') ∈ ((p,i) :: l2'0)) as [jj' Hqq'] by admit. (* analogous *)
     (* find the corresponding exiting node *)
     eapply in_cons_succ_in_rcons in Hqq. Unshelve. 2: exact (s,k). destructH. destruct d as [qe1 j1'].
     eapply in_succ_in2 in Hqq as Hin1.
-    assert (tcfg_edge (qe1,j1') (` qq, jj) = true) as Hedge1 by admit. (* use postfix_succ_in & succ_in_path_edge*)
+    assert (tcfg_edge (qe1,j1') (` qq, jj) = true) as Hedge1.
+    {
+      eapply postfix_cons with (a:=(p,i)) in Hlc0.
+      eapply postfix_path in Hpath1;[|cbn;simpl_nl;rewrite <-cons_rcons_assoc in Hlc0; eauto].
+      rewrite <-cons_rcons_assoc in Hqq. rewrite rcons_nl_rcons in Hqq.
+      eapply succ_in_path_edge in Hqq; eauto.
+    }
     eapply in_cons_succ_in_rcons in Hqq'. Unshelve. 2: exact (s,k). destructH. destruct d as [qe2 j2'].
     eapply in_succ_in2 in Hqq' as Hin2.
     assert (tcfg_edge (qe2,j2') (` qq', jj') = true) as Hedge2 by admit. (* analogous *)
-(*    assert (exists jj', (` qq',jj') ∈ ((p, i) :<: ((q2, j2) :< t2))) as [jj' Hqq'].
-    {
-      clear - Hpath2 Hlc2 Hlc'1.
-      specialize (ne_back_map_in p' i l2') as Hftag2. cbn in Hftag2. destructH.
-      exists j0. simpl_nl.
-      destruct Hftag2.
-      - left. subst qq'. inversion H0. setoid_rewrite <-H2. f_equal.
-      - right.
-        simpl_nl.
-        eapply impl_list'_incl. admit.
-        eapply postfix_incl; eauto. eapply In_rcons. right. eauto.
-    }*)
-    (* create the subpath from (s,k) to (qe,j') *)
     assert (TPath (s,k) (q1,j1) (l1'0 >: (s,k))) as Hpath1'.
     {
       clear - Hlc0 Hpath1.
@@ -880,44 +954,58 @@ Proof.
     eapply path_to_elem with (r:=(qe2,j2')) in Hpath2';eauto.
     2: { simpl_nl. eauto. }
     do 2 destructH. simpl_nl' Hpath1'1. simpl_nl' Hpath2'1.
-    destr_r ϕ. subst ϕ. simpl_nl' Hpath2'1.
-    destr_r ϕ0. subst ϕ0. simpl_nl' Hpath1'1.
-    assert (exited (` h') (` qq)) as Hexit1.
-    {
-      eapply loop_contains_loop_head in Hlc'0. eapply head_exit_in_impl in Hlc'0;cycle 1.
-      * reflexivity.
-      * instantiate (1:=qq). reflexivity.
-      * admit. (* qq is the back of p' :< l1', thus because tpath__imp p' :< impl_list' (q,j) :< t1, 
-       * and HLc'2, there is an impl_edge from (h',i) to (q,j)
-       *)
-      * auto.
-    }
-    assert (exited (` h') (` qq')) as Hexit2 by admit. (* analogous *)
-(*    eapply post_in_path_pre in Hlc0 as Hpre1. 2: eapply Hqe1. destructH. *)
-    destruct Hexit1 as [qe1' Hexit1].
-    destruct Hexit2 as [qe2' Hexit2].
-    eapply path_to_elem with (r:=(qe1,j1')) in Hpath1.
+    destr_r ϕ. simpl_nl' Hpath2'1.
+    destr_r ϕ0. simpl_nl' Hpath1'1. subst ϕ ϕ0.
+    eapply path_to_elem with (r:=(qe1,j1')) in Hpath1 as H1ϕ.
     2: { right. eapply postfix_incl. simpl_nl. all:eauto. }
-    eapply path_to_elem with (r:=(qe2,j2')) in Hpath2.
+    eapply path_to_elem with (r:=(qe2,j2')) in Hpath2 as H2ϕ.
     2: { right. eapply postfix_incl. simpl_nl. all:eauto. }
     do 2 destructH.
-    eapply lc_disj_exits_lsplits;auto;cycle 1.
-    + eapply exit_edge_pred_exiting; [exact Hexit1|].
+    assert (exit_edge (` h') qe1 (` qq)) as Hexit1'.
+    { eapply exit_edge_pred_exiting; [exact Hexit1|].
       unfold tcfg_edge,tcfg_edge' in Hedge1. conv_bool. destructH;eauto.
-    + eapply exit_edge_pred_exiting; [exact Hexit2|].
+    }
+    assert (exit_edge (` h') qe2 (` qq')) as Hexit2'.
+    { eapply exit_edge_pred_exiting; [exact Hexit2|].
       unfold tcfg_edge,tcfg_edge' in Hedge2. conv_bool. destruct Hedge2 ;eauto.
-    (* analogous, i.e. i hve to do the head_exit_in_impl thing again on qq' *) 
-    + econstructor;eauto. cbn. instantiate (1:=tl ϕ0). instantiate (1:= j1'). clear - Hpath2.
-      destruct Hpath2; cbn in *.
+    }
+    eapply lc_disj_exits_lsplits;auto;cycle 1.
+    + eauto.
+    + eauto.
+    + econstructor;eauto. cbn. instantiate (1:=tl ϕ0). instantiate (1:= j1'). clear - H1ϕ0.
+      destruct H1ϕ0; cbn in *.
       * econstructor.
-      * simpl_nl. cbn. econstructor;eauto. eapply path_back in Hpath2 as Heq. rewrite Heq. auto.
+      * simpl_nl. cbn. econstructor;eauto. eapply path_back in H1ϕ0 as Heq. rewrite Heq. auto.
     + admit. (* analogous *)
     + eapply lc_continue;cycle 2.
       * eapply lc_sub. 3: eauto. all: eauto.
         -- eapply rcons_prefix;eauto.
         -- eapply rcons_prefix;eauto.
-      * admit. (* eauto initializes the wrong list *)
-      * admit. 
+      * 
+        rewrite nlcons_to_list.
+        replace a0 with (s,k) in * by admit.
+        replace a with (s,k) in * by admit.
+        eapply post_prefix_cut.
+        -- eapply tpath_NoDup.
+           inversion Hpath1.
+           replace b with (q1,j1) in * by (clear - H1; destruct t1; inversion H1; subst;  eauto).
+           eapply H1.
+        -- simpl_nl. eapply Hlc0.
+        -- eauto.
+        -- replace ϕ0 with ((qe1,j1') :< tl ϕ0) in H1ϕ0,H1ϕ1 by admit.
+          inversion H1ϕ1.
+          { exfalso.
+            clear - Hin1 H2 Hpath1 Hlc0.
+            eapply tpath_NoDup in Hpath1.
+            cbn in Hpath1. inversion Hpath1.
+            eapply H3.
+            simpl_nl' H2. inversion H2. subst qe1. subst j1'.
+            eapply postfix_incl;eauto. simpl_nl. eauto.
+          }
+          eapply H2.
+        -- simpl_nl. cbn.
+           clear - Hpath1'0. destruct l0; inversion Hpath1'0; cbn in *;eauto.
+      * admit. (* analogous *)
 Admitted.
 
 Definition sub_list {A : Type} (l l' : list A) : Prop :=
