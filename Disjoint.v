@@ -494,28 +494,142 @@ Proof.
   - right. intro N. inversion N. contradiction.
 Qed.
 
+Lemma tcfg_graph_edge `{redCFG} q p i j
+      (Hedge : tcfg_edge (q,j) (p,i) = true)
+  : edge q p = true.
+Proof.
+  unfold tcfg_edge,tcfg_edge' in Hedge. conv_bool. firstorder.
+Qed.
+
+Lemma head_precedes_tpath `{C : redCFG} p h i t
+      (Hpath : TPath (root,start_tag) (p,i) t)
+      (Hloop : loop_contains h p)
+  : exists k, Precedes fst t (h,k).
+Admitted.
+
+
+Lemma impl_list'_ndeq_eq `{C : redCFG} (p q : Lab) j (h : local_impl_CFG_type C p) t
+      (Hexit : exit_edge (` h) q p)
+      (Hpath : TPath (root,start_tag) (q,j) ((q,j) :< t))
+  : exists t', impl_list' p ((q, j) :: t) = (h, tl j) :: impl_list' p t'.
+Proof.
+  (*
+  destruct h as [h Hh]. cbn in Hexit.
+  specialize (prefix_nincl_prefix (h, O :: tl j) ((q,j) :: t)) as Hpre.
+  exploit Hpre. 1: admit.
+  remember ((q,j) :< t) as t0.
+  setoid_rewrite nlcons_to_list in Hpre at 4 5.
+  setoid_rewrite <-Heqt0 in Hpre.
+  set (t' := prefix_nincl (h, O :: tl j) t0) in *. clear Heqt0.
+  exists t'.
+  decide (deq_loop p q).
+  { unfold exit_edge in Hexit. destructH. eapply d in Hexit0. contradiction. }
+  assert (exited h p) as Hexit'.
+  { eexists; eapply Hexit. }
+  assert (loop_contains h q) as Hloop.
+  { unfold exit_edge in Hexit; destructH; eauto. }
+  clear n Hexit. rename Hexit' into Hexit.
+  revert dependent q. revert dependent j.
+  induction t0; intros; inversion Hpath; subst.
+  - inversion Hpre; subst. eapply prefix_nil_nil in H1. congruence.
+  - replace (ne_to_list ((q,j) :<: t0)) with ((q,j) :: t0) in Hpre. 2: cbn;reflexivity.
+    inversion Hpre;subst.
+    + 
+    
+    
+    
+  
+  dependent induction Hpre.
+  - decide (exists e, exited q e /\ deq_loop p e).
+    + destruct j;[congruence|]. destruct n;[|congruence].
+      cbn. f_equal.
+      * f_equal. eapply subtype_extensionality. cbn. reflexivity.
+      * destruct (q == q) as [?|Habs]; [|exfalso; apply Habs; reflexivity].
+        destruct (O::j == O::j) as [?|Habs]; [|exfalso; apply Habs]; reflexivity.
+    + exfalso. do 2 simpl_dec' n. destruct (n p).
+      * contradiction. 
+      * eapply H. eapply deq_loop_refl.
+  - specialize (IHHpre edge root a_edge C p ). q j h Hh).
+                                                        *)
+  (***************)
+  
+  destruct h as [h Hh]. cbn in Hexit.
+  specialize (prefix_nincl_prefix (h, O :: tl j) ((q,j) :: t)) as Hpre.
+  exploit Hpre. 1: admit.
+  cbn.
+  set (t' := prefix_nincl (h, O :: tl j) ((q,j) :: t)) in *.
+  exists t'.
+  decide (deq_loop p q).
+  { unfold exit_edge in Hexit. destructH. eapply d in Hexit0. contradiction. }
+  assert (exited h p) as Hexit'.
+  { eexists; eapply Hexit. }
+  assert (loop_contains h q) as Hloop.
+  { unfold exit_edge in Hexit; destructH; eauto. }
+  clear n Hexit. rename Hexit' into Hexit.
+  eapply prefix_eq in Hpre.
+  destructH.
+  revert dependent q. revert dependent j. revert dependent t.
+  induction l2'; intros.
+  - unfold app in Hpre. inversion Hpre. subst h.
+    decide (exists e, exited q e /\ deq_loop p e).
+    + destruct j;[congruence|]. destruct n;[|congruence].
+      cbn. f_equal.
+      f_equal. eapply subtype_extensionality. cbn. reflexivity.
+      (* destruct (q == q) as [?|Habs]; [|exfalso; apply Habs; reflexivity].
+        destruct (O::j == O::j) as [?|Habs]; [|exfalso; apply Habs]; reflexivity.*)
+    + exfalso. do 2 simpl_dec' n. destruct (n p).
+      * contradiction. 
+      * eapply H. eapply deq_loop_refl.
+  - unfold app in Hpre. fold (l2' ++ (h, 0 :: tl j) :: t') in Hpre. inversion Hpre.
+    subst a.
+    specialize (IHl2').
+    decide (exists e, exited q e /\ deq_loop p e).
+    + destruct j;[admit|]. (* contradiction: q is a header with tag [] *)
+      destruct n.
+      * exfalso.
+        assert (h = q) as Hheq.
+        {
+          destructH. destruct e1 as [qe e1].
+          eapply exit_edge_unique_diff_head;eauto. intro N. eapply e2 in N.
+          destruct Hexit as [qe' Hexit].
+          eapply exit_not_deq in Hexit; eauto.
+          eapply loop_contains_deq_loop;auto.
+        }
+        rewrite H1 in Hpath. unfold tl in Hpath.
+        subst h. clear - Hpath.
+        eapply tpath_NoDup in Hpath.
+        simpl_nl' Hpath.
+        replace ((q, 0 :: j) :: _) with (((q, 0 :: j) :: l2') ++ (q, 0 :: j) :: t') in Hpath.
+        2: cbn; eauto.
+        eapply NoDup_app in Hpath.
+        -- eapply Hpath. left. auto.
+        -- left. auto.
+      * admit. (* header visited but not the first time: here we should use IH *)
+    + admit. (* some other node visited: here we should use IH *)
+Admitted.
+
 Lemma postfix_impl_list' `{redCFG} p q s i j k t l
-      (Hpath : TPath' ((p,i) :< ((q,j) :: t)))
+      (Hpath : TPath (root,start_tag) (p,i) ((p,i) :< ((q,j) :: t)))
       (Hpost : Postfix (l :r: (s,k)) (impl_list' p ((q,j) :: t)))
       (Hndeq : ~ deq_loop p q)
-  : exists h t', Postfix (l :r: (s,k)) ((h,tl j) :: impl_list' p t') /\ exit_edge (`h) q p.
+  : exists h, exit_edge (`h) q p /\ exists t', Postfix (l :r: (s,k)) ((h,tl j) :: impl_list' p t').
 Proof.
   do 2 simpl_dec' Hndeq. destructH.
+  cbn in Hpath. inversion Hpath.
+  replace b with (q,j) in * by (destruct t; inversion H1; subst; eauto).
   enough (exit_edge x q p).
   {
     assert (implode_nodes (head_exits_CFG H p) p x).
     - right. exists p. split;[|eapply deq_loop_refl].
       eapply head_exits_exited_inv1. eexists;eauto.
-    - cstr_subtype H1. set (h':=(↓ purify H1)) in *.
-      exists h'. destruct h' as [h Hh].
+    - cstr_subtype H6. set (h':=(↓ purify H6)) in *.
+      exists h'. destruct h' as [h Hh]. split;[auto|].
       cbn in Hndeq0,Hndeq1.
-      Lemma head_precedes_tpath `{C : redCFG} p h i t
-            (Hpath : TPath (root,start_tag) (p,i) t)
-            (Hloop : loop_contains h p)
-        : exists k, Precedes fst t (h,k).
-      Admitted.
-      eapply head_precedes_tpath in Hndeq0;[admit|inversion Hpath;subst;simpl_nl' H3;eauto].
-      Admitted. 
+      eapply (impl_list'_ndeq_eq) in H5. 2: cbn;eauto.
+      destructH. exists t'. rewrite H5 in Hpost. eauto.
+  }
+  eapply tcfg_graph_edge in H4. unfold exit_edge. split_conj; eauto.
+Qed.
 
 Lemma impl_deq_loop `{C : redCFG} (p q r : Lab) (p' q' : local_impl_CFG_type C r)
       (Heqp : p = `p')
@@ -667,14 +781,14 @@ Proof.
          }*)
       clear Hlc1 Hlc0.
       eapply postfix_impl_list' in Hlc0';eauto. 
-      eapply postfix_impl_list' in Hlc1';eauto. 2,3: spot_path.
+      eapply postfix_impl_list' in Hlc1';eauto. 
       do 2 destructH.
       destruct l1'.
-      ++ right. intro N. subst. cbn in Hlc0'0, Hlc1'0.
-         eapply2 postfix_hd_eq Hlc0'0 Hlc1'0.
-         rewrite Hlc0'0 in Hlc1'0.
-         clear - Hneq Hlc1'0 Hlc1'1 Hlc0'1 Hnexit. inversion Hlc1'0.
-         subst h0. destruct h as [h Hh]. cbn in Hlc1'1,Hlc0'1. destruct (Hnexit h);contradiction.
+      ++ right. intro N. subst. cbn in Hlc0'1, Hlc1'1.
+         eapply2 postfix_hd_eq Hlc0'1 Hlc1'1.
+         rewrite Hlc0'1 in Hlc1'1.
+         clear - Hneq Hlc1'1 Hlc1'0 Hlc0'0 Hnexit. inversion Hlc1'1.
+         subst h0. destruct h as [h Hh]. cbn in Hlc1'0,Hlc0'0. destruct (Hnexit h);contradiction.
       ++ left. congruence.
   + simpl_nl. cbn. auto. 
 Admitted.
@@ -799,12 +913,25 @@ Admitted.
 Lemma path_nlrcons_edge {A : Type} (a b c : A) l f
       (Hpath : Path f b c (l :>: a))
   : f a (ne_back l) = true.
-Admitted.
+Proof.
+  revert dependent c.
+  induction l; intros; inversion Hpath; subst; cbn in *.
+  - inversion H3. subst b0 b a1. auto.
+  - eauto.
+Qed.
 
 Lemma exits_eq_loop `{C:redCFG} q1 q2 h
       (Hexit1 : exited h q1)
       (Hexit2 : exited h q2)
   : eq_loop q1 q2.
+Proof.
+  revert q1 q2 h Hexit1 Hexit2.
+  enough (forall q1 q2 h : Lab, exited h q1 -> exited h q2 -> deq_loop q1 q2).
+  { intros. split; eauto. }
+  intros.
+  decide (deq_loop q1 q2);[auto|].
+  exfalso.
+  
 Admitted.
 
 Lemma exited_deq_p `{C:redCFG} p q (h : local_impl_CFG_type C p)
