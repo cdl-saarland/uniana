@@ -88,7 +88,7 @@ Admitted.
     conv_bool. destructH. destructH. unfold eff_tag in *.
     induction all_lab. destruct (back_edge_b p q). *)
 
-Definition TPath `{redCFG} := Path tcfg_edge.
+Definition TPath := Path tcfg_edge.
 
 Lemma tag_depth (* unused *)`{redCFG} p i q j t
       (Hpath : TPath (root,start_tag) (p,i) t)
@@ -104,7 +104,7 @@ Proof.
   - conv_bool. firstorder. 
 Qed.            
 
-Definition TPath' `{redCFG} π := TPath (ne_back π) (ne_front π) π.
+Definition TPath' π := TPath (ne_back π) (ne_front π) π.
 
 
 Parameter eff_tag_fresh : forall `{redCFG} p q q0 i j j0 l,

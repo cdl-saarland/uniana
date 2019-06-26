@@ -399,6 +399,14 @@ Lemma impl_list'_tpath `{C:redCFG} p i h t
       (Hpath : TPath' ((p,i) :< t))
       (Hp : deq_loop h p)
   : TPath' (C:=local_impl_CFG C h) ((impl_of_original' (or_introl Hp),i) :< impl_list' h t).
+Proof.
+  Arguments TPath : default implicits.
+  Arguments TPath' : default implicits.
+
+  
+
+  Arguments TPath {_ _ _ _ _}.
+  Arguments TPath' {_ _ _ _ _}.
 Admitted.
 
 Lemma lc_implode_out `{redCFG} p s i k t1 t2
@@ -635,7 +643,7 @@ Proof.
   dependent induction Hpath; intros.
   - exfalso. inversion Hpre. subst. inversion H1.
   - destruct b as [q' j'].
-    specialize (IHHpath  q' j' Hh). do 8 exploit' IHHpath.
+    specialize (IHHpath p q' j' h Hh). do 3 exploit' IHHpath.
     cbn.
     decide (deq_loop p q).
     {
@@ -655,7 +663,7 @@ Proof.
       subst h.
       destruct j.
       {
-        exfalso. clear - Hpath H0 Hloop.
+        exfalso. clear - Hpath H Hloop.
         eapply PathCons in Hpath;eauto.
         eapply loop_tag_not_nil; eauto. eapply loop_contains_loop_head;eauto.
       }
@@ -713,7 +721,7 @@ Proof.
         destruct (O :: i == j). 2: reflexivity.
         exfalso. eapply n0. exists p. rewrite <-e. split;eauto using deq_loop_refl.
       * eapply prefix_nincl_prefix. eapply prefix_incl;eauto.
-      * clear - Hloop Hloop' H0 Hpath Htag H2 Hneq.
+      * clear - Hloop Hloop' H Hpath Htag H2 Hneq.
         assert (exists n, Precedes fst π (h, n :: i)).
         {
           eapply PathCons in Hpath; eauto. eapply tpath_tag_prefix_head_prec in Hpath;cycle 1;eauto.
@@ -721,7 +729,7 @@ Proof.
           - destructH. exists n. inversion Hpath;subst;[contradiction|eauto].
         }
         destructH.
-        eapply tag_prefix_head in H; eauto. eapply prefix_cons;eauto.
+        eapply tag_prefix_head in H0; eauto. eapply prefix_cons;eauto.
 Qed.
   (*  
   induction l2'; intros.
