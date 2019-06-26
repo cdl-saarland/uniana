@@ -507,11 +507,74 @@ Lemma head_precedes_tpath `{C : redCFG} p h i t
   : exists k, Precedes fst t (h,k).
 Admitted.
 
+Lemma ex_head_zero
+      (Lab : finType) (edge : Lab -> Lab -> bool) (root : Lab) (a_edge : Lab -> Lab -> bool)
+      (C : redCFG edge root a_edge) (q : Lab) (j : Tag) (h : Lab) (t : ne_list Coord)
+      (Hpath : TPath (root, start_tag) (q, j) t)
+      (Hexit : exiting h q)
+  : (h, 0 :: tl j) ∈ t.
+Proof.
+  (*
+   * the tpath is also a cpath, thus because of dominance there is h on t
+   * going backwards from (q,j), as long as we haven't visited (h, 0:: tl j) the tail of j
+   * cannot be altered, the only changes possible are consing and modifying something on top of j
+   * or counting down the head of j by travelling backedges. 
+   * we have to ultimatively reach (h,0::tl j) because root is not in h
+   *)
+Admitted.
+
+Lemma loop_tag_not_nil `{redCFG} h t
+      (Hloop : loop_head h)
+      (Hpath : TPath (root,start_tag) (h,nil) t)
+  : False.
+Admitted.
+
+Lemma tag_tpath_backedge_in `(C : redCFG)
+      (q' : Lab) (j' : Tag) (h : Lab) (n0 : nat) (j : list nat) 
+      (π : ne_list Coord)
+      (Hpath : Path tcfg_edge (root, start_tag) (q', j') π)
+      (Hloop : loop_head h)
+      (Hedge : tcfg_edge (q', j') (h, S n0 :: j) = true)
+  : loop_contains h q'.
+  (*
+   * because h is head and has non-zero head-tag in Hedge, the incoming edge must be a backedge,
+   * thus its predecessor is inside the loop.
+   *)
+Admitted.
+
+Lemma tag_tpath_backedge `(C : redCFG)
+      (q' : Lab) (j' : Tag) (h : Lab) (n0 : nat) (j : list nat) 
+      (π : ne_list Coord)
+      (Hpath : Path tcfg_edge (root, start_tag) (q', j') π)
+      (Hloop : loop_head h)
+      (Hedge : tcfg_edge (q', j') (h, S n0 :: j) = true)
+  : j' = n0 :: j.
+Proof.
+  (*
+   * because h is head and has non-zero head-tag in Hedge, the incoming edge must be a backedge,
+   * thus the tag is as it is
+   *)
+Admitted.
+
+Lemma tpath_tag_prefix_head_prec `{redCFG} h q i j π
+      (Hpath : TPath (root,start_tag) (q,j) π)
+      (Hin : (h, 0 :: i) ∈ π)
+      (Hpre : Prefix i j)
+      (Hloop : loop_contains h q)
+  : exists n, Precedes fst π (h, n :: i).
+Proof.
+  (*
+   * we have (h, 0 :: i) ∈ π and we cannot leave the loop h between this and (q,j),
+   * since i is a prefix of j, j ∈ h and leaving would imply taking an outer back_edge 
+   * and thus irreversibly changing i.
+   * Thus the last instance of h has to have tag (n :: i) for some n (actually n = hd j)
+   *)
+Admitted.
 
 Lemma impl_list'_ndeq_eq `{C : redCFG} (p q : Lab) j (h : local_impl_CFG_type C p) t
       (Hexit : exit_edge (` h) q p)
-      (Hpath : TPath (root,start_tag) (q,j) ((q,j) :< t))
-  : exists t', impl_list' p ((q, j) :: t) = (h, tl j) :: impl_list' p t'.
+      (Hpath : TPath (root,start_tag) (q,j) t)
+  : exists t', impl_list' p t = (h, tl j) :: impl_list' p t'.
 Proof.
   (*
   destruct h as [h Hh]. cbn in Hexit.
@@ -554,10 +617,10 @@ Proof.
   (***************)
   
   destruct h as [h Hh]. cbn in Hexit.
-  specialize (prefix_nincl_prefix (h, O :: tl j) ((q,j) :: t)) as Hpre.
-  exploit Hpre. 1: admit.
-  cbn.
-  set (t' := prefix_nincl (h, O :: tl j) ((q,j) :: t)) in *.
+  specialize (prefix_nincl_prefix (h, O :: tl j) t) as Hpre.
+  exploit Hpre.
+  1: eapply ex_head_zero;eauto;unfold exit_edge in Hexit;eexists;eauto.
+  set (t' := prefix_nincl (h, O :: tl j) t) in *.
   exists t'.
   decide (deq_loop p q).
   { unfold exit_edge in Hexit. destructH. eapply d in Hexit0. contradiction. }
@@ -565,10 +628,102 @@ Proof.
   { eexists; eapply Hexit. }
   assert (loop_contains h q) as Hloop.
   { unfold exit_edge in Hexit; destructH; eauto. }
+  assert (Prefix (tl j) j) as Htag.
+  { destruct j; cbn; econstructor; econstructor. }
+  remember (tl j) as i. clear Heqi.
   clear n Hexit. rename Hexit' into Hexit.
-  eapply prefix_eq in Hpre.
-  destructH.
-  revert dependent q. revert dependent j. revert dependent t.
+  dependent induction Hpath; intros.
+  - exfalso. inversion Hpre. subst. inversion H1.
+  - destruct b as [q' j'].
+    specialize (IHHpath  q' j' Hh). do 8 exploit' IHHpath.
+    cbn.
+    decide (deq_loop p q).
+    {
+      exfalso. destruct Hexit as [qe Hexit]. eapply exit_not_deq;eauto.
+      eapply deq_loop_trans;eauto. eapply loop_contains_deq_loop; auto.
+    }
+    unfold ne_to_list in Hpre. fold (ne_to_list π) in Hpre.
+    decide (exists e, exited q e /\ deq_loop p e).
+    + assert (h = q) as Hheq.
+      {
+        destructH. destruct e1 as [qe e1].
+        eapply exit_edge_unique_diff_head;eauto. intro N. eapply e2 in N.
+        destruct Hexit as [qe' Hexit].
+        eapply exit_not_deq in Hexit; eauto.
+        eapply loop_contains_deq_loop;auto.
+      }
+      subst h.
+      destruct j.
+      {
+        exfalso. clear - Hpath H0 Hloop.
+        eapply PathCons in Hpath;eauto.
+        eapply loop_tag_not_nil; eauto. eapply loop_contains_loop_head;eauto.
+      }
+      destruct n0.
+      * inversion Hpre; subst.
+        -- destruct (q == q);[|congruence].
+           destruct (0 :: j == 0 :: j);[|congruence].
+           f_equal. f_equal. eapply subtype_extensionality. cbn. reflexivity.
+        -- exfalso.
+           eapply PathCons in Hpath; eauto.
+           assert (i = j) as Heqij.
+           {
+             eapply tpath_tag_len_eq_elem in Hpath;eauto;cycle 1.
+             - cbn. left. reflexivity.
+             - cbn. right. eapply prefix_incl; eauto.
+             - eapply prefix_length.
+               + inversion Htag;eauto. rewrite H1 in Hpath. cbn in Hpath. clear - Hpath. omega.
+               + cbn in Hpath. inversion Hpath. reflexivity.
+           } 
+           subst j.
+           clear - Hpath H2.
+           eapply tpath_NoDup in Hpath.
+           cbn in Hpath. inversion Hpath; subst.
+           eapply H1. eapply prefix_incl;eauto.
+      * rewrite IHHpath.
+        -- f_equal. f_equal.
+           destruct (q == q). 2: reflexivity.
+           destruct (O :: i == S n0 :: j). 1: congruence.
+           reflexivity.
+        -- eapply prefix_nincl_prefix.
+           inversion Hpre. subst.
+           eapply prefix_incl;eauto.
+        -- auto.
+        -- eapply tag_tpath_backedge_in; eauto using loop_contains_loop_head.
+        -- inversion Hpre; subst. inversion Htag;subst.
+           ++ exfalso.
+              eapply PathCons in Hpath;eauto.
+              eapply tpath_tag_len_eq_elem in Hpath;eauto;cycle 1.
+              ** left. reflexivity.
+              ** right. eapply prefix_incl;eauto.
+              ** clear - Hpath. cbn in Hpath. omega.
+           ++ assert (j' = n0 :: j) as Heqj by (eapply tag_tpath_backedge; eauto using loop_contains_loop_head).
+              subst j'.
+              econstructor;eauto.
+    + assert (h <> q) as Hneq.
+      {
+        contradict n0. subst h. exists p. split;eauto using deq_loop_refl.
+      }
+      assert (loop_contains h q') as Hloop'.
+      { eapply preds_in_same_loop;eauto. eapply tcfg_graph_edge;eauto. }
+      inversion Hpre; [contradiction|subst]. 
+      rewrite IHHpath;auto.
+      * f_equal. f_equal.
+        destruct (h == q). 2: reflexivity.
+        destruct (O :: i == j). 2: reflexivity.
+        exfalso. eapply n0. exists p. rewrite <-e. split;eauto using deq_loop_refl.
+      * eapply prefix_nincl_prefix. eapply prefix_incl;eauto.
+      * clear - Hloop Hloop' H0 Hpath Htag H2 Hneq.
+        assert (exists n, Precedes fst π (h, n :: i)).
+        {
+          eapply PathCons in Hpath; eauto. eapply tpath_tag_prefix_head_prec in Hpath;cycle 1;eauto.
+          - right. eapply prefix_incl;eauto.
+          - destructH. exists n. inversion Hpath;subst;[contradiction|eauto].
+        }
+        destructH.
+        eapply tag_prefix_head in H; eauto. eapply prefix_cons;eauto.
+Qed.
+  (*  
   induction l2'; intros.
   - unfold app in Hpre. inversion Hpre. subst h.
     decide (exists e, exited q e /\ deq_loop p e).
@@ -582,7 +737,10 @@ Proof.
       * eapply H. eapply deq_loop_refl.
   - unfold app in Hpre. fold (l2' ++ (h, 0 :: tl j) :: t') in Hpre. inversion Hpre.
     subst a.
-    specialize (IHl2').
+    specialize (IHl2' (tl t) j q).
+    exploit IHl2'.
+    { destruct t; cbn;[congruence'|].
+      
     decide (exists e, exited q e /\ deq_loop p e).
     + destruct j;[admit|]. (* contradiction: q is a header with tag [] *)
       destruct n.
@@ -606,7 +764,7 @@ Proof.
         -- left. auto.
       * admit. (* header visited but not the first time: here we should use IH *)
     + admit. (* some other node visited: here we should use IH *)
-Admitted.
+Admitted.*)
 
 Lemma postfix_impl_list' `{redCFG} p q s i j k t l
       (Hpath : TPath (root,start_tag) (p,i) ((p,i) :< ((q,j) :: t)))
@@ -626,7 +784,7 @@ Proof.
       exists h'. destruct h' as [h Hh]. split;[auto|].
       cbn in Hndeq0,Hndeq1.
       eapply (impl_list'_ndeq_eq) in H5. 2: cbn;eauto.
-      destructH. exists t'. rewrite H5 in Hpost. eauto.
+      destructH. exists t'. simpl_nl' H5. setoid_rewrite H5 in Hpost. eauto.
   }
   eapply tcfg_graph_edge in H4. unfold exit_edge. split_conj; eauto.
 Qed.
