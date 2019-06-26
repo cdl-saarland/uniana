@@ -395,6 +395,51 @@ Proof.
   destructH. eexists;eexists. destruct Hlc;eauto.
 Qed.
 
+Definition root' `(C : redCFG) := root.
+
+Lemma impl_list'_rcons `(C:redCFG) r q j t
+  : impl_list' r (t :r: (q,j)) =
+    match decision (deq_loop r q) with
+      | left H0 => impl_list' r t :r: (impl_of_original' (or_introl H0), j) 
+      | in_right =>
+          match decision (exists e : Lab, exited q e /\ deq_loop r e) with
+          | left Q =>
+              match j with
+              | 0 :: _ =>  impl_list' r t :r: (impl_of_original' (or_intror Q), tl j)
+              | _ => impl_list' r t
+              end
+          | in_right => impl_list' r t
+          end
+    end.
+Proof.
+  induction t; cbn.
+  - reflexivity.
+  - unfold rcons in IHt. rewrite IHt.
+    destruct a as [q0 j0]. decide (deq_loop r q).
+    + decide (deq_loop r q0).
+      * reflexivity.
+      * decide (exists e, exited q0 e /\ deq_loop r e).
+        -- destruct j0.
+           ++ reflexivity.
+           ++ destruct n0;reflexivity.
+        -- reflexivity.
+    + decide (exists e, exited q e /\ deq_loop r e).
+      * destruct j.
+        -- decide (deq_loop r q0).
+           ++ reflexivity.
+           ++ decide (exists e0, exited q0 e0 /\ deq_loop r e0);reflexivity.
+        -- destruct n0.
+           ++ decide (deq_loop r q0).
+              ** reflexivity.
+              ** decide (exists e0, exited q0 e0 /\ deq_loop r e0).
+                 --- destruct j0.
+                     +++ reflexivity.
+                     +++ destruct n1;reflexivity.
+                 --- reflexivity.
+           ++ reflexivity.
+      * reflexivity.
+Qed.
+  
 Lemma impl_list'_tpath `{C:redCFG} p i h t
       (Hpath : TPath' ((p,i) :< t))
       (Hp : deq_loop h p)
@@ -402,7 +447,25 @@ Lemma impl_list'_tpath `{C:redCFG} p i h t
 Proof.
   Arguments TPath : default implicits.
   Arguments TPath' : default implicits.
-
+  rinduction t.
+  - admit.
+  - destruct a as [q j]. exploit H.
+    {
+      setoid_rewrite rcons_nl_rcons in Hpath. simpl_nl' Hpath.
+      rewrite nl_cons_lr_shift in Hpath.
+      unfold TPath' in Hpath. cbn in Hpath. simpl_nl' Hpath. 
+      eapply path_rcons_inv in Hpath. destructH. destruct p0. destruct l; cbn in *; eapply tpath_tpath';eauto.
+    }
+    rewrite impl_list'_rcons.
+    decide (deq_loop h q).
+    + admit. (* this is easier: the successor of q is in the imploded graph, thus also in the imploded path *)
+    + decide (exists e, exited q e /\ deq_loop h e);auto.
+      destruct j;auto.
+      destruct n0;auto.
+      setoid_rewrite rcons_nl_rcons. simpl_nl.
+      rewrite nl_cons_lr_shift.
+      (* use path_rcons *)
+      admit. (* difficult *)
   
 
   Arguments TPath {_ _ _ _ _}.
