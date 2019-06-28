@@ -539,14 +539,12 @@ Section uniana.
     all: cycle 1.
     {
       clear - ηeq1 Hη1 Hexit__edge1 Hexit__succ1 Htr1. unfold TPath'. econstructor. cbn.
-      + rewrite ηeq1 in Hη1. replace (ne_back (_ :< tl η1)) with (root,start_tag);eauto.
-        symmetry. eapply path_back;eauto.
+      + rewrite ηeq1 in Hη1. eauto. 
       + eapply succ_in_path_edge;cycle 1;eauto.
     } 
     {
       clear - ηeq2 Hη2 Hexit__edge2 Hexit__succ2 Htr2. unfold TPath'. econstructor. cbn.
-      + rewrite ηeq2 in Hη2. replace (ne_back (_ :< tl η2)) with (root,start_tag);eauto.
-        symmetry. eapply path_back;eauto.
+      + rewrite ηeq2 in Hη2. eauto.
       + eapply succ_in_path_edge;cycle 1;eauto.
     }
     1,2: eapply tpath_NoDup;eauto.
