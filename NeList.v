@@ -291,17 +291,6 @@ Lemma postfix_app (* unused *){A : Type} (l1 l2 l' : list A) :
   - eapply cons_postfix; eauto.
 Qed.
 
-(*  Lemma postfix_dec {A : Type} `{EqDec A} (l l' : list A) : decidable (Postfix l l').
-  Proof.
-    unfold decidable. revert l'.
-    apply rcons_ind.
-    - induction l.
-      + left. econstructor.
-      + right. intro N. inversion N. eapply rcons_not_nil; eauto.
-    - intros. destruct H0.
-      + left. econstructor; eauto.
-      + admit. *)
-
 Lemma postfix_nincl_postfix (* unused *){A : Type} `{EqDec A eq} a l : Postfix (postfix_nincl a l) l.
 Proof.
   induction l; cbn; [econstructor; reflexivity|].

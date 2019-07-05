@@ -1731,3 +1731,6 @@ Proof.
    * * 
    *) 
 Admitted.
+
+
+(* FIXME: give intuition for unfinished proofs *)

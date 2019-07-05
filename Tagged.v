@@ -385,3 +385,5 @@ Qed.
   Admitted.
   
 End tagged.
+
+(* FIXME give intuition for unfinished proofs *)

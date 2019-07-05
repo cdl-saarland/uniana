@@ -241,21 +241,12 @@ Section red_cfg.
 
   Definition EqNeList (* unused *)(X : eqType) := EqType (ne_list X).
 
-  Global Instance loop_contains_dec qh q : dec (loop_contains qh q).
-    unfold loop_contains. eauto.
-    eapply finType_exists_dec. intros.
-    (* proof idea : consider only dupfree paths, there are only finitely many of them. *)
-  Admitted.
+  Parameter loop_contains_dec : forall qh q, dec (loop_contains qh q).
+
+  Global Existing Instance loop_contains_dec.
+  
   Hint Resolve loop_contains_dec.
   
-(*  Definition loop_contains_b qh q := to_bool (loop_contains_dec qh q).
-
-  Lemma loop_contains_spec : forall qh q, loop_contains_b qh q = true <-> loop_contains qh q.
-  Proof.
-    intros. unfold loop_contains_b. destruct (loop_contains_dec qh q); cbn; split;eauto.
-    intro. congruence.
-  Qed.*)
-
   Lemma back_edge_incl (p q : Lab) (Hback : p ↪ q) : edge p q = true.
   Proof. 
     unfold back_edge,back_edge_b in Hback. eapply minus_subgraph. eauto.
@@ -1115,9 +1106,6 @@ Section red_cfg.
     := l ⊆ l' /\ exists a, a ∈ l' /\ a ∉ l.
 
   Infix "⊂" := strict_incl (at level 55).
-
-(*  Lemma strict_incl_well_founded (A : Type) : well_founded (@strict_incl A).
-  Admitted.*)
 
   Lemma loop_contains_outermost h p
         (Hl : loop_contains h p)
@@ -2009,18 +1997,6 @@ Proof.
 Admitted.
 
 
-(*Lemma loop_CFG_top_level `{C : redCFG} (h p : Lab)
-      (Hloop : loop_contains h p)
-      (Hinner : innermost_loop_strict h p)
-      (D := loop_CFG C h (loop_contains_loop_head Hloop))
-      (p' := loop_CFG_elem C h p Hloop)
-  : implode_nodes (C:=D) p'.
-Proof.
-  set (root' := (↓ purify_head (loop_contains_loop_head Hloop))) in *. 
-  unfold implode_nodes. econstructor.
-  unfold deq_loop.
-Admitted.*)
-
 Definition top_level (* unused *)`{redCFG} q := forall h, loop_contains h q -> (h = root \/ h = q).
 
 Arguments loop_CFG {_ _ _ _} (_).
@@ -2724,7 +2700,7 @@ Proof.
         -- admit. (*left;eapply deq_loop_refl.*)
         -- left. unfold back_edge,back_edge_b in Hloop0. unfold_edge_op' Hloop0. firstorder.
       * econstructor.
-    + admit.
+    + admit. (* FIXME: give intuition *)
 Admitted.
 
 Lemma implode_CFG_elem `{C : redCFG} (p h : Lab) (Himpl : implode_nodes h p)
@@ -2845,21 +2821,58 @@ Proof.
   - exact None.
 Defined.
 
+
+Arguments loop_contains {_ _ _ _} _.
+
+Lemma head_exits_loop_contains_iff `(C : redCFG) (h p q : Lab)
+  : loop_contains C h q <-> loop_contains (head_exits_CFG C p) h q.
+Proof.
+  setoid_rewrite <-loop_contains'_basic at 2.
+  eapply head_exits_loop_equivalence.
+Qed.          
+
 Lemma head_exits_deq_loop_inv1 `(C : redCFG) (h p q : Lab)
   : deq_loop (C:=C) p q -> deq_loop (C:=head_exits_CFG C h) p q.
-Admitted.
+Proof.
+  intros.
+  unfold deq_loop in *.
+  setoid_rewrite <-head_exits_loop_contains_iff.
+  eauto.
+Qed.
 
 Lemma head_exits_deq_loop_inv2 `(C : redCFG) (h p q : Lab)
   : deq_loop (C:=head_exits_CFG C h) p q -> deq_loop (C:=C) p q.
-Admitted.
+Proof.
+  unfold deq_loop.
+  setoid_rewrite <-head_exits_loop_contains_iff.
+  eauto.
+Qed.
 
 Lemma head_exits_exited_inv1 `(C : redCFG) (qh h p : Lab)
   : exited (C:=C) h p -> exited (C:=head_exits_CFG C qh) h p.
-Admitted.
+Proof.
+  unfold exited, exit_edge.
+  setoid_rewrite <-head_exits_loop_contains_iff.
+  intros. destructH.
+  exists p0. split_conj;eauto.
+  eapply union_subgraph1;auto.
+Qed.
 
 Lemma head_exits_exited_inv2 `(C : redCFG) (qh h p : Lab)
   : exited (C:=head_exits_CFG C qh) h p -> exited (C:=C) h p.
-Admitted.
+Proof.
+  unfold exited, exit_edge.
+  setoid_rewrite <-head_exits_loop_contains_iff.
+  intros. destructH.
+  unfold_edge_op' H3. destruct H3.
+  - exists p0. split_conj;eauto.
+  - eapply head_exits_edge_spec in H. destructH. exists p1.
+    replace p0 with h in *.
+    + unfold exit_edge in H. destructH. split_conj; eauto.
+    + eapply exit_edge_unique_diff_head;eauto.
+Qed.
+
+Arguments loop_contains {_ _ _ _ _}.
 
 Lemma head_exits_implode_nodes_inv1 `(C : redCFG) (h p : Lab)
   : implode_nodes C h p -> implode_nodes (head_exits_CFG C h) h p.
@@ -2878,10 +2891,10 @@ Proof.
 Defined.
 
 Arguments local_impl_CFG {_ _ _ _} _.
-(** more parameters **)
 
 Lemma Lab_dec' `{redCFG} : forall (l l' : Lab), { l = l' } + { l <> l'}.
 Proof.
   apply Lab_dec.
 Qed.
+
 

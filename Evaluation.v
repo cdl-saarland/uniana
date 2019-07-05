@@ -635,6 +635,7 @@ Section eval.
         (Hsucc : (q',j') ≻ (q,j) | map fst l)
     : exists r r', (q',j',r') ≻ (q,j,r) | l.
   Proof.
+    (* just pick the state corresponding to (q',j') and (q,j) in l, which is unique since tagging is unique *)
   Admitted.
   
   Lemma tr_succ_eff' p q q' br i j k s r r' r0 l
@@ -642,6 +643,7 @@ Section eval.
         (Hsucc : (q, j, r) ≻ (br, k, r0) | (p, i, s) :< l)
         (Heff : eff' (br,r0) = Some (q',r'))
     : q = q'.
+    (* the effect is deterministic, thus (q,r) being a successor of (br,r0) implies q = q' *)
   Admitted.
 
   
@@ -656,6 +658,7 @@ Section eval.
         (Hsucc : (p,i) ≻ (q,j) | t)
     : eff_tag q p j = i.
   Proof.
+    (* tagging is deterministic thus (p,i) succeeding (q,j) implies that i is the tag of p coming from qj *)
   Admitted.
 
   Lemma eff_tcfg p q i j s r

@@ -2,6 +2,7 @@
 Require Import Coq.Program.Utils.
 Require Import Lists.ListSet.
 Require Import List.
+Require Import Coq.Classes.EquivDec.
 
 Require Export Evaluation.
 
@@ -12,7 +13,10 @@ Section unch.
   
   Notation "p --> q" := (edge p q = true) (at level 55,right associativity).
   
-  Variable root_no_pred' : forall p, p --> root -> False.
+  Lemma root_no_pred' : forall p, p --> root -> False.
+  Proof.
+    eapply root_no_pred.
+  Qed.
 
   Definition Unch := Lab -> Var -> set Lab.
 
@@ -55,19 +59,6 @@ Section unch.
     + cut (forall q, ~ List.In q (preds root)); intros; eauto using list_emp_in, root_no_pred'.
       rewrite in_preds. intros H. eapply root_no_pred'; eauto.
   Qed.
-
-(*  Inductive Front (u : Unch) : Var -> Lab -> Prop :=
-  | FrontDef : forall x p, is_def_lab x p -> Front u x p
-  | FrontIter : forall x l l' r r' p, l <> r ->
-                                 Front u x l ->
-                                 Front u x r ->
-                                 l' --> p ->
-                                 r' --> p ->
-                                 set_In l (u l' x) ->
-                                 set_In r (u r' x) ->
-                                 ~ set_In l (u r' x) ->
-                                 ~ set_In r (u l' x) ->
-                                 Front u x p.*)
   
   Lemma unch_trans_lem u to x unch :
     set_In u (unch_trans unch to x) ->
@@ -91,22 +82,87 @@ Section unch.
         * simpl in Hin. firstorder.
         * eauto using set_add_elim2.
   Qed.
+  
+  Definition unch_concr' (unch : Unch) (l : list Conf) :=
+    forall (to : Lab) (i : Tag) (s : State) (u : Lab) (x : Var),
+      (to,i,s) ∈ l ->
+      u ∈ unch to x ->
+      exists (j : Tag) (r : State), Precedes' l (u,j,r) (to,i,s) /\ r x = s x.
 
-  (*  Lemma in_exists_pred p i s k t :
-    forall tr step, proj2_sig tr = Step (`t) k (proj2_sig t) step -> In (p, i, s) tr  ->
-    p <> root ->
-    exists q j r, In (q, j, r) t /\ eff (q, j, r) = Some (p, i, s).
+  
+  Lemma prefix_trans_NoDup (A : Type) `{EqDec A eq} (a : A) (l l1 l2 : list A)
+        (Hpre1 : Prefix (a :: l1) l)
+        (Hpre2 : Prefix l2 l)
+        (Hnd : NoDup l)
+        (Hin : a ∈ l2)
+    : Prefix (a :: l1) l2.
   Proof.
-    intros k' step H Hneq.
-    dependent induction t; inv_tr H.
-    - exists root, start_tag, s0. split; [ constructor | eauto ].
-    - inv_tr H4. firstorder.
-    - destruct k as [[q j] r]. exists q, j, r.
-      split; [ constructor | eauto ].
-    - eapply IHt in H4; eauto. destruct H4 as [q [j [r [Hin Hstep]]]].
-      exists q, j, r. split; [ constructor |]; eauto.
-  Qed.*)
+    induction l;cbn.
+    - eapply prefix_incl in Hin;eauto. cbn in Hin. contradiction.
+    - inversion_clear Hnd;subst. decide' (a == a0).
+      + inversion Hpre1;subst.
+        * inversion Hpre2; subst; [econstructor|].
+          eapply prefix_incl in Hin; eauto. congruence.
+        * exfalso. eapply prefix_incl in H4. firstorder.          
+      + eapply prefix_incl in Hin;eauto. destruct Hin;[congruence|].
+        inversion Hpre1;subst;[congruence|].
+        inversion Hpre2; subst.
+        * econstructor;eauto.
+        * eapply IHl;eauto.
+  Qed.
 
+  
+  Lemma Tr_NoDup t
+        (Htr : Tr t)
+    : NoDup t.
+  Proof.
+    destruct (ne_front t) eqn:E. destruct c eqn:E'.
+    eapply Tr_EPath in Htr. destructH.
+    - eapply EPath_TPath in Htr. eapply tpath_NoDup in Htr. eapply NoDup_map_inv.
+      rewrite to_list_ne_map. eauto.
+    - rewrite E. reflexivity.
+  Qed.
+
+
+  Lemma precedes_prefix l' p q i j r s (t : ne_list Conf)
+        (Hprec : Precedes' t (q,j,r) (p,i,s))
+        (Hpre  : Prefix l' t)
+        (Hin : (p,i,s) ∈ l')
+        (Htr : Tr t)
+    : Precedes' l' (q,j,r) (p,i,s).
+  Proof.
+    unfold Precedes' in *.
+    destructH. exists l'0. split;eauto.
+    eapply prefix_trans_NoDup;eauto.
+    eapply Tr_NoDup;eauto.
+  Qed.
+
+  Lemma unch_concr'_pre unch t l
+        (HCunch : unch_concr unch t)
+        (Hpre : Prefix l (`t))
+    : unch_concr' unch l.
+  Proof.
+    unfold unch_concr,unch_concr' in *; eauto.
+    intros. specialize (HCunch to i s u x). exploit HCunch;[eapply prefix_incl;eauto|].
+    destructH. eexists; eexists; split; [|eauto].
+    eapply precedes_prefix;eauto. destruct t; cbn; eauto.
+  Qed.
+  
+  Lemma unch_dom u p i s x unch l 
+        (Hunch : u ∈ unch_trans unch p x)
+        (HCunch : unch_concr' (unch_trans unch) l)
+        (Htr : Tr ((p,i,s) :< l))
+    : Dom edge root u p.
+  Proof.
+    unfold unch_trans,unch_trans_ptw in Hunch. unfold unch_trans_local in Hunch.
+    (* FIXME: give intuition *)
+    destruct (Lab_dec' p root).
+    - cbn in *. destruct Hunch;[|contradiction]. (*subst. eapply dominant_self.
+    - assert (exists L, forall r, r ∈ L
+                        <-> forall q, q ∈ preds p
+                               -> r ∈ set_add Lab_dec' p (if is_def x q p then empty_set Lab else unch q x)). *)
+      admit.
+  Admitted.
 
   Lemma unch_correct :
     forall unch t,
