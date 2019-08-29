@@ -33,7 +33,7 @@ Qed.
 Lemma dec_DN_iff (* unused *)(X : Prop) : dec X -> ~ ~ X <-> X.
   split;[now eapply dec_DN|firstorder].
 Qed.
-Lemma dec_DM_impl_iff (* unused *)(X Y : Prop) : dec X -> dec Y -> ~ (X -> Y) <-> X /\ ~ Y.
+Lemma dec_DM_impl_iff (X Y : Prop) : dec X -> dec Y -> ~ (X -> Y) <-> X /\ ~ Y.
   split;[now eapply dec_DM_impl|firstorder].
 Qed.
 
@@ -298,7 +298,7 @@ Section red_cfg.
   Definition deq_loop q p : Prop :=
     forall h, loop_contains h p -> loop_contains h q.
 
-  Definition eq_loop (* unused *)q p : Prop :=
+  Definition eq_loop q p : Prop :=
     deq_loop q p /\ deq_loop p q.
 
   Global Instance deq_loop_dec h p : dec( deq_loop h p).
@@ -707,7 +707,7 @@ Section red_cfg.
           rewrite rev_rcons in Hr0. inversion Hr0;subst. eapply in_rev in N; contradiction.
   Qed.
   
-  Definition exiting (* unused *)(h p : Lab) : Prop :=
+  Definition exiting (h p : Lab) : Prop :=
     exists q, exit_edge h p q.
 
   Definition exited (h q : Lab) : Prop :=
@@ -1001,7 +1001,7 @@ Section red_cfg.
       destruct n;unfold innermost_loop in H;firstorder.
   Qed.
 
-  Lemma get_innermost_loop_strict_spec (p : Lab)
+  Lemma get_innermost_loop_strict_spec (* unused *)(p : Lab)
     : match get_innermost_loop_strict p with
       | Some (exist _ h H) => innermost_loop_strict h p
       | None => forall h', loop_contains h' p -> h' = p
@@ -1195,7 +1195,7 @@ Section red_cfg.
    * thus the nearest ancestor is the last such x
    *)
 
-  Lemma ex_near_ancestor p q
+  Lemma ex_near_ancestor (* unused *)p q
     : exists a, near_ancestor a p q.
   Proof.
 
@@ -1262,7 +1262,7 @@ Section red_cfg.
     unfold ancestor;firstorder 0.
   Qed.
   
-  Lemma ancestor_dom2 a p q
+  Lemma ancestor_dom2 (* unused *)a p q
     : ancestor a p q -> Dom edge root a q.
   Proof.
     eauto using ancestor_dom1, ancestor_sym.
@@ -2155,7 +2155,7 @@ Ltac ne_r_destruct l :=
   specialize (ne_list_nlrcons l) as H;
   destruct H as [? [? ?]]; subst l.
 
-Lemma union_subgraph1 (* unused *)(L : Type) (f g : L -> L -> bool)
+Lemma union_subgraph1 (L : Type) (f g : L -> L -> bool)
   : sub_graph f (f ∪ g).
 Proof.
   unfold sub_graph, union_edge. intros. rewrite H. cbn. reflexivity.
@@ -2481,7 +2481,7 @@ Proof.
   split;eauto. eapply negb_true_iff. auto.
 Qed.
   
-Lemma exit_edge_unique_diff_head (* unused *)`{redCFG} h qe e
+Lemma exit_edge_unique_diff_head `{redCFG} h qe e
       (Hexit : exit_edge h qe e)
       h'
       (Hloop : loop_contains h' h)
@@ -2528,13 +2528,13 @@ Proof.
   unfold back_edge,back_edge_b. unfold_edge_op. split;auto.
 Qed.
 
-Lemma loop_contains'_basic (* unused *)`{redCFG} h p
+Lemma loop_contains'_basic `{redCFG} h p
   : loop_contains' edge a_edge h p = loop_contains h p.
 Proof.
   reflexivity.
 Qed.
 
-Lemma exit_not_deq (* unused *)`{redCFG} h p q
+Lemma exit_not_deq `{redCFG} h p q
       (Hexit : exit_edge h p q)
       (Hdeq : deq_loop q h)
   : False.
@@ -2545,7 +2545,7 @@ Proof.
   eapply loop_contains_self. eapply loop_contains_loop_head;eauto.
 Qed.
 
-Lemma deq_loop_exited' (* unused *): forall (Lab : finType) (edge : Lab -> Lab -> bool) (root : Lab) (a_edge : Lab -> Lab -> bool)
+Lemma deq_loop_exited' : forall (Lab : finType) (edge : Lab -> Lab -> bool) (root : Lab) (a_edge : Lab -> Lab -> bool)
                            (C : redCFG edge root a_edge) (h qe e : Lab), exit_edge h qe e -> deq_loop h e.
 Proof.
   intros.
@@ -2592,7 +2592,7 @@ Proof.
 Admitted.  
  *)
 
-Lemma eq_loop_exiting `{redCFG} h p q
+Lemma eq_loop_exiting (* unused *)`{redCFG} h p q
       (Hexit : exit_edge h p q)
   : eq_loop h p.
 Proof.
@@ -2603,7 +2603,7 @@ Proof.
     eapply loop_contains_deq_loop;eauto.
 Qed.      
 
-Lemma eq_loop1 `{redCFG} p p' q
+Lemma eq_loop1 (* unused *)`{redCFG} p p' q
   : eq_loop p p' -> deq_loop p q -> deq_loop p' q.
 Proof.
   intros. destruct H0.
@@ -2786,7 +2786,7 @@ Proof.
   destruct d; [destruct s|]; eauto.
 Defined.
 
-Lemma opt_loop_CFG_elem `{C : redCFG} (p : Lab)
+Lemma opt_loop_CFG_elem (* unused *)`{C : redCFG} (p : Lab)
       (d : option {h : Lab | loop_head h})
       (Hd : match d with
             | Some (exist _ h _) => loop_contains h p
@@ -2812,7 +2812,7 @@ Definition local_impl_CFG_type `(C : redCFG) (h : Lab)
 Arguments redCFG : default implicits.
 Arguments implode_nodes : default implicits.
 
-Definition impl_of_original `(C : redCFG) (h : Lab)
+Definition impl_of_original (* unused *)`(C : redCFG) (h : Lab)
   : Lab -> option (local_impl_CFG_type C h).
 Proof.
   intro p.

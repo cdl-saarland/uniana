@@ -916,7 +916,7 @@ Proof.
   induction l;cbn;eauto. rewrite IHl. reflexivity.
 Qed.
 
-Lemma disjoint_subset (* unused *){A : Type} (l1 l1' l2 l2' : list A)
+Lemma disjoint_subset {A : Type} (l1 l1' l2 l2' : list A)
   : l1 ⊆ l1' -> l2 ⊆ l2' -> Disjoint l1' l2' -> Disjoint l1 l2.
 Proof.
   intros Hsub1 Hsub2 Hdisj.
@@ -1093,7 +1093,7 @@ Proof.
   - rewrite rev_cons. econstructor;eauto.
 Qed.
 
-Lemma prefix_rev_postfix' (* unused *)(A : Type) (l l' : list A)
+Lemma prefix_rev_postfix' (A : Type) (l l' : list A)
       (Hpre : Prefix (rev l) (rev l'))
   : Postfix l l'.
 Proof.
@@ -1129,7 +1129,7 @@ Proof.
   destruct H;[right|left]; eapply postfix_rev_prefix';eauto.
 Qed.
 
-Lemma prefix_length_eq {A : Type} `{EqDec A eq} (l1 l2 l : list A)
+Lemma prefix_length_eq (* unused *){A : Type} `{EqDec A eq} (l1 l2 l : list A)
       (Hlen : length l1 = length l2)
       (Hpre1 : Prefix l1 l)
       (Hpre2 : Prefix l2 l)
@@ -1193,7 +1193,7 @@ Proof.
     f_equal;[eapply rcons_eq2;eauto|apply IHl';eapply rcons_eq1;eauto].
 Qed.
 
-Lemma first_diff {A : Type} `{EqDec A eq} (l1 l2 : list A)
+Lemma first_diff (* unused *){A : Type} `{EqDec A eq} (l1 l2 : list A)
       (Hneq : l1 <> l2)
       (Hlen : length l1 = length l2)
       (Hnnil1 : l1 <> nil)

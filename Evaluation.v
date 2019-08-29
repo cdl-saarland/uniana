@@ -76,7 +76,7 @@ Section eval.
     
     destruct ((p, i, s) == (q, j, r)); firstorder.
   Qed.
-  Definition Conf_dec := conf_eq_eqdec.
+  Definition Conf_dec (* unused *):= conf_eq_eqdec.
 
   Definition is_effect_on (p q : Lab) :=
     exists i i' s s', eff ((p, i), s) = Some ((q, i'), s').

@@ -67,7 +67,7 @@ Definition tcfg_edge := tcfg_edge' edge eff_tag.
 Notation "pi -t> qj" := ((fun `(redCFG) => tcfg_edge pi qj = true) _ _ _ _ _)
                           (at level 50).
 
-Lemma tag_eq_loop_exit (* unused *)`{redCFG} p q i j j'
+Lemma tag_eq_loop_exit `{redCFG} p q i j j'
       (Htag : (q,j ) -t> (p,i))
       (Htag': (q,j') -t> (p,i))
       (Hneq : j <> j')
@@ -115,7 +115,7 @@ Parameter eff_tag_det : forall `{redCFG} q j p i i',
     eff_tag q p j = i' ->
     i = i'.
 
-Lemma tpath_succ_eff_tag `{redCFG} p q r i j s t
+Lemma tpath_succ_eff_tag (* unused *)`{redCFG} p q r i j s t
       (Hpath : TPath' ((r,s) :< t))
       (Hsucc : (q,j) ≻ (p,i) | (r,s) :: t)
   : eff_tag p q i = j.
@@ -169,7 +169,7 @@ Qed.
     - eapply precedes_in. simpl_nl. econstructor;eauto;cbn;eauto.
   Qed.
   
-  Lemma prec_tpath_tpath p i q j l
+  Lemma prec_tpath_tpath (* unused *)p i q j l
         (Htr : TPath (root,start_tag) (p,i) ((p, i) :< l))
         (Hprec : Precedes fst ((p,i) :: l) (q, j))
     : exists l', TPath (root,start_tag) (q,j) ((q,j) :< l').
@@ -192,7 +192,7 @@ Qed.
       + eapply IHHprec1;eauto.
   Qed.
   
-  Lemma tpath_tag_len_eq p j1 j2 l1 l2
+  Lemma tpath_tag_len_eq (* unused *)p j1 j2 l1 l2
         (Hpath1 : TPath (root, start_tag) (p, j1) l1)
         (Hpath2 : TPath (root, start_tag) (p, j2) l2)
     : length j1 = length j2.
@@ -206,7 +206,7 @@ Qed.
     : length j1 = length j2.
   Admitted.
 
-  Lemma dom_tpath_prec p q i l
+  Lemma dom_tpath_prec (* unused *)p q i l
         (Hdom : Dom edge root q p)
         (Hpath : TPath (root,start_tag) (p,i) l)
     : exists j, Precedes fst l (q,j).
@@ -225,7 +225,7 @@ Qed.
     : j = nil.
   Admitted.
   
-  Lemma tag_prefix_ancestor a p q i j l
+  Lemma tag_prefix_ancestor (* unused *)a p q i j l
         (Hanc : ancestor a p q)
         (Hpath : TPath (root, start_tag) (p,i) l)
         (Hprec : Precedes fst l (a,j))
@@ -240,7 +240,7 @@ Qed.
   Hint Unfold Coord.
   
 
-  Lemma tag_prefix_ancestor_elem a p q r i j k l
+  Lemma tag_prefix_ancestor_elem (* unused *)a p q r i j k l
         (Hanc : ancestor a p q)
         (Hpath : TPath (root,start_tag) (r,k) ((r,k) :< l))
         (Hprec : Precedes fst ((r,k) :: l) (a,j))
@@ -255,7 +255,7 @@ Qed.
     : exists h, loop_contains h p /\ Precedes fst t (h,j2).
   Admitted.
   
-  Lemma first_occ_tag_elem i j j1 j2 p q t
+  Lemma first_occ_tag_elem (* unused *)i j j1 j2 p q t
         (Htag : j = j1 ++ j2)
         (Hpath : TPath (root,start_tag) (p,i) t)
         (Hin : (q,j) ∈ t)
@@ -297,7 +297,7 @@ Qed.
     : h1 = h2.
   Admitted.
   
-  Lemma tag_prefix_same_head_elem p q h1 h2 i1 i2 j1 j2 k1 k2 t1 t2
+  Lemma tag_prefix_same_head_elem (* unused *)p q h1 h2 i1 i2 j1 j2 k1 k2 t1 t2
         (Hpath1 : TPath (root,start_tag) (p,i1) t1)
         (Hpath2 : TPath (root,start_tag) (p,i2) t2)
         (Hloop1 : loop_contains h1 q)
@@ -310,7 +310,7 @@ Qed.
     : h1 = h2.
   Admitted.
   
-  Lemma ancestor_level_connector p q a i j k t
+  Lemma ancestor_level_connector (* unused *)p q a i j k t
         (Hpath : TPath (root,start_tag) (p,i) t)
         (Hin : (q,j) ∈ t)
         (Hanc  : near_ancestor a p q)
@@ -319,7 +319,7 @@ Qed.
     : exists a', Precedes fst t (a',k) /\ (p,i) ≻* (a',k) ≻* (q,j) | t.
   Admitted.
 
-  Lemma find_loop_exit h a p i j k n l
+  Lemma find_loop_exit (* unused *)h a p i j k n l
         (Hpath : TPath (root,start_tag) (p,i) l)
         (Hpre : Prefix k j)
         (Hib : (a,k) ≻* (h, n :: j) | l)
@@ -327,7 +327,7 @@ Qed.
     : exists qe e, (a,k) ≻* (e,j) ≻* (qe,n :: j) ≻* (h, n :: j) | l /\ (e,j) ≻ (qe,n :: j) | l /\ exit_edge h qe e.
   Admitted.
   
-  Lemma tpath_deq_loop_prefix p q i j t
+  Lemma tpath_deq_loop_prefix (* unused *)p q i j t
         (Hdeq : deq_loop p q)
         (Hpath : TPath' t)
         (Hpre : Prefix j i)
@@ -345,7 +345,7 @@ Qed.
   Hint Resolve tpath_tpath'.
   Hint Resolve precedes_in.
 
-  Lemma dom_dom_in_between p q r i j k l
+  Lemma dom_dom_in_between (* unused *)p q r i j k l
         (Hdom1 : Dom edge root r q)
         (Hdom2 : Dom edge root q p)
         (Hpath : TPath' l)
@@ -359,7 +359,7 @@ Qed.
     : exists t', Path a_edge q p t'.
   Admitted.
 
-  Lemma tpath_exit_nin h q e n j t
+  Lemma tpath_exit_nin (* unused *)h q e n j t
         (Hpath : TPath (root, start_tag) (q,n :: j) t)
         (Hloop : loop_contains h q)
         (Hexit : exited h e)
@@ -367,14 +367,14 @@ Qed.
   Proof.
   Admitted.
   
-  Lemma loop_cutting_elem q p t i j
+  Lemma loop_cutting_elem (* unused *)q p t i j
         (Hpath : TPath' ((p,i) :< t))
         (Hib : (p,i) ≻* (q,j) | (p,i) :: t)
         (Hnoh : forall h k, loop_contains h q -> ~ (p,i) ≻* (h,k) ≻* (q,j) | (p,i) :: t)
     : exists t', Path a_edge q p t'.
   Admitted.
 
-  Lemma exit_cascade u p t i j k
+  Lemma exit_cascade (* unused *)u p t i j k
         (Hdom : Dom edge root u p)
         (Hprec : Precedes fst ((p,i) :: t) (u,j))
         (Hpath : TPath' ((p,i) :< t))

@@ -34,7 +34,7 @@ Section uniana.
          | None => forall q q' : Lab, edge p q = true -> p --> q' -> q = q'
          end.
 
-  Parameter root_no_pred' : forall p, p --> root -> False.
+  Parameter root_no_pred' (* unused *): forall p, p --> root -> False.
 
   Definition UniState := Var -> bool.
   
@@ -291,7 +291,7 @@ Section uniana.
     eapply postfix_succ_in; eauto;
     eapply succ_in_rcons2.
   
-  Lemma last_common_ex_succ (A : Type) `{EqDec A eq} (a1 a2 a1' a2' c : A) ll1 ll2 l1 l2
+  Lemma last_common_ex_succ (* unused *)(A : Type) `{EqDec A eq} (a1 a2 a1' a2' c : A) ll1 ll2 l1 l2
         (Hpre1 : Prefix (a1 :: l1) ll1)
         (Hpre2 : Prefix (a2 :: l2) ll2)
         (Hnin1 : a1' ∉ (a2 :: l2))
