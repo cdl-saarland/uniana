@@ -1549,14 +1549,39 @@ Section disj.
   Lemma ex_entry (h p q : Lab) (i j : Tag) t
         (Hin : innermost_loop h q)
         (Hnin : ~ loop_contains h p)
-        (Hpath : TPath' t)
+        (Hpath : TPath (root,start_tag) (q,j) t)
         (Hord : (q,j) ≻* (p,i) | t)
     : (q,j) ≻* (h,0 :: tl j) ≻* (p,i) | t.
   Proof.
+    pose (t' := while' (DecPred (fun xl => |j| <= |snd xl|)) t).
+    assert (Postfix t' t) as Hpost.
+    { eapply while'_postfix;subst t';eauto. }
+    assert (forall xl, xl ∈ t' -> loop_contains h (fst xl)) as Hloop by admit.    
+    inversion Hpost;subst.
+    - eapply splinter_cons in Hord. eapply splinter_in in Hord.
+      specialize (Hloop (p,i)).
+      exploit Hloop; rewrite H1; auto.
+      cbn in Hloop. contradiction.
+    -
+
+      Lemma postfix_ex_cons
+      : forall (A : Type) (l l' : list A) (a : A), Postfix l l' -> exists a' : A, Postfix (l :r: a') (l' :r: a).
+      Proof.
+        intros. eapply postfix_rev_prefix in H. eapply prefix_ex_cons in H. destructH.
+        exists a'. eapply prefix_rev_postfix'. do 2 rewrite rev_rcons. eauto.
+      Qed.
+
+      eapply postfix_ex_cons in H1. destructH. erewrite H in H1.
+      eapply while'_max in H1 as Hmax;[|subst t'; eauto]. cbn in Hmax.
+
+                                                                               
+      
+      admit.
+      
     (*
      * by dominance there must be an h in map fst t
      * define t' as the maximal suffix of t with tag dim >= |j|.
-     * then t' ⊆ h
+     * then forall x ∈ t', deq_loop x q thus x ∈ h
      * by definition t = t' or the maximal suffix starts with a loop enter
        * if t = t', contradiction bc. p ∈ t = t', and p ∈ h
        * else, ne_back t' = (h,0 :: tl j) and p ∉ t'
@@ -1597,9 +1622,8 @@ Section disj.
       copy Hinner Hinner''.
       eapply ex_entry in Hinner;eauto.
       eapply ex_entry in Hinner';eauto.
-      3: eapply last_common'_sym in Hlc.
-      3,5: eapply lc_succ_rt1;eauto.
-      2,3: spot_path.
+      2: eapply last_common'_sym in Hlc.
+      2,3: eapply lc_succ_rt1;eauto.
       rewrite Htag in Hinner.
       eapply splinter_cons in Hinner. eapply splinter_cons in Hinner'.
       eapply lc_succ_rt_eq_lc in Hlc;eauto.

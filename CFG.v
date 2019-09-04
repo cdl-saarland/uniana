@@ -1032,12 +1032,22 @@ Section red_cfg.
     unfold Transitive; eapply deq_loop_trans.
   Qed.
 
+  Lemma loop_contains_deq_loop h p
+        (Hloop : loop_contains h p)
+    : deq_loop p h.
+  Proof.
+    unfold deq_loop. intros. eapply loop_contains_trans;eauto.
+  Qed.
+
   Lemma innermost_loop_deq_loop (* unused *)h p q
         (Hinner : innermost_loop h p)
         (Hloop : loop_contains h q)
     : deq_loop q p.
   Proof.
-  Admitted.
+    unfold innermost_loop in Hinner. destructH.
+    eapply deq_loop_trans;eauto.
+    eapply loop_contains_deq_loop;eauto.
+  Qed.
 
   Lemma preds_in_same_loop h p q
         (Hl : loop_contains h p)
@@ -1075,13 +1085,6 @@ Section red_cfg.
     eapply single_exit;eauto.
     unfold exit_edge. repeat (split;eauto).
     contradict Hexit2. eapply loop_contains_trans;eauto.
-  Qed.
-  
-  Lemma loop_contains_deq_loop h p
-        (Hloop : loop_contains h p)
-    : deq_loop p h.
-  Proof.
-    unfold deq_loop. intros. eapply loop_contains_trans;eauto.
   Qed.
   (** ancestors **)
 
