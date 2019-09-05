@@ -85,7 +85,7 @@ Section eff_tag_iff.
 
   Lemma tag_exit_iff
     : j = tl i <-> match get_innermost_loop p with
-                 | Some (exist _ h _) => exit_edge h p q
+                 | Some h => exit_edge h p q
                  | None => False
                  end.
   Proof.
@@ -98,10 +98,10 @@ Section eff_tag_iff.
   Proof.
     split;intro H.
     - eapply tag_exit_iff in H.
-      destruct (get_innermost_loop p);[|contradiction]. destruct s. eexists; eauto.
+      destruct (get_innermost_loop p);[|contradiction]. eexists; eauto.
     - eapply tag_exit_iff. specialize (get_innermost_loop_spec p) as E. destruct (get_innermost_loop p).
-      + destruct s. destructH. eapply single_exit with (h0:=x) in H as H';subst;auto.
-        split;eauto. split;eauto. 2: eapply tcfg_edge_spec;eauto.
+      + destructH. 
+        split;eauto. 1: unfold innermost_loop in E; destructH; auto. split;eauto. 2: eapply tcfg_edge_spec;eauto.
         unfold exit_edge in H. destructH. intro Hl.
         eapply innermost_loop_deq_loop in E;eauto.
       + destructH. eapply E. unfold exit_edge in H; destructH. eauto.
@@ -131,7 +131,7 @@ Lemma tag_eq_loop_exit `{redCFG} p q i j j'
       (Htag': (q,j') -t> (p,i))
       (Hneq : j <> j')
   : match (get_innermost_loop q) with
-    | Some (exist _ h H) => exit_edge h q p
+    | Some h => exit_edge h q p
     | None => False
     end.
 Proof.

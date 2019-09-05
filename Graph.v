@@ -480,3 +480,17 @@ Ltac path_simpl' H :=
                                    eapply path_back in H as Q;
                                    cbn in Q; subst z
   end.
+
+Lemma path_contains_front {L : Type} (x y : L) e l
+      (Hpath : Path e x y l)
+  : y ∈ l.
+Proof.
+  induction Hpath; cbn; eauto.
+Qed.
+
+Lemma path_contains_back (* unused *){L : Type} (x y : L) e l
+      (Hpath : Path e x y l)
+  : x ∈ l.
+Proof.
+  induction Hpath; cbn; eauto.
+Qed.

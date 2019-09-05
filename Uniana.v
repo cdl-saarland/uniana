@@ -223,7 +223,7 @@ Section uniana.
     eapply (tag_eq_loop_exit (p:=p) (q:=q) (i:=i)) in c. 2,3: eapply Htcfg;eauto. clear Htcfg.
     eapply tr_lc_lt with (j3:=j1) (j4:=j2) in Htr1 as Hlc;eauto;destructH' Hlc.
     specialize (get_innermost_loop_spec q) as Hspec.
-    destruct (get_innermost_loop q) ;[destruct s|contradiction].
+    destruct (get_innermost_loop q) ;[|contradiction].
     eapply lc_disj_exit_lsplits in c as Hsplits;eauto; cycle 1.
     - spot_path. 
     - spot_path.
@@ -240,7 +240,7 @@ Section uniana.
         eapply join_andb_true_iff in Hsplit;eauto;cycle 1.
         {
           rewrite splits_spec. right. left.
-          exists x. eauto. 
+          exists e. eauto. 
         }
         eapply uni_branch_succ_p with (j:=j2);eauto.
         intros;symmetry;eapply HCuni;eauto.
@@ -251,17 +251,17 @@ Section uniana.
         eapply join_andb_true_iff in Hsplit;eauto;cycle 1.
         {
           rewrite splits_spec. right. left.
-          exists x. eauto. 
+          exists e. eauto. 
         }
         eapply uni_branch_succ_p with (j:=j1);eauto.
       + eapply (uni_branch_non_disj) with (br:=br);eauto;cbn;simpl_nl;eauto.
         * rewrite nlcons_to_list in Hlc0. eapply Hlc0.
         * rewrite nlcons_to_list in Hlc2. eapply Hlc2.
         * simpl_nl. auto.
-        * eapply join_andb_true_iff with (x0:=(br,qq,qq')) in Hsplit.
+        * eapply join_andb_true_iff with (x:=(br,qq,qq')) in Hsplit.
           unfold "∘" in Hsplit. cbn in Hsplit. auto.
           rewrite splits_spec. right. left.
-          exists x. eauto.
+          exists e. eauto.
   Qed.
 
   

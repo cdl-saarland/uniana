@@ -67,47 +67,12 @@ Arguments loop_head {_ _ _ _} _.
 Arguments loop_head_dec {_ _ _ _} _.
 Arguments get_innermost_loop_strict {_ _ _ _} _.
 
-Definition loop_containsT_loop_head `(C : redCFG) (p : Lab)
-           (H : {h : Lab | loop_contains h p})
-  : {h : Lab | loop_head C h}.
-Proof.
-  destruct H;exists x. eapply loop_contains_loop_head;eauto.
-Defined.
-
-Open Scope prg.
-
-Lemma loop_containsT_loop_head_same_h (* unused *)`(C : redCFG) (p : Lab)
-      (H : {h : Lab | loop_contains h p})
-  : (`H) = (` (loop_containsT_loop_head H)).
-Proof.
-  unfold loop_containsT_loop_head.
-  destruct H. cbn. reflexivity.
-Qed.
-
 Local Arguments deq_loop {_ _ _ _} _.
 Local Arguments depth {_ _ _ _} _.
 Local Arguments exited {_ _ _ _} _.
 
 Definition thrice (A B : Type) (f : A -> B) (xyz : A*A*A) : B*B*B
   := match xyz with (x,y,z) => (f x, f y, f z) end.
-
-
-Definition get_innermost_loop' `{C : redCFG} p
-  := match get_innermost_loop p with
-     | Some (exist _ h _) => h
-     | None => root
-     end.
-
-Lemma deq_loop_innermost' `{C : redCFG} (p : Lab)
-  : deq_loop C (get_innermost_loop' p) p.
-Proof.
-  remember (get_innermost_loop' p) as h.
-  specialize (get_innermost_loop_spec p) as Hspec.
-  unfold get_innermost_loop' in Heqh.
-  destruct (get_innermost_loop p).
-  - destruct s. subst. unfold innermost_loop in Hspec. subst. destructH; auto.
-  - subst. unfold deq_loop. intros. exfalso; eauto.
-Qed.   
     
 
 Program Definition path_splits__imp' `{C : redCFG} (p : Lab)
@@ -251,13 +216,7 @@ Fixpoint impl_list' `{redCFG} (r : Lab) (l : list Coord) :=
                  end
   end.
 
-Definition innermost_loop' (* unused *)`{redCFG} (h p : Lab) := (loop_contains h p \/ h = root) /\ deq_loop h p.
 
-Definition get_innermost_loop_strict' `{C : redCFG} p
-  := match get_innermost_loop_strict p with
-     | Some (exist _ h _) => h
-     | None => root
-     end.
 (*
 Lemma impl_list_cfg_tpath `{C : redCFG} l p i
       (Hin : forall q, q ∈ map fst l -> loop_contains (get_innermost_loop_strict' p) q)
@@ -1440,17 +1399,6 @@ Notation "t 'is' x -->ᵀ y" := (TPath x y t) (at level 70).
   : (h,0 :: tl i) ∈ t.
 *)
 
-Lemma eq_loop_innermost `{redCFG} h p q
-      (Heq : eq_loop p q)
-      (Hinner : innermost_loop h p)
-  : innermost_loop h q.
-Proof.
-  unfold innermost_loop in *.
-  destructH.
-  split;[eapply Heq in Hinner0;auto|]. 
-  unfold eq_loop in Heq. destructH.
-  eapply deq_loop_trans;eauto.
-Qed.
 
 Lemma lc_succ_rt1 {A : Type} `{EqDec A eq} l1 l2 l1' l2' (x y : A)
       (Hlc : last_common' l1 l2 l1' l2' x)

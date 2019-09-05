@@ -1217,4 +1217,59 @@ Proof.
 Qed.
 
 (* TODO : tidy up this file *)
+(*
+Instance ne_list_eq_dec (A : Type) : eq_dec A -> eq_dec (ne_list A).
+Proof.
+  intros H l.
+  induction l; intro l'; induction l'.
+  - decide (a = a0); subst;[left|right];eauto. contradict n. inversion n;eauto.
+  - right. intro N; inversion N.
+  - right. intro N; inversion N.
+  - decide (a = a0).
+    + subst. destruct (IHl l').
+      * subst. left. reflexivity.
+      * right. intro N; inversion N. congruence.
+    + right. intro N; inversion N. congruence.
+Qed.
+ *)
 
+Lemma nin_tl_iff (A : Type) `{EqDec A eq} (a : A) (l : ne_list A)
+  : a ∉ tl (rev l) -> a ∉ l \/ a = ne_back l.
+Proof.
+  intros.
+  decide' (a == ne_back l);eauto.
+  left. contradict H0. induction l;cbn in *;eauto.
+  - destruct H0;eauto. congruence.
+  - fold (rcons (rev l) a0).
+    rewrite tl_rcons;[eapply In_rcons;eauto|destruct l;cbn;eauto;erewrite app_length;cbn;omega].
+    destruct H0.
+    + subst. eauto.
+    + right. eapply IHl;eauto.
+Qed.
+
+Lemma tl_incl (A : Type) (l : list A)
+  : tl l ⊆ l.
+  induction l;cbn;firstorder.
+Qed.
+
+Lemma prefix_induction (* unused *){A : Type} {P : list A -> Prop}
+  : P nil
+    -> (forall (a : A) (l : list A) (l' : list A), P l' -> Prefix (a :: l') l -> P l)
+    -> forall l : list A, P l.
+Proof.
+  intros Hbase Hstep l. induction l;eauto.
+  eapply Hstep;eauto. econstructor.
+Qed.
+
+
+
+Lemma find_some' (* unused *)(A : Type) (f : A -> bool) (l : list A) (x : A)
+      (Hl : x ∈ l)
+      (Hf : f x = true)
+  : exists y, Some y = find f l.
+Proof.
+  induction l;cbn;[contradiction|].
+  destruct Hl;subst.
+  - rewrite Hf. eauto.
+  - destruct (f a);eauto.
+Qed.
