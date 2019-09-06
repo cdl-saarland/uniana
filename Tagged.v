@@ -108,10 +108,12 @@ Section eff_tag_iff.
   Qed.
 
   
-(*  Definition entry_edge (h p q : Lab) := loop_contains h q /\ ~ loop_contains h p /\ edge p q = true.
-  Lemma tag_lt_entry 
-    : | i | < | j | -> entry_edge (get_innermost_loop' q) p q.
-  Admitted.*)
+(*  Definition entry_edge (h p q : Lab) := loop_contains h q /\ ~ loop_contains h p /\ edge p q = true.*)
+
+  Lemma tag_entry_lt
+        (Hlt : |i| < |j|)
+    : j = O :: i.
+  Admitted.
   
   Lemma tag_entry_iff
     : j = O :: i <-> loop_head q /\ ~ loop_contains q p.

@@ -1481,6 +1481,11 @@ Qed.
 Section disj.
   Context `{C : redCFG}.
   
+  Notation "p '-a>b' q" := (a_edge p q) (at level 55).
+  Notation "p '-a>' q" := (p -a>b q = true) (at level 55).
+  Notation "p '-->b' q" := (edge p q) (at level 55).
+  Notation "p '-->' q" := (p -->b q = true) (at level 55, right associativity).
+  
 (*  Lemma lc_common_element_nin {A : Type}(l1 l2 l1' l2' : list (Lab * Tag)) x y
         (Hlc : last_common' l1 l2 l1' l2' x)
         (Hin1 : y ∈ l1)
@@ -1494,40 +1499,131 @@ Section disj.
     intros ? ? ? ? ? Hlc y Hin1 Hin2. 
     unfold last_common' in Hlc. destructH.*)
 
+  Lemma geq_tag_suffix_deq (h p q : Lab) l t i j
+        (Hin : loop_contains h q)
+        (Hpath : TPath (root,start_tag) (q,j) t)
+        (Hpost : Postfix l t)
+        (HForall : Forall (DecPred (fun xl => |j| <= |snd xl|)) l)
+        (Hel : (p,i) ∈ l)
+    : deq_loop p q.
+  Proof.
+  Admitted.
+
+  Lemma while'_front_In (A : Type) (e : A -> A -> bool) (P : decPred A) (l : ne_list A) (a b : A)
+        (Hpath : Path e a b l)
+        (HP : P b)
+    : b ∈ while' P l.
+  Proof.
+    destruct Hpath;cbn.
+    - decide (P a);try contradiction. left. auto.
+    - decide (P c);try contradiction. left. auto.
+  Qed.
+  
+  Lemma postfix_ex_cons
+    : forall (A : Type) (l l' : list A) (a : A), Postfix l l' -> exists a' : A, Postfix (l :r: a') (l' :r: a).
+  Proof.
+    intros. eapply postfix_rev_prefix in H. eapply prefix_ex_cons in H. destructH.
+    exists a'. eapply prefix_rev_postfix'. do 2 rewrite rev_rcons. eauto.
+  Qed.
+        
+  Lemma while'_forall (A : Type) (P : decPred A) (l : list A) a
+        (Hin : a ∈ while' P l)
+    : P a.
+  Proof.
+    eapply Forall_forall;[|eapply Hin]. eapply while'_Forall.
+  Qed.
+
+  Lemma eq_loop_same (h h' : Lab)
+        (Heq : eq_loop h h')
+        (Hl : loop_head h)
+        (Hl' : loop_head h')
+    : h = h'.
+  Proof.
+    eapply loop_contains_Antisymmetric.
+    all: unfold eq_loop,deq_loop in *;destructH;eauto using loop_contains_self.
+  Qed.
+  
   Lemma ex_entry (h p q : Lab) (i j : Tag) t
         (Hin : innermost_loop h q)
         (Hnin : ~ loop_contains h p)
         (Hpath : TPath (root,start_tag) (q,j) t)
         (Hord : (q,j) ≻* (p,i) | t)
-    : (q,j) ≻* (h,0 :: tl j) ≻* (p,i) | t.
+    : (h,0 :: tl j) ≻* (p,i) | t.
   Proof.
-    pose (t' := while' (DecPred (fun xl => |j| <= |snd xl|)) t).
+    remember (while' (DecPred (fun xl => |j| <= |snd xl|)) t) as t'.
     assert (Postfix t' t) as Hpost.
     { eapply while'_postfix;subst t';eauto. }
-    assert (forall xl, xl ∈ t' -> loop_contains h (fst xl)) as Hloop by admit.    
-    inversion Hpost;subst.
-    - eapply splinter_cons in Hord. eapply splinter_in in Hord.
+    assert (forall xl, xl ∈ t' -> loop_contains h (fst xl)) as Hloop by admit.
+    inversion Hpost.
+    - subst. eapply splinter_cons in Hord. eapply splinter_in in Hord.
       specialize (Hloop (p,i)).
-      exploit Hloop; rewrite H1; auto.
-      cbn in Hloop. contradiction.
-    -
-
-      Lemma postfix_ex_cons
-      : forall (A : Type) (l l' : list A) (a : A), Postfix l l' -> exists a' : A, Postfix (l :r: a') (l' :r: a).
-      Proof.
-        intros. eapply postfix_rev_prefix in H. eapply prefix_ex_cons in H. destructH.
-        exists a'. eapply prefix_rev_postfix'. do 2 rewrite rev_rcons. eauto.
-      Qed.
-
+      exploit Hloop.
+      + rewrite H0; auto.
+      + cbn in Hloop. contradiction.
+    - subst l.
+      specialize (rcons_destruct t') as Ht'.
+      destruct Ht'. (* t' is not empty *)
+      { enough ((q,j) ∈ t') as H00 by (rewrite H0 in H00;cbn in H00;contradiction).
+        subst.
+        eapply while'_front_In;eauto. cbn. omega. }
+      destructH.
+      destruct a0 as [h' k].
+      assert (h' = h); [|subst h'].
+      { (*
+         * h' is a header
+         * it has an incoming edge from outside of h
+         *)
+        Lemma entry_through_header h p q
+                  (Hnin : ~ loop_contains h p)
+                  (Hin : loop_contains h q)
+                  (Hedge : p --> q)
+        : q = h.
+        Admitted.
+        eapply entry_through_header.
+        - admit. (* because of while'_max *)
+        - destruct Hin as [Hin1 Hin2].
+          enough (deq_loop h' h).
+          { eapply H2. eapply loop_contains_self. admit. }
+          eapply deq_loop_trans; eauto.
+          + eapply geq_tag_suffix_deq; eauto.
+            * rewrite Heqt'. eapply while'_Forall.
+            * rewrite H0. eapply In_rcons. left. auto.
+          + eapply loop_contains_deq_loop;auto.
+        - admit. (* bc. Postfix_path etc. *)
+      }
       eapply postfix_ex_cons in H1. destructH. erewrite H in H1.
-      eapply while'_max in H1 as Hmax;[|subst t'; eauto]. cbn in Hmax.
-
-                                                                               
-      
-      admit.
-      
+      eapply while'_max in H1 as Hmax;[|eauto]. cbn in Hmax.
+      destruct a'. cbn in *. assert (|l| < |j|) as Hmax' by omega.
+      assert (|j| <= |k|) as Hjk.
+      { assert ((h,k) ∈ t') by (rewrite H0;eapply In_rcons;eauto).
+        rewrite Heqt' in H2.
+        eapply while'_forall in H2. cbn in H2. auto. }
+      assert (|l| < |k|) by omega.
+      eapply tag_entry_lt in H2.
+      + destruct j.
+        { exfalso. admit. }
+        assert (j = tl k) by admit.
+        rewrite H2 in H3. cbn in H3. cbn. subst j k.
+        clear - Hpost Heqt' H0 H Hpath Hord Hin Hnin.
+        eapply postfix_eq in Hpost. destructH.
+        rewrite H,Hpost.
+        rewrite consAppend. 
+        eapply splinter_app; eapply splinter_single.
+        * rewrite H0. eapply In_rcons. auto.
+        * eapply splinter_cons in Hord. eapply splinter_in in Hord.
+          rewrite Hpost in Hord. eapply in_app_or in Hord. destruct Hord;auto.
+          exfalso.
+          rewrite Heqt' in *.
+          eapply geq_tag_suffix_deq in Hpath;cycle 1.
+          -- destruct Hin; eauto.
+          -- eapply while'_postfix. symmetry. eauto.
+          -- rewrite Heqt'. eapply while'_Forall.
+          -- rewrite Heqt'. eapply H1.
+          -- eapply Hnin. eapply Hpath. eapply Hin.
+      + rewrite H0 in H1. eapply postfix_path in H1;eauto.
+        rewrite rcons_nl_rcons in H1. simpl_nl' H1.
+        eapply path_nlrcons_edge in H1. simpl_nl' H1. eauto.
     (*
-     * by dominance there must be an h in map fst t
      * define t' as the maximal suffix of t with tag dim >= |j|.
      * then forall x ∈ t', deq_loop x q thus x ∈ h
      * by definition t = t' or the maximal suffix starts with a loop enter
