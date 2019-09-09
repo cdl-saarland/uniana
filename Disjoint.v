@@ -1508,7 +1508,7 @@ Section disj.
   Proof.
   Admitted.
 
-  Require Import lvc.Take.
+  Require Import Take.
   Definition take_r (A : Type) (n : nat) (l : list A) := rev (take n (rev l)).
 
   Lemma geq_tag_suffix_tag_tl_eq (p q : Lab) l t i j
