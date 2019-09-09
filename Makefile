@@ -22,17 +22,10 @@ all: html
 clean: $(COQMAKEFILE)
 	@$(MAKE) -f $(COQMAKEFILE) $@
 	rm -f $(COQMAKEFILE)
-	rm -f $(COQMAKEFILE).conf # added by me
-	rm finiteTypes/*.vo finiteTypes/*.glob
+#	rm -f $(COQMAKEFILE).conf # added by me
+#	rm -f *.vo *.glob */*.vo */*.glob */*/*.vo */*/*.glob
 
-# this is highly customised and only useful for this particular project:
-fin-types:
-	coqc finiteTypes/External.v -R . UniAna
-	coqc finiteTypes/BasicDefinitions.v -R . UniAna
-	coqc finiteTypes/FinTypes.v -R . UniAna
-
-
-html: $(COQMAKEFILE) $(VS) fin-types
+html: $(COQMAKEFILE) $(VS)
 	rm -fr html
 	@$(MAKE) -f $(COQMAKEFILE) $@
 	cp $(EXTRA_DIR)/resources/* html
