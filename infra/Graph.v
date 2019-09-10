@@ -9,7 +9,7 @@ Require Import Lists.List.
 Require Import Coq.Program.Equality.
 Require Import Coq.Program.Utils.
 
-Require Export Util NeList ListOrder.
+Require Export ConvBoolTac NeList ListOrder.
 
 (** Graph **)  
 

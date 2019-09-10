@@ -1,11 +1,11 @@
-Require Import Coq.Classes.EquivDec.
 Require Import Lists.List.
 Require Import Omega.
 Require Import Coq.Program.Equality.
 Import Decidable.
-
 Require Import Coq.Classes.Morphisms Relation_Definitions.
+
 Require Import Util PreSuffix.
+Require Export DecTac.
 
 
 Inductive ne_list (A : Type) : Type :=

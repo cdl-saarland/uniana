@@ -53,7 +53,7 @@ Section cfg.
     induction l';intros.
     - exists h. split;eauto. intros. cbn in H0. contradiction.
     - exploit IHl'.
-      + eapply Util.incl_cons;eauto.
+      + eapply incl_cons;eauto.
       + destructH. decide (loop_contains a h').
         * exists a. split;[eapply loop_contains_trans;eauto|].
           intros. destruct H0.
@@ -142,7 +142,7 @@ Section cfg.
     induction l';intros.
     - exists root. split;[right;auto|].
       intros;cbn in *;contradiction.
-    - exploit IHl';[eapply Util.incl_cons;eauto|].
+    - exploit IHl';[eapply incl_cons;eauto|].
       destructH.
       decide (loop_contains a p /\ loop_contains a q).
       + destructH. decide (loop_contains a0 a).
