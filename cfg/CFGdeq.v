@@ -1,4 +1,4 @@
-Require Export CFGdef.
+Require Export CFGdef DecTac.
 
 Section cfg.
   Context `{C : redCFG}.
@@ -297,7 +297,7 @@ Section cfg.
         eapply not_not in H.
         * eapply in_tl_in in H. eapply in_rev in H. eapply in_nl_conc in H. destruct H;[contradiction|].
           eapply in_tl_in;eauto.
-        * eapply NeList.In_dec.
+        * eapply In_dec;eauto.
     - edestruct path_dec;eauto; firstorder.
     - edestruct (back_edge_dec p0 h); firstorder.
       Unshelve. all:eauto. (*TODO: remove *)
@@ -341,7 +341,7 @@ Section cfg.
       + clear IHHp1. unfold Dom in N.
         eapply postfix_incl in Hp1. eapply Hp1 in N; eauto.
         rewrite rcons_nl_rcons in x. eapply ne_to_list_inj in x. rewrite <-x in Hnd.
-        eapply f_equal with (f:=ne_back) in x. simpl_nl' x. eapply path_back in Hπ. rewrite Hπ in x.
+        eapply f_equal with (f:=@ne_back Lab) in x. simpl_nl' x. eapply path_back in Hπ. rewrite Hπ in x.
         subst a.
         eapply NoDup_nin_rcons; eauto. rewrite rcons_nl_rcons. assumption.
   Qed.

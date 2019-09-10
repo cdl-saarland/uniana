@@ -7,7 +7,7 @@ Require Import Nat.
 Require Import Bool.Bool.
 Require Import Coq.Logic.Eqdep_dec.
 
-Require Import Tagged Evaluation.
+Require Export Tagged Evaluation Disjoint.
 
 Parameter path_splits : forall `{redCFG}, Lab -> list (Lab * Lab * Lab).
 
@@ -679,7 +679,7 @@ Proof.
              eapply tpath_tag_len_eq_elem in Hpath;eauto;cycle 1.
              - cbn. left. reflexivity.
              - cbn. right. eapply prefix_incl; eauto.
-             - eapply prefix_length.
+             - eapply prefix_length;eauto.
                + inversion Htag;eauto. rewrite H1 in Hpath. cbn in Hpath. clear - Hpath. omega.
                + cbn in Hpath. inversion Hpath. reflexivity.
            } 
@@ -1869,10 +1869,10 @@ Proof.
         simpl_nl' Hlc'2. 
         eapply impl_list'_tpath1 in Hpath1.        
         destruct (impl_list' p ((q1,j1) :: t1)) eqn:E.
-        + setoid_rewrite E in Hlc'2. destruct l1'; cbn in Hlc'2; inversion Hlc'2; congruence'.
+        + (*setoid_rewrite E in Hlc'2.*) destruct l1'; cbn in Hlc'2; inversion Hlc'2; congruence'.
         + unfold nlcons in Hpath1. fold (nlcons p0 l) in Hpath1.
           unfold TPath' in Hpath1. inversion Hpath1.
-          setoid_rewrite E in Hlc'2.
+          (*setoid_rewrite E in Hlc'2.*)
           eapply postfix_path in H1.
           2 : simpl_nl;eauto.
           eapply PathCons in H1;eauto.

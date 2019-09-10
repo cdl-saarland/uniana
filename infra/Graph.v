@@ -9,7 +9,7 @@ Require Import Lists.List.
 Require Import Coq.Program.Equality.
 Require Import Coq.Program.Utils.
 
-Require Export ConvBoolTac NeList ListOrder.
+Require Export ConvBoolTac NeListTac ListOrder DecTac.
 
 (** Graph **)  
 
@@ -200,7 +200,7 @@ Section graph.
     induction Hto.
     - exists (ne_single a). split;econstructor;eauto. econstructor.
     - destruct IHHto as [ψ [IHHto IHnodup]].
-      destruct (In_dec c ψ).
+      destruct (@In_dec _ _ _ c ψ).
       + eapply prefix_nincl_prefix in H0.
         exists (c :< prefix_nincl c ψ). split.
         * rewrite nlcons_to_list in H0.

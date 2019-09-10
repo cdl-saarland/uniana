@@ -1,4 +1,5 @@
 Require Import Program.Equality.
+
 Require Export ListExtra.
 
 Notation "x ⊆ y" := (incl x y) (at level 50).
@@ -21,10 +22,6 @@ Qed.
 Inductive Postfix {A : Type} : list A -> list A -> Prop :=
 | PostSame l : Postfix l l
 | PostStep {a l l'} : Postfix l l' -> Postfix l (l' :r: a).
-
-Definition Disjoint {A : Type} (l l' : list A) : Prop :=
-  (forall a, In a l -> ~ In a l')
-  /\ (forall a, In a l' -> ~ In a l).
 
 Fixpoint prefix_nincl {A : Type} `{EqDec A eq} (a : A) (l : list A) : list A :=
   match l with
@@ -181,37 +178,6 @@ Proof.
   - destruct e. exfalso. apply nin. econstructor; eauto.
   - rewrite IHl; eauto. (*contradict nin. econstructor 2; eauto.*)
 Qed.
-Lemma disjoint_cons1 {A : Type} (a : A) l l' :
-  Disjoint (a :: l) l' <-> ~ In a l' /\ Disjoint l l'.
-Proof.
-  split; revert l.
-  - induction l'; intros l; firstorder.
-  - intros l [nin disj]. split.
-    + intros b in' N.
-      destruct in'.
-      * destruct H. contradiction.
-      * destruct disj as [disj _]. specialize (disj _ H). contradiction.
-    + intros b in' N.
-      destruct N.
-      * destruct H. contradiction.
-      * destruct disj as [disj _]. specialize (disj _ H). contradiction.
-Qed.
-
-Lemma disjoint_cons2 {A : Type} (a : A) l l' :
-  Disjoint l (a :: l') <-> ~ In a l /\ Disjoint l l'.
-Proof.
-  split; revert l.
-  - induction l'; intros l; firstorder.
-  - intros l [nin disj]. split.
-    + intros b in' N.
-      destruct N.
-      * destruct H. contradiction.
-      * destruct disj as [_ disj]. specialize (disj _ H). contradiction.
-    + intros b in' N.
-      destruct in'.
-      * destruct H. contradiction.
-      * destruct disj as [_ disj]. specialize (disj _ H). contradiction.
-Qed.
 
 Lemma postfix_incl {A : Type} (l l' : list A) : Postfix l l' -> incl l l'.
   intros post. induction post.
@@ -245,14 +211,6 @@ Proof.
   destruct (Nat.ltb (length l1) (length l2)) eqn:H.
   - left. eapply postfix_order_destruct'; eauto. eapply Nat.ltb_lt in H. omega.
   - right. eapply postfix_order_destruct'; eauto. eapply Nat.ltb_nlt in H. omega.
-Qed.
-
-Lemma In_rcons {A : Type} (a b : A) l :
-  In a (l :r: b) <-> a = b \/ In a l.
-Proof.
-  split.
-  - induction l; cbn; firstorder.
-  - intros. destruct H; induction l; cbn; firstorder.
 Qed.
 
 Lemma postfix_step_left {A : Type} (l l' : list A) a :
@@ -340,3 +298,96 @@ Proof.
   intros Hpre Hnd. induction Hpre; eauto.
   inversion Hnd; subst; eauto.
 Qed.
+
+Section Pre.
+  Variable A : Type.
+
+  Lemma prefix_eq :
+    forall (l1 l2 : list A), Prefix l1 l2 <-> (exists l2' : list A, l2 = l2' ++ l1).
+  Proof.
+    intros.
+    split;intros.
+    - induction H.
+      + exists nil; cbn; eauto.
+      + destructH. exists (a :: l2'). cbn. f_equal;eauto.
+    - destructH. rewrite H.
+      revert dependent l2.
+      induction l2'; intros;cbn;econstructor;eauto.
+  Qed.
+
+  Lemma prefix_length `{EqDec A eq} (l1 l2 : list A)
+        (Hpre : Prefix l1 l2)
+        (Hlen : length l1 = length l2)
+    : l1 = l2.
+  Proof.
+    eapply prefix_eq in Hpre. destructH. subst l2.
+    destruct l2';cbn in *; eauto.
+    exfalso.
+    rewrite app_length in Hlen. omega.
+  Qed.
+
+  Lemma prefix_rev_postfix (l l' : list A)
+        (Hpre : Prefix l l')
+    : Postfix (rev l) (rev l').
+  Proof.
+    induction Hpre.
+    - econstructor.
+    - rewrite rev_cons. econstructor;eauto.
+  Qed.
+
+  Lemma prefix_rev_postfix' (l l' : list A)
+        (Hpre : Prefix (rev l) (rev l'))
+    : Postfix l l'.
+  Proof.
+    rewrite <-(rev_involutive l).
+    rewrite <-(rev_involutive l').
+    eapply prefix_rev_postfix;eauto.
+  Qed.
+  
+  Lemma postfix_rev_prefix (l l' : list A)
+        (Hpost : Postfix l l')
+    : Prefix (rev l) (rev l').
+  Proof.
+    induction Hpost.
+    - econstructor.
+    - rewrite rev_rcons. econstructor;eauto.
+  Qed.
+  
+  Lemma postfix_rev_prefix' (l l' : list A)
+        (Hpost : Postfix (rev l) (rev l'))
+    : Prefix l l'.
+  Proof.
+    rewrite <-(rev_involutive l).
+    rewrite <-(rev_involutive l').
+    eapply postfix_rev_prefix;eauto.
+  Qed.
+
+  Lemma prefix_order_destruct
+    : forall l3 l4 l5 : list A, Prefix l3 l5 -> Prefix l4 l5 -> Prefix l3 l4 \/ Prefix l4 l3.
+  Proof.
+    intros.
+    eapply prefix_rev_postfix in H. eapply prefix_rev_postfix in H0.
+    eapply postfix_order_destruct in H;eauto.
+    destruct H;[right|left]; eapply postfix_rev_prefix';eauto.
+  Qed.
+
+  Lemma prefix_length_eq (* unused *)`{EqDec A eq} (l1 l2 l : list A)
+        (Hlen : length l1 = length l2)
+        (Hpre1 : Prefix l1 l)
+        (Hpre2 : Prefix l2 l)
+    : l1 = l2.
+  Proof.
+    eapply prefix_order_destruct in Hpre1 as Hor;eauto.
+    destruct Hor as [Hor|Hor]; eapply prefix_length in Hor; eauto; symmetry; eauto.
+  Qed.
+
+  Lemma prefix_induction (* unused *){P : list A -> Prop}
+    : P nil
+      -> (forall (a : A) (l : list A) (l' : list A), P l' -> Prefix (a :: l') l -> P l)
+      -> forall l : list A, P l.
+  Proof.
+    intros Hbase Hstep l. induction l;eauto.
+    eapply Hstep;eauto. econstructor.
+  Qed.
+
+End Pre.

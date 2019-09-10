@@ -66,6 +66,12 @@ Section Facts.
   Proof.
     intros Heql; rewrite Heql;unfold incl; tauto.
   Qed.
+  
+  Lemma tl_incl (l : list A)
+    : tl l ⊆ l.
+  Proof.
+    induction l;cbn;firstorder.
+  Qed.
 
 End Facts.
 
@@ -107,6 +113,14 @@ Section Rcons.
     induction l; intros; cbn in *; eauto. omega.
   Qed.
 
+  Lemma In_rcons (a b : A) l :
+    In a (l :r: b) <-> a = b \/ In a l.
+  Proof.
+    split.
+    - induction l; cbn; firstorder.
+    - intros. destruct H; induction l; cbn; firstorder.
+  Qed.
+  
   Lemma cons_rcons' (a : A) l :
     (a :: l) = (rev (tl (rev (a :: l))) :r: hd a (rev (a :: l))).
   Proof.
@@ -196,6 +210,51 @@ Section Rcons.
     : a ∈ l'.
   Proof.
     induction l;cbn in *;unfold incl in Hincl;eauto;firstorder.
+  Qed.
+
+End Rcons.
+  
+Ltac congruence' :=
+  lazymatch goal with
+  | [ H : ?l ++ (?a :: ?l') = nil |- _ ] => destruct l; cbn in H; congruence
+  | [ H : (?l ++ ?l') :: ?a :: ?l'' = nil |- _ ] => destruct l; cbn in H; congruence
+  | [ H : ?l :r: ?a = nil |- _ ] => eapply rcons_not_nil in H; contradiction
+  | [ H : nil = ?l ++ (?a :: ?l') |- _ ] => destruct l; cbn in H; congruence
+  | [ H : nil = (?l ++ ?l') :: ?a :: ?l'' |- _ ] => destruct l; cbn in H; congruence
+  | [ H : nil = ?l :r: ?a |- _ ] => symmetry in H; eapply rcons_not_nil in H; contradiction
+  end.
+
+Ltac fold_rcons H :=
+  match type of H with
+  | context C [?a :: ?b :: nil] => fold (app (a :: nil) (b :: nil)) in H;
+                                  fold (rcons (a :: nil) b) in H;
+                                  repeat rewrite <-cons_rcons_assoc in H
+  | context C [?l ++ ?a :: nil] => fold (rcons l a) in H
+  end.
+
+Section Rcons.
+
+  Lemma rcons_eq1 {A : Type} (l l' : list A) (a a' : A)
+    : l :r: a = l' :r: a' -> l = l'.
+  Proof.
+    revert l'; induction l; intros; destruct l'; cbn in *; inversion H; eauto; try congruence'.
+    f_equal. eapply IHl. repeat fold_rcons H2. auto.
+  Qed.
+  
+  Lemma rcons_eq2 {A : Type} (l l' : list A) (a a' : A)
+    : l :r: a = l' :r: a' -> a = a'.
+  Proof.
+    revert l'; induction l; intros; destruct l'; cbn in *; inversion H; eauto; congruence'.
+  Qed.
+  
+  Lemma rev_injective {A : Type} (l l' : list A)
+    : rev l = rev l' -> l = l'.
+  Proof.
+    revert l. induction l'; intros; cbn in *.
+    - destruct l;[reflexivity|cbn in *;congruence'].
+    - destruct l;cbn in *;[congruence'|].
+      repeat fold_rcons H. 
+      f_equal;[eapply rcons_eq2;eauto|apply IHl';eapply rcons_eq1;eauto].
   Qed.
 
 End Rcons.

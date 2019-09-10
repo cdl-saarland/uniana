@@ -7,7 +7,7 @@ Require Import Nat.
 Require Import Bool.Bool.
 Require Import Coq.Logic.Eqdep_dec.
 
-Require Export Tagged.
+Require Export Tagged LastCommon.
 
 Section eval.
 

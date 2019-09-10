@@ -11,7 +11,7 @@ Require Import List.
 Require Import Nat.
 Require Import Omega.
 
-Require Import Disjoint Unchanged.
+Require Import Disj Unchanged ListOrderTac FirstDiff.
 
 Section uniana.
 
@@ -192,7 +192,7 @@ Section uniana.
       eapply uni_branch_uni_succ' with (q1:=q1) (q2:=q2) (j1:=j1) (j2:=j2) (l1:=l1) in Hsplit;eauto.
       1: subst';reflexivity.
       1,2: eapply succ_cons; eapply postfix_succ_in;eauto;
-        eapply ne_back_E_rcons in Heq1; eapply ne_back_E_rcons in Heq2; destructH; destructH;
+        eapply ne_back_E_rcons in Heq1; eapply ne_back_E_rcons in Heq2;eauto; destructH; destructH;
           simpl_nl; only 1: rewrite <- Heq1; only 2: rewrite <- Heq2; eapply succ_in_rcons2.
   Qed.
   Arguments uni_branch_non_disj : clear implicits.
@@ -374,7 +374,7 @@ Section uniana.
     eapply Pr_cont with (c:=(p,i)) in Hprec1;[|cbn;eauto].
     eapply Pr_cont with (c:=(p,i)) in Hprec2;[|cbn;eauto].
     (* find the first difference in the tag suffices *)
-    eapply first_diff in c'.
+    eapply first_diff in c';eauto.
     2: assert (| j1 | = | j2 |) as Hlen;
       [(eapply (tpath_tag_len_eq_elem (l1:=(p,i):<l1)) ;eauto;eapply precedes_in;simpl_nl;eauto)|].
     2: { subst j1 j2. repeat rewrite app_length in Hlen. clear - Hlen. omega. }
@@ -524,7 +524,7 @@ Section uniana.
       2: rewrite nlcons_to_list; unfold Tag in *; rewrite <-ηeq1;eauto.
       2: rewrite nlcons_to_list; unfold Tag in *; rewrite <-ηeq2;eauto.
       4: contradict Htag0; inversion Htag0; eauto.
-      clear - Hlc Htr1 Htr2. destructH. destruct b1, b2. exists t, t0, e, e0. split_conj;eauto.
+      clear - Hlc Htr1 Htr2. destructH. destruct b1, b2. exists l, l0, e, e0. split_conj;eauto.
       contradict Hlc3. inversion Hlc3;subst;eauto. f_equal.
       eapply eff_tag_det; eapply tpath_succ_eff_tag; simpl_nl; unfold Coord in *; cycle 1; eauto.
       1: rewrite nlcons_to_list; unfold Tag in *; rewrite <-ηeq2.

@@ -12,7 +12,7 @@ Require Import finiteTypes.BasicDefinitions.*)
 
 Require Export FinTypes.
 
-Require Export Graph SimplDec ListExtra.
+Require Export Graph SimplDec NeList.
 
 (*  Notation "p '-->*' q" := (exists π, Path p q π) (at level 55, right associativity).*)
 

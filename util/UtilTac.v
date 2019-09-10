@@ -60,3 +60,10 @@ Ltac subst' :=
     | [H:(_,_) = (_,_) |- _] => inversion H; subst; clear H
     | [H: _ = _ /\ _ = _ |- _]=> destruct H; subst
     end.
+
+Ltac split_conj :=
+  lazymatch goal with
+  | [ |- _ /\ _ ] => split; split_conj
+  | [ |- _ <-> _ ] => split; split_conj
+  | _ => idtac
+  end.
