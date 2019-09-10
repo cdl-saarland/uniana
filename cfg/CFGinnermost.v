@@ -159,7 +159,7 @@ Section cfg.
         inversion H1;subst.
         decide (h = e).
         { subst;eexists;econstructor. }
-        specialize (path_to_elem _ a_edge _ _ e0 x H6 HeqS0) as [ϕ [Hϕ0 Hϕ1]].
+        specialize (@path_to_elem _ a_edge _ _ e0 x H6 HeqS0) as [ϕ [Hϕ0 Hϕ1]].
         specialize (H ϕ). exploit' H.
         { cbn. clear - Hϕ1.
           eapply prefix_strictPrefix;auto.

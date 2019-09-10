@@ -2,7 +2,6 @@ Global Set Nested Proofs Allowed.
 
 Require Import List.
 Require Import Coq.Bool.Bool.
-Require Import Coq.Classes.EquivDec.
 Require Import Coq.Program.Utils.
 Require Import Coq.Classes.EquivDec.
 
@@ -259,5 +258,3 @@ Ltac conv_bool := repeat match goal with
       | [H:(_,_) = (_,_) |- _] => inversion H; subst; clear H
       | [H: _ = _ /\ _ = _ |- _]=> destruct H; subst
       end.
-  
-  (* TODO: tidy up this file *)

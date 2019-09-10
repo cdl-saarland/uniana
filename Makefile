@@ -8,7 +8,7 @@ COQDOCFLAGS:= \
 export COQDOCFLAGS
 COQMAKEFILE:=Makefile.coq
 COQ_PROJ:=_CoqProject
-VS:=$(wildcard *.v)
+VS:=$(wildcard *.v */*.v */*/*.v)
 VS_IN_PROJ:=$(shell grep .v $(COQ_PROJ))
 
 ifeq (,$(VS_IN_PROJ))

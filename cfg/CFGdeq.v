@@ -93,7 +93,7 @@ Section cfg.
     : loop_contains qh x.
   Proof.
     unfold loop_contains.
-    exists p. specialize (path_from_elem _ edge _ q p x) as Hx. exploit Hx. destructH.
+    exists p. specialize (@path_from_elem _ edge _ q p x) as Hx. exploit Hx. destructH.
     exists ϕ. repeat (split;eauto). contradict Hnin. clear - Hx1 Hnin.
     induction Hx1; cbn in *;[auto|]. rewrite rev_rcons. cbn. eapply IHHx1 in Hnin.
     eapply tl_incl;auto.
@@ -108,7 +108,7 @@ Section cfg.
     unfold loop_contains in Hloop,Hloop'.
     decide (h = h');[subst;eauto|].
     destructH' Hloop'. destructH' Hloop.
-    exists p1. specialize (path_app _ edge (h' :<: π) π0 p h' p1) as Hϕ.
+    exists p1. specialize (@path_app _ edge (h' :<: π) π0 p h' p1) as Hϕ.
     exploit Hϕ.
     - econstructor;eauto. eapply minus_subgraph. eauto.
     - eexists;split;eauto;split;eauto. intro N.

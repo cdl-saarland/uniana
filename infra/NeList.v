@@ -5,7 +5,8 @@ Require Import Coq.Program.Equality.
 Import Decidable.
 
 Require Import Coq.Classes.Morphisms Relation_Definitions.
-Require Import Util.
+Require Import Util PreSuffix.
+
 
 Inductive ne_list (A : Type) : Type :=
 | ne_single : A -> ne_list A
@@ -27,10 +28,6 @@ Infix ":+:" := ne_conc (at level 50).
 Definition ne_rcons {A : Type} l a : ne_list A := l :+: ne_single a.
 
 Infix ":>:" := ne_rcons (at level 50).
-
-Definition rcons {A : Type} l a : list A := l ++ (a :: nil).
-
-Notation "l ':r:' a" := (rcons l a) (at level 50).
 
 Fixpoint ne_front {A : Type} (l : ne_list A) : A
   := match l with
@@ -57,266 +54,6 @@ Fixpoint ne_tl {A : Type} (l : ne_list A) : list A
      | ne_single _ => nil
      | _ :<: l => l
      end.
-
-Inductive Prefix {A : Type} : list A -> list A -> Prop :=
-| PreSame l : Prefix l l
-| PreStep {a l l'} : Prefix l l' -> Prefix l (a :: l').
-
-Lemma prefix_cons_in {A : Type} `{EqDec A eq} (a : A) l l' : Prefix (a :: l) l' -> In a l'.
-Proof.
-  intro Q. revert dependent l. induction l'; cbn in *; intros l Q.
-  - inversion Q.
-  - destruct (a == a0).
-    + auto.
-    + inversion Q; subst.
-      * exfalso; apply c; reflexivity.
-      * eauto.
-Qed.
-
-Inductive Postfix {A : Type} : list A -> list A -> Prop :=
-| PostSame l : Postfix l l
-| PostStep {a l l'} : Postfix l l' -> Postfix l (l' :r: a).
-
-Inductive neSub {A : Type} : ne_list A -> ne_list A -> Prop :=
-| SubSame l : neSub l l
-| SubPre {a l l'} : neSub l l' -> neSub l (a :<: l')
-| SubPost {a l l'} : neSub l l' -> neSub l (l' :>: a).
-
-Definition Disjoint {A : Type} (l l' : list A) : Prop :=
-  (forall a, In a l -> ~ In a l')
-  /\ (forall a, In a l' -> ~ In a l).
-
-Fixpoint prefix_nincl {A : Type} `{EqDec A eq} (a : A) (l : list A) : list A :=
-  match l with
-  | nil => nil
-  | b :: l => if a == b then l else prefix_nincl a l
-  end.
-
-Lemma prefix_nincl_prefix {A : Type} `{EqDec A eq} (a : A) l :
-  In a l -> Prefix (a :: prefix_nincl a l) l.
-Proof.
-  intros Q.
-  induction l; cbn;
-    inversion Q.
-  - subst a0. destruct (a == a); [|exfalso; apply c; reflexivity].
-    econstructor.
-  - destruct (a == a0).
-    + destruct e. econstructor.
-    + econstructor. eauto. 
-Qed.
-
-Lemma prefix_cons {A : Type} (l l' : list A) :
-  forall a, Prefix (a :: l) l' -> Prefix l l'.
-Proof.
-  intros a H. dependent induction H.
-  - econstructor. econstructor.
-  - econstructor. eapply IHPrefix; eauto.
-Qed.
-
-Lemma prefix_trans {A : Type} (l1 l2 l3 : list A) :
-  Prefix l1 l2 -> Prefix l2 l3 -> Prefix l1 l3.
-Proof.
-  revert l1 l3. induction l2; intros l1 l3 pre1 pre2; inversion pre1; inversion pre2; subst; eauto.
-  econstructor. eapply IHl2; eauto. eapply prefix_cons; eauto.
-Qed.
-
-Lemma prefix_cons_cons {A : Type} (a a' : A) l l' :
-  Prefix (a :: l) (a' :: l') -> Prefix l l'.
-Proof.
-  intros H. dependent induction H; cbn.
-  - econstructor.
-  - destruct l'.
-    + inversion H.
-    + econstructor. eapply IHPrefix; eauto.
-Qed.
-
-Lemma in_prefix_in {A : Type} `{EqDec A eq} (a : A) l l' :
-  In a l -> Prefix l l' -> In a l'.
-Proof.
-  intros Hin Hpre. induction l. 
-  - inversion Hin.
-  - destruct (a == a0).
-    + destruct e. eapply prefix_cons_in; eauto.
-    + eapply IHl; eauto.
-      * destruct Hin; [exfalso; subst; apply c; reflexivity|assumption].
-      * eapply prefix_cons; eauto.
-Qed. 
-
-Fixpoint postfix_nincl {A : Type} `{EqDec A eq} (a : A) (l : list A) : list A :=
-  match l with
-  | nil => nil
-  | b :: l => if a == b then nil else b :: postfix_nincl a l
-  end.
-
-Lemma rev_cons {A : Type} (a : A) l : rev (a :: l) = (rev l) :r: a.
-  induction l; cbn; eauto.
-Qed.
-
-Lemma cons_rcons_assoc {A : Type} (a b : A) l : (a :: l) :r: b = a :: (l :r: b).
-  induction l; cbn; eauto.
-Qed.
-
-Lemma rev_rcons {A : Type} (a : A) l : rev (l :r: a) = a :: (rev l).
-  induction l; cbn; eauto. unfold rcons in IHl. rewrite IHl; eauto using  cons_rcons_assoc.
-Qed.
-
-Lemma tl_rcons {A : Type} (a : A) l : length l > 0 -> tl (l :r: a) = tl l :r: a.
-  induction l; intros; cbn in *; eauto. omega.
-Qed.
-
-Lemma hd_rcons {A : Type} (a x y : A) l : length l > 0 -> hd x (l :r: a) = hd y l.
-  induction l; intros; cbn in *; eauto. omega.
-Qed.
-
-Lemma cons_rcons' {A : Type} (a : A) l :
-  (a :: l) = (rev (tl (rev (a :: l))) :r: hd a (rev (a :: l))).
-Proof.
-  revert a; induction l; intros b; [ cbn in *; eauto|].
-  rewrite rev_cons. rewrite tl_rcons.
-  - rewrite rev_rcons. erewrite hd_rcons.
-    + rewrite cons_rcons_assoc. f_equal. apply IHl.
-    + rewrite rev_length; cbn; omega.
-  - rewrite rev_length; cbn; omega.
-Qed.
-
-Lemma cons_rcons {A : Type} (a : A) l : exists a' l', (a :: l) = (l' :r: a').
-Proof.
-  exists (hd a (rev (a :: l))). exists (rev (tl (rev (a :: l)))).
-  apply cons_rcons'.
-Qed.
-
-(*  Lemma rcons_cons {A : Type} (a : A) l : exists a' l', (l :r: a) = (a' :: l').
-    remember (@cons_rcons A) as H.*)
-
-Ltac rem_cons_rcons a l H :=
-  let a' := fresh a in
-  let l' := fresh l in
-  specialize (cons_rcons a l) as [a' [l' H]].
-
-Lemma rev_nil (* unused *){A : Type} (l : list A) : rev l = nil <-> l = nil.
-Proof.
-  split; induction l; cbn in *; eauto; intros.
-  - exfalso. induction (rev l); cbn in *; congruence.
-  - congruence.
-Qed.
-
-(*  Lemma rev_inj {A : Type} (l l': list A) : rev l = rev l' -> l = l'.*)
-
-Lemma rcons_destruct {A : Type} (l : list A) : l = nil \/ exists a l', l = l' :r: a.
-Proof.
-  destruct l.
-  - left. reflexivity.
-  - right. apply cons_rcons.
-Qed.
-
-Lemma rcons_not_nil (* unused *){A : Type} (l : list A) a : l :r: a <> nil.
-Proof.
-  intro N. induction l; cbn in *; congruence.
-Qed.
-
-Lemma length_rcons {A : Type} l (a : A) : length (l :r: a) = S (length l).
-Proof.
-  induction l; cbn; eauto.
-Qed.
-
-Lemma rcons_length {A : Type} n (l l' : list A) a :
-  S n = length l -> l = l' :r: a -> n = length l'.
-Proof.
-  revert l l'.
-  induction n; intros; cbn in *; eauto; subst l; rewrite length_rcons in H; omega. 
-Qed.
-
-Lemma rcons_ind
-  : forall (A : Type) (P : list A -> Prop),
-    P nil -> (forall (a : A) (l : list A), P l -> P (l :r: a)) -> forall l : list A, P l.
-Proof.
-  intros.
-  remember (length l) as n.
-  revert l n Heqn.
-  refine ((fix F (l : list A) (n : nat) {struct n} : n = length l -> P l :=
-             match rcons_destruct l,n with
-             | or_introl lnil,  O => (fun (Hnl : O = length l) => _)
-             | or_intror (ex_intro _ a (ex_intro _ _ _)), S n => fun (Hnl : (S n) = length l) => _
-             | _,_ => _
-             end)).
-  - subst l. eauto.
-  - clear F. intros. subst l. eauto. 
-  - clear F. intros. destruct l; eauto using rcons_not_nil. cbn in H1. congruence.
-  - rewrite e1. apply H0. apply (F l0 n).
-    eapply rcons_length; eauto.
-Qed.
-
-Lemma postfix_nil {A : Type} (l : list A) : Postfix nil l.
-  apply rcons_ind; [econstructor|].
-  intros. econstructor; eauto.
-Qed.
-
-Ltac rinduction L := revert dependent L; intro L; eapply rcons_ind with (l:=L); intros.
-
-Lemma postfix_cons {A : Type} a (l l': list A) :
-  Postfix l l' -> Postfix (a :: l) (a :: l').
-Proof.
-  intros post.
-  - induction post.
-    + econstructor.
-    + rewrite <-cons_rcons_assoc. econstructor. assumption.
-Qed.
-
-Lemma postfix_eq {A : Type} (l1 l2 : list A) :
-  Postfix l1 l2 <-> exists l2',  l2 = l1 ++ l2'.
-Proof.
-  split.
-  - intro post. induction post.
-    + exists nil. apply app_nil_end.
-    + destruct IHpost as [l2' IH].
-      exists (l2' :r: a). rewrite IH. unfold rcons. rewrite app_assoc. reflexivity.
-  - intros [l2' H]. subst l2.
-    rinduction l2'.
-    + rewrite <-app_nil_end. econstructor.
-    + unfold rcons. rewrite app_assoc. econstructor. eauto.
-Qed.
-
-Lemma cons_postfix {A : Type} a b (l l': list A) :
-  Postfix (a :: l) (b :: l') -> Postfix l l'.
-Proof.
-  intros post. apply postfix_eq. apply postfix_eq in post as [l1' leq].
-  exists l1'. inversion leq. reflexivity.
-Qed.
-
-Lemma postfix_app (* unused *){A : Type} (l1 l2 l' : list A) :
-  Postfix (l' ++ l1) (l' ++ l2) -> Postfix l1 l2.
-  revert l1 l2. induction l'; intros; cbn; eauto.
-  apply IHl'. cbn in H. inversion H. 
-  - rewrite H2. econstructor.
-  - eapply cons_postfix; eauto.
-Qed.
-
-Lemma postfix_nincl_postfix (* unused *){A : Type} `{EqDec A eq} a l : Postfix (postfix_nincl a l) l.
-Proof.
-  induction l; cbn; [econstructor; reflexivity|].
-  destruct (a == a0); cbn; eauto using postfix_nil, postfix_cons.
-Qed.
-
-Lemma postfix_nil_nil {A : Type} (l : list A) :
-  Postfix l nil -> l = nil.
-Proof.
-  intro H. inversion H; eauto. destruct l'; cbn in H0; congruence.
-Qed.
-
-Lemma prefix_nil_nil (* unused *){A : Type} (l : list A) :
-  Prefix l nil -> l = nil.
-Proof.
-  intro H. inversion H; eauto. 
-Qed.  
-
-Lemma postfix_rcons_nil_eq {A : Type} l (a b : A) :
-  Postfix (l :r: a) (b :: nil) -> a = b /\ l = nil.
-Proof.
-  
-  intros post. apply postfix_eq in post as [l2' post]. destruct l; cbn in *; eauto.
-  - inversion post; eauto.
-  - inversion post. destruct l; cbn in H1; congruence.
-Qed.
 
 Ltac prove_not_In H Q b :=
   (contradict H; inversion H; eauto; subst b; exfalso; apply Q; reflexivity).
@@ -387,116 +124,6 @@ Ltac prove_last_common :=
   | [ |- _ ] => idtac
   end; split_conj; prove_last_common'.
 
-Lemma disjoint_cons1 {A : Type} (a : A) l l' :
-  Disjoint (a :: l) l' <-> ~ In a l' /\ Disjoint l l'.
-Proof.
-  split; revert l.
-  - induction l'; intros l; firstorder.
-  - intros l [nin disj]. split.
-    + intros b in' N.
-      destruct in'.
-      * destruct H. contradiction.
-      * destruct disj as [disj _]. specialize (disj _ H). contradiction.
-    + intros b in' N.
-      destruct N.
-      * destruct H. contradiction.
-      * destruct disj as [disj _]. specialize (disj _ H). contradiction.
-Qed.
-
-Lemma disjoint_cons2 {A : Type} (a : A) l l' :
-  Disjoint l (a :: l') <-> ~ In a l /\ Disjoint l l'.
-Proof.
-  split; revert l.
-  - induction l'; intros l; firstorder.
-  - intros l [nin disj]. split.
-    + intros b in' N.
-      destruct N.
-      * destruct H. contradiction.
-      * destruct disj as [_ disj]. specialize (disj _ H). contradiction.
-    + intros b in' N.
-      destruct in'.
-      * destruct H. contradiction.
-      * destruct disj as [_ disj]. specialize (disj _ H). contradiction.
-Qed.
-
-Lemma postfix_incl {A : Type} (l l' : list A) : Postfix l l' -> incl l l'.
-  intros post. induction post.
-  - apply incl_refl.
-  - apply incl_appl; eauto.
-Qed.
-
-Lemma postfix_hd_eq (A : Type) (a b : A) l l' :
-  Postfix (a :: l) (b :: l') -> a = b.
-Proof.
-  intro post. eapply postfix_eq in post as [l2' pst].
-  cbn in pst. inversion pst. eauto.
-Qed.
-
-Lemma postfix_order_destruct' {A : Type} (l1 l2 l3 : list A) :
-  Postfix l1 l3 -> Postfix l2 l3 -> length l1 <= length l2 -> Postfix l1 l2.
-Proof.
-  revert l1 l3. induction l2; intros l1 l3 post1 post2 len; cbn in *.
-  - destruct l1; cbn in len; [econstructor|omega].
-  - destruct l1; [eapply postfix_nil|].
-    destruct l3; [eapply postfix_nil_nil in post1; congruence|].
-    eapply postfix_hd_eq in post1 as aeq. destruct aeq.
-    eapply postfix_hd_eq in post2 as aeq. destruct aeq.
-    eapply postfix_cons, IHl2. 1,2: eapply cons_postfix; eauto. cbn in len. omega.
-Qed.      
-
-Lemma postfix_order_destruct {A : Type} (l1 l2 l3 : list A) :
-  Postfix l1 l3 -> Postfix l2 l3 -> Postfix l1 l2 \/ Postfix l2 l1.
-Proof.
-  intros post1 post2.
-  destruct (Nat.ltb (length l1) (length l2)) eqn:H.
-  - left. eapply postfix_order_destruct'; eauto. eapply Nat.ltb_lt in H. omega.
-  - right. eapply postfix_order_destruct'; eauto. eapply Nat.ltb_nlt in H. omega.
-Qed.
-
-Lemma In_rcons {A : Type} (a b : A) l :
-  In a (l :r: b) <-> a = b \/ In a l.
-Proof.
-  split.
-  - induction l; cbn; firstorder.
-  - intros. destruct H; induction l; cbn; firstorder.
-Qed.
-
-Lemma postfix_step_left {A : Type} (l l' : list A) a :
-  Postfix (l :r: a) l' -> Postfix l l'.
-  intros.
-  remember (l :r: a) as l0.
-  induction H. subst l0.
-  - econstructor. econstructor.
-  - econstructor; eauto.
-Qed.
-
-Lemma postfix_length {A : Type} (l l' : list A) :
-  Postfix l l' -> length l <= length l'.
-Proof.
-  intros post. induction post.
-  - reflexivity.
-  - rewrite length_rcons. rewrite IHpost. omega.
-Qed.
-
-Lemma postfix_order {A : Type} (l1 l2 l' : list A) (a : A) :
-  ~ In a l1 -> In a l2 -> Postfix l1 l'  -> Postfix l2 l' -> Postfix l1 l2.
-Proof.
-  intros nin1 in2 pst1 pst2. eapply postfix_order_destruct'; eauto.
-  eapply postfix_order_destruct in pst1; eauto. clear pst2.
-  destruct pst1.
-  { exfalso. apply postfix_incl in H. firstorder. }
-  apply postfix_length; eauto.
-Qed.
-
-Lemma postfix_elem {A : Type} `{EqDec A eq} (a:A) l l':
-  length l > 0 -> Postfix l (a :: l') -> In a l.
-Proof.
-  intros len post.
-  destruct l.
-  { cbn in len; omega. }
-  eapply postfix_hd_eq in post.
-  subst a0. econstructor; eauto.
-Qed.
 
 Ltac congruence' :=
   lazymatch goal with
@@ -569,54 +196,14 @@ Proof.
       }
       subst l3.
       erewrite IHl1 with (l2:=l2); eauto.
-      * contradict in1. right. eauto.
+      (* contradict in1. right. eauto.*)
       * eapply cons_postfix; eauto.
-      * contradict in2. right. eauto.
+      (* contradict in2. right. eauto.*)
       * eapply cons_postfix; eauto.
       * rewrite cons_rcons_assoc in po1. eapply cons_postfix; eauto.
       * rewrite cons_rcons_assoc in po1. eapply cons_postfix; eauto.
 Qed.
 
-Lemma postfix_nincl_spec {A : Type} `{EqDec A eq} (a : A) l :
-  In a l -> Postfix (postfix_nincl a l :r: a) l.
-Proof.
-  intros ina.
-  induction l; inversion ina.
-  - subst a0. cbn. destruct equiv_dec;[|exfalso; apply c; reflexivity].
-    cbn. apply postfix_cons, postfix_nil.
-  - cbn. destruct equiv_dec; cbn.
-    + destruct e; apply postfix_cons, postfix_nil.
-    + apply postfix_cons. fold (rcons (postfix_nincl a l) a). eauto.
-Qed.
-
-Lemma postfix_nincl_invariant {A : Type} `{EqDec A eq} (a : A) l :
-  ~ In a l -> postfix_nincl a l = l.
-Proof.
-  intros nin.
-  induction l; cbn; eauto.
-  destruct equiv_dec.
-  - destruct e. exfalso. apply nin. econstructor; eauto.
-  - rewrite IHl; eauto. contradict nin. econstructor 2; eauto.
-Qed.
-
-Lemma postfix_trans {A : Type} (l l' l'': list A) :
-  Postfix l l' -> Postfix l' l'' -> Postfix l l''.
-Proof.
-  intros post1; revert l''.
-  induction post1; intros l'' post2.
-  - induction post2; econstructor; eauto.
-  - apply IHpost1. eapply postfix_step_left; eauto.
-Qed.
-
-Lemma postfix_nincl_nincl {A : Type} `{EqDec A eq} (a : A) l :
-  ~ In a (postfix_nincl a l).
-Proof.
-  induction l; cbn; eauto. destruct (a == a0).
-  - tauto.
-  - contradict IHl. inversion IHl.
-    + subst a0. exfalso; apply c; reflexivity.
-    + assumption.
-Qed.
 
 Definition last_common {A : Type} `{EqDec A eq} (l1 l2 : list A) (s : A) :=
   exists l1' l2', Postfix (l1' :r: s) l1 /\ Postfix (l2' :r: s) l2
@@ -668,7 +255,7 @@ Proof.
                  assert (Postfix l12 (a0 :: l22)).
                  {
                    eapply postfix_order with (a1:=s1); eauto.
-                   - econstructor 2; eauto.
+                   (*- econstructor 2; eauto.*)
                    - eapply postfix_step_left; eauto.
                    - cbn. apply postfix_cons. eapply postfix_step_left; eauto.
                  }
@@ -856,12 +443,6 @@ Proof.
   induction l; cbn; eauto.
 Qed.
 
-Lemma map_rcons {A B : Type} (f : A -> B) :
-  forall a l, map f (l :r: a) = map f l :r: f a.
-Proof.
-  intros. induction l;cbn;eauto. unfold rcons in IHl. rewrite IHl. reflexivity.
-Qed.
-
 Lemma postfix_map (* unused *){A B : Type} (f : A -> B) :
   forall l l', Postfix l l' -> Postfix (map f l) (map f l').
 Proof.
@@ -893,12 +474,6 @@ Proof.
     Unset Printing Coercions.
 Qed.
 
-Lemma incl_cons_hd (* unused *)(A : Type) (a : A) l l'
-      (Hincl : (a :: l) ⊆ l')
-  : a ∈ l'.
-Proof.
-  induction l;cbn in *;unfold incl in Hincl;eauto;firstorder.
-Qed.
 
 Lemma ne_map_in {A B : Type} (f:A->B) a (l:ne_list A) :
   In a l -> In (f a) (ne_map f l).
@@ -988,22 +563,6 @@ Ltac cbn_nl :=
 Ltac cbn_nl' H :=
   repeat (cbn in H; simpl_nl' H).
 
-Lemma prefix_in_list {A : Type} l (a:A) :
-  In a l
-  -> exists l', Prefix (a :: l') l.
-Proof.
-  intro Hin.
-  induction l.
-  - inversion Hin. 
-  - destruct Hin;[subst;exists l; simpl_nl;econstructor|].
-    eapply IHl in H. destruct H as [l' H]. exists l'. cbn; econstructor; assumption.
-Qed.
-
-Lemma prefix_nil {A : Type} (l : list A) : Prefix nil l.
-Proof.
-  induction l; econstructor; firstorder.
-Qed.
-
 Lemma prefix_nlcons: forall (A : Type) (l l' : list A) (a : A),
     Prefix (a :< l) l' -> Prefix l l'.
 Proof.
@@ -1012,17 +571,6 @@ Proof.
 Qed.
 
 
-Definition prefix_incl : forall (A : Type) (l l' : list A), Prefix l l' -> l ⊆ l'
-  := fun (A : Type) (l l' : list A) (post : Prefix l l') =>
-       Prefix_ind A (fun l0 l'0 : list A => l0 ⊆ l'0) (fun l0 : list A => incl_refl l0)
-                  (fun (a : A) (l0 l'0 : list A) (_ : Prefix l0 l'0) (IHpost : l0 ⊆ l'0) =>
-                     incl_appr (a :: nil) IHpost) l l' post.      
-
-Lemma prefix_NoDup (* unused *){A : Type} (l l' : list A) : Prefix l l' -> NoDup l' -> NoDup l.
-Proof.
-  intros Hpre Hnd. induction Hpre; eauto.
-  inversion Hnd; subst; eauto.
-Qed.
 
 Lemma last_common_singleton1 (* unused *){A : Type} `{EqDec A eq} (s a : A) l
       (Hlc : last_common (a :: nil) l s)
@@ -1200,7 +748,7 @@ Lemma first_diff (* unused *){A : Type} `{EqDec A eq} (l1 l2 : list A)
       (Hnnil2 : l2 <> nil)
   : exists a1 a2 l' l1' l2', a1 <> a2 /\ l1 = l1' ++ a1 :: l' /\ l2 = l2' ++ a2 :: l'.
 Proof.
-  specialize (first_diff' (rev l1) (rev l2)) as Hfi.
+  specialize (@first_diff' _ _ _ (rev l1) (rev l2)) as Hfi.
   exploit Hfi; cycle -1.
   - destructH.
     rewrite <-rev_involutive in Hfi2. eapply rev_injective in Hfi2.

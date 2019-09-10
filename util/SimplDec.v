@@ -44,8 +44,3 @@ Ltac simpl_dec :=
   end.*)
 
 
-
-Goal forall (X : finType) (P Q : X -> Prop), (forall x, dec (P x)) -> (forall x, dec (Q x)) -> ~ (forall x, P x \/ Q x) -> False.
-  intros. (*setoid_rewrite (DM_notAll _) in H.*) (*evar (forall x, P x \/ Q x).*)
-  simpl_dec' H.
-Abort.

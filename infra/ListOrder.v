@@ -3,8 +3,7 @@
 Require Import Lists.List.
 Require Import Coq.Program.Equality.
 Require Import Coq.Classes.EquivDec.
-Require Import Util NeList.
-
+Require Export Util ListExtra PreSuffix NeList.
 
 
 Local Definition prefix_nincl' {A : Type} `{EqDec A eq} (a : A) l
@@ -89,7 +88,7 @@ Section aux.
     - econstructor.
       + contradict Hnin.
         eapply In_rcons in Hnin. destruct Hnin;[left;eauto|inversion Hnd;contradiction].
-      + eapply IHl; inversion Hnd;subst; eauto. firstorder.
+      + eapply IHl; inversion Hnd;subst; eauto. 
   Qed.
 
   Lemma NoDup_rev (l : list A)
@@ -335,7 +334,7 @@ Section splinter.
         (Hright : splinter (a :: l') l0)
     : splinter (l ++ a :: l') l0.
   Proof.
-    rewrite (post_pre_nincl_NoDup l0 a);eauto; [|eapply splinter_incl;eauto;firstorder].
+    rewrite (@post_pre_nincl_NoDup _ _ _ l0 a);eauto; [|eapply splinter_incl;eauto;firstorder].
     eapply splinter_remove_dup. setoid_rewrite app_cons_assoc at 2.
     assert (forall (l' l0 : list A),
                NoDup l0
@@ -344,7 +343,7 @@ Section splinter.
     {
       clear. intros ? ? Hnd Hsp.
       assert (a ∈ l0) as Hin by (eauto with splinter).
-      rewrite (post_pre_nincl_NoDup l0 a) in Hsp;eauto.
+      rewrite (post_pre_nincl_NoDup (l:=l0) (a:=a)) in Hsp;eauto.
       set (l1 := postfix_nincl a l0) in *.
       assert (a ∉ l1) by eapply postfix_nincl_nincl.
       induction l1;cbn in *.
@@ -388,7 +387,7 @@ Ltac splice_splinter :=
       | ?a :: _
         => lazymatch l1 with
           | context C [a :: nil]
-            => fold_rcons H; eapply (splinter_app_l a l) in H;[|eauto|eapply Q];
+            => fold_rcons H; eapply (splinter_app_l (a:=a) (l0:=l)) in H;[|eauto|eapply Q];
               clear Q; cbn in H
           end
       end
@@ -426,10 +425,10 @@ Section succ_rt.
     induction l; inversion Hsucc1; inversion Hsucc2; inversion Hnd; subst.
     - (* copy-copy *) eauto.
     - (* copy-skip -> contradiction *)
-      exfalso. eapply H11. eapply splinter_incl;eauto. firstorder.
+      exfalso. eapply H11. eapply splinter_incl;eauto. 
     - (* skip-copy *)
       econstructor. eapply splinter_incl in H2.
-      eapply splinter_single;eauto. firstorder 1.
+      eapply splinter_single;eauto. 
     - (* skip-skip *)
       econstructor;eauto.
   Qed.
@@ -511,7 +510,7 @@ Ltac find_succ_rel :=
           match l1 with
           | context C [?b']
             => unify b b';
-              eapply (splinter_trans _ l1);
+              eapply (splinter_trans (l2:=l1));
               [|apply H]; solve [repeat (econstructor;eauto)]
           end
       end
@@ -521,7 +520,7 @@ Ltac resolve_succ_rt :=
   lazymatch goal with
   | [ Ha : context Ca [?a :: ?c :: _],
            Hb : context Cb [?b] |- ?a ≻* ?b | ?l ]
-    => try find_succ_rel; eapply (succ_rt_trans _ c _);
+    => try find_succ_rel; eapply (succ_rt_trans (b:=c));
       [eauto|find_succ_rel|find_succ_rel]
   | [ |- ?a ≻* ?b ≻* ?c | ?l ] => eapply succ_rt_combine;resolve_succ_rt
   end.

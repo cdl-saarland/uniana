@@ -625,7 +625,7 @@ Proof.
   (***************)
   
   destruct h as [h Hh]. cbn in Hexit.
-  specialize (prefix_nincl_prefix (h, O :: tl j) t) as Hpre.
+  specialize (@prefix_nincl_prefix _ _ _ (h, O :: tl j) t) as Hpre.
   exploit Hpre.
   1: eapply ex_head_zero;eauto;unfold exit_edge in Hexit;eexists;eauto.
   set (t' := prefix_nincl (h, O :: tl j) t) in *.
@@ -1508,9 +1508,6 @@ Section disj.
   Proof.
   Admitted.
 
-  Require Import Take.
-  Definition take_r (A : Type) (n : nat) (l : list A) := rev (take n (rev l)).
-
   Lemma geq_tag_suffix_tag_tl_eq (p q : Lab) l t i j
         (Hpath : TPath (root,start_tag) (q,j) t)
         (Hpost : Postfix l t)
@@ -1560,28 +1557,6 @@ Section disj.
     : q = h.
   Admitted.
   
-  Lemma take_tl (A : Type) (n : nat) (l : list A)
-        (Hn : S n = |l|)
-    : take n l = rev (tl (rev l)).
-  Proof.
-    revert dependent n.
-    induction l;intros;cbn in *.
-    - congruence.
-    - destruct n;cbn.
-      + inversion Hn;subst. symmetry in H0. rewrite length_zero_iff_nil in H0. subst l. cbn. reflexivity.
-      + inversion Hn;subst. exploit IHl. rewrite IHl.
-        fold (rev l :r: a). rewrite tl_rcons.
-        * rewrite rev_rcons. reflexivity.
-        * rewrite rev_length. omega.
-  Qed.
-  
-  Lemma take_r_tl (A : Type) (n : nat) (l : list A)
-        (Hn : S n = |l|)
-    : take_r n l = tl l.
-  Proof.
-    unfold take_r. rewrite take_tl; [|rewrite rev_length;eauto].
-    do 2 rewrite rev_involutive. reflexivity.
-  Qed.
 
   Lemma ex_entry (h p q : Lab) (i j : Tag) t
         (Hin : innermost_loop h q)
