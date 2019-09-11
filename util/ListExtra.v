@@ -1,7 +1,7 @@
 (** * ListExtra 
     - includes some useful facts about lists
 **)
-
+Require Import Program.Equality.
 Require Export List.
 
 Require Export Take.
@@ -255,6 +255,38 @@ Section Rcons.
     - destruct l;cbn in *;[congruence'|].
       repeat fold_rcons H. 
       f_equal;[eapply rcons_eq2;eauto|apply IHl';eapply rcons_eq1;eauto].
+  Qed.
+  
+  Lemma NoDup_rcons (* unused *)(A : Type) (x : A) (l : list A)
+    : x ∉ l -> NoDup l -> NoDup (l :r: x).
+  Proof.
+    intros Hnin Hnd. revert x Hnin.
+    induction Hnd; intros y Hnin; cbn.
+    - econstructor; eauto. econstructor.
+    - econstructor.
+      + rewrite in_app_iff. contradict Hnin. destruct Hnin; [contradiction|firstorder].
+      + eapply IHHnd. contradict Hnin. right; assumption.
+  Qed.
+
+  Lemma NoDup_nin_rcons (A : Type) (x : A) (l : list A)
+    : NoDup (l :r: x) -> x ∉ l.
+  Proof.
+    intros Hnd Hin.
+    dependent induction l.
+    - destruct Hin.
+    - destruct Hin; rewrite cons_rcons_assoc in Hnd; inversion Hnd.
+      + subst a. eapply H2. apply In_rcons;firstorder.
+      + eapply IHl; eauto.
+  Qed.
+  
+  Lemma NoDup_app (A : Type) (l l' : list A)
+    : NoDup (l ++ l') -> forall a, a ∈ l -> a ∉ l'.
+  Proof.
+    induction l; intros; cbn; [contradiction|].
+    inversion H;subst.
+    destruct H0; subst.
+    - contradict H3. eapply in_app_iff. firstorder.
+    - eapply IHl;auto.
   Qed.
 
 End Rcons.

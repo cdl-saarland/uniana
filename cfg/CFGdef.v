@@ -53,22 +53,6 @@ Class redCFG
     }.
 
 Hint Resolve loop_head_dom a_edge_incl a_edge_acyclic a_reachability.
-
-
-  Lemma ne_list_nlrcons: forall (A : Type) (l : ne_list A), exists (a : A) (l' : list A), l = l' >: a.
-  Proof.
-    induction l.
-    - exists a, nil. eauto.
-    - destructH. rewrite IHl. exists a0, (a :: l'). cbn. reflexivity.
-  Qed.
-  
-  Ltac destr_r x :=
-    let Q := fresh "Q" in
-    specialize (ne_list_nlrcons x) as Q;
-    let a := fresh "a" in
-    let l := fresh "l" in
-    destruct Q as [a [l Q]];
-    rewrite Q in *.
   
   Definition CPath `{redCFG} := Path edge.
   Definition APath `{redCFG} := Path a_edge.
@@ -84,7 +68,8 @@ Section cfg.
   Notation "p '-->b' q" := (edge p q) (at level 55).
   Notation "p '-->' q" := (p -->b q = true) (at level 55, right associativity).
 
-  (** abbreviation for CPath **)
+  (** * abbreviation for CPath **)
+
   Definition CPath' π := CPath (ne_back π) (ne_front π) π.
 
   Lemma cpath_cpath' (* unused *)r p t
@@ -95,27 +80,9 @@ Section cfg.
     eapply path_front in Hpath as Hfront.
     rewrite Hfront,Hback. assumption.
   Qed.
-  
-  (*
-Local Ltac prove_spec :=
-  intros;
-  let tac :=
-      fun _ => lazymatch goal with
-              [ |- to_bool ?e = true <-> ?p] => destruct e; cbn; split; eauto ; intros; congruence
-            end
-  in
-  lazymatch goal with
-  | [ |- ?f _ _ _ = true <-> ?p ]
-    => unfold f; tac 0
-  | [ |- ?f _ _ = true <-> ?p ]
-    => unfold f; tac 0
-  | [ |- ?f _ = true <-> ?p ]
-    => unfold f; tac 0
-  | [ |- ?f = true <-> ?p ]
-    => unfold f; tac 0
-  end.*)
 
-  (** decidable properties on redCFG **)
+
+  (** * decidable properties on redCFG **)
   
   Global Instance Lab_dec : EqDec Lab eq.
   Proof.
@@ -157,8 +124,12 @@ Local Ltac prove_spec :=
   Qed.
 
   Hint Resolve back_edge_dec.
+  
+  (** * depth **)
 
-  (** Some basic facts **)
+  Definition depth (p : Lab) := length (filter (DecPred (fun h => loop_contains h p)) (elem Lab)). 
+
+  (** * Some basic facts **)
   
   Lemma reachability (q : Lab) : exists π : ne_list Lab, Path edge root q π.
   Proof.
@@ -181,34 +152,44 @@ Local Ltac prove_spec :=
       eapply path_from_elem in N;eauto. destructH. apply Hacy in N0;eauto.
   Qed.
   
-  (** about loops **)
   
-  Lemma loop_contains_loop_head (qh q : Lab)
-    : loop_contains qh q -> loop_head qh.
-  Proof.
-    intro Q. unfold loop_head, loop_contains in *. destruct Q as [p [_ [Q _]]].
-    eexists; eauto.
-  Qed.
-
-  Lemma loop_contains_self h : loop_head h -> loop_contains h h.
-  Proof.
-    intros Hl. unfold loop_contains.
-    - unfold loop_head in Hl. destruct Hl. 
-      eapply loop_head_dom in H as Hdom.
-      eapply back_edge_incl in H as Hreach. specialize (a_reachability x) as Hreach'.
-      destructH.
-      eapply subgraph_path' in Hreach' as Hreach'';eauto using a_edge_incl.
-      eapply Hdom in Hreach''. eapply path_from_elem in Hreach''; eauto.
-      destructH; eauto.
-      eapply path_NoDup' in Hreach''0;eauto. 
-      destructH. exists x, π0. firstorder;eauto.
-      + eapply subgraph_path';eauto using a_edge_incl.
-      + eapply NoDup_rev in Hreach''3. eapply path_back in Hreach''2.
-        remember (rev π0) as l.
-        destruct l;cbn in *;eauto.
-        specialize (ne_list_nlrcons π0) as Heql'. destructH. subst π0. cbn in *. simpl_nl' Heql.
-        rewrite rev_rcons in Heql. inversion Heql;subst e l.
-        simpl_nl' Hreach''2. subst. inversion Hreach''3;subst. auto.
-  Qed.
   
 End cfg.
+
+(** * decPred_bool **)
+
+Instance decide_decPred_bool (A : Type) (f : A -> bool) a : dec (if f a then True else False).
+Proof.
+  cbn. destruct (f a); eauto.
+Qed.
+
+Definition decPred_bool (A : Type) (f : A -> bool) := DecPred (fun a => if f a then True else False).
+
+Definition finType_sub_decPred {X : finType} (p : decPred X) : finType.
+Proof.
+  eapply (@finType_sub X p). eapply decide_pred. 
+Defined.
+
+(** * generalizations **)
+
+Open Scope prg.
+
+Definition restrict_edge (A : finType) (f : A -> A -> bool) (p : decPred A)
+  : let L' := finType_sub p (decide_pred p) in L' -> L' -> bool
+  := fun x y => (f (`x) (`y)).
+
+Definition restrict_edge' (A : Type) (f : A -> A -> bool) (p : decPred A)
+  := f ∩ ((fun a _ => to_bool (@decision (p a) (decide_pred p a)))
+            ∩ (fun _ b => to_bool (@decision (p b) (decide_pred p b)))).
+
+Definition loop_contains' (L : Type) edge a_edge (qh q : L)
+  := exists p π, (edge ∖ a_edge) p qh = true /\ Path edge q p π /\ qh ∉ tl (rev π).
+
+Definition exit_edge' (L : finType) (edge a_edge : L -> L -> bool) (h p q : L)
+  := loop_contains' edge a_edge h p /\ ~ loop_contains' edge a_edge h q /\ edge p q = true.
+
+Definition back_edge'  (L : Type) (edge a_edge : L -> L-> bool) (p q : L)
+  := (edge ∖ a_edge) p q = true.
+
+Definition loop_head' (* unused *)(L : Type) (edge a_edge : L -> L-> bool) (h : L)
+  := exists p, (edge ∖ a_edge) p h = true.

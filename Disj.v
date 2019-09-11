@@ -193,7 +193,6 @@ Proof.
 Qed.
 
 Local Arguments deq_loop {_ _ _ _ _}.
-Local Arguments depth {_ _ _ _ _}.
 Arguments loop_head {_ _ _ _ _}.
 Arguments loop_head_dec {_ _ _ _ _}.
 Arguments get_innermost_loop_strict {_ _ _ _ _}. 
@@ -325,7 +324,9 @@ Proof.*) (*
   - admit.
 Admitted. *)
 
-Lemma exit_edge_dep_eq (* unused *)`{redCFG} h qe1 qe2 e1 e2
+Arguments depth {_ _ _ _ _} _.
+
+Lemma exit_edge_dep_eq (* unused *)`{redCFG} (h qe1 qe2 e1 e2 : Lab)
       (Hexit1 : exit_edge h qe1 e1)
       (Hexit2 : exit_edge h qe2 e2)
   : depth e1 = depth e2. 

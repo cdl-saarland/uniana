@@ -230,6 +230,28 @@ Section NeList.
     destruct l as [a | a l'];exists a;[exists nil|exists l'];cbn;[|rewrite <-nlcons_necons];reflexivity.
   Qed.
 
+  Lemma ne_list_nlrcons: forall (A : Type) (l : ne_list A), exists (a : A) (l' : list A), l = l' >: a.
+  Proof.
+    induction l.
+    - exists a, nil. eauto.
+    - destructH. rewrite IHl. exists a0, (a :: l'). cbn. reflexivity.
+  Qed.
+  
+  Lemma neconc_app (l l' : ne_list A)
+    : l ++ l' = l :+: l'.
+  Proof.
+    induction l;cbn;eauto.
+    rewrite IHl. reflexivity.
+  Qed.
+  
+  Lemma nl_cons_lr_shift (a b : A) (l : list A)
+    : (a :<: (l >: b)) = ((a :< l) :>: b).
+  Proof.
+    revert a.
+    induction l; intros; cbn ; eauto.
+    fold ((ne_rcons (a :< l) b)). rewrite IHl. reflexivity.
+  Qed.
+
 End NeList.
 
 Lemma nin_tl_iff (A : Type) `{EqDec A eq} (a : A) (l : ne_list A)
@@ -256,3 +278,5 @@ Proof.
   - rewrite Hf. eauto.
   - destruct (f a);eauto.
 Qed.
+
+

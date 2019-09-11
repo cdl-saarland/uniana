@@ -390,4 +390,12 @@ Section Pre.
     eapply Hstep;eauto. econstructor.
   Qed.
 
+  Lemma prefix_ex_cons (* unused *)(l l' : list A) (a : A)
+    : Prefix l l' -> exists a', Prefix (a' :: l) (a :: l').
+  Proof.
+    intros Hpre. revert a. induction Hpre; intros b.
+    - exists b. econstructor.
+    - specialize (IHHpre a). destructH. eexists. econstructor. eauto.
+  Qed.
+
 End Pre.

@@ -1,4 +1,5 @@
-Require Export CFGdeq.
+Require Export CFGloop.
+Require Import NePreSuffix.
 
 Section cfg.
   Context `{C : redCFG}.
@@ -7,8 +8,93 @@ Section cfg.
   Notation "p '-a>' q" := (p -a>b q = true) (at level 55).
   Notation "p '-->b' q" := (edge p q) (at level 55).
   Notation "p '-->' q" := (p -->b q = true) (at level 55, right associativity).
+
+  (** * loop ordering by relative depth **)
+
+  Definition deq_loop q p : Prop :=
+    forall h, loop_contains h p -> loop_contains h q.
+
+  Definition eq_loop q p : Prop :=
+    deq_loop q p /\ deq_loop p q.
+
+  Global Instance deq_loop_dec h p : dec (deq_loop h p).
+  eauto.
+  Qed.
+
+  (** * Preorder properties of deq_loop **)
+
+  (** Reflexivity **)
   
-  (** innermost_loops **)
+  Lemma deq_loop_refl l :
+    deq_loop l l.
+  Proof.
+    unfold deq_loop;firstorder.
+  Qed.
+
+  (** * Transitivity **)
+  
+  Lemma deq_loop_trans p q r
+        (H1 : deq_loop p q)
+        (H2 : deq_loop q r)
+    : deq_loop p r.
+  Proof.
+    unfold deq_loop in *. intros. eapply H1,H2;eauto.
+  Qed.
+
+  Program Instance deq_loop_PreOrder : PreOrder deq_loop.
+  Next Obligation.
+    unfold Reflexive. eapply deq_loop_refl.
+  Qed.
+  Next Obligation.
+    unfold Transitive; eapply deq_loop_trans.
+  Qed.
+
+  (** * deq_loop facts **)
+  
+  Lemma loop_contains_deq_loop h p
+        (Hloop : loop_contains h p)
+    : deq_loop p h.
+  Proof.
+    unfold deq_loop. intros. eapply loop_contains_trans;eauto.
+  Qed.
+  
+  Lemma deq_loop_root p
+    : deq_loop p root.
+  Proof.
+    unfold deq_loop.
+    intros.
+    exfalso.
+    eapply root_loop_root in H as H'. subst.
+    unfold loop_contains in H. destructH.
+    eapply back_edge_incl in H0. eapply root_no_pred;eauto.
+  Qed.
+  
+  Lemma exit_not_deq h p q
+        (Hexit : exit_edge h p q)
+        (Hdeq : deq_loop q h)
+    : False.
+  Proof.
+    unfold exit_edge in Hexit. destructH.
+    apply Hexit2.
+    eapply Hdeq.
+    eapply loop_contains_self. eapply loop_contains_loop_head;eauto.
+  Qed.
+
+  Lemma eq_loop1 (* unused *) p p' q
+    : eq_loop p p' -> deq_loop p q -> deq_loop p' q.
+  Proof.
+    intros. destruct H.
+    eapply deq_loop_trans;eauto.
+  Qed.
+
+  Lemma eq_loop2 p q q'
+    : eq_loop q q' -> deq_loop p q -> deq_loop p q'.
+  Proof.
+    intros. destruct H.
+    eapply deq_loop_trans;eauto.
+  Qed.
+  
+  (** * Definitions for innermost loops **)
   
   Definition innermost_loop h p : Prop := loop_contains h p /\ deq_loop h p.
 
@@ -60,6 +146,32 @@ Section cfg.
     | inright _ => None
     end.
 
+  (** * simple facts about innermost loops **)
+
+  Lemma innermost_loop_deq_loop (* unused *)h p q
+        (Hinner : innermost_loop h p)
+        (Hloop : loop_contains h q)
+    : deq_loop q p.
+  Proof.
+    unfold innermost_loop in Hinner. destructH.
+    eapply deq_loop_trans;eauto.
+    eapply loop_contains_deq_loop;eauto.
+  Qed.
+
+  Lemma eq_loop_innermost h p q
+        (Heq : eq_loop p q)
+        (Hinner : innermost_loop h p)
+    : innermost_loop h q.
+  Proof.
+    unfold innermost_loop in *.
+    destructH.
+    split;[eapply Heq in Hinner0;auto|]. 
+    unfold eq_loop in Heq. destructH.
+    eapply deq_loop_trans;eauto.
+  Qed.
+
+  (** * Uniqueness of innermost loops *)
+
   Lemma innermost_loop_strict_unique (* unused *)(h h' p : Lab)
         (H : innermost_loop_strict h p)
         (Q : innermost_loop_strict h' p)
@@ -71,36 +183,9 @@ Section cfg.
     eapply loop_contains_Antisymmetric;auto.
   Qed.
 
-  Definition LPath := Path (fun h p => decision (innermost_loop_strict h p)).
+  (** * LPath **)
   
-  (** StrictPrefix **)
-
-  Definition StrictPrefix' := 
-    fun (A : Type) (l l' : ne_list A) => exists a : A, Prefix (a :<: l) l'.
-
-  Lemma prefix_strictPrefix:
-    forall (e : Lab) (x ϕ : ne_list Lab), Prefix ϕ x -> StrictPrefix' ϕ (e :<: x).
-  Proof.
-    intros e x ϕ Hϕ1.
-    unfold StrictPrefix'. cbn.
-    revert dependent e.
-    induction Hϕ1; intros.
-    - exists e; econstructor.
-    - specialize(IHHϕ1 a). destructH. exists a0. econstructor. auto.
-  Qed.
-
-  Lemma StrictPrefix_well_founded (A : Type) : well_founded (@StrictPrefix' A).
-  Proof.
-    unfold well_founded.
-    intros. 
-    induction a.
-    - econstructor. intros. unfold StrictPrefix' in *. destructH. inversion H;[congruence'|]. inversion H2.
-    - constructor. intros.
-      unfold StrictPrefix' in H.
-      destructH. cbn in *. inversion H;subst.
-      + eapply ne_to_list_inj in H3. subst. auto.
-      + eapply IHa. unfold StrictPrefix'. exists a1. cbn. auto.
-  Qed.
+  Definition LPath := Path (fun h p => decision (innermost_loop_strict h p)).
   
   Lemma find_some_strong (A : Type) `{Q:EqDec A eq} (f : A -> bool) (l : list A) (x : A) (Hnd : NoDup l)
     : find f l = Some x -> x ∈ l /\ f x = true /\ forall y, y ≻* x | l -> f y = true -> x = y.
@@ -116,8 +201,6 @@ Section cfg.
       + destruct (a == y);[rewrite e in E;congruence|].
         inversion Hnd; subst. eapply IHl;eauto. inversion H0;subst;auto. congruence.
   Qed.
-
-  (** LPath **)
   
   Lemma loop_LPath_helper p h π
         (Hpath : Path a_edge root p (p :<: π))
@@ -191,7 +274,9 @@ Section cfg.
           { destruct Hex;[symmetry in H2;contradiction|auto]. }
           eapply dom_dom_acyclic;eauto. eapply dom_loop;auto.
         * exfalso. decide (loop_contains h p); cbn in *; [congruence|contradiction].
-  Qed.    
+  Qed.
+
+  (** * Existence of innermost loops **)
   
   Lemma loop_contains_innermost (h p : Lab)
         (Hloop : loop_contains h p)
@@ -281,68 +366,8 @@ Section cfg.
       eapply loop_contains_innermost_strict in H;eauto.
       destructH. specialize (n h'0); contradiction.
   Qed.
-  
-  Lemma deq_loop_trans p q r
-        (H1 : deq_loop p q)
-        (H2 : deq_loop q r)
-    : deq_loop p r.
-  Proof.
-    unfold deq_loop in *. intros. eapply H1,H2;eauto.
-  Qed.
 
-  Program Instance deq_loop_PreOrder : PreOrder deq_loop.
-  Next Obligation.
-    unfold Reflexive. eapply deq_loop_refl.
-  Qed.
-  Next Obligation.
-    unfold Transitive; eapply deq_loop_trans.
-  Qed.
-
-  Lemma loop_contains_deq_loop h p
-        (Hloop : loop_contains h p)
-    : deq_loop p h.
-  Proof.
-    unfold deq_loop. intros. eapply loop_contains_trans;eauto.
-  Qed.
-
-  Lemma innermost_loop_deq_loop (* unused *)h p q
-        (Hinner : innermost_loop h p)
-        (Hloop : loop_contains h q)
-    : deq_loop q p.
-  Proof.
-    unfold innermost_loop in Hinner. destructH.
-    eapply deq_loop_trans;eauto.
-    eapply loop_contains_deq_loop;eauto.
-  Qed.
-
-  (** preds **)
-
-  Definition preds `{redCFG Lab edge} p : list Lab := filter (decPred_bool (fun q => edge q p)) (elem Lab). 
-
-  Lemma preds_in_same_loop h p q
-        (Hl : loop_contains h p)
-        (Hneq : h <> p)
-        (Hedge : q --> p)
-    : loop_contains h q.
-  Proof.
-    unfold loop_contains in Hl.
-    destructH.
-    eapply path_rcons in Hl2 as Hl2';eauto.
-    exists p0, (π :>: q). repeat (split;eauto).
-    simpl_nl. rewrite rev_rcons. cbn. eapply nin_tl_iff in Hl3;auto.
-    destruct Hl3 as [Hl3|Hl3];[contradict Hl3;eapply in_rev;auto|eapply path_back in Hl2;subst;auto].
-  Qed.
-
-  Lemma deq_loop_exited h qe e
-        (Hexit : exit_edge h qe e)
-    : deq_loop qe e.
-  Proof.
-    eapply no_exit_head in Hexit as Hneh.
-    unfold exit_edge in *. destructH.
-    unfold deq_loop. intros. 
-    eapply preds_in_same_loop in H;eauto.
-    intro N. eapply loop_contains_loop_head in H. subst. contradiction.
-  Qed.
+  (** * Lemmas about relative loop depth on exit edges **)
   
   Lemma deq_loop_exiting h qe e
         (Hexit : exit_edge h qe e)
@@ -356,6 +381,38 @@ Section cfg.
     unfold exit_edge. repeat (split;eauto).
     contradict Hexit2. eapply loop_contains_trans;eauto.
   Qed.
+
+  Lemma deq_loop_exited h qe e
+        (Hexit : exit_edge h qe e)
+    : deq_loop qe e.
+  Proof.
+    eapply no_exit_head in Hexit as Hneh.
+    unfold exit_edge in *. destructH.
+    unfold deq_loop. intros. 
+    eapply preds_in_same_loop in H;eauto.
+    intro N. eapply loop_contains_loop_head in H. subst. contradiction.
+  Qed.
+  
+  Lemma deq_loop_exited' : forall (h qe e : Lab), exit_edge h qe e -> deq_loop h e.
+  Proof.
+    intros.
+    eapply deq_loop_exited in H as H'.
+    eapply deq_loop_exiting in H as H''.
+    eapply deq_loop_trans;eauto.
+  Qed.
+  
+  Lemma eq_loop_exiting h p q
+        (Hexit : exit_edge h p q)
+    : eq_loop h p.
+  Proof.
+    split.
+    - eapply deq_loop_exiting;eauto.
+    - unfold exit_edge in Hexit.
+      destruct Hexit as [Hexit _].
+      eapply loop_contains_deq_loop;eauto.
+  Qed.      
+  
+  (** * Variant of get_innermost_loop that uses the root if there is no loop **)
 
   Definition get_innermost_loop' p
     := match get_innermost_loop p with
@@ -380,17 +437,5 @@ Section cfg.
        | Some h => h
        | None => root
        end.
-
-  Lemma eq_loop_innermost h p q
-        (Heq : eq_loop p q)
-        (Hinner : innermost_loop h p)
-    : innermost_loop h q.
-  Proof.
-    unfold innermost_loop in *.
-    destructH.
-    split;[eapply Heq in Hinner0;auto|]. 
-    unfold eq_loop in Heq. destructH.
-    eapply deq_loop_trans;eauto.
-  Qed.
 
 End cfg.

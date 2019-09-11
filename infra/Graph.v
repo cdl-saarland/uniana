@@ -428,6 +428,12 @@ Proof.
   eapply subgraph_path' in Hp; eauto.
 Qed.
 
+Lemma union_subgraph1 (L : Type) (f g : L -> L -> bool)
+  : sub_graph f (f ∪ g).
+Proof.
+  unfold sub_graph, union_edge. intros. rewrite H. cbn. reflexivity.
+Qed.
+
 Lemma minus_subgraph {L : Type} (edge1 edge2 : L -> L -> bool) :
   sub_graph (edge1 ∖ edge2) edge1.
 Proof.

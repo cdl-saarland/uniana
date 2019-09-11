@@ -40,3 +40,16 @@ Ltac cbn_nl :=
 
 Ltac cbn_nl' H :=
   repeat (cbn in H; simpl_nl' H).
+
+Ltac ne_r_destruct l :=
+  let H := fresh "H" in
+  specialize (ne_list_nlrcons l) as H;
+  destruct H as [? [? ?]]; subst l.
+  
+Ltac destr_r x :=
+  let Q := fresh "Q" in
+  specialize (ne_list_nlrcons x) as Q;
+  let a := fresh "a" in
+  let l := fresh "l" in
+  destruct Q as [a [l Q]];
+  rewrite Q in *.
