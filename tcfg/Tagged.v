@@ -20,113 +20,112 @@ Section tagged.
   
   Context `{C : redCFG}.
 
-Definition Tag := list nat.
+  Definition Tag := list nat.
 
-Program Instance Tag_dec : EqDec Tag eq.
-Next Obligation.
-  apply list_eqdec, nat_eq_eqdec.
-Qed.
-
-Definition start_tag : Tag := nil.
-
-Definition Coord : Type := (Lab * Tag).
-Hint Resolve Tag_dec.
-
-Program Instance Coord_dec : EqDec Coord eq.
-Next Obligation.
-  eapply prod_eqdec;eauto.
-Qed.
-
-Hint Resolve Coord_dec.
-
-
-
-Definition tcfg_edge' (tag : Lab -> Lab -> Tag -> Tag) :=
-  (fun c c' : Coord => let (p,i) := c  in
-                    let (q,j) := c' in
-                    edge p q && ( (tag p q i) ==b j)).
-
-
-Definition eff_tag `{redCFG} p q i : Tag
-  := if decision (p ↪ q)
-     then match i with
-          | nil => nil
-          | n :: l => (S n) :: l
-          end
-     else
-       if decision (exists h, exit_edge h p q) then
-         tl i
-       else
-         if decision (loop_head q) then
-           O :: i
-         else
-           i.
-
-Definition tcfg_edge := tcfg_edge' eff_tag.
-
-Hint Unfold Coord tcfg_edge tcfg_edge'.
-
-Notation "pi -t> qj" := (tcfg_edge pi qj = true) (at level 50).
-(*Notation "pi -t> qj" := ((fun `(redCFG) => tcfg_edge pi qj = true) _ _ _ _ _)
-                          (at level 50).*)
-
-Lemma tcfg_edge_spec (p q : Lab) i j
-  : (p,i) -t> (q,j) <-> edge p q = true /\ eff_tag p q i = j.
-Proof.
-  unfold tcfg_edge,tcfg_edge'.
-  conv_bool. split;split;destructH;auto.
-Qed.
-
-Hint Resolve tcfg_edge_spec.
-
-Section eff_tag_iff.
-  Variables (p q : Lab) (i j : Tag).
-  Hypothesis (Hpq : (p,i) -t> (q,j)).
-
-  Lemma tag_exit_iff
-    : j = tl i <-> match get_innermost_loop p with
-                 | Some h => exit_edge h p q
-                 | None => False
-                 end.
-  Proof.
-    unfold tcfg_edge,tcfg_edge' in Hpq. conv_bool. destructH.
-    unfold eff_tag in Hpq.
-  Admitted.
-  
-  Lemma tag_exit_iff'
-    : j = tl i <-> exists h, exit_edge h p q.
-  Proof.
-    split;intro H.
-    - eapply tag_exit_iff in H.
-      destruct (get_innermost_loop p);[|contradiction]. eexists; eauto.
-    - eapply tag_exit_iff. specialize (get_innermost_loop_spec p) as E. destruct (get_innermost_loop p).
-      + destructH. 
-        split;eauto. 1: unfold innermost_loop in E; destructH; auto. split;eauto. 2: eapply tcfg_edge_spec;eauto.
-        unfold exit_edge in H. destructH. intro Hl.
-        eapply innermost_loop_deq_loop in E;eauto.
-      + destructH. eapply E. unfold exit_edge in H; destructH. eauto.
+  Program Instance Tag_dec : EqDec Tag eq.
+  Next Obligation.
+    apply list_eqdec, nat_eq_eqdec.
   Qed.
 
-  
-(*  Definition entry_edge (h p q : Lab) := loop_contains h q /\ ~ loop_contains h p /\ edge p q = true.*)
+  Definition start_tag : Tag := nil.
 
-  Lemma tag_entry_lt
-        (Hlt : |i| < |j|)
-    : j = O :: i.
-  Admitted.
-  
-  Lemma tag_entry_iff
-    : j = O :: i <-> loop_head q /\ ~ loop_contains q p.
-  Admitted.
+  Definition Coord : Type := (Lab * Tag).
+  Hint Resolve Tag_dec.
 
-  Lemma tag_back_edge_iff
-    : match hd_error i with
-      | Some n => S n :: tl i = j
-      | None => False
-      end <-> p ↪ q.
-  Admitted.
-End eff_tag_iff.
-      
+  Program Instance Coord_dec : EqDec Coord eq.
+  Next Obligation.
+    eapply prod_eqdec;eauto.
+  Qed.
+
+  Hint Resolve Coord_dec.
+
+  Definition tcfg_edge' (tag : Lab -> Lab -> Tag -> Tag) :=
+    (fun c c' : Coord => let (p,i) := c  in
+                      let (q,j) := c' in
+                      edge p q && ( (tag p q i) ==b j)).
+
+  Definition eff_tag `{redCFG} p q i : Tag
+    := if decision (p ↪ q)
+       then match i with
+            | nil => nil
+            | n :: l => (S n) :: l
+            end
+       else
+         if decision (exists h, exit_edge h p q) then
+           tl i
+         else
+           if decision (loop_head q) then
+             O :: i
+           else
+             i.
+
+  Definition tcfg_edge := tcfg_edge' eff_tag.
+
+  Hint Unfold Coord tcfg_edge tcfg_edge'.
+
+  Notation "pi -t> qj" := (tcfg_edge pi qj = true) (at level 50).
+  (*Notation "pi -t> qj" := ((fun `(redCFG) => tcfg_edge pi qj = true) _ _ _ _ _)
+                          (at level 50).*)
+
+  Lemma tcfg_edge_spec (p q : Lab) i j
+    : (p,i) -t> (q,j) <-> edge p q = true /\ eff_tag p q i = j.
+  Proof.
+    unfold tcfg_edge,tcfg_edge'.
+    conv_bool. split;split;destructH;auto.
+  Qed.
+
+  Hint Resolve tcfg_edge_spec.
+
+  Section eff_tag_facts.
+    Variables (p q : Lab) (i j : Tag).
+    Hypothesis (Hpq : (p,i) -t> (q,j)).
+
+    Lemma tag_exit_iff
+      : j = tl i <-> match get_innermost_loop p with
+                   | Some h => exit_edge h p q
+                   | None => False
+                   end.
+    Proof.
+      unfold tcfg_edge,tcfg_edge' in Hpq. conv_bool. destructH.
+      unfold eff_tag in Hpq.
+    Admitted.
+  
+    Lemma tag_exit_iff'
+      : j = tl i <-> exists h, exit_edge h p q.
+    Proof.
+      split;intro H.
+      - eapply tag_exit_iff in H.
+        destruct (get_innermost_loop p);[|contradiction]. eexists; eauto.
+      - eapply tag_exit_iff. specialize (get_innermost_loop_spec p) as E. destruct (get_innermost_loop p).
+        + destructH. 
+          split;eauto. 1: unfold innermost_loop in E; destructH; auto. split;eauto. 2: eapply tcfg_edge_spec;eauto.
+          unfold exit_edge in H. destructH. intro Hl.
+          eapply innermost_loop_deq_loop in E;eauto.
+        + destructH. eapply E. unfold exit_edge in H; destructH. eauto.
+    Qed.
+
+    Lemma tag_exit_lt
+          (Hgt : |j| < |i|)
+      : j = tl i.
+    Admitted.
+
+    Lemma tag_entry_lt
+          (Hlt : |i| < |j|)
+      : j = O :: i.
+    Admitted.
+    
+    Lemma tag_entry_iff
+      : j = O :: i <-> entry_edge q p.
+    Admitted.
+
+    Lemma tag_back_edge_iff
+      : match hd_error i with
+        | Some n => S n :: tl i = j
+        | None => False
+        end <-> p ↪ q.
+    Admitted.
+  End eff_tag_facts.
+  
 
 Lemma tag_eq_loop_exit `{redCFG} p q i j j'
       (Htag : (q,j ) -t> (p,i))

@@ -106,6 +106,8 @@ Section cfg.
     eauto.
   Qed.
 
+  Definition entry_edge (p h : Lab) := loop_head h /\ ~ loop_contains h p /\ edge p h = true.
+
   Definition exiting (h p : Lab) : Prop :=
     exists q, exit_edge h p q.
 

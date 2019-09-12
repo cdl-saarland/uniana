@@ -7,7 +7,7 @@ Require Import Nat.
 Require Import Bool.Bool.
 Require Import Coq.Logic.Eqdep_dec.
 
-Require Export Tagged Evaluation Disjoint.
+Require Export Tagged Evaluation Disjoint MaxPreSuffix DisjDef.
 
 Parameter path_splits : forall `{redCFG}, Lab -> list (Lab * Lab * Lab).
 
@@ -839,15 +839,6 @@ Proof.
   eapply impl_list'_tpath;eauto.
 Qed.
 
-Definition last_common' (A : Type) `{EqDec A eq} (l1 l2 l1' l2' : list A) (s : A)
-  := Postfix (l1' :r: s) l1 /\ Postfix (l2' :r: s) l2 /\ Disjoint l1' l2' /\ s ∉ l1' /\ s ∉ l2'.
-
-Lemma last_common'_iff (A : Type) `(EqDec A eq) l1 l2 (a : A)
-  : last_common l1 l2 a <-> exists l1' l2', last_common' l1 l2 l1' l2' a.
-Proof.
-  unfold last_common, last_common' in *. firstorder.
-Qed.
-
 Ltac swap_names H Q :=
   let R := fresh "R" in
   rename H into R;
@@ -1101,16 +1092,6 @@ Proof.
       induction l1;cbn;eauto. f_equal. unfold rcons in IHl1. rewrite IHl1. reflexivity.
 Qed.
 
-Lemma path_nlrcons_edge (* unused *){A : Type} (a b c : A) l f
-      (Hpath : Path f b c (l :>: a))
-  : f a (ne_back l) = true.
-Proof.
-  revert dependent c.
-  induction l; intros; inversion Hpath; subst; cbn in *.
-  - inversion H3. subst b0 b a1. auto.
-  - eauto.
-Qed.
-
 Lemma exits_eq_loop `{C:redCFG} q1 q2 h
       (Hexit1 : exited h q1)
       (Hexit2 : exited h q2)
@@ -1195,89 +1176,6 @@ Lemma depth_leq_deq (* unused *)`(H : redCFG) (s h : Lab)
 Proof.
 Admitted.
 
-Fixpoint while' {A : Type} (P : decPred A) (l : list A) : list A
-  := match l with
-     | nil => nil
-     | a :: l => if decision (P a) then a :: while' P l else nil
-     end.
-
-Definition while {A : Type} (P : decPred A) (l : list A) : list A
-  := rev (while' P (rev l)).
-
-Lemma while'_postfix {A : Type} (P : decPred A) (l l' : list A)
-      (H : while' P l = l')
-  : Postfix l' l.
-Proof.
-  revert dependent l'.
-  induction l; intros; cbn in *; eauto.
-  - subst. constructor.
-  - decide (P a).
-    + destruct l';[congruence|]. inversion H; subst.
-      eapply postfix_cons. eapply IHl. reflexivity.
-    + subst. eapply postfix_nil.
-Qed.
-
-Lemma while_prefix (* unused *){A : Type} (P : decPred A) (l l' : list A)
-      (H : while P l = l')
-  : Prefix l' l.
-Proof.
-  eapply postfix_rev_prefix'.
-  unfold while in H. rewrite <-H.
-  rewrite rev_involutive.
-  eapply while'_postfix;eauto.
-Qed.
-  
-Lemma while'_Forall {A : Type} (P : decPred A) (l : list A)
-  : Forall P (while' P l).
-Proof.
-  induction l;cbn;eauto.
-  decide (P a).
-  - econstructor;eauto.
-  - econstructor.
-Qed.
-  
-Lemma while_Forall {A : Type} (P : decPred A) (l : list A)
-  : Forall P (while P l).
-Proof.
-  unfold while. rewrite Forall_forall. setoid_rewrite <-in_rev. rewrite <-Forall_forall.
-  eapply while'_Forall.
-Qed.
-
-Lemma while'_app {A : Type} (P : decPred A) (l l' : list A)
-      (H : Forall P l)
-  : while' P (l ++ l') = l ++ while' P l'.
-Proof.
-  induction l;cbn;auto.
-  inversion H;subst. exploit IHl.
-  decide (P a);[|contradiction]. rewrite IHl. auto.
-Qed.
-
-Lemma while'_max {A : Type} (P : decPred A) (l l' : list A) a
-      (Hpost : Postfix (l' :r: a) l)
-      (Hw : while' P l = l')
-  : ~ P a.
-Proof.
-  rewrite postfix_eq in Hpost.
-  destructH.
-  rewrite Hpost in Hw.
-  intro N. rewrite while'_app in Hw.
-  - clear - Hw. induction l';cbn in Hw;[congruence|]. eapply IHl'. inversion Hw. rewrite H0 at 1. reflexivity.
-  - rewrite Forall_forall. setoid_rewrite In_rcons. intros. destruct H;subst;auto.
-    eapply Forall_forall in H;eauto. rewrite <-Hw.
-    eapply while'_Forall.
-Qed.
-    
-  
-Lemma while_max (* unused *){A : Type} (P : decPred A) (l l' : list A) a
-      (Hpre : Prefix (a :: l') l)
-      (Hw : while P l = l')
-  : ~ P a.
-Proof.
-  unfold while in Hw.
-  rewrite <-rev_involutive in Hw. eapply rev_injective in Hw.
-  eapply while'_max;eauto.
-  rewrite <-rev_cons. eapply prefix_rev_postfix;eauto.
-Qed.
 
 Lemma exit_impl (* unused *)`{C : redCFG} {h qe e}
       (Hexit : exit_edge h qe e)
@@ -1330,22 +1228,6 @@ Lemma disj_exits_loop_split (* unused *)`{C : redCFG}
   : exists qq qq' : Lab, (` s', qq, qq') ∈ loop_splits__imp h e1 \/ (` s', qq, qq') ∈ loop_splits__imp h e2.
 Admitted.
 
-Lemma Disjoint_sym {A : Type} (l l' : list A)
-      (Hdisj : Disjoint l l')
-  : Disjoint l' l.
-Proof.
-  unfold Disjoint in *.
-  firstorder.
-Qed.
-
-Lemma last_common'_sym (* unused *){A : Type} `{EqDec A eq} (l1 l2 l1' l2' : list A) (a : A)
-      (Hlc : last_common' l1' l2' l1 l2 a)
-  : last_common' l2' l1' l2 l1 a.
-Proof.
-  unfold last_common' in *. destructH.
-  split_conj;eauto.
-  eapply Disjoint_sym. auto.
-Qed.
 
 Lemma lc_disj_exits_lsplits_base (* unused *)`{C : redCFG}
       (k : Tag) (e1 e2 q1 q2 h : Lab) (i j1 j2 : Tag) (t1 t2 : list Coord)
@@ -1401,331 +1283,12 @@ Notation "t 'is' x -->ᵀ y" := (TPath x y t) (at level 70).
 *)
 
 
-Lemma lc_succ_rt1 {A : Type} `{EqDec A eq} l1 l2 l1' l2' (x y : A)
-      (Hlc : last_common' l1 l2 l1' l2' x)
-      (Hin : y ∈ l1')
-  : y ≻* x | l1.
-Proof.
-  unfold last_common' in Hlc. destructH.
-  eapply splinter_postfix;eauto.
-  eapply splinter_rev. cbn. rewrite rev_rcons. econstructor. econstructor.
-  eapply splinter_single. rewrite <-In_rev. auto.
-Qed.
-
-Lemma lc_nil1 {A : Type} `{EqDec A eq} l1 l2 l2' (x : A)
-      (Hlc : last_common' l1 l2 [] l2' x)
-  : Some x = hd_error l1.
-Proof.
-  unfold last_common' in Hlc. destructH.
-  cbn in *.
-  destruct l1;[inversion Hlc0;congruence'|].
-  cbn.
-  f_equal.
-  eapply postfix_hd_eq;eauto.
-Qed.
-
-Lemma lc_cons1 {A : Type} `{EqDec A eq} l1 l2 l1' l2' (x y : A)
-      (Hlc : last_common' l1 l2 (x :: l1') l2' y)
-  : Some x = hd_error l1.
-Proof.
-  unfold last_common' in Hlc. destructH.
-  destruct l1;[inversion Hlc0;congruence'|].
-  cbn.
-  rewrite cons_rcons_assoc in Hlc0.
-  f_equal.
-  eapply postfix_hd_eq;eauto.
-Qed.
-
-Lemma lc_succ_rt_eq_lc {A : Type} `{EqDec A eq} l1 l2 l1' l2' (x y : A)
-      (Hlc : last_common' l1 l2 l1' l2' x)
-      (Hsucc1 : y ≻* x | l1)
-      (Hsucc2 : y ≻* x | l2)
-      (Hnd1 : NoDup l1)
-      (Hnd2 : NoDup l2)
-  : x = y.
-Proof.
-  unfold last_common' in Hlc. destructH.
-  dependent induction Hsucc1.
-  - clear IHHsucc1.
-    destruct l1';cbn in Hlc0; eapply postfix_hd_eq in Hlc0; eauto.
-    subst a.
-    dependent induction Hsucc2.
-    + destruct l2';cbn in Hlc2; eapply postfix_hd_eq in Hlc2; eauto. subst.
-      exfalso. eapply Hlc1;left; reflexivity.
-    + destruct l2';cbn in Hlc2; eapply postfix_hd_eq in Hlc2 as Heq; eauto.
-      * subst a.
-        eapply splinter_cons in Hsucc2. exfalso. eapply splinter_in in Hsucc2. inversion Hnd2. auto.
-      * eapply IHHsucc2 with (l2':=l2') ; eauto.
-        -- eapply cons_postfix;eauto.
-        -- clear - Hlc1. eapply disjoint_cons2 in Hlc1. firstorder.
-        -- inversion Hnd2. auto.
-  - destruct l1';cbn in Hlc0; eapply postfix_hd_eq in Hlc0 as Heq; eauto.
-    + subst a.
-      eapply splinter_cons in Hsucc1. eapply splinter_in in Hsucc1. inversion Hnd1. subst. contradiction.
-    + eapply IHHsucc1 with (l1':=l1');eauto.
-      * eapply cons_postfix;eauto.
-      * eapply disjoint_cons1 in Hlc1. firstorder.
-      * inversion Hnd1. auto.
-Qed.
 
 (*Lemma succ_rt_antisym (A : Type) (a b : A) (l : list A)
       (Hnd : NoDup l)
   : a ≻* b | l -> b ≻* a | l -> a = b.
 *)
 
-Lemma hd_error_ne_front {A : Type} (l : ne_list A)
-  : hd_error l = Some (ne_front l).
-Proof.
-  induction l;cbn;auto.
-Qed.
-
-Section disj.
-  Context `{C : redCFG}.
-  
-  Notation "p '-a>b' q" := (a_edge p q) (at level 55).
-  Notation "p '-a>' q" := (p -a>b q = true) (at level 55).
-  Notation "p '-->b' q" := (edge p q) (at level 55).
-  Notation "p '-->' q" := (p -->b q = true) (at level 55, right associativity).
-  
-(*  Lemma lc_common_element_nin {A : Type}(l1 l2 l1' l2' : list (Lab * Tag)) x y
-        (Hlc : last_common' l1 l2 l1' l2' x)
-        (Hin1 : y ∈ l1)
-        (Hin2 : y ∈ l2)
-    : y ∉ l1' /\ y ∉ l2'.
-  Proof.
-    revert dependent y. revert l1 l2 l1' l2' x Hlc.
-    enough (forall (l1 l2 l1' l2' : list (Lab * Tag)) (x : Lab * Tag),
-               last_common' l1 l2 l1' l2' x -> forall y, y ∈ l1 -> y ∈ l2 -> y ∉ l1').
-    { split;[|eapply last_common'_sym in Hlc];eapply H;eauto. }
-    intros ? ? ? ? ? Hlc y Hin1 Hin2. 
-    unfold last_common' in Hlc. destructH.*)
-
-  Lemma geq_tag_suffix_deq (p q : Lab) l t i j
-        (Hpath : TPath (root,start_tag) (q,j) t)
-        (Hpost : Postfix l t)
-        (HForall : Forall (DecPred (fun xl => |j| <= |snd xl|)) l)
-        (Hel : (p,i) ∈ l)
-    : deq_loop p q.
-  Proof.
-  Admitted.
-
-  Lemma geq_tag_suffix_tag_tl_eq (p q : Lab) l t i j
-        (Hpath : TPath (root,start_tag) (q,j) t)
-        (Hpost : Postfix l t)
-        (HForall : Forall (DecPred (fun xl => |j| <= |snd xl|)) l)
-        (Hel : (p,i) ∈ l)
-    : take_r (| tl j |) i = tl j.
-  Admitted.
-
-  Lemma while'_front_In (A : Type) (e : A -> A -> bool) (P : decPred A) (l : ne_list A) (a b : A)
-        (Hpath : Path e a b l)
-        (HP : P b)
-    : b ∈ while' P l.
-  Proof.
-    destruct Hpath;cbn.
-    - decide (P a);try contradiction. left. auto.
-    - decide (P c);try contradiction. left. auto.
-  Qed.
-  
-  Lemma postfix_ex_cons
-    : forall (A : Type) (l l' : list A) (a : A), Postfix l l' -> exists a' : A, Postfix (l :r: a') (l' :r: a).
-  Proof.
-    intros. eapply postfix_rev_prefix in H. eapply prefix_ex_cons in H. destructH.
-    exists a'. eapply prefix_rev_postfix'. do 2 rewrite rev_rcons. eauto.
-  Qed.
-        
-  Lemma while'_forall (A : Type) (P : decPred A) (l : list A) a
-        (Hin : a ∈ while' P l)
-    : P a.
-  Proof.
-    eapply Forall_forall;[|eapply Hin]. eapply while'_Forall.
-  Qed.
-
-  Lemma eq_loop_same (h h' : Lab)
-        (Heq : eq_loop h h')
-        (Hl : loop_head h)
-        (Hl' : loop_head h')
-    : h = h'.
-  Proof.
-    eapply loop_contains_Antisymmetric.
-    all: unfold eq_loop,deq_loop in *;destructH;eauto using loop_contains_self.
-  Qed.
-  
-  Lemma entry_through_header h p q
-        (Hnin : ~ loop_contains h p)
-        (Hin : loop_contains h q)
-        (Hedge : p --> q)
-    : q = h.
-  Admitted.
-  
-
-  Lemma ex_entry (h p q : Lab) (i j : Tag) t
-        (Hin : innermost_loop h q)
-        (Hnin : ~ loop_contains h p)
-        (Hpath : TPath (root,start_tag) (q,j) t)
-        (Hord : (q,j) ≻* (p,i) | t)
-    : (h,0 :: tl j) ≻* (p,i) | t.
-  Proof.
-    remember (while' (DecPred (fun xl => |j| <= |snd xl|)) t) as t'.
-    assert (Postfix t' t) as Hpost.
-    { eapply while'_postfix;subst t';eauto. }
-    assert (forall xl, xl ∈ t' -> loop_contains h (fst xl)) as Hloop.
-    { intros. destruct xl as [x l]. eapply geq_tag_suffix_deq in H.
-      4: subst t'; eapply while'_Forall.
-      all: cbn;eauto;destruct Hin as [Hin _];eauto.
-    } 
-    inversion Hpost.
-    - subst. eapply splinter_cons in Hord. eapply splinter_in in Hord.
-      specialize (Hloop (p,i)).
-      exploit Hloop.
-      + rewrite H0; auto.
-      + cbn in Hloop. contradiction.
-    - subst l.
-      specialize (rcons_destruct t') as Ht'.
-      destruct Ht'. (* t' is not empty *)
-      { enough ((q,j) ∈ t') as H00 by (rewrite H0 in H00;cbn in H00;contradiction).
-        subst.
-        eapply while'_front_In;eauto. cbn. omega. }
-      destructH.
-      destruct a0 as [h' k].
-      eapply postfix_ex_cons in H1. destructH. erewrite H in H1.
-      assert (h' = h); [|subst h'].
-      { (*
-         * h' is a header
-         * it has an incoming edge from outside of h
-         *)
-        destruct a'.
-        eapply entry_through_header;cycle 1.
-        - destruct Hin as [Hin1 Hin2].
-          enough (deq_loop h' h).
-          { eapply H2. eapply loop_contains_self. eapply loop_contains_loop_head;auto. }
-          eapply deq_loop_trans; eauto.
-          + eapply geq_tag_suffix_deq. 2:eapply Hpost. all: eauto.
-            * rewrite Heqt'. eapply while'_Forall.
-            * rewrite H0. eapply In_rcons. left. auto.
-          + eapply loop_contains_deq_loop;auto.
-        - rewrite H0 in H1. 
-          eapply postfix_path in H1;eauto 1.
-          instantiate (1:=e).
-          admit. (* inversion tactic for paths *)
-        - eapply while'_max in H1;eauto. cbn in H1. contradict H1.
-          admit. (* because depth = length of tag *)
-      }
-      eapply while'_max in H1 as Hmax;[|eauto]. cbn in Hmax.
-      destruct a'. cbn in *. assert (|l| < |j|) as Hmax' by omega.
-      assert (|j| <= |k|) as Hjk.
-      { assert ((h,k) ∈ t') by (rewrite H0;eapply In_rcons;eauto).
-        rewrite Heqt' in H2.
-        eapply while'_forall in H2. cbn in H2. auto. }
-      assert (|l| < |k|) by omega.
-      eapply tag_entry_lt in H2.
-      + destruct j.
-        { exfalso. cbn in Hmax'. omega. }
-        assert (j = tl k).
-        { replace j with (tl (n :: j)) by (cbn;auto). erewrite <-geq_tag_suffix_tag_tl_eq.
-          - rewrite take_r_tl;eauto. cbn. rewrite H2. cbn. cbn in Hmax. rewrite H2 in Hjk. cbn in Hjk. omega.
-          - eauto.
-          - eapply Hpost. 
-          - subst t'. eapply while'_Forall.
-          - rewrite H0. eapply In_rcons. left. eauto.
-        }
-        rewrite H2 in H3. cbn in H3. cbn. subst j k.
-        clear - Hpost Heqt' H0 H Hpath Hord Hin Hnin.
-        eapply postfix_eq in Hpost. destructH.
-        rewrite H,Hpost.
-        rewrite consAppend. 
-        eapply splinter_app; eapply splinter_single.
-        * rewrite H0. eapply In_rcons. auto.
-        * eapply splinter_cons in Hord. eapply splinter_in in Hord.
-          rewrite Hpost in Hord. eapply in_app_or in Hord. destruct Hord;auto.
-          exfalso.
-          rewrite Heqt' in *.
-          eapply geq_tag_suffix_deq in Hpath;cycle 1.
-          -- eapply while'_postfix. symmetry. eauto.
-          -- rewrite Heqt'. eapply while'_Forall.
-          -- rewrite Heqt'. eapply H1.
-          -- eapply Hnin. eapply Hpath. eapply Hin.
-      + rewrite H0 in H1. eapply postfix_path in H1;eauto.
-        rewrite rcons_nl_rcons in H1. simpl_nl' H1.
-        eapply path_nlrcons_edge in H1. simpl_nl' H1. eauto.
-    (*
-     * define t' as the maximal suffix of t with tag dim >= |j|.
-     * then forall x ∈ t', deq_loop x q thus x ∈ h
-     * by definition t = t' or the maximal suffix starts with a loop enter
-       * if t = t', contradiction bc. p ∈ t = t', and p ∈ h
-       * else, ne_back t' = (h,0 :: tl j) and p ∉ t'
-     *)
-  Admitted.
-
-  Variable (t1 t2 : ne_list (Lab * Tag)) (r1 r2 : list (Lab * Tag)) (q1 q2 s : Lab) (j1 j2 k : Tag).
-  Hypotheses (Hpath1 : TPath (root,start_tag) (q1,j1) t1)
-             (Hpath2 : TPath (root,start_tag) (q2,j2) t2)
-             (Hlc : last_common' t1 t2 r1 r2 (s,k))
-             (Hneq : r1 <> r2) (* <-> r1 <> nil \/ r2 <> nil *)
-             (Hloop : eq_loop q1 q2)
-             (Htag : tl j1 = tl j2)
-             (Htagleq : hd 0 j1 <= hd 0 j2).
-
-  Lemma s_deq_q : deq_loop s q1.
-  Proof.
-    intros h Hh.
-    eapply loop_contains_innermost in Hh as Hinner. destructH.
-    eapply eq_loop_innermost in Hinner as Hinner'; eauto.
-    eapply innermost_loop_deq_loop;eauto. 2:eapply Hloop in Hh;auto.
-    eapply path_front in Hpath1 as Hfront1.
-    eapply path_front in Hpath2 as Hfront2.
-    destruct r1, r2.
-    - contradiction.
-    - eapply lc_nil1 in Hlc.
-      rewrite hd_error_ne_front in Hlc. setoid_rewrite Hfront1 in Hlc. inversion Hlc. subst s k.
-      unfold innermost_loop in Hinner. destructH; auto.
-    - eapply last_common'_sym in Hlc. eapply lc_nil1 in Hlc.
-      rewrite hd_error_ne_front in Hlc. setoid_rewrite Hfront2 in Hlc. inversion Hlc. subst s k.
-      unfold innermost_loop in Hinner'. destructH; auto.
-    - decide (loop_contains h' s);[auto|exfalso].
-      assert (p = (q1,j1)); [|subst p].
-      { eapply lc_cons1 in Hlc;rewrite hd_error_ne_front in Hlc;setoid_rewrite Hfront1 in Hlc. inversion Hlc;auto. }
-      assert (p0 = (q2,j2)); [|subst p0].
-      { eapply last_common'_sym in Hlc.
-        eapply lc_cons1 in Hlc;rewrite hd_error_ne_front in Hlc;setoid_rewrite Hfront2 in Hlc. inversion Hlc;auto. }
-      copy Hinner Hinner''.
-      eapply ex_entry in Hinner;eauto.
-      eapply ex_entry in Hinner';eauto.
-      2: eapply last_common'_sym in Hlc.
-      2,3: eapply lc_succ_rt1;eauto.
-      rewrite Htag in Hinner.
-      eapply lc_succ_rt_eq_lc in Hlc;eauto.
-      2,3: eapply tpath_NoDup;eauto.
-      eapply n. inversion Hlc. eapply loop_contains_self. unfold innermost_loop in Hinner''. destructH.
-      eapply loop_contains_loop_head;eauto.
-  Qed.
-    
-  Lemma dep_eq_impl_head_eq (* unused *): depth s = depth q1 -> get_innermost_loop' s = get_innermost_loop' q1.
-  Admitted.
-
-  Lemma r1_in_head_q (* unused *): forall x, x ∈ r1 -> deq_loop (fst x) q1.
-  Admitted.
-  Lemma r2_in_head_q (* unused *): forall x, x ∈ r2 -> deq_loop (fst x) q2.
-  Admitted.
-
-  Lemma no_back_edge (* unused *): forall x, (get_innermost_loop' q1) ≻ x | (map fst r1) :r: s -> False.
-  Admitted.
-
-  Lemma lc_eq_disj
-        (Hdep : depth s = depth q1)
-        (Hjeq : j1 = j2)
-    : Disjoint (map fst r1) (map fst r2).
-  Admitted.
-  
-  Lemma lc_neq_disj
-        (Hdep : depth s = depth q1)
-        (Hjneq : j1 <> j2)
-    : exists r', Prefix ((get_innermost_loop' q1) :: r') (map fst r2)
-            /\ Disjoint (map fst r1) r'.
-  Admitted.
-  (* This section is now similar to the one in the paper *)
-    
-End disj.
 
 
 (*Lemma lc_disj_exits_lsplits' `{redCFG}

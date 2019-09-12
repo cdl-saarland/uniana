@@ -42,3 +42,11 @@ Proof.
   intros Hsub1 Hsub2 Hdisj.
   unfold Disjoint in *. destructH. split;firstorder.
 Qed.
+
+Lemma Disjoint_sym {A : Type} (l l' : list A)
+      (Hdisj : Disjoint l l')
+  : Disjoint l' l.
+Proof.
+  unfold Disjoint in *.
+  firstorder.
+Qed.

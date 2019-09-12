@@ -90,6 +90,25 @@ Section Lc.
     exists l1' l2', Postfix (l1' :r: s) l1 /\ Postfix (l2' :r: s) l2
                /\ Disjoint l1' l2'
                /\ ~ In s l1' /\ ~ In s l2'.
+  
+
+  Definition last_common' `{EqDec A eq} (l1 l2 l1' l2' : list A) (s : A)
+    := Postfix (l1' :r: s) l1 /\ Postfix (l2' :r: s) l2 /\ Disjoint l1' l2' /\ s ∉ l1' /\ s ∉ l2'.
+
+  Lemma last_common'_iff `(EqDec A eq) l1 l2 (a : A)
+    : last_common l1 l2 a <-> exists l1' l2', last_common' l1 l2 l1' l2' a.
+  Proof.
+    unfold last_common, last_common' in *. firstorder.
+  Qed.
+
+  Lemma last_common'_sym `{EqDec A eq} (l1 l2 l1' l2' : list A) (a : A)
+        (Hlc : last_common' l1' l2' l1 l2 a)
+    : last_common' l2' l1' l2 l1 a.
+  Proof.
+    unfold last_common' in *. destructH.
+    split_conj;eauto.
+    eapply Disjoint_sym. auto.
+  Qed.
 
   Lemma ne_last_common `{EqDec A eq} (l1 l2 : ne_list A) :
     ne_back l1 = ne_back l2
