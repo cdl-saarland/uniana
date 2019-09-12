@@ -1,4 +1,4 @@
-Require Export CFGinnermost.
+Require Export CFGinnermost CFGgeneral.
 
 
 (** * head_exits **)
@@ -348,7 +348,7 @@ Qed.
 Definition head_exits_property `(C : redCFG) qh := forall h p q, exit_edge h p q -> ~ loop_contains h qh
                                                             -> edge h q = true.
 
-Arguments exit_edge {_ _ _ _} (_).
+Local Arguments exit_edge {_ _ _ _} (_).
 
 Lemma head_exits_property_satisfied `(C : redCFG) qh : head_exits_property (head_exits_CFG C qh) qh.
 Proof.
@@ -371,4 +371,54 @@ Proof.
     eapply no_exit_head;eauto. unfold loop_head.
     exists h. unfold back_edge,back_edge_b. unfold_edge_op. split;auto.
     eapply negb_true_iff,not_true_is_false. auto.
+Qed.
+
+Local Arguments loop_contains {_ _ _ _} _.
+
+Lemma head_exits_loop_contains_iff `(C : redCFG) (h p q : Lab)
+  : loop_contains C h q <-> loop_contains (head_exits_CFG C p) h q.
+Proof.
+  setoid_rewrite <-loop_contains'_basic at 2.
+  eapply head_exits_loop_equivalence.
+Qed.          
+
+Lemma head_exits_deq_loop_inv1 `(C : redCFG) (h p q : Lab)
+  : deq_loop (C:=C) p q -> deq_loop (C:=head_exits_CFG C h) p q.
+Proof.
+  intros.
+  unfold deq_loop in *.
+  setoid_rewrite <-head_exits_loop_contains_iff.
+  eauto.
+Qed.
+
+Lemma head_exits_deq_loop_inv2 `(C : redCFG) (h p q : Lab)
+  : deq_loop (C:=head_exits_CFG C h) p q -> deq_loop (C:=C) p q.
+Proof.
+  unfold deq_loop.
+  setoid_rewrite <-head_exits_loop_contains_iff.
+  eauto.
+Qed.
+
+Lemma head_exits_exited_inv1 `(C : redCFG) (qh h p : Lab)
+  : exited (C:=C) h p -> exited (C:=head_exits_CFG C qh) h p.
+Proof.
+  unfold exited, exit_edge.
+  setoid_rewrite <-head_exits_loop_contains_iff.
+  intros. destructH.
+  exists p0. split_conj;eauto.
+  eapply union_subgraph1;auto.
+Qed.
+
+Lemma head_exits_exited_inv2 `(C : redCFG) (qh h p : Lab)
+  : exited (C:=head_exits_CFG C qh) h p -> exited (C:=C) h p.
+Proof.
+  unfold exited, exit_edge.
+  setoid_rewrite <-head_exits_loop_contains_iff.
+  intros. destructH.
+  unfold_edge_op' H3. destruct H3.
+  - exists p0. split_conj;eauto.
+  - eapply head_exits_edge_spec in H. destructH. exists p1.
+    replace p0 with h in *.
+    + unfold exit_edge in H. destructH. split_conj; eauto.
+    + eapply exit_edge_unique_diff_head;eauto.
 Qed.

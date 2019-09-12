@@ -5,6 +5,18 @@ Definition implode_nodes `{C : redCFG} (r : Lab)
   := DecPred (fun p => (deq_loop r p
                      \/ exists e, exited p e /\ deq_loop r e)).
 
+Local Arguments loop_contains {_ _ _ _ _}.
+Local Arguments exit_edge {_ _ _ _} (_).
+
+Lemma head_exits_implode_nodes_inv1 `(C : redCFG) (h p : Lab)
+  : implode_nodes (C:=C) h p -> implode_nodes (C:=head_exits_CFG C h) h p.
+Proof.
+  intro Himpl.
+  cbn in Himpl. destruct Himpl.
+  - left. eapply head_exits_deq_loop_inv1. eauto.
+  - right. destructH. exists e. split; eauto using head_exits_exited_inv1, head_exits_deq_loop_inv1.
+Qed.
+
 Lemma implode_nodes_root_inv `{C : redCFG} r
   : implode_nodes r root.
 Proof.
@@ -131,3 +143,40 @@ Proof.
   econstructor. unfold pure. instantiate (1:=p).
   decide (implode_nodes h p);eauto.
 Defined.
+
+Arguments head_exits_CFG {_ _ _ _} _.
+Arguments implode_CFG {_ _ _ _} _.
+
+Definition local_impl_CFG `(C : redCFG) (h : Lab)
+  := implode_CFG (head_exits_CFG C h) h (head_exits_property_satisfied (C:=C) (qh:=h)).
+
+Arguments redCFG : clear implicits.
+Arguments implode_nodes {_ _ _ _} _.
+Definition local_impl_CFG_type `(C : redCFG) (h : Lab)
+  := (finType_sub_decPred (implode_nodes (head_exits_CFG C h) h)).
+Arguments redCFG : default implicits.
+Arguments implode_nodes : default implicits.
+
+Definition impl_of_original (* unused *)`(C : redCFG) (h : Lab)
+  : Lab -> option (local_impl_CFG_type C h).
+Proof.
+  intro p.
+  decide (implode_nodes (head_exits_CFG C h) h p).
+  - apply Some. econstructor. eapply purify;eauto.
+  - exact None.
+Defined.  
+
+Definition impl_of_original' `(C : redCFG) (h p : Lab) (H : implode_nodes C h p)
+  : local_impl_CFG_type C h.
+Proof.
+  econstructor. eapply purify;eauto.
+  eapply head_exits_implode_nodes_inv1;eauto.
+Defined.
+
+Arguments local_impl_CFG {_ _ _ _} _.
+
+Lemma Lab_dec' `{redCFG} : forall (l l' : Lab), { l = l' } + { l <> l'}.
+Proof.
+  apply Lab_dec.
+Qed.
+

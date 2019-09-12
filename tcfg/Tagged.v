@@ -7,7 +7,7 @@ Require Import Nat.
 Require Import Bool.Bool.
 Require Import Coq.Logic.Eqdep_dec.
 
-Require Export CFG Precedes CFGdeq CFGancestor.
+Require Export ImplodeCFG Precedes CFGdeq CFGancestor.
 
 Ltac destr_let :=
   match goal with
