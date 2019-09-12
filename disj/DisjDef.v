@@ -1,5 +1,35 @@
 Require Export Tagged LastCommon Disjoint.
 
+
+Parameter path_splits : forall `{redCFG}, Lab -> list (Lab * Lab * Lab).
+
+Parameter loop_splits : forall `{redCFG}, Lab -> Lab -> list (Lab * Lab * Lab).
+
+(* remove branch from splits, we can use the assumed global branch function to get varsets back*)
+Definition pl_split `{redCFG} (qh qe q1 q2 br : Lab) :=
+  (exists π ϕ, CPath br qh (π :>: br)
+          /\ CPath br qe (ϕ :>: br)
+          /\ q1 = ne_back π
+          /\ q2 = ne_back ϕ
+          /\ q1 <> q2 (* if π = single or φ = single, then this is not implied by the next condition *)
+          /\ Disjoint (tl π) (tl ϕ)).
+
+Parameter path_splits_spec (* unused *): forall `{redCFG} p q1 q2 br,
+    pl_split p p q1 q2 br <->
+    (br, q1, q2) ∈ path_splits p.
+
+Parameter loop_splits_spec (* unused *): forall `{redCFG} qh qe q1 q2 br,
+    loop_contains qh br /\ (* otherwise some splits would be considered as loop splits *)
+    exited qh qe /\
+    pl_split qh qe q1 q2 br <->
+    (br, q1, q2) ∈ loop_splits qh qe.
+
+Parameter splits' : forall `{redCFG}, Lab -> Lab -> list (Lab * Lab * Lab).
+Parameter splits  : forall `{redCFG}, Lab -> list (Lab * Lab * Lab).
+Parameter rel_splits : forall `{redCFG}, Lab -> Lab -> list (Lab * Lab * Lab).
+
+(** * Some useful lemmas **)
+
 Lemma path_nlrcons_edge (* unused *){A : Type} (a b c : A) l f
       (Hpath : Path f b c (l :>: a))
   : f a (ne_back l) = true.

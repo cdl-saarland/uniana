@@ -11,7 +11,7 @@ Require Import List.
 Require Import Nat.
 Require Import Omega.
 
-Require Import Disj Unchanged ListOrderTac FirstDiff.
+Require Import PathSplits Unchanged ListOrderTac FirstDiff.
 
 Section uniana.
 
