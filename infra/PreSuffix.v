@@ -397,5 +397,12 @@ Section Pre.
     - exists b. econstructor.
     - specialize (IHHpre a). destructH. eexists. econstructor. eauto.
   Qed.
+  
+  Lemma postfix_ex_cons
+    : forall (l l' : list A) (a : A), Postfix l l' -> exists a' : A, Postfix (l :r: a') (l' :r: a).
+  Proof.
+    intros. eapply postfix_rev_prefix in H. eapply prefix_ex_cons in H. destructH.
+    exists a'. eapply prefix_rev_postfix'. do 2 rewrite rev_rcons. eauto.
+  Qed.
 
 End Pre.

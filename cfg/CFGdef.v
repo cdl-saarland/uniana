@@ -153,8 +153,15 @@ Section cfg.
       intro N. specialize a_edge_acyclic as Hacy. unfold acyclic in Hacy.
       eapply path_from_elem in N;eauto. destructH. apply Hacy in N0;eauto.
   Qed.
-  
-  
+
+  Lemma edge_destruct p q
+        (Hedge : p --> q)
+    : p -a> q \/ p ↪ q.
+  Proof.
+    decide (p -a> q);[left;auto|right].
+    unfold back_edge,back_edge_b. unfold minus_edge. conv_bool. split; auto.
+    eapply eq_true_not_negb in n. auto.
+  Qed.
   
 End cfg.
 

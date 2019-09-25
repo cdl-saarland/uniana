@@ -14,9 +14,6 @@ Section cfg.
   Definition deq_loop q p : Prop :=
     forall h, loop_contains h p -> loop_contains h q.
 
-  Definition eq_loop q p : Prop :=
-    deq_loop q p /\ deq_loop p q.
-
   Global Instance deq_loop_dec h p : dec (deq_loop h p).
   eauto.
   Qed.
@@ -79,6 +76,16 @@ Section cfg.
     eapply Hdeq.
     eapply loop_contains_self. eapply loop_contains_loop_head;eauto.
   Qed.
+  
+  Lemma deq_loop_depth p q
+        (Hdeq : deq_loop p q)
+    : depth q <= depth p.
+  Admitted.
+
+  (** * Equivalence relation eq_loop **)
+
+  Definition eq_loop q p : Prop :=
+    deq_loop q p /\ deq_loop p q.
 
   Lemma eq_loop1 (* unused *) p p' q
     : eq_loop p p' -> deq_loop p q -> deq_loop p' q.
@@ -92,6 +99,33 @@ Section cfg.
   Proof.
     intros. destruct H.
     eapply deq_loop_trans;eauto.
+  Qed.
+  
+  Global Instance eq_loop_Eq : Equivalence eq_loop.
+  econstructor.
+  - econstructor;apply deq_loop_refl.
+  - econstructor; destruct H;eauto.
+  - econstructor; destruct H,H0; eapply deq_loop_trans;eauto.
+  Qed.
+
+  Global Instance eq_loop_proper_deq_loop1 (p : Lab) : Proper (eq_loop ==> Basics.impl) (fun q => deq_loop q p).
+  unfold Proper. unfold respectful. unfold Basics.impl.
+  intros. eapply eq_loop1; eauto.
+  Qed.
+  
+  Global Instance eq_loop_proper_deq_loop2 (p : Lab) : Proper (eq_loop ==> Basics.impl) (deq_loop p).
+  unfold Proper. unfold respectful. unfold Basics.impl.
+  intros. eapply eq_loop2; eauto.
+  Qed.
+  
+  Lemma eq_loop_same (h h' : Lab)
+        (Heq : eq_loop h h')
+        (Hl : loop_head h)
+        (Hl' : loop_head h')
+    : h = h'.
+  Proof.
+    eapply loop_contains_Antisymmetric.
+    all: unfold eq_loop,deq_loop in *;destructH;eauto using loop_contains_self.
   Qed.
   
   (** * Definitions for innermost loops **)
@@ -147,6 +181,15 @@ Section cfg.
     end.
 
   (** * simple facts about innermost loops **)
+  
+  
+  Lemma innermost_eq_loop h q
+        (Hinnermost : innermost_loop h q)
+    : eq_loop h q.
+  Proof.
+    destruct Hinnermost. split;auto.
+    eapply loop_contains_deq_loop;auto.
+  Qed.
 
   Lemma innermost_loop_deq_loop (* unused *)h p q
         (Hinner : innermost_loop h p)

@@ -48,31 +48,41 @@ Section disj.
     - decide (P c);try contradiction. left. auto.
   Qed.
   
-  Lemma postfix_ex_cons
-    : forall (A : Type) (l l' : list A) (a : A), Postfix l l' -> exists a' : A, Postfix (l :r: a') (l' :r: a).
-  Proof.
-    intros. eapply postfix_rev_prefix in H. eapply prefix_ex_cons in H. destructH.
-    exists a'. eapply prefix_rev_postfix'. do 2 rewrite rev_rcons. eauto.
-  Qed.
-
-  Lemma eq_loop_same (h h' : Lab)
-        (Heq : eq_loop h h')
-        (Hl : loop_head h)
-        (Hl' : loop_head h')
-    : h = h'.
-  Proof.
-    eapply loop_contains_Antisymmetric.
-    all: unfold eq_loop,deq_loop in *;destructH;eauto using loop_contains_self.
-  Qed.
-  
   Lemma entry_through_header h p q
         (Hnin : ~ loop_contains h p)
         (Hin : loop_contains h q)
         (Hedge : p --> q)
     : q = h.
-  Admitted.
+  Proof.
+    specialize (a_reachability p) as Hreach. destructH.
+    eapply path_front in Hreach as Hfront.
+    eapply subgraph_path' in Hreach as Hreach'. 2: eapply a_edge_incl.
+    eapply PathCons in Hreach';eauto.
+    eapply dom_loop in Hreach' as Hdom;eauto.
+    cbn in Hdom. decide (q = h);destruct Hdom;auto;try contradiction.
+    exfalso.
+    contradict Hnin.
+    unfold loop_contains in *. destructH.
+    eapply path_rcons in Hedge;eauto.
+    exists p0. eexists. split_conj;eauto.
+    simpl_nl. eapply nin_tl_iff in Hin3;eauto.
+    destruct Hin3.
+    - simpl_nl. rewrite rev_rcons. cbn. rewrite <-in_rev. auto.
+    - eapply path_back in Hin2. rewrite Hin2 in H0. symmetry in H0. contradiction.
+  Qed.
   
-
+  Lemma deq_loop_le p i j q t t'
+        (Hdeq : deq_loop p q)
+        (Hpath : TPath (root,start_tag) (p,i) t)
+        (Hpath' : TPath (root,start_tag) (q,j) t')
+    : |j| <= |i|.
+  Proof.
+    eapply tag_depth in Hpath as Hdep'. 2: eapply path_contains_front;eauto.
+    eapply tag_depth in Hpath' as Hdep. 2: eapply path_contains_front;eauto.
+    rewrite Hdep, Hdep'.
+    eapply deq_loop_depth;auto.
+  Qed.
+    
   Lemma ex_entry (h p q : Lab) (i j : Tag) t
         (Hin : innermost_loop h q)
         (Hnin : ~ loop_contains h p)
@@ -121,9 +131,18 @@ Section disj.
         - rewrite H0 in H1. 
           eapply postfix_path in H1;eauto 1.
           instantiate (1:=e).
-          admit. (* inversion tactic for paths *)
-        - eapply while'_max in H1;eauto. cbn in H1. contradict H1.
-          admit. (* because depth = length of tag *)
+          rewrite rcons_nl_rcons in H1. simpl_nl' H1.
+          eapply path_nlrcons_edge in H1. simpl_nl' H1.
+          eapply tcfg_edge_spec in H1. destructH. eauto.
+        - eapply while'_max in H1 as H1';eauto. cbn in H1'. contradict H1'.
+          eapply loop_contains_deq_loop in H1'.
+          eapply innermost_eq_loop in Hin.
+          rewrite Hin in H1'.
+          eapply postfix_incl in H1.
+          eapply path_to_elem in Hpath as Hpath'. 
+          2: { eapply H1. eapply In_rcons. left. reflexivity. }
+          destructH.
+          eapply deq_loop_le;cycle 1;eauto.
       }
       eapply while'_max in H1 as Hmax;[|eauto]. cbn in Hmax.
       destruct a'. cbn in *. assert (|l| < |j|) as Hmax' by omega.
@@ -168,8 +187,8 @@ Section disj.
      * by definition t = t' or the maximal suffix starts with a loop enter
        * if t = t', contradiction bc. p ∈ t = t', and p ∈ h
        * else, ne_back t' = (h,0 :: tl j) and p ∉ t'
-     *)
-  Admitted.
+       *)
+  Qed. 
 
   Variable (t1 t2 : ne_list (Lab * Tag)) (r1 r2 : list (Lab * Tag)) (q1 q2 s : Lab) (j1 j2 k : Tag).
   Hypotheses (Hpath1 : TPath (root,start_tag) (q1,j1) t1)
@@ -212,7 +231,7 @@ Section disj.
       2,3: eapply tpath_NoDup;eauto.
       eapply n. inversion Hlc. eapply loop_contains_self. unfold innermost_loop in Hinner''. destructH.
       eapply loop_contains_loop_head;eauto.
-  Qed.
+  Qed. Print Assumptions s_deq_q.
     
   Lemma dep_eq_impl_head_eq (* unused *): depth s = depth q1 -> get_innermost_loop' s = get_innermost_loop' q1.
   Admitted.
