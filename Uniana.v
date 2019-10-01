@@ -4,12 +4,12 @@ Require Import Coq.Bool.Bool.
 Require Import Coq.Logic.Eqdep.
 Require Import Coq.Logic.Eqdep_dec.
 Require Import Coq.Logic.Decidable.
-Require Import Coq.Program.Equality.
 Require Import Coq.Program.Utils.
 Require Import Lists.ListSet.
 Require Import List.
 Require Import Nat.
 Require Import Omega.
+Require Import Program.Basics.
 
 Require Import PathSplits Unchanged ListOrderTac FirstDiff.
 
@@ -65,26 +65,26 @@ Section uniana.
        end
     ).
   
-  Definition uni_trans (uni : Uni) (unch : Unch) : Uni :=
-    fun p
-    => if p == root then uni root
-      else fun x => (join_andb (map ((uni_branch uni) ∘ fst ∘ fst) (splits p)))
-                   (* the predecessor is only included in split set if p is an exit *)
-                   && (join_andb (map (fun q => abs_uni_eff (uni q) x) (preds p)))
-                 || join_orb (map (fun q => (q <>b p)
-                                          && uni q x
-                                          && join_andb (map ((uni_branch uni) ∘ fst ∘ fst)
-                                                            (rel_splits p q)))
-                                 (unch_trans unch p x)).
+  Definition uni_trans (uni : Uni) (unch : @Unch Lab) : Uni :=
+    fun (p : Lab)
+    => if decision (p = root) then uni root
+      else fun (x : Var) => (join_andb (map ((uni_branch uni) ∘ fst ∘ fst) (splits p)))
+                      (* the predecessor is only included in split set if p is an exit *)
+                      &&  (join_andb (map (fun q => abs_uni_eff (uni q) x) (preds p)))
+                    || join_orb (map (fun q => (negb (decision (q = p)))
+                                                 && uni q x
+                                                 && join_andb (map ((uni_branch uni) ∘ fst ∘ fst)
+                                                                   (rel_splits p q)))
+                                     (unch_trans unch p x)).
 
   Lemma uni_trans_root_inv (* unused *):
     forall uni unch x, uni_trans uni unch root x = uni root x.
   Proof.
     intros.
     unfold uni_trans.
-    destruct (equiv_dec root root).
+    decide (root = root).
     reflexivity.
-    exfalso. apply c. reflexivity.
+    exfalso. apply n. reflexivity.
   Qed.
   
   Lemma uni_branch_uni_succ p br q1 q2 i k j1 j2 s1 s2 uni l1 l2 
@@ -432,7 +432,7 @@ Section uniana.
     (* Now take the paths br -->* qe1 -> e1 and br --> qe2 -> ledge. These construct a loop_split *)
     (* FIXME *)
     eapply lc_disj_exits_lsplits with (h0:=h) (e3:=e1) (e4:=e2) (i0:=l'++j) in Hlc as Hsplit;eauto.
-    replace splits' with loop_splits in Hsplit by admit.
+    replace splits' with (loop_splits _ ) in Hsplit by admit.
     all: cycle 1.
     {
       clear - ηeq1 Hη1 Hexit__edge1 Hexit__succ1 Htr1. unfold TPath'. econstructor. cbn.
@@ -572,6 +572,11 @@ Section uniana.
         with (q1:=q1) (q2:=q2) (uni:=uni) in HCuni;eauto.
   Qed.
 
+  Lemma neq_sym (A : Type) (a b : A) : a <> b -> b <> a.
+  Proof.
+    intros H Q. rewrite Q in H. contradiction.
+  Qed.
+      
   Lemma uni_same_lab p q1 q2 i j1 j2 s1 s2 r1 r2 uni l1 l2
         (Htr1 : Tr ((p,i,s1) :<: (q1,j1,r1) :< l1))
         (Htr2 : Tr ((p,i,s2) :<: (q2,j2,r2) :< l2))
@@ -582,8 +587,8 @@ Section uniana.
     : q2 = q1.
   Proof.
     eapply tr_lc_lt in Htr1 as LC_lt;eauto. destructH' LC_lt.
-    destruct (q2 == q1) as [ Heq | Hneq ]; [ eauto | exfalso ].
-    symmetry in Hneq.
+    decide (q2 = q1)  as [ Heq | Hneq ]; [ eauto | exfalso ].
+    eapply (neq_sym) in Hneq.
     eapply last_common_sym in LC_lt.
     eapply lc_join_split in LC_lt as LC_join;eauto.
     Unshelve. all:cycle 3. exact p. exact i.
@@ -650,9 +655,8 @@ Section uniana.
     unfold uni_trans in Htrans. 
     assert (X := Hsem). destruct X as [t1 [k1 [Hts1 Hteq1]]].
     assert (X := Hsem'). destruct X as [t2 [k2 [Hts2 Hteq2]]].
-    destruct (p == root); [ subst | ].
-    - rewrite e in *; clear e. 
-      eapply HCuni; [eapply Hts1|apply Hts2| | | apply Htrans].
+    decide (p = root); [ subst | ].
+    - eapply HCuni; [eapply Hts1|apply Hts2| | | apply Htrans].
       + specialize (root_prefix t1) as [s0 rp]. apply root_start_tag in HIn as rst. subst i.
         eapply prefix_cons_in in rp as rp'.
         assert (Prefix (`t1) (`t)) as pre_t.
@@ -710,6 +714,7 @@ Section uniana.
         destruct H as [u H].
         conv_bool.
         destruct H as [Hunch [[Hneq' Huni] Hunibr]].
+        decide (u = p);cbn in Hneq';[congruence|clear Hneq'].
         copy HCunch HCunch1.
         copy HCunch' HCunch2.
         specialize (HCunch p i s u x HIn Hunch).
@@ -722,10 +727,10 @@ Section uniana.
           all: eapply precedes_step_inv.
           -- rewrite <-nlcons_to_list. setoid_rewrite Hteq1 in Hprec. apply Hprec.
           -- rewrite <-nlcons_necons, <-Hteq1. destruct t; eauto.
-          -- cbn. eauto.
+          -- cbn. eauto. 
           -- rewrite <-nlcons_to_list. setoid_rewrite Hteq2 in Hprec'. apply Hprec'.
           -- rewrite <-nlcons_necons, <-Hteq2. destruct t'; eauto.
-          -- cbn;eauto.
+          -- cbn;eauto. 
         * unfold Precedes' in Hprec,Hprec'. destructH' Hprec. destructH' Hprec'.
           rewrite nlcons_to_list in Hprec0.
           eapply prefix_trace in Hprec0 as Htr1 ; [|destruct t; eauto].

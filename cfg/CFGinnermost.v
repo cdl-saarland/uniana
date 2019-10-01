@@ -100,6 +100,7 @@ Section cfg.
     intros. destruct H.
     eapply deq_loop_trans;eauto.
   Qed.
+
   
   Global Instance eq_loop_Eq : Equivalence eq_loop.
   econstructor.
@@ -108,7 +109,8 @@ Section cfg.
   - econstructor; destruct H,H0; eapply deq_loop_trans;eauto.
   Qed.
 
-  Global Instance eq_loop_proper_deq_loop1 (p : Lab) : Proper (eq_loop ==> Basics.impl) (fun q => deq_loop q p).
+  Global Instance eq_loop_proper_deq_loop1 (p : Lab)
+    : Proper (eq_loop ==> Basics.impl) (fun q => deq_loop q p).
   unfold Proper. unfold respectful. unfold Basics.impl.
   intros. eapply eq_loop1; eauto.
   Qed.

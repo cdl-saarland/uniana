@@ -214,7 +214,7 @@ Section eval.
 
   Lemma in_pred_exists p i s k t :
     In (p,i,s) (k :<: t) ->
-    p =/= root ->
+    p <> root ->
     Tr (k :<: t) ->
     exists q j r, In (q, j, r) t /\ eff (q, j, r) = Some (p, i, s).
   Proof.
@@ -225,7 +225,7 @@ Section eval.
         split; cbn; eauto.
       + exfalso. eapply Hneq. inversion H1.
         destruct a,p0. cbn in H3. destruct H3;[|contradiction].
-        inversion H0;inversion H. reflexivity.
+        inversion H0;inversion H. subst p e. reflexivity.
     - destruct Hin; subst.
       + destruct a as [[q j] r].
         exists q, j, r. split; [ constructor | assumption ]. reflexivity.
@@ -300,7 +300,7 @@ Section eval.
   Lemma precedes_step_inv :
     forall k t p s, Precedes' (nlcons k t) p s ->
                Tr (nlcons k t) ->
-               lab_of p =/= lab_of s ->
+               lab_of p <> lab_of s ->
                In p t.
   Proof.
     intros.
@@ -463,10 +463,11 @@ Section eval.
   Lemma precedes_succ (t : trace) q j r q' j' r' p i s k' :
     Precedes' (`t) (q', j', r') (q, j, r) ->
     eff (q, j, r) = Some (p, i, s) ->
-    p =/= q' ->
+    p <> q' ->
     Tr (k' :<: (`t)) ->
     Precedes' (k' :<: (`t)) (q', j', r') (p, i, s).
   Proof.
+    Set Printing All.
     intros Hprec Heff Hneq Htr.
     destruct Hprec as [t' [Hpre Hprec]].
     exists (nlcons (q,j,r) t').
@@ -482,13 +483,14 @@ Section eval.
         * simpl_nl;eauto.
         * inversion Htr; eauto.
       + simpl_nl; eauto.
-    - econstructor; cbn; eauto.
+    - econstructor; cbn; eauto. 
       rewrite <-nlcons_to_list. eauto.
   Qed.
+       
   
   Lemma precedes_step (* unused *)l q j r p i s :
     forall k, In (q, j, r) l ->
-         p =/= q ->
+         p <> q ->
          eff (q, j, r) = Some (p, i, s) ->
          Tr (nlcons k l) -> 
          Precedes' (nlcons k l) (q, j, r) (p, i, s).
@@ -820,4 +822,3 @@ Section test.
   Qed.
 
 End test.
-

@@ -188,14 +188,14 @@ Section unch.
       + destruct Hpred as [q [j [r [Hpredin Hpred]]]].
         assert (Hedge: q --> to) by (eauto using step_conf_implies_edge).
         eapply unch_trans_lem in Hunch; try eassumption.
-        destruct (Lab_dec' to u) as [ | Hneq ]; subst.
-        * exists i, s. split; [ | reflexivity ]. eauto using precedes_self.
+        destruct (Lab_dec to u) as [ | Hneq ]; subst.
+        * exists i, s. split; [ | reflexivity ]. rewrite <-e. eapply precedes_self;eauto.
         * destruct Hunch; [ firstorder |].
           setoid_rewrite in_preds in H0.
           eapply H0 in Hedge. destruct Hedge as [Hndef Huin].
           edestruct Hred as [j' [r' [Hprec Heq]]]; eauto.
           exists j', r'. rewrite Heq.
-          split; [|eauto using no_def_untouched]. rewrite H. eapply precedes_succ; eauto.
+          split; [|eauto using no_def_untouched]. rewrite H. eapply precedes_succ; eauto. 
           rewrite <-H. destruct t; eauto.
       + clear - H. destruct t; cbn in H; inversion t; subst x.
         * congruence.

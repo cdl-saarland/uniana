@@ -55,4 +55,4 @@ Definition option_prod (* unused *){A B : Type} (a : option A) (b : option B) : 
 
 End Option.
 
-Infix "∘" := Basics.compose (at level 70).
+(*Infix "∘" := Basics.compose (at level 40).*)
