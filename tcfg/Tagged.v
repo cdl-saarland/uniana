@@ -76,6 +76,15 @@ Section tagged.
 
   Hint Resolve tcfg_edge_spec.
 
+  
+  Definition TPath := Path tcfg_edge.
+
+  Lemma tag_depth (* unused *)`{redCFG} p i q j t
+        (Hpath : TPath (root,start_tag) (p,i) t)
+        (Hin : (q,j) ∈ t)
+    : length j = depth q.
+  Admitted.
+
   Section eff_tag_facts.
     Variables (p q : Lab) (i j : Tag).
     Hypothesis (Hpq : (p,i) -t> (q,j)).
@@ -115,7 +124,7 @@ Section tagged.
     Admitted.
     
     Lemma tag_entry_iff
-      : j = O :: i <-> entry_edge q p.
+      : j = O :: i <-> entry_edge p q.
     Admitted.
 
     Lemma tag_back_edge_iff
@@ -124,6 +133,35 @@ Section tagged.
         | None => False
         end <-> p ↪ q.
     Admitted.
+
+    Lemma tag_deq_le
+      : |i| <= |j| <-> deq_loop q p.
+    Admitted.
+
+    Lemma tag_deq_ge
+      : |i| >= |j| <-> deq_loop p q.
+    Admitted.
+    
+    Lemma tag_deq_total
+      : deq_loop p q \/ deq_loop q p.
+    Proof.
+      specialize (Nat.le_ge_cases (|i|) (|j|)) as Hcases.
+      destruct Hcases;[right|left].
+      - eapply tag_deq_le;auto.
+      - eapply tag_deq_ge;auto.
+    Qed.
+
+    Lemma tag_deq_or_entry
+      : deq_loop p q \/ entry_edge p q.
+    Admitted.
+
+    Lemma tcfg_edge_destruct
+      : i = j (* normal *)
+        \/ j = O :: i (* entry *)
+        \/ match hd_error i with Some n => S n :: tl i = j | None => False end (* back *)
+        \/ j = tl i. (* exit *)
+    Admitted.
+    
   End eff_tag_facts.
   
 
@@ -148,13 +186,6 @@ Admitted.
     conv_bool. destructH. destructH. unfold eff_tag in *.
     induction all_lab. destruct (back_edge_b p q). *)
 
-Definition TPath := Path tcfg_edge.
-
-Lemma tag_depth (* unused *)`{redCFG} p i q j t
-      (Hpath : TPath (root,start_tag) (p,i) t)
-      (Hin : (q,j) ∈ t)
-  : length j = depth q.
-Admitted.
 
 Lemma TPath_CPath `{redCFG} c c' π :
   TPath c c' π -> CPath (fst c) (fst c') (ne_map fst π).

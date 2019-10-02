@@ -21,6 +21,14 @@ Section disj.
     intros ? ? ? ? ? Hlc y Hin1 Hin2. 
     unfold last_common' in Hlc. destructH.*)
 
+  Definition prec_loop_contains (qh q : Lab) (k j : Tag)
+    := exists (p : Lab) (π : ne_list Coord),
+      p ↪ qh /\ TPath (q,j) (p,k) π /\ qh ∉ tl (rev (map fst π)).
+
+  Definition prec_loop_contains' (qh q : Lab) (k j : Tag)
+    := loop_contains qh q /\ Prefix j k /\
+       exists π p i, TPath (root,start_tag) (p,i) π /\ (qh,k) ∈ π /\ (q,j) ∈ π.
+
   Lemma geq_tag_suffix_deq (p q : Lab) l t i j
         (Hpath : TPath (root,start_tag) (q,j) t)
         (Hpost : Postfix l t)
@@ -28,15 +36,149 @@ Section disj.
         (Hel : (p,i) ∈ l)
     : deq_loop p q.
   Proof.
-  Admitted.
+    rewrite Forall_forall in HForall. cbn in HForall.
+    revert dependent t. revert dependent p. revert i.
+    rinduction l.
+    - contradiction.
+    - eapply In_rcons in Hel. destruct Hel.
+      + subst a.
+        specialize (rcons_destruct l0) as Hl0. destruct Hl0;[|destructH];subst l0.
+        * cbn in *.
+          inversion Hpath;subst;eapply postfix_hd_eq in Hpost;
+            inversion Hpost;subst;eapply deq_loop_refl.
+        * copy Hpost Hpost'.
+          eapply postfix_path in Hpost;eauto.
+          rewrite rcons_nl_rcons in Hpost.
+          simpl_nl' Hpost.
+          eapply path_nlrcons_edge in Hpost. simpl_nl' Hpost.
+          destruct a.
+          destruct (tag_deq_or_entry Hpost) as [Hdeq|Hentry].
+          -- eapply deq_loop_trans;eauto. eapply H;eauto.
+             ++ intros;eauto. eapply HForall. eapply In_rcons. right;auto.
+             ++ eapply In_rcons;eauto.
+             ++ eapply postfix_step_left;eauto.
+          -- eapply tag_entry_iff in Hentry;eauto. subst t0.
+             assert (|j| <= |i|) as Hleq.
+             { specialize (HForall (p,i));cbn in HForall.
+               eapply HForall. eapply In_rcons. left;reflexivity.
+             }
+             intros h Hloop.
+             decide (h = e).
+             ++ subst h. exfalso.
+                assert (|j| < |0 :: i|) as Hleq'.
+                { cbn. omega. }
+                eapply loop_contains_deq_loop in Hloop.
+                eapply deq_loop_depth in Hloop.
+                enough (|0 :: i| <= |j|) by omega.
+                erewrite tag_depth;eauto.
+                erewrite tag_depth;eauto.
+                ** inversion Hpath;cbn;auto.
+                ** eapply postfix_incl;eauto. eapply In_rcons. right. eapply In_rcons. left;auto.
+             ++ eapply preds_in_same_loop;cycle 1;eauto 1.
+                ** eapply tcfg_edge_spec in Hpost. destructH. auto.
+                ** eapply H;eauto.
+                   --- intros;eauto. eapply HForall. eapply In_rcons. right. auto.
+                   --- eapply In_rcons. left. auto.
+                   --- eapply postfix_step_left;eauto. 
+      + eapply H;eauto.
+        * intros;eauto. eapply HForall. eapply In_rcons. right;auto.
+        * eapply postfix_step_left;eauto.
+  Qed.
 
+  Lemma postfix_take (A : Type) (l l' : list A)
+    : take ( |l'| ) l = l' <-> Postfix l' l.
+  Proof.
+    split; intro H.
+    - rewrite <-H.
+      remember (|l'|) as n. clear.
+      revert l. induction n.
+      + cbn. eapply postfix_nil.
+      + intros l. destruct l.
+        * cbn. econstructor;auto.
+        * cbn. eapply postfix_cons;eauto.
+    - revert dependent l. induction l';intros;cbn;auto.
+      destruct l. 1: inversion H;congruence'.
+      f_equal.
+      + symmetry;eapply postfix_hd_eq;eauto.
+      + eapply IHl'. eapply cons_postfix;eauto.
+  Qed.      
+
+  Lemma prefix_take_r (A : Type) (l l' : list A)
+    : take_r ( |l'| ) l = l' <-> Prefix l' l.
+  Proof.
+    split; intro H.
+    - eapply postfix_rev_prefix'.
+      eapply postfix_take.
+      eapply rev_rev_eq.
+      rewrite rev_involutive.
+      rewrite rev_length.
+      unfold take_r in H.
+      assumption.
+    - eapply prefix_rev_postfix in H.
+      eapply postfix_take in H.
+      eapply rev_rev_eq in H.
+      rewrite rev_involutive in H.
+      rewrite rev_length in H.
+      unfold take_r.
+      assumption.
+  Qed.
+      
   Lemma geq_tag_suffix_tag_tl_eq (p q : Lab) l t i j
         (Hpath : TPath (root,start_tag) (q,j) t)
         (Hpost : Postfix l t)
         (HForall : Forall (DecPred (fun xl => |j| <= |snd xl|)) l)
         (Hel : (p,i) ∈ l)
     : take_r (| tl j |) i = tl j.
-  Admitted.
+  Proof.
+    rewrite Forall_forall in HForall. cbn in *.
+    eapply prefix_take_r.
+    revert dependent t. revert dependent p. revert i.
+    rinduction l.
+    - contradiction.
+    - eapply In_rcons in Hel. destruct Hel.
+      + subst a.
+        specialize (rcons_destruct l0) as Hl0. destruct Hl0;[|destructH];subst l0.
+        * cbn in *.
+          inversion Hpath;subst;eapply postfix_hd_eq in Hpost;
+            inversion Hpost;subst;cbn.
+          -- econstructor;auto.
+          -- clear. induction j;cbn;econstructor;auto. econstructor.
+        * copy Hpost Hpost'.
+          eapply postfix_path in Hpost;eauto.
+          rewrite rcons_nl_rcons in Hpost.
+          simpl_nl' Hpost.
+          eapply path_nlrcons_edge in Hpost. simpl_nl' Hpost.
+          destruct a.
+          (* everything outside these brackets [ *)
+          exploit' H.
+          1: { intros;eauto. eapply HForall. eapply In_rcons. right;auto. }
+          specialize (H t0 e).
+          exploit H.
+          1: { eapply In_rcons. left;auto. }
+          1: { eapply postfix_step_left;eauto. }
+          specialize (tcfg_edge_destruct Hpost) as Hdestr.
+          assert (|j| <= |i|) as Hji.
+          { specialize (HForall (p,i)). cbn in *. eapply HForall.
+            eapply In_rcons;auto. }
+          destruct Hdestr as [Hn|[He|[Hb|Hx]]]. all: subst;auto.
+          -- assert (|j| < |0 :: i|) by (cbn;omega).
+             inversion H.
+             ++ exfalso. subst l0. rewrite <-H3 in H0. clear - H0.
+                destruct j;cbn in *;omega. 
+             ++ subst. auto.
+          -- destruct i;cbn in Hb;[contradiction|]. subst t0.
+             destruct j. 1: { cbn. eapply prefix_nil. }
+             cbn in *.
+             assert (|j| < |n :: i|) by (cbn;omega).
+             inversion H.
+             ++ exfalso. subst l0. subst j. cbn in Hji. omega.
+             ++ subst. econstructor. auto. 
+          -- eapply prefix_trans;eauto. clear; induction i;cbn;econstructor;eauto. econstructor.
+          (* ] could be generalized, it is the same in this and the other geq_tag_suffix lemma *)
+      + eapply H;eauto.
+        * intros;eauto. eapply HForall. eapply In_rcons. right;auto.
+        * eapply postfix_step_left;eauto.
+  Qed.
 
   Lemma while'_front_In (A : Type) (e : A -> A -> bool) (P : decPred A) (l : ne_list A) (a b : A)
         (Hpath : Path e a b l)
@@ -156,7 +298,8 @@ Section disj.
         { exfalso. cbn in Hmax'. omega. }
         assert (j = tl k).
         { replace j with (tl (n :: j)) by (cbn;auto). erewrite <-geq_tag_suffix_tag_tl_eq.
-          - rewrite take_r_tl;eauto. cbn. rewrite H2. cbn. cbn in Hmax. rewrite H2 in Hjk. cbn in Hjk. omega.
+          - rewrite take_r_tl;eauto. cbn. rewrite H2. cbn. cbn in Hmax.
+            rewrite H2 in Hjk. cbn in Hjk. omega.
           - eauto.
           - eapply Hpost. 
           - subst t'. eapply while'_Forall.
