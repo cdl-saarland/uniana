@@ -119,6 +119,13 @@ Section cfg.
   unfold Proper. unfold respectful. unfold Basics.impl.
   intros. eapply eq_loop2; eauto.
   Qed.
+
+  Global Instance eq_loop_proper_contains (h : Lab)
+    : Proper (eq_loop ==> iff) (loop_contains h).
+  Proof.
+    unfold Proper, respectful, Basics.impl.
+    intros. split;eapply H. 
+  Qed.
   
   Lemma eq_loop_same (h h' : Lab)
         (Heq : eq_loop h h')

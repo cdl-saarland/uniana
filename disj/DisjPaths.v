@@ -331,7 +331,15 @@ Section disj.
        * if t = t', contradiction bc. p ∈ t = t', and p ∈ h
        * else, ne_back t' = (h,0 :: tl j) and p ∉ t'
        *)
-  Qed. 
+  Qed.
+
+  Lemma loop_tag_dom (h p : Lab) (i j : Tag) t
+    (Hloop : loop_contains h p)
+    (Hpath : TPath (root,start_tag) (p,i) t)
+    (Htagle : j ⊴ i)
+    (Hdep : |j| = depth h)
+    : (h,j) ∈ t.
+  Admitted.
 
   Variable (t1 t2 : ne_list (Lab * Tag)) (r1 r2 : list (Lab * Tag)) (q1 q2 s : Lab) (j1 j2 k : Tag).
   Hypotheses (Hpath1 : TPath (root,start_tag) (q1,j1) t1)
@@ -376,16 +384,60 @@ Section disj.
       eapply loop_contains_loop_head;eauto.
   Qed. Print Assumptions s_deq_q.
     
-  Lemma dep_eq_impl_head_eq (* unused *): depth s = depth q1 -> get_innermost_loop' s = get_innermost_loop' q1.
+  Lemma dep_eq_impl_head_eq (* unused *): depth s = depth q1 -> eq_loop s q1.
+  Proof.
+    intros Hdep.
+    split;[eapply s_deq_q|].
+    admit.
+  Admitted.
+       
+  Lemma head_in_both (h : Lab) (l : Tag)
+    (Hcont : loop_contains h q1)
+    (Hel : (h,l) ∈ r1)
+    : (h,l) ∈ r2.
+  Proof.
+    enough ((h,l) ∈ t2).
+    - unfold last_common' in Hlc.
+      destructH.
+      eapply postfix_eq in Hlc2 as Hlc2. destructH' Hlc2.
+      rewrite Hlc2 in H.
+      rewrite <-app_cons_assoc in H. eapply in_app_or in H. destruct H;[auto|exfalso].
+      clear - Hlc2 Hlc0 Hcont H Hpath1 Hpath2 Hel.
+      rewrite <-app_cons_assoc in Hlc2.
+      assert (Prefix ((s,k) :: l2') t2) as Hpre.
+      { eapply prefix_eq. eexists;eauto. }
+      rewrite nlcons_to_list in Hpre. eapply path_prefix_path in Hpath2;eauto.
+      rewrite rcons_nl_rcons in Hlc0. eapply path_postfix_path in Hlc0;eauto.
+      simpl_nl' Hpath2. simpl_nl' Hlc0.
+      eapply path_app in Hlc0;eauto. cbn_nl' Hlc0.
+      eapply tpath_NoDup in Hlc0. clear - Hlc0 Hel H.
+      rewrite <-nlconc_to_list in Hlc0. simpl_nl' Hlc0.
+      unfold rcons in Hlc0. rewrite <-app_assoc in Hlc0.
+      eapply NoDup_app;eauto.
+    - rewrite Hloop in Hcont.
+      eapply loop_tag_dom;eauto.
+      + admit.
+      + admit.
   Admitted.
 
   Lemma r1_in_head_q (* unused *): forall x, x ∈ r1 -> deq_loop (fst x) q1.
+  Proof.
+    intros (p,i) Hel h Hh.
+    eapply loop_contains_innermost in Hh as Hinner. destructH.
+    eapply eq_loop_innermost in Hinner as Hinner'; eauto.
+    eapply innermost_loop_deq_loop;eauto. 2:eapply Hloop in Hh;auto.
+    eapply path_front in Hpath1 as Hfront1.
+    eapply path_front in Hpath2 as Hfront2.
+    destruct r1.
+    - contradiction.
+    - cbn.
   Admitted.
+  
   Lemma r2_in_head_q (* unused *): forall x, x ∈ r2 -> deq_loop (fst x) q2.
   Admitted.
 
   Lemma no_back_edge (* unused *): forall x, (get_innermost_loop' q1) ≻ x | (map fst r1) :r: s -> False.
-  Admitted.
+  Admitted. (* this lemma states the absence of ALL innermost_loop headers of q1 *)
 
   Lemma lc_eq_disj
         (Hdep : depth s = depth q1)

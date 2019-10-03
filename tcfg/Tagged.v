@@ -76,14 +76,6 @@ Section tagged.
 
   Hint Resolve tcfg_edge_spec.
 
-  
-  Definition TPath := Path tcfg_edge.
-
-  Lemma tag_depth (* unused *)`{redCFG} p i q j t
-        (Hpath : TPath (root,start_tag) (p,i) t)
-        (Hin : (q,j) ∈ t)
-    : length j = depth q.
-  Admitted.
 
   Section eff_tag_facts.
     Variables (p q : Lab) (i j : Tag).
@@ -163,7 +155,34 @@ Section tagged.
     Admitted.
     
   End eff_tag_facts.
+
+  (** tagging order **)
+
+  Fixpoint tagle' (i j : Tag)
+    := match i,j with
+       | nil,nil => true
+       | _ :: _, nil => false
+       | nil, _ :: _ => true
+       | n :: i, m :: j => if decision (n < m)
+                        then true
+                        else if (n== m)
+                             then tagle' i j
+                             else false
+       end.
+
+  (* the tags have to be reversed bc. the head is least significant *)
+  Definition tagle (i j : Tag) := tagle' (rev i) (rev j).
+
+  Infix "⊴" := tagle.
   
+  
+  Definition TPath := Path tcfg_edge.
+
+  Lemma tag_depth (* unused *)`{redCFG} p i q j t
+        (Hpath : TPath (root,start_tag) (p,i) t)
+        (Hin : (q,j) ∈ t)
+    : length j = depth q.
+  Admitted.  
 
 Lemma tag_eq_loop_exit `{redCFG} p q i j j'
       (Htag : (q,j ) -t> (p,i))
