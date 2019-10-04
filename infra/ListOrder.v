@@ -110,7 +110,7 @@ Inductive splinter {A : Type} : list A -> list A -> Prop :=
 | sls_sim l l' a : splinter_strict l l' -> splinter_strict (a :: l) (a :: l')
 | sls_skip l l' a : splinter_strict l l' -> splinter_strict l (a :: l').  *)
 
-Notation "l1 ⊴ l2" := (splinter l1 l2) (at level 70).
+(*Notation "l1 ⊴ l2" := (splinter l1 l2) (at level 70).*)
 
 (* Read: a succeeds b in l modulo reflexivity and transitivity *)
 Notation "a ≻* b | l" := (splinter (a :: b :: nil) l) (at level 70, b at next level).

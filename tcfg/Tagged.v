@@ -160,21 +160,66 @@ Section tagged.
 
   Fixpoint tagle' (i j : Tag)
     := match i,j with
-       | nil,nil => true
-       | _ :: _, nil => false
-       | nil, _ :: _ => true
+       | nil,_ => True
+       | _ :: _, nil => False
        | n :: i, m :: j => if decision (n < m)
-                        then true
-                        else if (n== m)
+                        then True
+                        else if decision (n = m)
                              then tagle' i j
-                             else false
+                             else False
        end.
 
   (* the tags have to be reversed bc. the head is least significant *)
   Definition tagle (i j : Tag) := tagle' (rev i) (rev j).
 
-  Infix "⊴" := tagle.
-  
+  Infix "⊴" := tagle (at level 70).
+
+  Global Instance tagle'_PreOrder : PreOrder tagle'.
+  econstructor.
+  - unfold Reflexive. intros x. induction x;cbn;auto.
+    decide (a < a);[omega|].
+    decide (a = a);[auto|omega].
+  - intros x. induction x; intros y z Hxy Hyz;cbn in *;auto.
+    destruct y;[contradiction|];cbn in *.
+    destruct z;[contradiction|];cbn in *.
+    decide (a < n0);[auto|].
+    decide (a < n); decide (n < n0).
+    + exfalso. omega.
+    + exfalso. assert (n0 < n) by omega. decide (n = n0);[omega|contradiction].
+    + exfalso. assert (n < a) by omega. decide (a = n);[omega|contradiction].
+    + decide (a = n); decide (n = n0). 2-4: contradiction.
+      subst a. decide (n = n0);[|contradiction].
+      eapply IHx;eauto.
+  Qed.
+
+  Global Instance tagle'_PartialOrder : PartialOrder eq tagle'.
+  econstructor;intros.
+  - subst. econstructor. 2: unfold Basics.flip. all: eapply tagle'_PreOrder.
+  - inversion H. clear H. unfold Basics.flip in H1.
+    revert dependent x. induction x0;intros;cbn in *.
+    + destruct x; cbn in *;[auto|contradiction].
+    + destruct x; cbn in *;[contradiction|].
+      decide (n = a).
+      * decide (a = n);[|omega]. decide (n < a); decide (a < n). 1-3:omega. subst.
+        f_equal. eapply IHx0;eauto.
+      * decide (n < a);[|contradiction].
+        decide (a < n);[omega|].
+        decide (a = n);[omega|contradiction].
+  Qed.
+
+  Global Instance tagle_Preorder : PreOrder tagle.
+  econstructor.
+  - unfold Reflexive. intros x. unfold tagle. eapply tagle'_PreOrder.
+  - unfold Transitive, tagle. intros. eapply tagle'_PreOrder;eauto.
+  Qed.
+
+  Global Instance tagle_PartialOrder : PartialOrder eq tagle.
+  econstructor;intros.
+  - subst. econstructor. 2: unfold Basics.flip. all: eapply tagle'_PreOrder.
+  - inversion H. unfold tagle,Basics.flip in *.
+    eapply rev_rev_eq.
+    apply (partial_order_antisym tagle'_PartialOrder (rev x) (rev x0));eauto.
+  Qed.   
   
   Definition TPath := Path tcfg_edge.
 

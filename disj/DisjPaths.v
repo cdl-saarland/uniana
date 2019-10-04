@@ -3,6 +3,8 @@ Require Export DisjDef MaxPreSuffix.
 Section disj.
   Context `{C : redCFG}.
   
+  Infix "⊴" := tagle (at level 70).
+  
   Notation "p '-a>b' q" := (a_edge p q) (at level 55).
   Notation "p '-a>' q" := (p -a>b q = true) (at level 55).
   Notation "p '-->b' q" := (edge p q) (at level 55).
@@ -224,7 +226,14 @@ Section disj.
     rewrite Hdep, Hdep'.
     eapply deq_loop_depth;auto.
   Qed.
-    
+
+  Lemma tagle_monotone p q i j t
+    (Hpath : TPath (root,start_tag) (p,i) t)
+    (Hel : (q,j) ∈ t)
+    (Hlen : |j| <= |i|)
+    : j ⊴ i.
+  Admitted.
+  
   Lemma ex_entry (h p q : Lab) (i j : Tag) t
         (Hin : innermost_loop h q)
         (Hnin : ~ loop_contains h p)
@@ -333,6 +342,14 @@ Section disj.
        *)
   Qed.
 
+  Lemma ex_back_edge (p h q : Lab) (i j k : Tag) t
+    (Hpath : TPath (root,start_tag) (p,k) t)
+    (Hsucc : (h,0 :: i) ≻* (q,j) | t)
+    (Hneq : (h,0 :: i) <> (q,j))
+    (Hloop : loop_contains h q)
+    : exists l, Prefix l j /\ match l with nil => False | n :: l => S n :: l ⊴ i end.
+  Admitted.
+  
   Lemma loop_tag_dom (h p : Lab) (i j : Tag) t
     (Hloop : loop_contains h p)
     (Hpath : TPath (root,start_tag) (p,i) t)
@@ -390,6 +407,10 @@ Section disj.
     split;[eapply s_deq_q|].
     admit.
   Admitted.
+
+  Lemma tagle_jj
+    : j1 ⊴ j2.
+  Admitted.
        
   Lemma head_in_both (h : Lab) (l : Tag)
     (Hcont : loop_contains h q1)
@@ -415,11 +436,31 @@ Section disj.
       unfold rcons in Hlc0. rewrite <-app_assoc in Hlc0.
       eapply NoDup_app;eauto.
     - rewrite Hloop in Hcont.
+      assert ((h,l) ∈ t1) as Hel'.
+      { eapply postfix_incl;eauto.
+        unfold last_common' in Hlc. destructH. eapply postfix_step_left;eauto.
+      } 
       eapply loop_tag_dom;eauto.
-      + admit.
-      + admit.
-  Admitted.
+      + rewrite <-tagle_jj. eapply tagle_monotone;eauto.
+        eapply path_to_elem in Hel';eauto. destructH.
+        eapply deq_loop_le;eauto.
+        eapply loop_contains_deq_loop. rewrite Hloop. eauto.
+      + clear Hpath2. eapply tag_depth; eauto.
+  Qed.
 
+  Lemma succ_NoDup_app (A : Type) (x y : A) (l l' : list A)
+        (Hsucc : x ≻* y | l ++ l')
+        (Hnd : NoDup (l ++ l'))
+        (Hel : y ∈ l)
+    : x ∈ l.
+    clear - Hsucc Hnd Hel.
+    revert dependent l.
+    induction l';intros;cbn in *;try rewrite app_nil_r in *.
+    - eapply splinter_in. eapply Hsucc.
+    - destruct l;[contradiction|].
+      admit.
+  Admitted.
+  
   Lemma r1_in_head_q (* unused *): forall x, x ∈ r1 -> deq_loop (fst x) q1.
   Proof.
     intros (p,i) Hel h Hh.
@@ -428,16 +469,107 @@ Section disj.
     eapply innermost_loop_deq_loop;eauto. 2:eapply Hloop in Hh;auto.
     eapply path_front in Hpath1 as Hfront1.
     eapply path_front in Hpath2 as Hfront2.
-    destruct r1.
-    - contradiction.
-    - cbn.
-  Admitted.
-  
-  Lemma r2_in_head_q (* unused *): forall x, x ∈ r2 -> deq_loop (fst x) q2.
-  Admitted.
+    cbn. decide (loop_contains h' p);[auto|exfalso].
+    eapply ex_entry with (i:=i) in Hinner;eauto.
+    2: {
+      assert (t1 = (q1,j1) :< tl t1).
+      { clear - Hpath1. induction Hpath1;cbn;eauto. simpl_nl. reflexivity. }
+      rewrite H. simpl_nl.
+      econstructor. setoid_rewrite nlcons_to_list at 2. rewrite <-H. clear H.
+      eapply splinter_single. 
+      unfold last_common' in Hlc. destructH.
+      eapply postfix_incl;eauto.
+      eapply In_rcons. eauto.
+    }
+    copy Hlc Hlc'.
+    unfold last_common' in Hlc'. destructH.
+    assert ((h', 0 :: tl j1) ∈ r1) as Hhel.
+    {
+      clear - Hinner Hlc'0 Hpath1 Hel.
+      eapply splinter_in in Hinner as Hel'.
+      eapply postfix_eq in Hlc'0. destructH.
+      rewrite <-app_cons_assoc in Hlc'0.
+      setoid_rewrite Hlc'0 in Hinner.
+      eapply succ_NoDup_app;eauto. Set Printing Coercions.
+      rewrite app_cons_assoc in Hlc'0. 
+      rewrite rcons_nl_rcons in Hlc'0.
+      rewrite nlconc_to_list in Hlc'0.
+      eapply ne_to_list_inj in Hlc'0.
+      rewrite app_cons_assoc.
+      rewrite rcons_nl_rcons.
+      rewrite nlconc_to_list. 
+      setoid_rewrite <-Hlc'0. Unset Printing Coercions.
+      eapply tpath_NoDup;eauto.
+    }
+    eapply Hlc'1;eauto.
+    eapply head_in_both;eauto.
+    rewrite Hloop. destruct Hinner';auto.
+  Qed.
 
   Lemma no_back_edge (* unused *): forall x, (get_innermost_loop' q1) ≻ x | (map fst r1) :r: s -> False.
   Admitted. (* this lemma states the absence of ALL innermost_loop headers of q1 *)
+
+  Lemma j1_prefix_k
+    : Prefix j1 k.
+  Proof.
+  Admitted.
+  
+  Lemma r2_in_head_q (* unused *): forall x, x ∈ r2 -> deq_loop (fst x) q2.
+  Proof.
+    intros (p,i) Hel h Hh.
+    eapply loop_contains_innermost in Hh as Hinner. destructH. 
+    eapply eq_loop_innermost in Hinner as Hinner'; [|symmetry in Hloop];eauto.
+    eapply innermost_loop_deq_loop;eauto. 2:eapply Hloop in Hh;auto.
+    eapply path_front in Hpath1 as Hfront1.
+    eapply path_front in Hpath2 as Hfront2.
+    cbn. decide (loop_contains h' p);[auto|exfalso].
+    eapply ex_entry with (i:=i) in Hinner;eauto.
+    2: {
+      assert (t2 = (q2,j2) :< tl t2).
+      { clear - Hpath2. induction Hpath2;cbn;eauto. simpl_nl. reflexivity. }
+      rewrite H. simpl_nl.
+      econstructor. setoid_rewrite nlcons_to_list at 2. rewrite <-H. clear H.
+      eapply splinter_single. 
+      unfold last_common' in Hlc. destructH.
+      eapply postfix_incl;eauto.
+      eapply In_rcons. eauto.
+    }
+    eapply ex_back_edge in Hpath2 as Hbacke;cycle 1.
+    2: destruct Hinner';eauto.
+    - eapply lc_succ_rt1.
+      + eapply last_common'_sym. eauto.
+      + unfold last_common' in Hlc. destructH.
+        clear - Hinner Hlc2 Hpath2 Hel.
+        eapply splinter_in in Hinner as Hel'.
+        eapply postfix_eq in Hlc2. destructH.
+        rewrite <-app_cons_assoc in Hlc2.
+        setoid_rewrite Hlc2 in Hinner.
+        eapply succ_NoDup_app in Hinner;eauto. Set Printing Coercions.
+        rewrite app_cons_assoc in Hlc2. 
+        rewrite rcons_nl_rcons in Hlc2.
+        rewrite nlconc_to_list in Hlc2.
+        eapply ne_to_list_inj in Hlc2.
+        rewrite app_cons_assoc.
+        rewrite rcons_nl_rcons.
+        rewrite nlconc_to_list. 
+        setoid_rewrite <-Hlc2. Unset Printing Coercions.
+        eapply tpath_NoDup;eauto.
+    - destruct r2;[contradiction|].
+      admit.
+    - destruct Hinner';eauto.
+      eapply s_deq_q;eauto.
+    - destructH.
+      destruct l;[contradiction|].
+
+      Inductive taglle : Tag -> Tag -> Prop :=
+      | TgNil : taglle nil nil
+      | TgConsCons (n m : nat) (i j : Tag) : n <= m -> taglle i j -> taglle (n :: i) (m :: j).
+
+      Definition taglle' (i j : Tag) := exists i', Prefix i' i /\ taglle i' j.
+    
+    
+    
+  Admitted.
 
   Lemma lc_eq_disj
         (Hdep : depth s = depth q1)
