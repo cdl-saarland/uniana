@@ -1,18 +1,103 @@
+Require Import Program.Equality.
 Require Export ListExtra PreSuffix ListOrder.
 
 Definition Tag := list nat.
   
-Inductive Tagle' : Tag -> Tag -> Prop :=
-| TgApp' (i j : Tag) : Tagle' j (i ++ j)
-| TgLt' (n m : nat) (i j : Tag) : n < m -> Tagle' (i :r: n) (j :r: m).
-
 Inductive Tagle : Tag -> Tag -> Prop :=
-| TgEq (i : Tag) : Tagle i i
-| TgCons (n : nat) (i j : Tag) : Tagle i j -> Tagle i (n :: j)
-| TgLt (n m : nat) (i j : Tag) : |i| = |j| -> n < m -> Tagle (i :r: n) (j :r: m).
+| TgApp (i : Tag) : Tagle nil i
+| TgEq  (n : nat) (i j : Tag) : Tagle i j -> Tagle (i :r: n) (j :r: n)
+| TgLt (n m : nat) (i j : Tag) : n < m -> Tagle (i :r: n) (j :r: m).
 
-(*Definition Tagle (i j : Tag) := exists j', Prefix j' j /\ Tagle' i j'.*)
 
+Infix "⊴" := Tagle (at level 70).
+
+Lemma Tagle_rcons (i j : Tag) (n m : nat)
+      (H : i ⊴ j)
+      (Hle : n <= m)
+  : i :r: n ⊴ j :r: m.
+Proof.
+  eapply le_lt_or_eq in Hle. destruct Hle;subst;econstructor;eauto.
+Qed.
+
+Lemma Tagle_cons (i j : Tag) (n : nat)
+      (H : i ⊴ j)
+  : i ⊴ n :: j.
+Proof.
+  induction H.
+  - econstructor.
+  - rewrite <-cons_rcons_assoc. econstructor;eauto.
+  - rewrite <-cons_rcons_assoc. econstructor;eauto.
+Qed.
+
+Lemma Tagle_refl (i : Tag)
+  : i ⊴ i.
+Proof.
+  rinduction i.
+  - econstructor.
+  - econstructor;eauto.
+Qed.  
+
+Lemma app_rcons_assoc (A : Type) (l l' : list A) (a : A)
+  : l ++ l' :r: a = (l ++ l') :r: a.
+Proof.
+  unfold rcons. eapply app_assoc.
+Qed.
+
+Lemma Tagle_app (i j : Tag)
+  : j ⊴ i ++ j.
+Proof.
+  rinduction j.
+  - econstructor.
+  - rewrite app_rcons_assoc. econstructor. auto.
+Qed.
+
+Lemma Tagle_le (i j : Tag) (n m : nat)
+      (H : i :r: n ⊴ j :r: m)
+  : n <= m.
+Proof.
+  dependent induction H.
+  - congruence'. 
+  - eapply rcons_eq2 in x0. eapply rcons_eq2 in x. subst. reflexivity.
+  - eapply rcons_eq2 in x0. eapply rcons_eq2 in x. subst. omega.
+Qed.
+    
+Hint Constructors Tagle : tagle.
+Hint Immediate Tagle_app : tagle.
+
+Ltac destr_r' l :=
+  let H := fresh "Hl" in
+  let x := fresh "x" in
+  let l' := fresh "l" in
+  let Hlx := fresh "Hx" in
+  specialize (rcons_destruct l) as H;
+  destruct H as [H|[x [l' Hlx]]].
+
+Global Instance Tagle_PreOrder : PreOrder Tagle.
+Proof.
+  econstructor.
+  - unfold Reflexive. eapply Tagle_refl.
+  - unfold Transitive.
+    intros x y z Hxy Hyz. revert dependent z.
+    dependent induction Hxy;intros.
+    + econstructor.
+    + destr_r' z;subst.
+      * inversion Hyz;try congruence'. 
+      * eapply Tagle_le in Hyz as Hle.
+        eapply le_lt_or_eq in Hle. destruct Hle.
+        -- econstructor;auto.
+        -- subst. 
+           inversion Hyz;[congruence'| |].
+           ++ eapply rcons_eq1 in H as Hj. subst.
+              eapply rcons_eq2 in H. subst. econstructor.
+              eapply rcons_eq1 in H0. subst. eapply IHHxy. auto.
+           ++ eapply rcons_eq2 in H. subst. econstructor;auto.
+    + destr_r' z;subst.
+      * inversion Hyz;congruence'.
+      * eapply Tagle_le in Hyz as Hle.
+        eapply le_lt_or_eq in Hle. destruct Hle.
+        -- econstructor;auto. omega.
+        -- subst. econstructor. auto.
+Qed.
 
   (** tagging order **)
 
@@ -26,37 +111,29 @@ Inductive Tagle : Tag -> Tag -> Prop :=
                              then tagle' i j
                              else False
        end.
+  
+  Global Instance Tagle_PartialOrder : PartialOrder eq Tagle.
+  Proof.
+    econstructor;intros.
+    - subst. econstructor;unfold Basics.flip; eapply Tagle_refl.
+    - inversion H. unfold Basics.flip in H1. clear H.
+      revert dependent H1.
+      induction H0;intros.
+      + inversion H1;try congruence'. reflexivity.
+      + inversion H1;[congruence' | |].
+        * f_equal. eapply rcons_eq1 in H. eapply rcons_eq1 in H2.
+          subst. eauto.
+        * exfalso. eapply rcons_eq2 in H. eapply rcons_eq2 in H2. subst. omega.
+      + inversion H1;[congruence' | |].
+        * exfalso. eapply rcons_eq2 in H0. eapply rcons_eq2 in H2. subst. omega.
+        * exfalso. eapply rcons_eq2 in H0. eapply rcons_eq2 in H2. subst. omega.
+  Qed.
+(*      
+      
 
   (* the tags have to be reversed bc. the head is least significant *)
   Definition tagle (i j : Tag) := tagle' (rev i) (rev j).
 
-Infix "⊴" := tagle (at level 70).
-
-
-(*
-Global Instance Tagle'_PreOrder : PreOrder Tagle'.
-Proof.
-  econstructor.
-  - unfold Reflexive. intros x. induction x;econstructor;eauto.
-  - unfold Transitive. intros x y z Hxy. revert z.
-    induction Hxy;intros z Hyz;eauto.
-    destruct z.
-    + inversion Hyz.
-    + decide (n <= n0).
-      * econstructor;eauto. eapply IHHxy.
-        inversion Hyz;subst. auto.
-      * inversion Hyz;subst. omega.
-Qed.
-
-Global Instance Tagle_PreOrder : PreOrder Tagle.
-Proof.
-  econstructor.
-  - unfold Reflexive. intros. exists x. split;[econstructor|].
-    eapply Tagle'_PreOrder.
-  - unfold Transitive. intros x y z Hxy Hyz.
-    unfold Tagle in *. destructH. destructH.
-    
-  *)  
 
   Global Instance tagle'_PreOrder : PreOrder tagle'.
   econstructor.
@@ -104,3 +181,4 @@ Proof.
     eapply rev_rev_eq.
     apply (partial_order_antisym tagle'_PartialOrder (rev x) (rev x0));eauto.
   Qed.
+ *)
