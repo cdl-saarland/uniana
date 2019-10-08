@@ -8,7 +8,7 @@ COQDOCFLAGS:= \
 export COQDOCFLAGS
 COQMAKEFILE:=Makefile.coq
 COQ_PROJ:=_CoqProject
-VS:=$(wildcard *.v */*.v */*/*.v)
+VS:=$(shell find . -name '*.v' -a ! -name 'vars.v') #$(wildcard *.v */*.v */*/*.v)
 VS_IN_PROJ:=$(shell grep .v $(COQ_PROJ))
 
 ifeq (,$(VS_IN_PROJ))
@@ -22,7 +22,7 @@ all: html
 clean: $(COQMAKEFILE)
 	@$(MAKE) -f $(COQMAKEFILE) $@
 	rm -f $(COQMAKEFILE)
-#	rm -f $(COQMAKEFILE).conf # added by me
+	rm -f $(COQMAKEFILE).conf # added by me
 #	rm -f *.vo *.glob */*.vo */*.glob */*/*.vo */*/*.glob
 
 html: $(COQMAKEFILE) $(VS)
