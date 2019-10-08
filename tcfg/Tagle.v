@@ -29,6 +29,7 @@ Proof.
   - rewrite <-cons_rcons_assoc. econstructor;eauto.
 Qed.
 
+
 Lemma Tagle_refl (i : Tag)
   : i ⊴ i.
 Proof.
@@ -62,7 +63,7 @@ Proof.
 Qed.
     
 Hint Constructors Tagle : tagle.
-Hint Immediate Tagle_app : tagle.
+Hint Immediate Tagle_app Tagle_le Tagle_refl Tagle_cons : tagle.
 
 Ltac destr_r' l :=
   let H := fresh "Hl" in
@@ -128,6 +129,60 @@ Qed.
         * exfalso. eapply rcons_eq2 in H0. eapply rcons_eq2 in H2. subst. omega.
         * exfalso. eapply rcons_eq2 in H0. eapply rcons_eq2 in H2. subst. omega.
   Qed.
+
+  
+
+  Lemma prefix_tagle (i j : Tag)
+        (Hpre : Prefix i j)
+    : i ⊴ j.
+  Proof.
+    induction Hpre;
+      eauto with tagle.
+  Qed.
+
+  Lemma Tagle_app2 (i j k : Tag)
+        (H : i ++ k ⊴ j ++ k)
+    : i ⊴ j.
+  Proof.
+    rinduction k.
+    - do 2 rewrite app_nil_r in H. assumption.
+    - eapply H.
+      inversion H0.
+      + destruct l;cbn in H2;congruence'.
+      + rewrite app_rcons_assoc in H1. eapply rcons_eq1 in H1.
+        rewrite app_rcons_assoc in H2. eapply rcons_eq1 in H2.
+        subst. eauto.
+      + rewrite app_rcons_assoc in H1. eapply rcons_eq2 in H1.
+        rewrite app_rcons_assoc in H2. eapply rcons_eq2 in H2.
+        subst. omega.
+  Qed.
+  
+  Lemma Tagle_cons2 (i : Tag) (n m : nat)
+        (Hle : n <= m)
+    : n :: i ⊴ m :: i.
+  Proof.
+    rinduction i.
+    - fold (nil ++ [n]). fold ([] ++ [m]).
+      fold ([] :r: n). fold ([] :r: m).
+      eapply le_lt_or_eq in Hle.
+      destruct Hle;subst;econstructor;eauto.
+      reflexivity.
+    - do 2 rewrite <-cons_rcons_assoc. econstructor;eauto.
+  Qed.
+
+  Lemma tagle_prefix_hd_le (n m : nat) (i j : Tag)
+        (H2 : m :: i ⊴ j)
+        (H1 : Prefix (n :: i) j)
+    : m <= n.
+  Proof.
+    eapply prefix_eq in H1.
+    destructH.
+    subst. rewrite app_cons_assoc in H2. fold ([m] ++ i) in H2. eapply Tagle_app2 in H2.
+    fold (nil ++ [m]) in H2.
+    fold ([] :r: m) in H2.
+    eapply Tagle_le;eauto.
+  Qed.
+  
 (*      
       
 

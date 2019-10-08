@@ -12,9 +12,30 @@ Section disj.
 
   Load vars.
 
+  Lemma length_jj
+    : | j1 | = | j2 |.
+  Proof.
+    erewrite tag_depth;cycle 1.
+    - eapply Hpath1.
+    - eapply path_contains_front;eauto.
+    - erewrite tag_depth;cycle 1.
+      + eapply Hpath2.
+      + eapply path_contains_front;eauto.
+      + destruct Hloop.
+        eapply Nat.le_antisymm;eapply deq_loop_depth;eauto.
+  Qed.
+
   Lemma tagle_jj
     : j1 ⊴ j2.
-  Admitted.
+  Proof.
+    specialize (length_jj) as Hlen.
+    clear - Htag Htagleq Hlen.
+    destruct j1,j2;cbn in *;subst.
+    - reflexivity.
+    - omega.
+    - omega.
+    - eapply Tagle_cons2. auto.
+  Qed.
   
   Lemma head_in_both (h : Lab) (l : Tag)
         (Hcont : loop_contains h q1)
@@ -173,17 +194,6 @@ Section disj.
     - eapply tl_prefix.
     - eapply j1_prefix_k.
   Qed.
-
-  Lemma prefix_tagle (i j : Tag)
-        (Hpre : Prefix i j)
-    : i ⊴ j.
-  Admitted.
-
-  Lemma tagle_tagle_hd_eq (n m : nat) (i j : Tag)
-        (H1 : n :: i ⊴ k)
-        (H2 : m :: j ⊴ k)
-    : n = m.
-  Admitted.
   
   Lemma r2_in_head_q (* unused *): forall x, x ∈ r2 -> deq_loop (fst x) q2.
   Proof.
@@ -223,10 +233,10 @@ Section disj.
       eapply s_deq_q;cycle 2;eauto.
     - destructH.
       destruct l;[contradiction|].
-      eapply prefix_tagle in Hbacke0.
+(*      eapply prefix_tagle in Hbacke0.*)
       eapply PreOrder_Transitive in Hbacke1. exploit Hbacke1.
-      { eapply prefix_tagle. eapply tl_j2_prefix_k. }
-      eapply tagle_tagle_hd_eq in Hbacke0;eauto.
+      { eapply prefix_tagle. eapply tl_j2_prefix_k. }                                   
+      eapply tagle_prefix_hd_le in Hbacke0;eauto. 
       omega.
   Qed.
 
