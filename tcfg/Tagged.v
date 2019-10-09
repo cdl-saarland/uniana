@@ -468,6 +468,49 @@ Qed.
     (* TODO: lift on tpaths, on cpaths we might have duplicates, thus it doesn't work there *)
   Admitted.
   
+  
+  Lemma tpath_depth_eq (p q : Lab) (i j : Tag) pi qj t
+        (Hpath : TPath pi qj t)
+        (Hel1 : (p,i) ∈ t)
+        (Hel2 : (q,j) ∈ t)
+        (Heq : |i| = |j|)
+    : depth p = depth q.
+  Admitted.
+  Lemma tpath_depth_lt (p q : Lab) (i j : Tag) pi qj t
+        (Hpath : TPath pi qj t)
+        (Hel1 : (p,i) ∈ t)
+        (Hel2 : (q,j) ∈ t)
+        (Hlt : |i| < |j|)
+    : depth p < depth q.
+  Admitted.
+  
+  Lemma loop_tag_dom (h p : Lab) (i j : Tag) t
+    (Hloop : loop_contains h p)
+    (Hpath : TPath (root,start_tag) (p,i) t)
+    (Htagle : j ⊴ i)
+    (Hdep : |j| = depth h)
+    : (h,j) ∈ t.
+  Admitted.
+  
+  Lemma deq_loop_le p i j q t t'
+        (Hdeq : deq_loop p q)
+        (Hpath : TPath (root,start_tag) (p,i) t)
+        (Hpath' : TPath (root,start_tag) (q,j) t')
+    : |j| <= |i|.
+  Proof.
+    eapply tag_depth in Hpath as Hdep'. 2: eapply path_contains_front;eauto.
+    eapply tag_depth in Hpath' as Hdep. 2: eapply path_contains_front;eauto.
+    rewrite Hdep, Hdep'.
+    eapply deq_loop_depth;auto.
+  Qed.
+
+  Lemma tagle_monotone p q i j t
+    (Hpath : TPath (root,start_tag) (p,i) t)
+    (Hel : (q,j) ∈ t)
+    (Hlen : |j| <= |i|)
+    : j ⊴ i.
+  Admitted.
+  
 End tagged.
 
 (* FIXME give intuition for unfinished proofs *)

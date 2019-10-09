@@ -81,7 +81,22 @@ Proof.
   eapply splinter_rev. cbn. rewrite rev_rcons. econstructor. econstructor.
   eapply splinter_single. rewrite <-In_rev. auto.
 Qed.
-
+  
+Lemma lc_succ_rt2 (A : Type) `{EqDec A eq} (l1 l2 l1' l2' : list A) (a b c : A)
+      (Hlc : last_common' l1 l2 l1' l2' a)
+      (Hnd : NoDup l2)
+      (Hsucc : b ≻* c | l2)
+      (Hel : c ∈ l2')
+  : b ∈ l2'.
+Proof.
+  unfold last_common' in Hlc. destructH.
+  eapply splinter_in in Hsucc as Hel'.
+  eapply postfix_eq in Hlc2. destructH.
+  rewrite <-app_cons_assoc in Hlc2.
+  setoid_rewrite Hlc2 in Hsucc.
+  eapply succ_NoDup_app in Hsucc;eauto. 
+  setoid_rewrite <-Hlc2;eauto.
+Qed.
 
 Lemma lc_succ_rt_eq_lc {A : Type} `{EqDec A eq} l1 l2 l1' l2' (x y : A)
       (Hlc : last_common' l1 l2 l1' l2' x)

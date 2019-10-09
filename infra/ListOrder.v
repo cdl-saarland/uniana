@@ -60,16 +60,6 @@ Section aux.
       f_equal. rewrite postfix_nincl_app_in. eapply IHl; inversion Hnd; eauto.
       rewrite <-in_rev; eauto.
   Qed.
-  
-  Lemma rev_rev_eq (l l' : list A)
-    : l = l' <-> rev l = rev l'.
-  Proof.
-    revert l l'.
-    enough (forall (l l' : list A), l = l' -> rev l = rev l').
-    { split;eauto. intros. rewrite <-rev_involutive. rewrite <-rev_involutive at 1. eauto. }
-    intros ? ? Hll.
-    subst. reflexivity.
-  Qed.
 
   Lemma postfix_nincl_rev_prefix_nincl' (a : A) l
     : rev (postfix_nincl a l) = prefix_nincl' a (rev l).
@@ -440,6 +430,19 @@ Section succ_rt.
   Proof.
     splice_splinter;eauto.
   Qed.
+
+  Lemma succ_NoDup_app (x y : A) (l l' : list A)
+        (Hsucc : x ≻* y | l ++ l')
+        (Hnd : NoDup (l ++ l'))
+        (Hel : y ∈ l)
+    : x ∈ l.
+    clear - Hsucc Hnd Hel.
+    revert dependent l.
+    induction l';intros;cbn in *;try rewrite app_nil_r in *.
+    - eapply splinter_in. eapply Hsucc.
+    - destruct l;[contradiction|].
+      admit.
+  Admitted.
 
   Ltac find_in_succ_rt := eapply splinter_incl; eauto; firstorder.
   

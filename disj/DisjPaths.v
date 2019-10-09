@@ -1,15 +1,9 @@
 Require Export DisjDef MaxPreSuffix.
 
 Section disj.
-  Context `{C : redCFG}.
-  
-  Infix "⊴" := Tagle (at level 70).
-  
-  Notation "p '-a>b' q" := (a_edge p q) (at level 55).
-  Notation "p '-a>' q" := (p -a>b q = true) (at level 55).
-  Notation "p '-->b' q" := (edge p q) (at level 55).
-  Notation "p '-->' q" := (p -->b q = true) (at level 55, right associativity).
 
+  Load X_notations.
+  
   (* TODO: remove *)
   Definition prec_loop_contains (qh q : Lab) (k j : Tag)
     := exists (p : Lab) (π : ne_list Coord),
@@ -75,45 +69,7 @@ Section disj.
         * intros;eauto. eapply HForall. eapply In_rcons. right;auto.
         * eapply postfix_step_left;eauto.
   Qed.
-
-  Lemma postfix_take (A : Type) (l l' : list A)
-    : take ( |l'| ) l = l' <-> Postfix l' l.
-  Proof.
-    split; intro H.
-    - rewrite <-H.
-      remember (|l'|) as n. clear.
-      revert l. induction n.
-      + cbn. eapply postfix_nil.
-      + intros l. destruct l.
-        * cbn. econstructor;auto.
-        * cbn. eapply postfix_cons;eauto.
-    - revert dependent l. induction l';intros;cbn;auto.
-      destruct l. 1: inversion H;congruence'.
-      f_equal.
-      + symmetry;eapply postfix_hd_eq;eauto.
-      + eapply IHl'. eapply cons_postfix;eauto.
-  Qed.      
-
-  Lemma prefix_take_r (A : Type) (l l' : list A)
-    : take_r ( |l'| ) l = l' <-> Prefix l' l.
-  Proof.
-    split; intro H.
-    - eapply postfix_rev_prefix'.
-      eapply postfix_take.
-      eapply rev_rev_eq.
-      rewrite rev_involutive.
-      rewrite rev_length.
-      unfold take_r in H.
-      assumption.
-    - eapply prefix_rev_postfix in H.
-      eapply postfix_take in H.
-      eapply rev_rev_eq in H.
-      rewrite rev_involutive in H.
-      rewrite rev_length in H.
-      unfold take_r.
-      assumption.
-  Qed.
-      
+  
   Lemma geq_tag_suffix_tag_tl_eq (p q : Lab) l t i j
         (Hpath : TPath (root,start_tag) (q,j) t)
         (Hpost : Postfix l t)
@@ -180,48 +136,6 @@ Section disj.
     - decide (P a);try contradiction. left. auto.
     - decide (P c);try contradiction. left. auto.
   Qed.
-  
-  Lemma entry_through_header h p q
-        (Hnin : ~ loop_contains h p)
-        (Hin : loop_contains h q)
-        (Hedge : p --> q)
-    : q = h.
-  Proof.
-    specialize (a_reachability p) as Hreach. destructH.
-    eapply path_front in Hreach as Hfront.
-    eapply subgraph_path' in Hreach as Hreach'. 2: eapply a_edge_incl.
-    eapply PathCons in Hreach';eauto.
-    eapply dom_loop in Hreach' as Hdom;eauto.
-    cbn in Hdom. decide (q = h);destruct Hdom;auto;try contradiction.
-    exfalso.
-    contradict Hnin.
-    unfold loop_contains in *. destructH.
-    eapply path_rcons in Hedge;eauto.
-    exists p0. eexists. split_conj;eauto.
-    simpl_nl. eapply nin_tl_iff in Hin3;eauto.
-    destruct Hin3.
-    - simpl_nl. rewrite rev_rcons. cbn. rewrite <-in_rev. auto.
-    - eapply path_back in Hin2. rewrite Hin2 in H0. symmetry in H0. contradiction.
-  Qed.
-  
-  Lemma deq_loop_le p i j q t t'
-        (Hdeq : deq_loop p q)
-        (Hpath : TPath (root,start_tag) (p,i) t)
-        (Hpath' : TPath (root,start_tag) (q,j) t')
-    : |j| <= |i|.
-  Proof.
-    eapply tag_depth in Hpath as Hdep'. 2: eapply path_contains_front;eauto.
-    eapply tag_depth in Hpath' as Hdep. 2: eapply path_contains_front;eauto.
-    rewrite Hdep, Hdep'.
-    eapply deq_loop_depth;auto.
-  Qed.
-
-  Lemma tagle_monotone p q i j t
-    (Hpath : TPath (root,start_tag) (p,i) t)
-    (Hel : (q,j) ∈ t)
-    (Hlen : |j| <= |i|)
-    : j ⊴ i.
-  Admitted.
   
   Lemma ex_entry (h p q : Lab) (i j : Tag) t
         (Hin : innermost_loop h q)
@@ -339,45 +253,7 @@ Section disj.
     : exists l, Prefix l j /\ match l with nil => False | n :: l => S n :: l ⊴ i end.
   Admitted.
   
-  Lemma loop_tag_dom (h p : Lab) (i j : Tag) t
-    (Hloop : loop_contains h p)
-    (Hpath : TPath (root,start_tag) (p,i) t)
-    (Htagle : j ⊴ i)
-    (Hdep : |j| = depth h)
-    : (h,j) ∈ t.
-  Admitted.
-  
-
-  Lemma succ_NoDup_app (A : Type) (x y : A) (l l' : list A)
-        (Hsucc : x ≻* y | l ++ l')
-        (Hnd : NoDup (l ++ l'))
-        (Hel : y ∈ l)
-    : x ∈ l.
-    clear - Hsucc Hnd Hel.
-    revert dependent l.
-    induction l';intros;cbn in *;try rewrite app_nil_r in *.
-    - eapply splinter_in. eapply Hsucc.
-    - destruct l;[contradiction|].
-      admit.
-  Admitted.
-  
-  Lemma lc_succ_rt2 (A : Type) `{EqDec A eq} (l1 l2 l1' l2' : list A) (a b c : A)
-        (Hlc : last_common' l1 l2 l1' l2' a)
-        (Hnd : NoDup l2)
-        (Hsucc : b ≻* c | l2)
-        (Hel : c ∈ l2')
-    : b ∈ l2'.
-  Proof.
-    unfold last_common' in Hlc. destructH.
-    eapply splinter_in in Hsucc as Hel'.
-    eapply postfix_eq in Hlc2. destructH.
-    rewrite <-app_cons_assoc in Hlc2.
-    setoid_rewrite Hlc2 in Hsucc.
-    eapply succ_NoDup_app in Hsucc;eauto. 
-    setoid_rewrite <-Hlc2;eauto.
-  Qed.
-
-  Load vars.
+  Load X_vars.
 
   Lemma s_deq_q : deq_loop s q1.
   Proof.
@@ -412,12 +288,12 @@ Section disj.
       eapply n. inversion Hlc. eapply loop_contains_self. unfold innermost_loop in Hinner''. destructH.
       eapply loop_contains_loop_head;eauto.
   Qed. 
-    
+
+  (*
   Lemma dep_eq_impl_head_eq (* unused *): depth s = depth q1 -> eq_loop s q1.
   Proof.
     intros Hdep.
     split;[eapply s_deq_q|].
-    admit.
-  Admitted.
+   *)
   
 End disj.

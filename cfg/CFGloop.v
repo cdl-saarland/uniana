@@ -491,5 +491,28 @@ Section cfg.
     }
     eapply single_exit in Hexit'';eauto. contradiction.
   Qed.
+  
+  Lemma entry_through_header h p q
+        (Hnin : ~ loop_contains h p)
+        (Hin : loop_contains h q)
+        (Hedge : p --> q)
+    : q = h.
+  Proof.
+    specialize (a_reachability p) as Hreach. destructH.
+    eapply path_front in Hreach as Hfront.
+    eapply subgraph_path' in Hreach as Hreach'. 2: eapply a_edge_incl.
+    eapply PathCons in Hreach';eauto.
+    eapply dom_loop in Hreach' as Hdom;eauto.
+    cbn in Hdom. decide (q = h);destruct Hdom;auto;try contradiction.
+    exfalso.
+    contradict Hnin.
+    unfold loop_contains in *. destructH.
+    eapply path_rcons in Hedge;eauto.
+    exists p0. eexists. split_conj;eauto.
+    simpl_nl. eapply nin_tl_iff in Hin3;eauto.
+    destruct Hin3.
+    - simpl_nl. rewrite rev_rcons. cbn. rewrite <-in_rev. auto.
+    - eapply path_back in Hin2. rewrite Hin2 in H0. symmetry in H0. contradiction.
+  Qed.
 
 End cfg.

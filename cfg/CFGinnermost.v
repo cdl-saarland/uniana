@@ -77,9 +77,21 @@ Section cfg.
     eapply loop_contains_self. eapply loop_contains_loop_head;eauto.
   Qed.
   
+  Lemma deq_loop_head_loop_contains p h
+        (Hdeq : deq_loop p h)
+        (Hhead : loop_head h)
+    : loop_contains h p.
+  Admitted.
+  
   Lemma deq_loop_depth p q
         (Hdeq : deq_loop p q)
     : depth q <= depth p.
+  Admitted.
+  
+  Lemma deq_loop_depth_eq p q
+        (Hdeq : deq_loop p q)
+        (Hdep : depth q = depth p)
+    : deq_loop q p.
   Admitted.
 
   (** * Equivalence relation eq_loop **)

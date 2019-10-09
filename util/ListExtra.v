@@ -257,6 +257,16 @@ Section Rcons.
       f_equal;[eapply rcons_eq2;eauto|apply IHl';eapply rcons_eq1;eauto].
   Qed.
   
+  Lemma rev_rev_eq (A : Type) (l l' : list A)
+    : l = l' <-> rev l = rev l'.
+  Proof.
+    revert l l'.
+    enough (forall (l l' : list A), l = l' -> rev l = rev l').
+    { split;eauto. intros. rewrite <-rev_involutive. rewrite <-rev_involutive at 1. eauto. }
+    intros ? ? Hll.
+    subst. reflexivity.
+  Qed.
+  
   Lemma NoDup_rcons (* unused *)(A : Type) (x : A) (l : list A)
     : x ∉ l -> NoDup l -> NoDup (l :r: x).
   Proof.

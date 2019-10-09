@@ -403,6 +403,58 @@ Section Pre.
   Proof.
     intros. eapply postfix_rev_prefix in H. eapply prefix_ex_cons in H. destructH.
     exists a'. eapply prefix_rev_postfix'. do 2 rewrite rev_rcons. eauto.
+  Qed.  
+
+  Lemma tl_prefix (l : list A)
+    : Prefix (tl l) l.
+  Proof.
+    induction l;cbn;econstructor;eauto. econstructor.
+  Qed.
+  
+  Lemma prefix_tl (l l' : list A) (a : A)
+    : Prefix (a :: l) l' -> Prefix l (tl l').
+  Proof.
+    clear. intros. inversion H;subst;cbn.
+    - econstructor.
+    - eapply prefix_cons;eauto.
+  Qed.  
+
+  Lemma postfix_take (l l' : list A)
+    : take ( |l'| ) l = l' <-> Postfix l' l.
+  Proof.
+    split; intro H.
+    - rewrite <-H.
+      remember (|l'|) as n. clear.
+      revert l. induction n.
+      + cbn. eapply postfix_nil.
+      + intros l. destruct l.
+        * cbn. econstructor;auto.
+        * cbn. eapply postfix_cons;eauto.
+    - revert dependent l. induction l';intros;cbn;auto.
+      destruct l. 1: inversion H;congruence'.
+      f_equal.
+      + symmetry;eapply postfix_hd_eq;eauto.
+      + eapply IHl'. eapply cons_postfix;eauto.
+  Qed.
+
+  Lemma prefix_take_r (l l' : list A)
+    : take_r ( |l'| ) l = l' <-> Prefix l' l.
+  Proof.
+    split; intro H.
+    - eapply postfix_rev_prefix'.
+      eapply postfix_take.
+      eapply rev_rev_eq.
+      rewrite rev_involutive.
+      rewrite rev_length.
+      unfold take_r in H.
+      assumption.
+    - eapply prefix_rev_postfix in H.
+      eapply postfix_take in H.
+      eapply rev_rev_eq in H.
+      rewrite rev_involutive in H.
+      rewrite rev_length in H.
+      unfold take_r.
+      assumption.
   Qed.
 
 End Pre.
