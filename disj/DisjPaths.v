@@ -245,12 +245,39 @@ Section disj.
        *)
   Qed.
 
+  (* misc *)
+
+  Global Instance Path_dec (L : eqType) (e : L -> L -> bool) (x y : L) (π : ne_list L)
+    : dec (Path e x y π).
+  revert y.
+  induction π;intro y;eauto.
+  - decide (a = x);decide (a = y);subst. 1: left;econstructor.
+    all: right;contradict n;inversion n;reflexivity.
+  - destruct (IHπ (ne_front π)).
+    1: decide (a = y).
+    1: subst; destruct (e (ne_front π) y) eqn:E.
+    1: left;econstructor;eauto 1.
+    all: right;intro N;inversion N;clear N.
+    all: match goal with [ Q : Path _ _ _ _ |- _] => eapply path_front in Q as Hfront end.
+    all: cbn in Hfront;subst;try contradiction. congruence.
+  Qed.
+
   Lemma ex_back_edge (p h q : Lab) (i j k : Tag) t
     (Hpath : TPath (root,start_tag) (p,k) t)
     (Hsucc : (h,0 :: i) ≻* (q,j) | t)
     (Hneq : (h,0 :: i) <> (q,j))
     (Hloop : loop_contains h q)
     : exists l, Prefix l j /\ match l with nil => False | n :: l => S n :: l ⊴ i end.
+  Proof.
+    (*
+     * assume there are no *outer* back_edges. <- this could be formulated using APath & loopimplosion
+     * then proof by induction on the the path t' from (q,j) to the predecessor of (h,0::i),
+     * that (take_r |tl j| k) ⊴ (tl j) holds forall (p,k) ∈ t'.
+     * by monotonicity and antisymmetry we have tl j = k forall (p,k) ∈ t', where |k|=|tl j|
+     * thus i = tl j.
+     * then find entry for q using ex_entry. this gives us another (h,0::i) ∈ t, 
+     * contradiction to tpath_NoDup.
+     *) 
   Admitted.
   
   Load X_vars.

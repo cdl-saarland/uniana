@@ -51,6 +51,88 @@ Proof.
   unfold back_edge,back_edge_b. unfold_edge_op. split;auto.
 Qed.
 
+Parameter loop_contains'_dec
+  : forall (L : finType) (e f : L -> L -> bool) (h p : L), dec (loop_contains' e f h p).
+Existing Instance loop_contains'_dec.
+
+Definition deq_loop' :=
+  fun (Lab : finType) (edge : Lab -> Lab -> bool) (a_edge : Lab -> Lab -> bool) (q p : Lab) =>
+    forall h : Lab, loop_contains' edge a_edge h p -> loop_contains' edge a_edge h q.
+
+Instance deq_loop'_dec (Lab : finType) (edge : Lab -> Lab -> bool) (a_edge : Lab -> Lab -> bool) (q p : Lab)
+  : dec (deq_loop' edge a_edge q p).
+unfold deq_loop'. eauto.
+Qed.
+
+Definition exited' :=
+  fun (Lab : finType) (edge : Lab -> Lab -> bool) (a_edge : Lab -> Lab -> bool)
+    (h q : Lab) => exists p : Lab, exit_edge' edge a_edge h p q.
+                                                                   
+Definition implode_nodes' :=
+  fun (Lab : finType) (edge : Lab -> Lab -> bool) (root : Lab) (a_edge : Lab -> Lab -> bool) (r : Lab) =>
+    DecPred (fun p : Lab => deq_loop' edge a_edge r p
+                         \/ (exists e : Lab, exited' edge a_edge p e /\ deq_loop' edge a_edge r e)).
+
+Lemma implode_nodes_path_inv `(C : redCFG) (h : Lab) (Hhe : head_exits_property C h) p q π
+      (Hpath : CPath p q π)
+      (HPp : (implode_nodes h) p)
+      (HPq : (implode_nodes h) q)
+  : exists ϕ, Path (restrict_edge' edge (implode_nodes h)) p q ϕ /\ splinter_strict ϕ π.
+Admitted.
+
+Lemma back_edge_eq_loop `{C : redCFG} (p h : Lab)
+      (Hp : p ↪ h)
+  : eq_loop p h.
+Proof.
+  split.
+  - eapply loop_contains_deq_loop. eapply loop_contains_ledge;eauto.
+  - decide (deq_loop h p);[auto|exfalso]. unfold deq_loop in n. simpl_dec' n.
+    simpl_dec' n. destructH. eapply no_exit_head.
+    + unfold exit_edge. split_conj;eauto 1. eapply back_edge_incl;eauto.
+    + eexists;eauto.
+Qed.
+      
+Lemma back_edge_eq_loop' `{C : redCFG} (p q h : Lab)
+      (Hp : p ↪ h)
+      (Hq : q ↪ h)
+  : eq_loop p q.
+Proof.
+  eapply back_edge_eq_loop in Hp.
+  eapply back_edge_eq_loop in Hq.
+  transitivity h. auto. symmetry. auto.
+Qed.
+
+Lemma back_edge_no_head `{C : redCFG} (p h : Lab)
+      (Hbe : p ↪ h)
+  : ~ loop_head p.
+Proof.
+  intro N.
+  eapply no_self_loops;[eapply back_edge_incl;eauto|].
+  eapply loop_contains_Antisymmetric.
+  - eapply loop_contains_ledge in Hbe as Hledge. eapply back_edge_eq_loop in Hbe as Q.
+    rewrite <-Q. eapply loop_contains_self. auto.
+  - eapply loop_contains_ledge;eauto.
+Qed.
+
+Lemma all_latches_stay_latches `{C : redCFG} (p q h : Lab)
+      (Hbe : p ↪ q)
+      (Hhead : loop_head' (restrict_edge' edge (implode_nodes h))
+                          (restrict_edge' a_edge (implode_nodes h)) q)
+  : back_edge' (restrict_edge' edge (implode_nodes h)) (restrict_edge' a_edge (implode_nodes h)) p q.
+Proof.
+  unfold back_edge'. unfold loop_head' in Hhead. destructH.
+  eapply implode_nodes_back_edge in Hhead as Hbe0.
+  eapply back_edge_eq_loop' in Hbe as Heq;eauto 1.
+  unfold_edge_op. unfold_edge_op' Hhead. destructH.
+  conv_bool. eapply back_edge_incl in Hbe as He.
+  split_conj;eauto 1.
+  - destruct Hhead0;[left;rewrite <-Heq;auto 1|].
+    destructH. unfold exited,exit_edge in H0. destructH. eapply back_edge_no_head in Hbe0.
+    eapply loop_contains_loop_head in H2. contradiction.
+  - left. unfold back_edge,back_edge_b in Hbe. unfold_edge_op' Hbe. destructH;eauto.
+Qed.
+
+
 Instance implode_CFG `(H : redCFG) h7 (Hhe : head_exits_property H h7)
   : @redCFG (finType_sub_decPred (implode_nodes h7))
             (restrict_edge edge (implode_nodes h7))
@@ -68,7 +150,7 @@ Proof.
       as WFind.
     eapply WFind.
     intros ? IHwf ? ? ?. clear WFind.
-    destruct H1.
+    destruct H1. 
     + eexists; econstructor.
     + unfold implode_nodes in H0. cbn in H0.
       decide (implode_nodes h7 b).
@@ -124,18 +206,21 @@ Proof.
               ** contradict n3. eapply H4;eauto.
               ** contradiction.
   - rewrite loop_contains'_basic in H1.
-    unfold loop_contains in H1. rename H1 into Hloop.
-    destructH.
-    exists p0.
-    revert dependent p.
-    induction π;intros;inversion Hloop2;subst.
-    + exists (ne_single a). split_conj;eauto.
-      * unfold_edge_op. split_conj;eauto using back_edge_incl.
-        -- admit. (*left;eapply deq_loop_refl.*)
-        -- left. unfold back_edge,back_edge_b in Hloop0. unfold_edge_op' Hloop0. firstorder.
-      * econstructor.
-    + admit. (* FIXME: give intuition *)
-Admitted.
+fold (loop_head' (restrict_edge' edge (implode_nodes h7)) (restrict_edge' a_edge (implode_nodes h7)) h) in H0.
+unfold loop_contains in H1.
+destructH.
+eapply all_latches_stay_latches in H0;eauto.
+exists p0.
+eapply implode_nodes_path_inv in H1;eauto.
+2: { unfold back_edge' in H0. unfold_edge_op' H0. destructH. auto. }
+destructH. exists ϕ. split_conj;eauto.
+contradict H5. clear - H6 H5.
+eapply splinter_strict_rev in H6.
+destruct (rev ϕ);cbn in *;[contradiction|].
+inversion H6;subst;cbn in *.
+    + eapply splinter_strict_incl;eauto.
+    + eapply splinter_strict_incl;eauto.
+Qed.
 
 Lemma implode_CFG_elem `{C : redCFG} (p h : Lab) (Himpl : implode_nodes h p)
   : finType_sub_decPred (implode_nodes h).

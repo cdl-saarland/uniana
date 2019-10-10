@@ -50,3 +50,11 @@ Proof.
   unfold Disjoint in *.
   firstorder.
 Qed.
+
+Lemma disjoint2 {A : Type} `{EqDec A} (l1 l2 : list A)
+  : Disjoint l1 l2 <-> forall x y, x ∈ l1 -> y ∈ l2 -> x <> y.
+Proof.
+  split;unfold Disjoint;intros.
+  - intro N. subst x. firstorder.
+  - split;intros;intro N;eapply H0;eauto.
+Qed.

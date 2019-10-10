@@ -11,6 +11,11 @@ Section disj.
         (Hdep : depth s = depth q1)
         (Hjeq : j1 = j2)
     : Disjoint (map fst r1) (map fst r2).
+  Proof.
+    unfold Disjoint.
+    (* 
+     * Show 
+     *)
   Admitted.
   
   Lemma lc_neq_disj

@@ -95,10 +95,10 @@ Inductive splinter {A : Type} : list A -> list A -> Prop :=
 | sl_copy l l' a : splinter l (a :: l') -> splinter (a :: l) (a :: l')
 | sl_skip l l' a : splinter l l' -> splinter l (a :: l').
 
-(*Inductive splinter_strict {A : Type} : list A -> list A -> Prop :=
+Inductive splinter_strict {A : Type} : list A -> list A -> Prop :=
 | sls_nil : splinter_strict nil nil
 | sls_sim l l' a : splinter_strict l l' -> splinter_strict (a :: l) (a :: l')
-| sls_skip l l' a : splinter_strict l l' -> splinter_strict l (a :: l').  *)
+| sls_skip l l' a : splinter_strict l l' -> splinter_strict l (a :: l').
 
 (*Notation "l1 ⊴ l2" := (splinter l1 l2) (at level 70).*)
 
@@ -207,7 +207,52 @@ Hint Resolve
      splinter_remove_dup
      splinter_rcons_left
      splinter_rcons_right : splinter.
-     
+Section splinterStrict.
+  Variable (A : Type).
+
+    Lemma splinter_strict_rcons_right (a : A) l l'
+          (Hsp : splinter_strict l l')
+      : splinter_strict l (l' :r: a).
+    Proof.
+      induction Hsp; cbn in *; econstructor;eauto.
+      econstructor.
+    Qed.
+
+    Lemma splinter_strict_rcons (a : A) l l'
+          (Hsp : splinter_strict l l')
+      : splinter_strict (l :r: a) (l' :r: a).
+    Proof.
+      dependent induction Hsp; cbn in *.
+      - econstructor. econstructor.
+      - econstructor. fold (l :r: a). fold (l' :r: a). auto.
+      - econstructor. fold (l' :r: a). auto.
+    Qed.
+
+    Hint Resolve splinter_strict_rcons splinter_strict_rcons_right.
+
+  Lemma splinter_strict_rev (l l' : list A)
+    : splinter_strict l l' <-> splinter_strict (rev l) (rev l').
+  Proof.
+    revert l l'.
+    enough (forall (l l' : list A), splinter_strict l l' -> splinter_strict (rev l) (rev l')).
+    {
+      split;eauto. intros Hrev. rewrite <-rev_involutive. rewrite <- rev_involutive at 1.
+      eapply H; eauto.
+    }
+    intros ? ? Hsp.
+    induction Hsp; cbn in *; eauto;[econstructor| |];
+      fold (rcons (rev l) a); fold  (rcons (rev l') a);eauto.
+  Qed.
+  
+  Lemma splinter_strict_incl (l l' : list A)
+    : splinter_strict l l' -> l ⊆ l'.
+  Proof.
+    intros.
+    induction H;eauto.
+  Qed.
+
+End splinterStrict.
+    
 
 Section splinter.
   Context {A : Type} `{EqDec A eq}.

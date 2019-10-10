@@ -182,8 +182,7 @@ Section disj.
                    eapply deq_loop_head_loop_contains.
                    --- eapply deq_loop_depth_eq.
                        +++ eapply Hdeqq;eauto.
-                       +++ 
-                           eapply tpath_depth_eq;eauto.
+                       +++ eapply tpath_depth_eq;eauto.
                            eapply path_contains_front;eauto.
                    --- exists p';eauto.
              ++ subst. destruct i';cbn in Q;[contradiction|].
