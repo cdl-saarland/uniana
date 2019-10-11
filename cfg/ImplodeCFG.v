@@ -73,12 +73,6 @@ Definition implode_nodes' :=
     DecPred (fun p : Lab => deq_loop' edge a_edge r p
                          \/ (exists e : Lab, exited' edge a_edge p e /\ deq_loop' edge a_edge r e)).
 
-Lemma implode_nodes_path_inv `(C : redCFG) (h : Lab) (Hhe : head_exits_property C h) p q π
-      (Hpath : CPath p q π)
-      (HPp : (implode_nodes h) p)
-      (HPq : (implode_nodes h) q)
-  : exists ϕ, Path (restrict_edge' edge (implode_nodes h)) p q ϕ /\ splinter_strict ϕ π.
-Admitted.
 
 Lemma back_edge_eq_loop `{C : redCFG} (p h : Lab)
       (Hp : p ↪ h)
@@ -132,6 +126,100 @@ Proof.
   - left. unfold back_edge,back_edge_b in Hbe. unfold_edge_op' Hbe. destructH;eauto.
 Qed.
 
+Lemma impl_nimpl_ex_headexit `{H : redCFG} a b c h π
+      (Haimpl : (implode_nodes h) a)
+      (Himpl : (implode_nodes h) c)
+      (Hnimpl : ~ (implode_nodes h) b)
+      (Hpath : CPath a b π)
+      (Hedge : a_edge b c = true)
+  : exists h', exit_edge H h' b c /\ h' ∈ π.
+Proof.
+  unfold implode_nodes in Himpl. cbn in Himpl.
+  unfold implode_nodes in Hnimpl. cbn in Hnimpl. simpl_dec' Hnimpl.
+  destructH.
+  simpl_dec' Hnimpl1. simpl_dec' Hnimpl1.
+  simpl_dec' Hnimpl0. simpl_dec' Hnimpl0.
+  destructH.
+  exists x. unfold exit_edge;split_conj; eauto using a_edge_incl.
+  - destruct Himpl.
+    + contradict Hnimpl3. eauto.
+    + destructH.
+      destruct H1 as [q Hexit].
+      decide (x = c).
+      * exfalso. subst.
+          
+        exfalso. subst. eapply loop_reachs_member in Hnimpl2. destructH.
+        eapply a_edge_acyclic;eauto.
+      * intro N.
+        eapply exit_edge_unique_diff_head in Hexit;auto;cycle 1.
+        -- exact N.
+        -- contradict Hnimpl3. eapply H2;eauto.
+        -- contradiction.
+  - decide (x=a).
+    { subst x. eapply path_contains_back;eauto. }
+    eapply dom_loop_contains;[eauto| |eauto using subgraph_path'].
+    contradict Hnimpl3.
+    destruct Haimpl.
+    + eapply H0;eauto.
+    + clear - H0 Hnimpl3 n. destructH.
+      unfold exited in H1. destructH.
+      eapply H2. eapply exit_edge_in_loop;eauto.
+Qed.
+
+
+Lemma implode_nodes_path_inv `(C : redCFG) (h : Lab) (Hhe : head_exits_property C h) p q π
+      (Hpath : CPath p q π)
+      (HPp : (implode_nodes h) p)
+      (HPq : (implode_nodes h) q)
+  : exists ϕ, Path (restrict_edge' edge (implode_nodes h)) p q ϕ /\ splinter_strict ϕ π.
+Proof.
+  revert dependent q. revert dependent π.
+  specialize (well_founded_ind (R:=(@StrictPrefix' Lab)) (@StrictPrefix_well_founded Lab)
+                               (fun π : ne_list Lab => forall (q : Lab),
+                                    CPath p q π ->
+                                    implode_nodes h q
+                                    -> exists π0,
+                                        Path (restrict_edge' edge (implode_nodes h)) p q π0
+                                        /\ splinter_strict π0 π))
+    as WFind.
+  eapply WFind.
+  intros x IHwf ? Hpath Himpl. clear WFind.
+  destruct Hpath.
+  - eexists;split;econstructor. econstructor.
+  - decide ((implode_nodes h) b).
+    + specialize (IHwf π). exploit IHwf;[econstructor;econstructor|].
+      destructH.
+      eexists;split;[econstructor;eauto 1|cbn;econstructor;auto].
+      unfold_edge_op. split_conj;auto.
+    + eapply edge_destruct in H. destruct H.
+      * eapply impl_nimpl_ex_headexit in n as Hhexit;cycle 3;eauto.
+        destruct Hhexit as [h' [Hhexit Hel]].
+        eapply path_to_elem in Hel;eauto. destructH.
+        specialize (IHwf ϕ).
+        assert (implode_nodes h h') as Himpl'.
+        {
+          destruct Himpl.
+          * right. exists c. split;[exists b|];eauto.
+          * exfalso.
+            destructH. eapply no_exit_head;eauto.
+            unfold exited,exit_edge in H1; destructH. eauto using loop_contains_loop_head.
+        }
+        exploit IHwf.
+        -- eapply prefix_ex_cons in Hel1. destructH. econstructor. cbn. eauto.
+        -- destructH. 
+           exists (c :<: π0). split.
+           ++ econstructor;eauto 1. unfold_edge_op. split_conj;eauto 1.
+              eapply a_edge_incl.
+              eapply head_exits_property_a_edge;eauto.
+              contradict n.
+              eapply loop_contains_deq_loop in n.
+              eapply eq_loop_exiting in Hhexit.
+              unfold implode_nodes. cbn. left. 
+              eapply eq_loop2;eauto.
+           ++ cbn. econstructor.
+              transitivity ϕ;eauto with splinter.
+      * admit.
+Admitted.
 
 Instance implode_CFG `(H : redCFG) h7 (Hhe : head_exits_property H h7)
   : @redCFG (finType_sub_decPred (implode_nodes h7))
@@ -152,72 +240,50 @@ Proof.
     intros ? IHwf ? ? ?. clear WFind.
     destruct H1. 
     + eexists; econstructor.
-    + unfold implode_nodes in H0. cbn in H0.
-      decide (implode_nodes h7 b).
+    + decide (implode_nodes h7 b).
       * specialize (IHwf π). exploit IHwf;[econstructor;econstructor|].
         destructH.
         eexists; econstructor;eauto.
         unfold_edge_op. split_conj;auto.
-      * unfold implode_nodes in n. cbn in n. simpl_dec' n.
-        destructH.
-        simpl_dec' n1. simpl_dec' n1.  
-        enough (exists h, exit_edge _ h b c).
+      * eapply impl_nimpl_ex_headexit in H0 as Hnexit.
+        4: eapply subgraph_path';eauto.
+        2 :{ eapply implode_nodes_root_inv. }
+        2,3: eauto.
+        destruct Hnexit as [h [H3 H4]].
+        eapply path_to_elem in H4;eauto. destructH.
+        specialize (IHwf ϕ). 
+        assert (implode_nodes h7 h) as Himpl.
         {
-          destructH.
-          enough (h ∈ π).
-          {
-            eapply path_to_elem in H4;eauto. destructH.
-            specialize (IHwf ϕ).
-            assert (implode_nodes h7 h) as Himpl.
-            {
-              destruct H0.
-              * right. exists c. split;[exists b|];eauto.
-              * exfalso.
-                destructH. eapply no_exit_head;eauto.
-                unfold exited,exit_edge in H4; destructH. eauto using loop_contains_loop_head.
-            }
-            exploit IHwf.
-            - eapply prefix_ex_cons in H6. destructH. econstructor. cbn. eauto.
-            - destructH. 
-              exists (c :<: π0). econstructor;eauto. unfold_edge_op. split_conj;eauto.
-              eapply head_exits_property_a_edge;eauto.
-              contradict n0.
-              eapply loop_contains_deq_loop in n0.
-              eapply eq_loop_exiting in H3.
-              eapply eq_loop2;eauto.
-          }
-          eapply dom_loop;[unfold exit_edge in H3;destructH;eauto|].
-          eapply subgraph_path';eauto.
+          destruct H0.
+          * right. exists c. split;[exists b|];eauto.
+          * exfalso.
+            destructH. eapply no_exit_head;eauto.
+            unfold exited,exit_edge in H4; destructH. eauto using loop_contains_loop_head.
         }
-        simpl_dec' n0. simpl_dec' n0.
-        destructH.
-        exists x. unfold exit_edge;split_conj;eauto using a_edge_incl.
-        destruct H0.
-        -- contradict n3. eauto.
-        -- destructH.
-           destruct H3 as [q Hexit]. 
-           decide (x = c).
-           ++ exfalso. subst. eapply loop_reachs_member in n2. destructH.
-              eapply a_edge_acyclic;eauto.
-           ++ 
-              intro N.
-              eapply exit_edge_unique_diff_head in Hexit;auto;cycle 1.
-              ** exact N.
-              ** contradict n3. eapply H4;eauto.
-              ** contradiction.
+        exploit IHwf.
+        -- eapply prefix_ex_cons in H6. destructH. econstructor. cbn. eauto.
+        -- destructH. 
+           exists (c :<: π0). econstructor;eauto. unfold_edge_op. split_conj;eauto.
+           eapply head_exits_property_a_edge;eauto.
+           contradict n.
+           eapply loop_contains_deq_loop in n.
+           eapply eq_loop_exiting in H3.
+           unfold implode_nodes. cbn. left. 
+           eapply eq_loop2;eauto.
   - rewrite loop_contains'_basic in H1.
-fold (loop_head' (restrict_edge' edge (implode_nodes h7)) (restrict_edge' a_edge (implode_nodes h7)) h) in H0.
-unfold loop_contains in H1.
-destructH.
-eapply all_latches_stay_latches in H0;eauto.
-exists p0.
-eapply implode_nodes_path_inv in H1;eauto.
-2: { unfold back_edge' in H0. unfold_edge_op' H0. destructH. auto. }
-destructH. exists ϕ. split_conj;eauto.
-contradict H5. clear - H6 H5.
-eapply splinter_strict_rev in H6.
-destruct (rev ϕ);cbn in *;[contradiction|].
-inversion H6;subst;cbn in *.
+    fold (loop_head' (restrict_edge' edge (implode_nodes h7))
+                     (restrict_edge' a_edge (implode_nodes h7)) h) in H0.
+    unfold loop_contains in H1.
+    destructH.
+    eapply all_latches_stay_latches in H0;eauto.
+    exists p0.
+    eapply implode_nodes_path_inv in H1;eauto.
+    2: { unfold back_edge' in H0. unfold_edge_op' H0. destructH. auto. }
+    destructH. exists ϕ. split_conj;eauto.
+    contradict H5. clear - H6 H5.
+    eapply splinter_strict_rev in H6.
+    destruct (rev ϕ);cbn in *;[contradiction|].
+    inversion H6;subst;cbn in *.
     + eapply splinter_strict_incl;eauto.
     + eapply splinter_strict_incl;eauto.
 Qed.

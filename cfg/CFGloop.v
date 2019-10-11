@@ -473,8 +473,7 @@ Section cfg.
         contradict Hnloop. eapply loop_contains_trans;eauto.
   Qed.
   
-  Lemma exit_edge_in_loop (* unused *) (h1 h2 p1 p2 e1 e2 : Lab)
-        (Hexit : exit_edge h1 p1 e1)
+  Lemma exit_edge_in_loop (* unused *) (h1 h2 p2 e2 : Lab)
         (Hexit' : exit_edge h2 p2 e2)
         (Hloop : loop_contains h1 h2)
         (Hneq : h1 <> h2)

@@ -250,8 +250,45 @@ Section splinterStrict.
     intros.
     induction H;eauto.
   Qed.
+  
+  Lemma splinter_strict_refl (l : list A)
+    : splinter_strict l l.
+  Proof.
+    induction l;econstructor;auto.
+  Qed.
+
+  Lemma splinter_strict_prefix (l1 l2 : list A)
+        (Hpre : Prefix l1 l2)
+    : splinter_strict l1 l2.
+  Proof.
+    induction Hpre;[eauto using splinter_strict_refl|econstructor;auto].
+  Qed.
+
+  Lemma splinter_strict_nil (l : list A)
+    : splinter_strict [] l.
+  Proof.
+    induction l;econstructor;eauto.
+  Qed.
+
+  Hint Resolve splinter_strict_nil splinter_strict_prefix splinter_strict_refl.
+
+  Global Instance splinter_strict_trans (A : Type)
+    : Transitive (@splinter_strict A).
+  Proof.
+    unfold Transitive. intros.
+    revert dependent z.
+    induction H;intros;eauto with splinter.
+    - dependent induction H0;subst.
+      + econstructor. eapply IHsplinter_strict;eauto.
+      + econstructor. eapply IHsplinter_strict0;eauto.
+    - dependent induction H0.
+      + econstructor;eauto.
+      + econstructor;eauto.
+  Qed.
 
 End splinterStrict.
+
+Hint Resolve splinter_strict_nil splinter_strict_prefix splinter_strict_refl : splinter.
     
 
 Section splinter.
