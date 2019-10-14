@@ -68,10 +68,10 @@ Definition exited' :=
   fun (Lab : finType) (edge : Lab -> Lab -> bool) (a_edge : Lab -> Lab -> bool)
     (h q : Lab) => exists p : Lab, exit_edge' edge a_edge h p q.
                                                                    
-Definition implode_nodes' :=
+(*Definition implode_nodes' :=
   fun (Lab : finType) (edge : Lab -> Lab -> bool) (root : Lab) (a_edge : Lab -> Lab -> bool) (r : Lab) =>
     DecPred (fun p : Lab => deq_loop' edge a_edge r p
-                         \/ (exists e : Lab, exited' edge a_edge p e /\ deq_loop' edge a_edge r e)).
+                         \/ (exists e : Lab, exited' edge a_edge p e /\ deq_loop' edge a_edge r e)).*)
 
 
 Lemma back_edge_eq_loop `{C : redCFG} (p h : Lab)
@@ -126,6 +126,10 @@ Proof.
   - left. unfold back_edge,back_edge_b in Hbe. unfold_edge_op' Hbe. destructH;eauto.
 Qed.
 
+Global Instance deq_loop_Transitive `(C : redCFG) : Transitive deq_loop.
+eapply deq_loop_PreOrder.
+Qed.
+
 Lemma impl_nimpl_ex_headexit `{H : redCFG} a b c h π
       (Haimpl : (implode_nodes h) a)
       (Himpl : (implode_nodes h) c)
@@ -166,6 +170,33 @@ Proof.
       eapply H2. eapply exit_edge_in_loop;eauto.
 Qed.
 
+Definition implode_nodes' `{C : redCFG} :=
+  fun (r : Lab) =>
+    DecPred (fun p : Lab => deq_loop r p \/ (exists e : Lab, exited p e /\ eq_loop r e)).
+
+Global Instance deq_loop_contains_Proper `(C : redCFG) (h : Lab)
+  : Proper (Basics.flip deq_loop ==> Basics.impl) (loop_contains h).
+Proof.
+  intros x y Hdeq Hloop. unfold Basics.flip in Hdeq. eapply Hdeq. assumption.
+Qed.
+
+Lemma implode_nodes_inner_remove `(C : redCFG) (h p q : Lab)
+      (Himpl : implode_nodes h p)
+      (Hndeq : ~ deq_loop h p)
+      (Hel : loop_contains p q)
+      (Himplq : implode_nodes h q)
+  : p = q.
+Proof.
+  destruct Himpl;[contradiction|]. destructH.
+  unfold exited in H0. destructH.
+  destruct Himplq.
+  - exfalso. eapply Hndeq. 
+  eapply loop_contains_deq_loop in Hel. transitivity q;eauto.
+  - decide (p = q);[auto|exfalso].
+    destructH. unfold exited in H2. destructH.
+    eapply exit_edge_in_loop in n;eauto.
+    apply Hndeq. transitivity e0;eauto. eapply loop_contains_deq_loop;auto.
+Qed.
 
 Lemma implode_nodes_path_inv `(C : redCFG) (h : Lab) (Hhe : head_exits_property C h) p q π
       (Hpath : CPath p q π)
@@ -218,8 +249,30 @@ Proof.
               eapply eq_loop2;eauto.
            ++ cbn. econstructor.
               transitivity ϕ;eauto with splinter.
-      * admit.
-Admitted.
+      * decide (deq_loop h c).
+        { exfalso. apply n. left. eapply back_edge_eq_loop in H. rewrite H. auto. }
+        decide (c = a).
+        { subst. exists (ne_single a). split;cbn;econstructor. eauto with splinter. }
+        assert (~ loop_contains c a).
+        {
+          intro N.
+          eapply implode_nodes_inner_remove in HPp;eauto.
+        }
+        eapply dom_loop_contains in Hpath as Hdom;eauto using loop_contains_ledge.
+        eapply path_to_elem in Hdom;eauto.
+        destructH.
+        specialize (IHwf ϕ).
+        exploit' IHwf.
+        { eapply prefix_ex_cons in Hdom1. destructH. econstructor. cbn.
+          eauto using loop_contains_loop_head. }
+        specialize (IHwf c).
+        exploit IHwf.
+        destructH.
+        exists π0. split.
+        -- eauto.
+        -- cbn. econstructor. eapply splinter_strict_prefix in Hdom1. transitivity ϕ;eauto.
+Qed.
+
 
 Instance implode_CFG `(H : redCFG) h7 (Hhe : head_exits_property H h7)
   : @redCFG (finType_sub_decPred (implode_nodes h7))
