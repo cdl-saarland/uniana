@@ -67,3 +67,10 @@ Ltac split_conj :=
   | [ |- _ <-> _ ] => split; split_conj
   | _ => idtac
   end.
+
+Ltac destr_let :=
+  match goal with
+  | [ |- context[let (_,_) := fst ?a in _]] => destruct a;unfold fst 
+  | [ |- context[let (_,_) := snd ?a in _]] => destruct a;unfold snd
+  | [ |- context[let (_,_) := ?a in _]] => destruct a
+  end.

@@ -1,12 +1,5 @@
 Require Export ImplodeCFG Precedes CFGancestor Tagle.
 
-Ltac destr_let :=
-  match goal with
-  | [ |- context[let (_,_) := fst ?a in _]] => destruct a;unfold fst 
-  | [ |- context[let (_,_) := snd ?a in _]] => destruct a;unfold snd
-  | [ |- context[let (_,_) := ?a in _]] => destruct a
-  end.
-
 Section tagged.
   
   Context `{C : redCFG}.

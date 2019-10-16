@@ -264,8 +264,7 @@ Section disj.
 
   Lemma ex_back_edge (p h q : Lab) (i j k : Tag) t
     (Hpath : TPath (root,start_tag) (p,k) t)
-    (Hsucc : (h,0 :: i) ≻* (q,j) | t)
-    (Hneq : (h,0 :: i) <> (q,j))
+    (Hsucc : splinter_strict [(h,0 :: i); (q,j)] t)
     (Hloop : loop_contains h q)
     : exists l, Prefix l j /\ match l with nil => False | n :: l => S n :: l ⊴ i end.
   Proof.

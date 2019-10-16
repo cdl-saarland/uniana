@@ -27,15 +27,6 @@ Qed.
 
 Definition purify_implode `{redCFG} h :=
   purify (implode_nodes_root_inv h) (D:=decide_pred _).
-  
-Definition impl_list `{redCFG} (h : Lab) :=
-  filter (DecPred (fun q : Lab => (loop_contains h q \/ exited h q)
-                        /\ (deq_loop h q
-                            \/ exists e, exited q e
-                                   /\ deq_loop h e
-                           )
-                  )
-         ).
 
 
 Lemma implode_nodes_back_edge (* unused *)`{redCFG} h p q
@@ -196,6 +187,11 @@ Proof.
     destructH. unfold exited in H2. destructH.
     eapply exit_edge_in_loop in n;eauto.
     apply Hndeq. transitivity e0;eauto. eapply loop_contains_deq_loop;auto.
+Qed.
+
+Lemma implode_nodes_self `(C : redCFG) (h : Lab)
+  : (implode_nodes h) h.
+  left. eapply deq_loop_refl.
 Qed.
 
 Lemma implode_nodes_path_inv `(C : redCFG) (h : Lab) (Hhe : head_exits_property C h) p q π
@@ -360,6 +356,12 @@ Definition local_impl_CFG_type `(C : redCFG) (h : Lab)
   := (finType_sub_decPred (implode_nodes (head_exits_CFG C h) h)).
 Arguments redCFG : default implicits.
 Arguments implode_nodes : default implicits.
+Definition impl_of_original' `(C : redCFG) (h p : Lab) (H : implode_nodes C h p)
+  : local_impl_CFG_type C h.
+Proof.
+  econstructor. eapply purify;eauto.
+  eapply head_exits_implode_nodes_inv1;eauto.
+Defined.
 
 Definition impl_of_original (* unused *)`(C : redCFG) (h : Lab)
   : Lab -> option (local_impl_CFG_type C h).
@@ -370,13 +372,6 @@ Proof.
   - exact None.
 Defined.  
 
-Definition impl_of_original' `(C : redCFG) (h p : Lab) (H : implode_nodes C h p)
-  : local_impl_CFG_type C h.
-Proof.
-  econstructor. eapply purify;eauto.
-  eapply head_exits_implode_nodes_inv1;eauto.
-Defined.
-
 Arguments local_impl_CFG {_ _ _ _} _.
 
 Lemma Lab_dec' `{redCFG} : forall (l l' : Lab), { l = l' } + { l <> l'}.
@@ -384,3 +379,228 @@ Proof.
   apply Lab_dec.
 Qed.
 
+Definition edge' `(C : redCFG) := edge.
+
+Lemma head_exits_CFG_path `(C : redCFG) (h p q : Lab) π
+      (Hpath : CPath p q π)
+  : Path (edge' (head_exits_CFG C h)) p q π.
+Proof.
+  unfold edge'.
+  eapply subgraph_path'.
+  - eapply union_subgraph1.
+  - auto.
+Qed.
+
+Lemma head_exits_CFG_implode_nodes_inv `(C : redCFG) (h p : Lab)
+      (Himpl : implode_nodes C h p)
+  : implode_nodes (head_exits_CFG C h) h p.
+Proof.
+  destruct Himpl;[left|right].
+  - eapply head_exits_deq_loop_inv1. assumption.
+  - destructH. exists e. split.
+    + eapply head_exits_exited_inv1. assumption.
+    + eapply head_exits_deq_loop_inv1. assumption.
+Qed.
+
+
+Fixpoint impl_list' `{C : redCFG} (r : Lab) (l : list Lab)
+  := match l with
+     | nil => nil
+     | q :: l => match decision (deq_loop r q) with
+               | left H => impl_of_original' (h:=r) (p:=q) (or_introl H) :: impl_list' r l
+               | right H => match decision (exists e : Lab, exited q e /\ deq_loop r e) with
+                           | left Q =>
+                             match l with (* only preserve the head if it's the entry *)
+                                      | nil => impl_of_original' (or_intror Q) :: impl_list' r l
+                                      | q' :: l' => if decision (loop_contains q q')
+                                                  then impl_list' r l
+                                                  else impl_of_original' (or_intror Q) :: impl_list' r l
+                             end
+                           | right Q => impl_list' r l
+                           end
+               end
+     end.
+
+Ltac collapse_ioo x y :=
+  replace (impl_of_original' x) with (impl_of_original' y);
+  [|unfold impl_of_original'; f_equal; eapply pure_eq].
+
+Ltac resolve_ioo_eq :=
+  match goal with
+    [ |- impl_of_original' ?H = impl_of_original' ?Q] =>
+    unfold impl_of_original';f_equal;eapply pure_eq
+  end.  
+
+
+Lemma implode_nodes_edge `(C : redCFG) (h p q : Lab)
+      (HPp : implode_nodes C h p)
+      (HPq : implode_nodes C h q)
+      (Hedge : edge p q = true)
+  : edge' (local_impl_CFG C h) (impl_of_original' HPp) (impl_of_original' HPq) = true.
+Proof.
+  unfold edge'.
+Admitted.
+
+Definition impl_list'_cond1 `{C : redCFG} (h p : Lab) (l : list Lab) :=
+  ~ deq_loop h p
+      /\ (match hd_error l with
+         | Some q => loop_contains p q
+         | None => False
+         end
+         \/ ~ exists e, exited p e /\ deq_loop h e).
+
+Definition impl_list'_cond2 `{C : redCFG} (h p : Lab) (l : list Lab) :=
+  deq_loop h p
+      \/ (exists e, exited p e /\ deq_loop h e /\ match hd_error l with
+                                          | Some q => ~ loop_contains p q
+                                          | None => True
+                                          end).
+
+Lemma impl_list'_spec1 `(C : redCFG) (h : Lab) (p : Lab) (l : list Lab)
+  : impl_list' h (p :: l) = impl_list' h l
+    <-> impl_list'_cond1 h p l.
+Admitted.
+
+Lemma impl_list'_spec2 `(C : redCFG) (h p : Lab) (l : list Lab)
+  : exists Hp, impl_list' h (p :: l) = impl_of_original' (p:=p) Hp :: impl_list' h l
+    <-> impl_list'_cond2 h p l.
+Admitted.
+
+Lemma impl_list'_spec_destr `(C : redCFG) (h p : Lab) (l : list Lab)
+  : impl_list'_cond1 h p l \/ impl_list'_cond2 h p l.
+Proof.
+  unfold impl_list'_cond1,impl_list'_cond2.
+  destruct l;cbn.
+Admitted.
+      
+
+(* TODO: write path explicitly *)
+Lemma implode_nodes_path_inv' `(C : redCFG) (h : Lab) (Hhe : head_exits_property C h) p q π
+      (Hpath : CPath p q π)
+      (HPp : (implode_nodes C h) p)
+      (HPq : (implode_nodes C h) q)
+      (q' := impl_of_original' HPq)
+  : exists ϕ, Path (edge' (local_impl_CFG C h)) (impl_of_original' HPp) q' ϕ /\ impl_list' h π = ϕ.
+Proof.
+  revert dependent q. revert dependent π.
+  specialize (well_founded_ind (R:=(@StrictPrefix' Lab)) (@StrictPrefix_well_founded Lab)
+                               (fun π : ne_list Lab => forall (q : Lab),
+                                    CPath p q π ->
+                                    forall HPq : implode_nodes C h q,
+                                      let q' := impl_of_original' HPq in
+                                      exists ϕ, Path (edge' (local_impl_CFG C h))
+                                                (impl_of_original' HPp) q' ϕ
+                                           /\ impl_list' h π = ϕ
+                               ))
+    as WFind.
+  eapply WFind.
+  intros x IHwf ? Hpath Himpl q'. clear WFind.
+  destruct Hpath.
+  - exists (ne_single q'). split.
+    + subst q'. collapse_ioo HPp Himpl. econstructor.
+    + cbn. decide (deq_loop h a);cbn.
+      * f_equal. subst q'. resolve_ioo_eq.
+      * decide (exists e, exited a e /\ deq_loop h e).
+        -- subst q'. f_equal. resolve_ioo_eq.
+        -- exfalso. destruct HPp;contradiction. 
+  - decide ((implode_nodes C h) b).
+    + specialize (IHwf π). exploit IHwf;[econstructor;econstructor|]. unfold q' in IHwf.
+      destructH.
+      eexists;split.
+      econstructor;eauto 1.
+        eapply implode_nodes_edge;eauto.
+      * cbn. decide (deq_loop h c).
+        -- f_equal;[subst q';resolve_ioo_eq|eauto].
+        -- decide (exists e, exited c e /\ deq_loop h e).
+           ++ destruct (ne_to_list π) eqn:E;[congruence'|].
+              decide (loop_contains c e0).
+              ** admit. (* fails *)
+              ** f_equal;[subst q';resolve_ioo_eq|eauto].
+           ++ admit. (* fails *)
+              (*
+      eexists;split;[econstructor;eauto 1|]. cbn;econstructor;auto].
+      unfold_edge_op. split_conj;auto.
+    + eapply edge_destruct in H. destruct H.
+      * eapply impl_nimpl_ex_headexit in n as Hhexit;cycle 3;eauto.
+        destruct Hhexit as [h' [Hhexit Hel]].
+        eapply path_to_elem in Hel;eauto. destructH.
+        specialize (IHwf ϕ).
+        assert (implode_nodes h h') as Himpl'.
+        {
+          destruct Himpl.
+          * right. exists c. split;[exists b|];eauto.
+          * exfalso.
+            destructH. eapply no_exit_head;eauto.
+            unfold exited,exit_edge in H1; destructH. eauto using loop_contains_loop_head.
+        }
+        exploit IHwf.
+        -- eapply prefix_ex_cons in Hel1. destructH. econstructor. cbn. eauto.
+        -- destructH. 
+           exists (c :<: π0). split.
+           ++ econstructor;eauto 1. unfold_edge_op. split_conj;eauto 1.
+              eapply a_edge_incl.
+              eapply head_exits_property_a_edge;eauto.
+              contradict n.
+              eapply loop_contains_deq_loop in n.
+              eapply eq_loop_exiting in Hhexit.
+              unfold implode_nodes. cbn. left. 
+              eapply eq_loop2;eauto.
+           ++ cbn. econstructor.
+              transitivity ϕ;eauto with splinter.
+      * decide (deq_loop h c).
+        { exfalso. apply n. left. eapply back_edge_eq_loop in H. rewrite H. auto. }
+        decide (c = a).
+        { subst. exists (ne_single a). split;cbn;econstructor. eauto with splinter. }
+        assert (~ loop_contains c a).
+        {
+          intro N.
+          eapply implode_nodes_inner_remove in HPp;eauto.
+        }
+        eapply dom_loop_contains in Hpath as Hdom;eauto using loop_contains_ledge.
+        eapply path_to_elem in Hdom;eauto.
+        destructH.
+        specialize (IHwf ϕ).
+        exploit' IHwf.
+        { eapply prefix_ex_cons in Hdom1. destructH. econstructor. cbn.
+          eauto using loop_contains_loop_head. }
+        specialize (IHwf c).
+        exploit IHwf.
+        destructH.
+        exists π0. split.
+        -- eauto.
+        -- cbn. econstructor. eapply splinter_strict_prefix in Hdom1. transitivity ϕ;eauto.
+Qed.
+
+*)
+  
+Lemma local_impl_CFG_path `(C : redCFG) (h p q : Lab) π
+      (Hpath : CPath p q π)
+      (Hp : implode_nodes C h p)
+      (Hq : implode_nodes C h q)
+  : exists ϕ, Path (edge' (local_impl_CFG C h)) (impl_of_original' Hp) (impl_of_original' Hq) ϕ.
+Proof.
+  unfold local_impl_CFG.
+  set (D := head_exits_CFG C h).
+  eapply head_exits_CFG_path in Hpath.
+  eapply head_exits_CFG_implode_nodes_inv in Hp as Hp'.
+  eapply head_exits_CFG_implode_nodes_inv in Hq as Hq'.
+  eapply implode_nodes_path_inv in Hpath;eauto.
+  2: eapply head_exits_property_satisfied.
+  unfold edge'. destructH.
+  eapply restrict_edge_path_equiv in Hpath0.
+  destruct (toSubList ϕ _);[contradiction|].
+  exists (s :< l). eauto.
+Qed.
+
+
+
+(*Inductive implPath `(C : redCFG) (h : Lab) :=
+| iPsingle (p : Lab) (Hp : implode_nodes h p)
+  : implPath (ne_single p) (ne_single (impl_of_original' Hp))
+| iPskip l l' (p : Lab) : CPath root p (p :<: l) -> implPath l l' -> implPath (p :<: l) l'
+| iPsim (p : Lab) : implPath ( *)
+                                                                          
+  
+  
+  
+         

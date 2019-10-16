@@ -108,6 +108,8 @@ Proof.
 Admitted.
  *)
 
+Parameter impl_list : forall `{C : redCFG}, Lab -> list Lab -> list Lab.
+
 Lemma impl_disj_coord_impl_disj_lab `{redCFG} l1 l2 s p i
       (Hpath1 : TPath' ((p,i) :< l1 :>: (s,i)))
       (Hpath2 : TPath' ((p,i) :< l2 :>: (s,i)))

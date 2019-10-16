@@ -12,6 +12,10 @@ Section disj.
         (Hjeq : j1 = j2)
     : Disjoint (map fst r1) (map fst r2).
   Proof.
+    eapply TPath_CPath in Hpath1 as Hpath1'. cbn in Hpath1'.
+    eapply local_impl_CFG_path in Hpath1';eauto.
+    Unshelve. 3: eapply implode_nodes_root_inv. 3: eapply implode_nodes_self.
+    
     unfold Disjoint.
     (* 
      * Show 

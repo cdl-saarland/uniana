@@ -111,7 +111,7 @@ Section disj.
     rewrite Hloop. destruct Hinner';auto.
   Qed.
 
-  Lemma no_head (* unused *): forall h', h' ∈ map fst r1 -> ~ loop_contains h' q1.
+  Lemma no_head : forall h', h' ∈ map fst r1 -> ~ loop_contains h' q1.
   Proof.
     intros h' Hel Hnin.
     eapply in_fst in Hel.
@@ -121,6 +121,7 @@ Section disj.
     eapply Hlc1;eauto.
   Qed.
 
+  (* TODO: move *)
   Lemma only_inner_heads_tag_prefix p i q j l 
         (Hpath : TPath (p, i) (q, j) l)
         (Hnhead : forall (h' : Lab) (k' : Tag), (h',k') ∈ tl (rev l) -> loop_contains h' q -> False)
@@ -242,15 +243,16 @@ Section disj.
       eapply lc_succ_rt2;eauto. eapply tpath_NoDup;eauto.
     } 
     eapply ex_back_edge in Hpath2 as Hbacke;cycle 1.
-    2: destruct Hinner';eauto.
-    - eapply lc_succ_rt1.
-      + eapply last_common'_sym. eauto.
-      + eauto. 
-    - destruct r2;[contradiction|].
-      intros N. setoid_rewrite <-N in Hlc. 
-      unfold last_common' in Hlc.
-      destructH.
-      contradiction.
+    1: destruct Hinner';eauto.
+    - eapply splinter_neq_strict.
+      + eapply lc_succ_rt1.
+        * eapply last_common'_sym. eauto.
+        * eauto.
+      + destruct r2;[contradiction|].
+        intros N. setoid_rewrite <-N in Hlc. 
+        unfold last_common' in Hlc.
+        destructH.
+        contradiction.
     - destruct Hinner'.
       eapply s_deq_q;cycle 2;eauto.
     - destructH.

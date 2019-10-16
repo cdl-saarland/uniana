@@ -329,9 +329,10 @@ Section splinter.
         (Hsp : splinter (a :: l) l')
     : a ∈ l'.
   Proof.
+    clear H equiv0.
     dependent induction Hsp;[firstorder|].
-    do 2 exploit' IHHsp. 
-    specialize (IHHsp a l eq_refl).
+    (*do 2 exploit' IHHsp. *)
+    specialize (IHHsp a l x).
     firstorder.
   Qed.
 
@@ -339,9 +340,10 @@ Section splinter.
         (Hsp : splinter (a :: l) l')
     : splinter l l'.
   Proof.
-    dependent induction Hsp; do 2 exploit' IHHsp.
-    - eauto.
-    - specialize (IHHsp a l eq_refl). econstructor;eauto.
+    clear H equiv0.
+    dependent induction Hsp.
+    - subst. eauto.
+    - specialize (IHHsp a l x). econstructor;eauto.
   Qed.
 
   Lemma splinter_incl (l l' : list A)
@@ -448,6 +450,28 @@ End splinter.
 
 Hint Constructors splinter : splinter.
 Hint Resolve splinter_nil splinter_in splinter_incl : splinter.
+
+
+Lemma splinter_strict_single (A : Type) (l : list A) (a : A)
+  : splinter_strict [a] l <-> a ∈ l.
+Proof.
+  clear.
+  split;intros.
+  - dependent induction H;cbn;auto.
+  - dependent induction l;cbn in *;[contradiction|].
+    destruct H;[subst;econstructor;eauto with splinter|econstructor;eauto].
+Qed.
+Lemma splinter_neq_strict (A : Type) (l : list A) (a b : A)
+      (Hsp : splinter [a;b] l)
+      (Hneqq : a <> b)
+  : splinter_strict [a;b] l.
+Proof.
+  clear - Hsp Hneqq. 
+  dependent induction Hsp;subst;eauto with splinter.
+  - econstructor. inversion Hsp; subst;[contradiction|]. eapply splinter_in in H1.
+    eapply splinter_strict_single;auto.
+  - econstructor. eapply IHHsp;eauto.
+Qed.
 
 
 Ltac splice_splinter :=
