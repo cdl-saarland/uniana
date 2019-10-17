@@ -451,28 +451,55 @@ Definition impl_list'_cond1 `{C : redCFG} (h p : Lab) (l : list Lab) :=
 
 Definition impl_list'_cond2 `{C : redCFG} (h p : Lab) (l : list Lab) :=
   deq_loop h p
-      \/ (exists e, exited p e /\ deq_loop h e /\ match hd_error l with
-                                          | Some q => ~ loop_contains p q
-                                          | None => True
-                                          end).
+  \/ ((exists e, exited p e /\ deq_loop h e) /\ match hd_error l with
+                                        | Some q => ~ loop_contains p q
+                                        | None => True
+                                        end).
 
 Lemma impl_list'_spec1 `(C : redCFG) (h : Lab) (p : Lab) (l : list Lab)
-  : impl_list' h (p :: l) = impl_list' h l
-    <-> impl_list'_cond1 h p l.
+  : impl_list'_cond1 h p l -> impl_list' h (p :: l) = impl_list' h l.
 Admitted.
 
 Lemma impl_list'_spec2 `(C : redCFG) (h p : Lab) (l : list Lab)
-  : exists Hp, impl_list' h (p :: l) = impl_of_original' (p:=p) Hp :: impl_list' h l
-    <-> impl_list'_cond2 h p l.
-Admitted.
+      (Hp : implode_nodes C h p)
+  : impl_list'_cond2 h p l
+    -> impl_list' h (p :: l) = impl_of_original' (p:=p) Hp :: impl_list' h l.
+Proof.
+  intro Q.
+  cbn. unfold impl_list'_cond2 in Q.
+  decide (deq_loop h p). 1: f_equal;resolve_ioo_eq.
+  destruct Q;[contradiction|]. destruct H. 
+  decide (exists e, exited p e /\ deq_loop h e);[|contradiction].
+  destruct l;cbn in H0;[f_equal;resolve_ioo_eq|].
+  decide (loop_contains p e0);[contradiction|].
+  f_equal;resolve_ioo_eq.
+Qed.
 
 Lemma impl_list'_spec_destr `(C : redCFG) (h p : Lab) (l : list Lab)
   : impl_list'_cond1 h p l \/ impl_list'_cond2 h p l.
 Proof.
   unfold impl_list'_cond1,impl_list'_cond2.
-  destruct l;cbn.
+  destruct l;cbn. all: decide (deq_loop h p);[right;firstorder|].
+  - decide (exists e, exited p e /\ deq_loop h e);[|left;split;auto].
+    right;right. auto. 
+  - decide (exists e, exited p e /\ deq_loop h e);[|left;split;auto;right;auto].
+    decide (loop_contains p e);
+      [left;split;auto;left;auto|right;right;auto].
+Qed.      
+
+Require Import MaxPreSuffix.
+
+Lemma impl_list'_app `(C : redCFG) (l l' : list Lab) (h : Lab)
+  : impl_list' h (l ++ l') = impl_list' h l ++ impl_list' h l'.
+Proof.
+  induction l;[cbn|];eauto. unfold app at 1. fold (l ++ l').
+  cbn. decide (deq_loop h a).
+  - rewrite IHl. reflexivity.
+  - decide (exists e, exited a e /\ deq_loop h e);[|eapply IHl].
+    (* This does not hold in general! only in som secure path context *)
 Admitted.
-      
+  
+  
 
 (* TODO: write path explicitly *)
 Lemma implode_nodes_path_inv' `(C : redCFG) (h : Lab) (Hhe : head_exits_property C h) p q π
@@ -506,46 +533,65 @@ Proof.
   - decide ((implode_nodes C h) b).
     + specialize (IHwf π). exploit IHwf;[econstructor;econstructor|]. unfold q' in IHwf.
       destructH.
+(*      specialize (impl_list'_spec_destr C h c π) as Hdestr.
+      destruct Hdestr.*)
+      assert (impl_list'_cond2 h c π).
+      { unfold impl_list'_cond2. decide (deq_loop h c);[left;auto|].
+        destruct Himpl;[contradiction|right;split;auto].
+        destruct (ne_to_list π) eqn:E;[congruence'|].
+        replace e0 with b in *.
+        2: eapply path_front in Hpath;rewrite nlcons_to_list in E;
+          subst;simpl_nl' E;rewrite E;simpl_nl;auto.
+        intro N. eapply implode_nodes_inner_remove in N. 2:right;eapply e. 3: eapply p. 2:auto.
+        subst. eapply no_self_loops;eauto.
+      }
+      copy H0 H0'.
+      eapply impl_list'_spec2 in H0.
       eexists;split.
       econstructor;eauto 1.
-        eapply implode_nodes_edge;eauto.
-      * cbn. decide (deq_loop h c).
-        -- f_equal;[subst q';resolve_ioo_eq|eauto].
-        -- decide (exists e, exited c e /\ deq_loop h e).
-           ++ destruct (ne_to_list π) eqn:E;[congruence'|].
-              decide (loop_contains c e0).
-              ** admit. (* fails *)
-              ** f_equal;[subst q';resolve_ioo_eq|eauto].
-           ++ admit. (* fails *)
-              (*
-      eexists;split;[econstructor;eauto 1|]. cbn;econstructor;auto].
-      unfold_edge_op. split_conj;auto.
+      1: eapply implode_nodes_edge;eauto.
+      unfold ne_to_list at 1. fold (ne_to_list π).
+      rewrite H0. cbn. subst q'. rewrite IHwf1. reflexivity.
     + eapply edge_destruct in H. destruct H.
       * eapply impl_nimpl_ex_headexit in n as Hhexit;cycle 3;eauto.
         destruct Hhexit as [h' [Hhexit Hel]].
-        eapply path_to_elem in Hel;eauto. destructH.
-        specialize (IHwf ϕ).
-        assert (implode_nodes h h') as Himpl'.
+
+        assert (exists π0, CPath a h' π0 /\ (while' (DecPred (fun p => not (implode_nodes C h p))) π) ++ π0 = π).
+        1: admit.
+        destructH.
+        assert (implode_nodes C h h') as Himpl'.
         {
           destruct Himpl.
           * right. exists c. split;[exists b|];eauto.
           * exfalso.
             destructH. eapply no_exit_head;eauto.
-            unfold exited,exit_edge in H1; destructH. eauto using loop_contains_loop_head.
+            unfold exited,exit_edge in e1; destructH. eauto using loop_contains_loop_head.
         }
+        specialize (IHwf π0).
         exploit IHwf.
-        -- eapply prefix_ex_cons in Hel1. destructH. econstructor. cbn. eauto.
-        -- destructH. 
-           exists (c :<: π0). split.
-           ++ econstructor;eauto 1. unfold_edge_op. split_conj;eauto 1.
-              eapply a_edge_incl.
+        -- assert (Prefix π0 π). 1: { eapply prefix_eq. eexists. rewrite <-H2. reflexivity. }
+           eapply prefix_ex_cons in H0. destructH. econstructor. cbn. eauto. 
+        -- unfold q' in IHwf. destructH. 
+           exists (q' :<: ϕ). split.
+           ++ econstructor;eauto 1. unfold edge'.
+              rewrite restrict_edge_intersection. cbn.
+              unfold_edge_op. split_conj;eauto 1.
+              2,3: eapply head_exits_implode_nodes_inv1;eauto. 
+              left. eapply a_edge_incl.
               eapply head_exits_property_a_edge;eauto.
               contradict n.
               eapply loop_contains_deq_loop in n.
               eapply eq_loop_exiting in Hhexit.
               unfold implode_nodes. cbn. left. 
               eapply eq_loop2;eauto.
-           ++ cbn. econstructor.
+           ++ unfold ne_to_list. fold (ne_to_list π). fold (ne_to_list ϕ).
+              subst q'.
+              rewrite <-IHwf1.
+              rewrite <-H2.
+              rewrite app_comm_cons.
+              rewrite impl_list'_app.
+              admit. (*
+              rewrite impl_list'_spec2.
               transitivity ϕ;eauto with splinter.
       * decide (deq_loop h c).
         { exfalso. apply n. left. eapply back_edge_eq_loop in H. rewrite H. auto. }
@@ -568,10 +614,10 @@ Proof.
         destructH.
         exists π0. split.
         -- eauto.
-        -- cbn. econstructor. eapply splinter_strict_prefix in Hdom1. transitivity ϕ;eauto.
-Qed.
+        -- cbn. econstructor. eapply splinter_strict_prefix in Hdom1. transitivity ϕ;eauto. 
 
-*)
+                      *)
+Admitted.
   
 Lemma local_impl_CFG_path `(C : redCFG) (h p q : Lab) π
       (Hpath : CPath p q π)
