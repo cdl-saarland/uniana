@@ -439,7 +439,12 @@ Lemma implode_nodes_edge `(C : redCFG) (h p q : Lab)
   : edge' (local_impl_CFG C h) (impl_of_original' HPp) (impl_of_original' HPq) = true.
 Proof.
   unfold edge'.
-Admitted.
+  rewrite restrict_edge_intersection. unfold_edge_op. cbn.
+  eapply head_exits_CFG_implode_nodes_inv in HPp.
+  eapply head_exits_CFG_implode_nodes_inv in HPq.
+  unfold implode_nodes in *. cbn in *.
+  firstorder.
+Qed.
 
 Definition impl_list'_cond1 `{C : redCFG} (h p : Lab) (l : list Lab) :=
   ~ deq_loop h p
@@ -458,7 +463,16 @@ Definition impl_list'_cond2 `{C : redCFG} (h p : Lab) (l : list Lab) :=
 
 Lemma impl_list'_spec1 `(C : redCFG) (h : Lab) (p : Lab) (l : list Lab)
   : impl_list'_cond1 h p l -> impl_list' h (p :: l) = impl_list' h l.
-Admitted.
+Proof.
+  intro Q.
+  cbn. unfold impl_list'_cond1 in Q.
+  decide (deq_loop h p);destruct Q. 1:contradiction.
+  decide (exists e, exited p e /\ deq_loop h e);destruct H0;try contradiction.
+  - destruct l;cbn in H0;[contradiction|].
+    decide (loop_contains p e0);auto. contradiction.
+  - destruct l;cbn in H0;[contradiction|auto].
+  - auto.
+Qed.
 
 Lemma impl_list'_spec2 `(C : redCFG) (h p : Lab) (l : list Lab)
       (Hp : implode_nodes C h p)
@@ -502,7 +516,37 @@ Proof.
   split;auto.
 Qed.
 
-(* TODO: write path explicitly *)
+Lemma path_postfix_nincl_in_loop' `(C : redCFG) a b h π x
+      (Hpath : CPath a b π)
+      (Hnincl : h ∉ π)
+      (Hloop : loop_contains h b)
+      (Hel : x ∈ π)
+  : loop_contains h x.
+Proof.
+  decide (loop_contains h x);[auto|exfalso].
+  eapply dom_loop_contains in Hloop. 2:eauto.
+  eapply path_from_elem in Hel;eauto.
+  destructH.
+  eapply Hloop in Hel0. eapply postfix_incl in Hel1.
+  eapply Hnincl. eapply Hel1. auto.
+Qed.
+
+Lemma path_postfix_nincl_in_loop `(C : redCFG) a b h π x
+      (Hpath : CPath a b π)
+      (Hloop : loop_contains h b)
+      (Hpfn : x ∈ postfix_nincl h π)
+  : loop_contains h x.
+Proof.
+  specialize (postfix_nincl_postfix h π) as Hpost.
+  specialize (@postfix_nincl_nincl _ _ _ h π) as Hnincl.
+  set (π' := postfix_nincl h π) in *.
+  destruct π';[contradiction|].
+  rewrite nlcons_to_list in Hpfn. rewrite nlcons_to_list in Hnincl.
+  eapply path_postfix_nincl_in_loop'.
+  2-4:eauto.
+  eapply path_postfix_path in Hpath;eauto. simpl_nl. eauto.
+Qed.
+
 Lemma implode_nodes_path_inv' `(C : redCFG) (h : Lab) (Hhe : head_exits_property C h) p q π
       (Hpath : CPath p q π)
       (HPp : (implode_nodes C h) p)
@@ -594,36 +638,75 @@ Proof.
            rewrite <-IHwf1.
            rewrite Hπ.
            simpl_nl. rewrite <-app_cons_assoc.
-           erewrite impl_list'_spec2;eauto. 2: admit.
-           rewrite impl_list'_remove. 2: admit.
+           erewrite impl_list'_spec2;eauto.
+           2: {
+             unfold impl_list'_cond2.
+             destruct Himpl;[left;auto|].
+             exfalso. eapply no_exit_head;eauto.
+             destructH. unfold exited,exit_edge in e1. destructH. eapply loop_contains_loop_head;eauto.
+           } 
+           rewrite impl_list'_remove.
+           2: {
+             intros. intro N. eapply implode_nodes_inner_remove in N as Hinir;cycle 1.
+             - exact Himpl'.
+             - contradict n. eapply deq_loop_exiting in Hhexit. left. transitivity h';eauto.
+             - eapply path_postfix_nincl_in_loop;cycle 1.
+               + unfold exit_edge in Hhexit. destructH. eapply Hhexit0.
+               + eauto.
+               + eauto. 
+             - subst h'. eapply postfix_nincl_nincl;eauto.
+           } 
            reflexivity.
       * decide (deq_loop h c).
         { exfalso. apply n. left. eapply back_edge_eq_loop in H. rewrite H. auto. }
-
-
-        decide (c ∈ π) as [Hel|Hnin].
-        -- eapply path_from_elem' in Hel;eauto. destructH.
-           eapply postfix_eq in Hel1. destruct Hel1 as [π0 Hπ].
-           specialize (IHwf (c :< π0)).
-           assert (Prefix (c :< π0) π) as Hpre.
-           { eapply prefix_eq. eexists. rewrite Hπ. simpl_nl. rewrite <-app_cons_assoc;reflexivity. }
-           exploit' IHwf.
-           { eapply prefix_ex_cons in Hpre. destructH. econstructor;cbn;eauto. }
-           specialize (IHwf c).
-           exploit' IHwf.
-           { eapply path_prefix_path in Hpre;eauto. simpl_nl' Hpre. eauto. }
-           exploit' IHwf. unfold q' in IHwf. destructH.
-           exists ϕ;split;eauto.
-           unfold ne_to_list at 1. fold (ne_to_list π). rewrite Hπ.
-           rewrite <-IHwf1.
-           simpl_nl. rewrite <-app_cons_assoc. 
-           (* rewrite impl_list'_remove.  <-- this doesn't work here *)
-           erewrite impl_list'_spec1;eauto. 2: admit.
-           rewrite impl_list'_remove. 2: admit.
-           reflexivity.
-        -- exfalso.
-           (* Show a ∉ c, but then by dom_loop_contains c ∈ π --> contradiction *)
-Admitted.
+        assert (c ∈ π) as Hel.
+        {
+          decide (a = c).
+          { subst a. eapply path_contains_back;eauto. }
+          assert (~ loop_contains c a).
+          {
+            intro N. clear IHwf.
+            eapply implode_nodes_inner_remove in HPp;eauto.
+          }
+          eapply dom_loop_contains;eauto.
+          eapply loop_contains_ledge;eauto.
+        }
+        eapply path_from_elem' in Hel;eauto. destructH.
+        eapply postfix_eq in Hel1. destruct Hel1 as [π0 Hπ].
+        specialize (IHwf (c :< π0)).
+        assert (Prefix (c :< π0) π) as Hpre.
+        { eapply prefix_eq. eexists. rewrite Hπ. simpl_nl. rewrite <-app_cons_assoc;reflexivity. }
+        exploit' IHwf.
+        { eapply prefix_ex_cons in Hpre. destructH. econstructor;cbn;eauto. }
+        specialize (IHwf c).
+        exploit' IHwf.
+        { eapply path_prefix_path in Hpre;eauto. simpl_nl' Hpre. eauto. }
+        exploit' IHwf. unfold q' in IHwf. destructH.
+        exists ϕ;split;eauto.
+        unfold ne_to_list at 1. fold (ne_to_list π). rewrite Hπ.
+        rewrite <-IHwf1.
+        simpl_nl. rewrite <-app_cons_assoc.
+        assert (forall y, y ∈ postfix_nincl c π -> loop_contains c y) as Hy.
+        {
+          intros. eapply path_postfix_nincl_in_loop;cycle 1.
+          - eapply loop_contains_ledge;eauto.
+          - eauto.
+          - eauto.
+        } 
+        erewrite impl_list'_spec1;eauto.
+        2: {
+          unfold impl_list'_cond1. split;[auto|].
+          left. destruct (postfix_nincl c π) eqn:E;cbn.
+          - eapply loop_contains_self. eexists;eauto.
+          - eapply Hy. rewrite E. left;auto.
+        } 
+        rewrite impl_list'_remove;auto.
+        intros. intro N. eapply implode_nodes_inner_remove in N;cycle 1.
+        ++ apply Himpl.
+        ++ auto.
+        ++ auto.
+        ++ subst. eapply postfix_nincl_nincl. eauto.
+Qed.
   
 Lemma local_impl_CFG_path `(C : redCFG) (h p q : Lab) π
       (Hpath : CPath p q π)
