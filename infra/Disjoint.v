@@ -57,3 +57,12 @@ Proof.
   - split;auto using Disjoint_sym.
   - destructH. auto.
 Qed.
+
+Lemma Disjoint_map_inj (A B : Type) (f : A -> B) (Hinj : injective f) (l l' : list A)
+  : Disjoint (map f l) (map f l') -> Disjoint l l'.
+Proof.
+  intros.
+  unfold Disjoint in *.
+  intros a Hel Hel'. eapply H;eauto.
+  1,2: eapply in_map;eauto.
+Qed.

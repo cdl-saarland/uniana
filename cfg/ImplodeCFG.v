@@ -727,15 +727,46 @@ Proof.
   exists (s :< l). eauto.
 Qed.
 
+Require Import Disjoint.
 
+Lemma impl_list'2_implode_nodes `(C : redCFG) h p π
+      (H : impl_list'_cond2 h p π)
+  : implode_nodes C h p.
+Proof.
+  unfold impl_list'_cond2 in H. destruct H;[left;auto|]. destruct H. right;auto.
+Qed.
+  
+Lemma impl_list_incl `(C : redCFG) h π
+  : map (@proj1_sig _ _) (impl_list' h π) ⊆ π.
+Proof.
+  intros x Hx. eapply in_map_iff in Hx. destructH. rewrite <-Hx0. clear Hx0.
+  revert dependent x0.
+  induction π;intros.
+  - cbn in Hx1. contradiction.
+  - specialize (impl_list'_spec_destr _ h a π) as Hspec.
+    destruct Hspec.
+    + rewrite impl_list'_spec1 in Hx1;eauto.
+    + destruct x0. push_purify p.
+      erewrite impl_list'_spec2 in Hx1;eauto.
+      destruct Hx1;eauto. rewrite <-H1. left. cbn. reflexivity.
+      Unshelve.
+      eapply impl_list'2_implode_nodes;eauto.
+Qed.
 
-(*Inductive implPath `(C : redCFG) (h : Lab) :=
-| iPsingle (p : Lab) (Hp : implode_nodes h p)
-  : implPath (ne_single p) (ne_single (impl_of_original' Hp))
-| iPskip l l' (p : Lab) : CPath root p (p :<: l) -> implPath l l' -> implPath (p :<: l) l'
-| iPsim (p : Lab) : implPath ( *)
-                                                                          
-  
-  
-  
-         
+Lemma impl_list_disj1 `(C : redCFG) h π ϕ
+  : Disjoint π ϕ -> Disjoint (impl_list' h π) (impl_list' h ϕ).
+Proof.
+  intros.
+  eapply disjoint_subset in H. 2,3: eapply impl_list_incl.
+  eapply Disjoint_map_inj in H;eauto. 1: eapply H.
+  unfold injective. intros. rewrite subtype_extensionality in H0. auto.
+Qed.
+
+Lemma impl_list_disjoint `(C : redCFG) h π ϕ s p q
+      (Hπ : CPath s p (π >: s))
+      (Hϕ : CPath s q (ϕ >: s))
+      (Hdeq : deq_loop h s)
+  : Disjoint π ϕ <-> Disjoint (impl_list' h π) (impl_list' h ϕ).
+Proof.
+  split;intros;[eapply impl_list_disj1;eauto|].
+Admitted.

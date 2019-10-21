@@ -199,17 +199,40 @@ Section Rcons.
       eapply rcons_length; eauto.
   Qed.
 
-  Lemma map_rcons (f : A -> B) :
-    forall a l, map f (l :r: a) = map f l :r: f a.
-  Proof.
-    intros. induction l;cbn;eauto. unfold rcons in IHl. rewrite IHl. reflexivity.
-  Qed.
-
   Lemma incl_cons_hd (* unused *) (a : A) l l'
         (Hincl : (a :: l) ⊆ l')
     : a ∈ l'.
   Proof.
     induction l;cbn in *;unfold incl in Hincl;eauto;firstorder.
+  Qed.
+
+  (** * map facts **)
+  
+  Lemma map_rcons (f : A -> B) :
+    forall a l, map f (l :r: a) = map f l :r: f a.
+  Proof.
+    intros. induction l;cbn;eauto. unfold rcons in IHl. rewrite IHl. reflexivity.
+  Qed.
+  
+  Lemma map_inj_in (f : A -> B) (Hinj : injective f) (l : list A) (a : A)
+    : (f a) ∈ map f l -> a ∈ l.
+  Proof.
+    induction l;intros;cbn in *.
+    - contradiction.
+    - destruct H.
+      + eapply Hinj in H. subst. left;auto.
+      + right;eauto.
+  Qed.
+
+  Lemma map_inj_incl (f : A -> B) (Hinj : injective f) (l l' : list A)
+    : map f l ⊆ map f l' -> l ⊆ l'.
+  Proof.
+    revert l'.
+    induction l;intros;cbn in *.
+    - eauto.
+    - intros b Hb. destruct Hb.
+      + subst. eapply map_inj_in;eauto.
+      + eapply IHl;eauto. intros c Hc. eapply H. right. auto.
   Qed.
 
 End Rcons.
