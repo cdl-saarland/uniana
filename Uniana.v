@@ -184,7 +184,7 @@ Section uniana.
     : False.
   Proof.
     enough (ne_back l1' = ne_back l2').
-    - eapply Hdisj.
+    - eapply disjoint1 in Hdisj. eapply Hdisj.
       + eapply in_ne_back.
       + rewrite <-H; eapply in_ne_back.
     - destruct (ne_back l1') as [q1 j1] eqn:Heq1.
@@ -319,7 +319,8 @@ Section uniana.
       exists a0, a. split_conj.
       + lc_ex_succ_pre_post.
       + lc_ex_succ_pre_post.
-      + intro Heq; subst. unfold Disjoint in Hlc1. destruct Hlc1. clear - H0.
+      + intro Heq; subst. eapply disjoint1 in Hlc1.
+        unfold Disjoint in Hlc1. destruct Hlc1. clear - H0.
         eapply H0; eapply In_rcons; left; eauto.
   Qed.
   

@@ -1,23 +1,18 @@
 Require Export ListExtra.
 
 Definition Disjoint {A : Type} (l l' : list A) : Prop :=
-  (forall a, In a l -> ~ In a l')
-  /\ (forall a, In a l' -> ~ In a l).
+  (forall a, a ∈ l -> a ∉ l').
 
 Lemma disjoint_cons1 {A : Type} (a : A) l l' :
   Disjoint (a :: l) l' <-> ~ In a l' /\ Disjoint l l'.
 Proof.
   split; revert l.
   - induction l'; intros l; firstorder.
-  - intros l [nin disj]. split.
+  - intros l [nin disj]. 
     + intros b in' N.
       destruct in'.
       * destruct H. contradiction.
-      * destruct disj as [disj _]. specialize (disj _ H). contradiction.
-    + intros b in' N.
-      destruct N.
-      * destruct H. contradiction.
-      * destruct disj as [disj _]. specialize (disj _ H). contradiction.
+      * specialize (disj _ H). contradiction.
 Qed.
 
 Lemma disjoint_cons2 {A : Type} (a : A) l l' :
@@ -25,22 +20,18 @@ Lemma disjoint_cons2 {A : Type} (a : A) l l' :
 Proof.
   split; revert l.
   - induction l'; intros l; firstorder.
-  - intros l [nin disj]. split.
+  - intros l [nin disj]. 
     + intros b in' N.
       destruct N.
       * destruct H. contradiction.
-      * destruct disj as [_ disj]. specialize (disj _ H). contradiction.
-    + intros b in' N.
-      destruct in'.
-      * destruct H. contradiction.
-      * destruct disj as [_ disj]. specialize (disj _ H). contradiction.
+      * unfold Disjoint in disj. specialize (disj _ in'). contradiction.
 Qed.
 
 Lemma disjoint_subset (A : Type) (l1 l1' l2 l2' : list A)
   : l1 ⊆ l1' -> l2 ⊆ l2' -> Disjoint l1' l2' -> Disjoint l1 l2.
 Proof.
   intros Hsub1 Hsub2 Hdisj.
-  unfold Disjoint in *. destructH. split;firstorder.
+  unfold Disjoint in *. firstorder.
 Qed.
 
 Lemma Disjoint_sym {A : Type} (l l' : list A)
@@ -56,5 +47,13 @@ Lemma disjoint2 {A : Type} `{EqDec A} (l1 l2 : list A)
 Proof.
   split;unfold Disjoint;intros.
   - intro N. subst x. firstorder.
-  - split;intros;intro N;eapply H0;eauto.
+  - intros;intro N;eapply H0;eauto.
+Qed.
+
+Lemma disjoint1 (A : Type) (l1 l2 : list A)
+  : Disjoint l1 l2 <-> Disjoint l1 l2 /\ Disjoint l2 l1.
+Proof.
+  split;intros;auto.
+  - split;auto using Disjoint_sym.
+  - destructH. auto.
 Qed.

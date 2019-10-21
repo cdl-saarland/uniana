@@ -160,10 +160,12 @@ Section Lc.
                      - cbn. apply postfix_cons. eapply postfix_step_left; eauto.
                    }
                    apply postfix_incl in H1. apply id in disj2 as disj2'.
-                   destruct disj2' as [disj2' _].
+                   unfold Disjoint in disj2'.
                    unfold incl in H1. intro In12. apply H1 in In12. cbn in In12.
                    destruct In12 as [In12|In12]; [subst a; apply c1; reflexivity|].
-                   destruct disj2 as [_ disj2]. specialize (disj2 _ In12).
+                   clear disj2.
+                   assert (a ∉ l21) as disj2.
+                   { intro N. eapply disj2'. eauto. eapply In12. }
                    apply disj2. apply postfix_elem in post21; eauto.
                    --- eapply In_rcons in post21.
                        destruct post21; [subst a; exfalso; apply c0; reflexivity|assumption].
@@ -201,7 +203,9 @@ Section Lc.
                   split_conj.
                   - prove_last_common.
                   - prove_last_common.
-                  - eapply disjoint_cons1. split; eauto. destruct (disj2) as [disj2' _].
+                  - eapply disjoint_cons1. split; eauto.
+                    eapply disjoint1 in disj2.
+                    destruct (disj2) as [disj2' _].
                     cbn in disj2'. specialize (disj2' _ (or_introl eq_refl)).
                     contradict disj2'. cbn in disj2'.
                     destruct disj2'; [subst a0; exfalso; apply c1; reflexivity|eauto].

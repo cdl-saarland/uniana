@@ -795,7 +795,7 @@ Proof.
         destruct l2';cbn.
         + contradict Hnin1. rewrite <-Hnin1. unfold map at 2. fold (map fst l1').
           rewrite nlcons_to_list. eapply in_ne_back.
-        + cbn in Hlc2. intro N.
+        + cbn in Hlc2. intro N. eapply disjoint1 in Hlc2.
           eapply Hlc2. 1,2:rewrite nlcons_to_list. eapply in_ne_back. rewrite <-N. eapply in_ne_back.
       - admit. (* analogous *)
         Unshelve. all: eauto;clear.
