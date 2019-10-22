@@ -417,7 +417,22 @@ Section Pre.
     clear. intros. inversion H;subst;cbn.
     - econstructor.
     - eapply prefix_cons;eauto.
-  Qed.  
+  Qed.
+  
+  Lemma prefix_rcons (l l' : list A) (a : A)
+        (Hpref : Prefix l l')
+    : Prefix (l :r: a) (l' :r: a).
+  Proof.
+    clear - Hpref.
+    revert dependent l.
+    induction l';intros l Hpref;cbn.
+    - destruct l;cbn.
+      + econstructor.
+      + inversion Hpref.
+    - inversion Hpref;subst.
+      + cbn. econstructor.
+      + econstructor. eapply IHl';eauto.
+  Qed.
 
   Lemma postfix_take (l l' : list A)
     : take ( |l'| ) l = l' <-> Postfix l' l.
@@ -455,6 +470,16 @@ Section Pre.
       rewrite rev_length in H.
       unfold take_r.
       assumption.
+  Qed.
+  
+  Global Instance Prefix_Reflexive : Reflexive (@Prefix A).
+  Proof.
+    econstructor.
+  Qed.
+  
+  Global Instance Postfix_Reflexive : Reflexive (@Postfix A).
+  Proof.
+    econstructor.
   Qed.
 
 End Pre.

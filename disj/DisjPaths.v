@@ -244,7 +244,34 @@ Section disj.
        * else, ne_back t' = (h,0 :: tl j) and p ∉ t'
        *)
   Qed.
-
+  
+  Lemma ex_entry_elem (h p q q' : Lab) (i j j' : Tag) t
+        (Hin : innermost_loop h q)
+        (Hnin : ~ loop_contains h p)
+        (Hpath : TPath (root,start_tag) (q',j') t)
+        (Hord : (q,j) ≻* (p,i) | t)
+    : (h,0 :: tl j) ≻* (p,i) | t.
+  Proof.
+    copy Hpath Hpath'.
+    eapply path_to_elem in Hpath.
+    2: { eapply splinter_in. eauto. }
+    destructH.
+    eapply prefix_eq in Hpath1 as Heq. destructH.
+    eapply splinter_prefix;eauto.
+    eapply ex_entry;eauto.
+    rewrite Heq in Hord.
+    clear - Hord Hpath0 Heq Hpath'.
+    eapply tpath_NoDup in Hpath'. rewrite Heq in Hpath'. clear Heq.
+    induction l2';intros.
+    - cbn in Hord. eauto.
+    - inversion Hord;subst.
+      + exfalso.
+        eapply NoDup_app in Hpath';[|left;eauto].
+        eapply Hpath'.
+        eapply path_contains_front;eauto.
+      + eapply IHl2';eauto. inversion Hpath'. subst. eauto.
+  Qed.    
+    
   (* misc *)
 
   Global Instance Path_dec (L : eqType) (e : L -> L -> bool) (x y : L) (π : ne_list L)
