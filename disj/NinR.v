@@ -193,23 +193,54 @@ Section disj.
         eapply postfix_step_left;eauto.
   Qed.
   
+  Lemma r1_tpath
+    : TPath (s,k) (q1,j1) (r1 >: (s,k)).
+  Proof.
+    unfold last_common' in Hlc. destructH.
+    eapply postfix_path in Hlc0;eauto.
+  Qed.
+
+  Lemma postfix_tl_rev (A : Type) (l l' : list A)
+        (Hpost : Postfix l l')
+    : Postfix (rev (tl (rev l))) (rev (tl (rev l'))).
+  Proof.
+    clear - Hpost.
+    destr_r' l;subst;cbn.
+    - eapply postfix_nil.
+    - rewrite rev_rcons. cbn. eapply postfix_rev_prefix in Hpost.
+      rewrite rev_rcons in Hpost. eapply prefix_tl in Hpost.
+      eapply prefix_rev_postfix;eauto.
+  Qed.
+  
+  Lemma prefix_tag_r1 p i
+        (Hel : (p,i) ∈ (r1 :r: (s,k)))
+    : Prefix j1 i.
+  Proof.
+    rewrite rcons_nl_rcons in Hel.
+    eapply path_from_elem in Hel;cycle 1.
+    - eauto.
+    - eapply r1_tpath.
+    - destructH.
+      eapply only_inner_heads_tag_prefix;eauto.
+      + intros. eapply no_head;eauto.
+        eapply postfix_incl.
+        * eapply NePreSuffix.postfix_map.
+          eapply postfix_tl_rev in Hel1. simpl_nl' Hel1.
+          rewrite rev_rcons in Hel1. cbn in Hel1. rewrite rev_involutive in Hel1. eauto.
+        * eapply in_map with (f:=fst) in H. cbn in H. rewrite map_rev. rewrite <-in_rev. eauto.
+      + intros. simpl_nl' Hel1. eapply postfix_incl in H;eauto.
+        eapply In_rcons in H. destruct H.
+        * inversion H;subst. eapply s_deq_q;eauto.
+        * eapply r1_in_head_q in H. cbn in H. eauto.
+  Qed.
+  
   Lemma j1_prefix_k
     : Prefix j1 k.
   Proof.
-    unfold last_common' in Hlc.
-    destructH.
-    specialize (no_head) as Hnhead.
-    specialize (r1_in_head_q) as Hdeqq.
-    rewrite rcons_nl_rcons in Hlc0.
-    eapply path_postfix_path in Hpath1 as Hpath1';eauto. simpl_nl' Hpath1'.
-    eapply only_inner_heads_tag_prefix;eauto.
-    { simpl_nl. rewrite rev_rcons. cbn. setoid_rewrite <-in_rev. intros.
-      eapply Hnhead. eapply in_map;eauto. cbn. eauto. }
-    intros. simpl_nl' H. eapply In_rcons in H. destruct H.
-    - inversion H;subst. eapply s_deq_q;eauto.
-    - specialize (Hdeqq (h',k')). cbn in Hdeqq. eauto. 
+    eapply prefix_tag_r1.
+    eapply In_rcons. left. reflexivity.
   Qed.
-
+  
   Lemma tl_j2_prefix_k
     : Prefix (tl j2) k.
   Proof.

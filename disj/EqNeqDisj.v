@@ -1,22 +1,9 @@
 Require Export ImplodeTCFG NinR.
 
-
 Section disj.
 
   Load X_notations.
   Load X_vars.
-  
-  Lemma r1_tpath
-    : TPath (s,k) (q1,j1) (r1 >: (s,k)).
-  Proof.
-    unfold last_common' in Hlc. destructH.
-    eapply postfix_path in Hlc0;eauto.
-  Qed.
-
-  Lemma prefix_tag_r1 p i
-        (Hel : (p,i) ∈ r1)
-    : Prefix j1 i.
-  Admitted.
 
   Hypothesis (Hdep : depth s = depth q1).
 
@@ -78,11 +65,97 @@ Section disj.
       - unfold last_common' in Hlc. destructH. eauto.
     Qed.
 
+    Local Definition t3 := r3 >: (s,k) :+ prefix_nincl (s,k) t2.
+
+    Lemma t3_postfix
+      : Postfix (r3 :r: (s,k)) t3.
+    Proof.
+      eapply postfix_eq. exists (prefix_nincl (s,k) t2). unfold t3.
+      rewrite <-nlconc_to_list. simpl_nl. reflexivity.
+    Qed.
+
+    Lemma t2_eq
+      : t2 = r2 >: (s,k) :+ prefix_nincl (s,k) t2.
+    Proof.
+      unfold last_common' in Hlc. destructH.
+      clear - Hpath2 Hlc2.
+      eapply postfix_eq in Hlc2. destructH.
+      enough (l2' = prefix_nincl (s,k) t2).
+      { rewrite <-H. eapply ne_to_list_inj. rewrite <-nlconc_to_list. simpl_nl. eauto. }
+      rewrite Hlc2. 
+      eapply tpath_NoDup in Hpath2.
+      setoid_rewrite Hlc2 in Hpath2. clear Hlc2.
+      induction r2;cbn.
+      - destruct (s == s).
+        + destruct (k == k).
+          * reflexivity.
+          * congruence.
+        + congruence.
+      - destr_let. cbn in Hpath2. destruct (s == e).
+        + destruct (k == t).
+          * exfalso. inversion Hpath2.
+            eapply H1. eapply in_or_app. left. eapply in_or_app. right. left.
+            f_equal. rewrite e0. reflexivity.  rewrite e1. reflexivity.
+          * eapply IHl. inversion Hpath2. unfold rcons. eauto.
+        + eapply IHl.
+          inversion Hpath2. unfold rcons. eauto.
+    Qed.
+
+    Lemma t3_prefix
+      : Prefix t3 t2.
+    Proof.
+      rewrite t2_eq. eapply prefix_eq.
+      unfold t3. eapply prefix_eq in Hpre as Hpre'. destructH' Hpre'.
+      rewrite Hpre'. eexists.
+      do 2 rewrite <-nlconc_to_list. simpl_nl. rewrite app_assoc.
+      rewrite <-app_rcons_assoc. reflexivity.
+    Qed.
+    
+    Lemma t3_tpath
+      : TPath (root,start_tag) (q3,j1) t3.
+    Proof.
+      unfold t3.
+      replace (prefix_nincl (s,k) t2) with (tl ((s,k) :: prefix_nincl (s,k) t2)) by (cbn;eauto).
+      rewrite nlcons_to_list.
+      eapply path_app.
+      - eapply path_prefix_path;eauto.
+        eapply prefix_eq. setoid_rewrite t2_eq at 1.
+        rewrite <-nlconc_to_list. simpl_nl. rewrite <-app_cons_assoc. eexists. reflexivity.
+      - simpl_nl. eapply r3_tpath.
+    Qed.
+
     Lemma ex_entry_r3 h i
           (Hel : (h,i) ∈ r3)
+          (Hndeq : ~ deq_loop q1 h)
           (Hexit : exists e, exited h e /\ deq_loop q1 e)
       : (h,0 :: tl i) ∈ r3.
-    Admitted.
+    Proof.
+      specialize t3_tpath as Hpath3.
+      eapply ex_entry_elem in Hpath3 as Hentry.
+      - enough ((h, 0 :: tl i) ∈ (r3 :r: (s,k))).
+        { eapply In_rcons in H. destruct H;[|auto].
+          exfalso. inversion H. subst h.
+          specialize (s_eq_q1) as Q. destruct Q. contradiction.
+        }
+        specialize t3_postfix as Hpre3.
+        eapply postfix_eq in Hpre3. destructH.
+        eapply succ_NoDup_app.
+        3: eapply In_rcons;left;reflexivity.
+        + setoid_rewrite <-Hpre3. eauto.
+        + setoid_rewrite <-Hpre3. eapply tpath_NoDup;eauto.
+      - split.
+        + eapply loop_contains_self.
+          destructH. unfold exited,exit_edge in Hexit0. destructH.
+          eapply loop_contains_loop_head;eauto.
+        + eapply deq_loop_refl.
+      - rewrite s_eq_q1. contradict Hndeq. eapply loop_contains_deq_loop;eauto.
+      - eapply lc_succ_rt1;eauto.
+        instantiate (1:=r1). instantiate (1:=t1).
+        unfold last_common' in *. destructH. split_conj;eauto.
+        + eapply t3_postfix;eauto.
+        + eapply Disjoint_sym. eapply disjoint3.
+        + contradict Hlc5. eapply prefix_incl;eauto.
+    Qed.
     
     Lemma disj_inst_impl
       : Disjoint (impl_tlist q1 r1) (impl_tlist q1 r3).
@@ -132,8 +205,9 @@ Section disj.
     Lemma disj_node
       : Disjoint (map fst r1) (map fst r3).
     Proof.
+      specialize (r1_tpath Hpath1 Hlc) as r1_tpath'.
       eapply impl_list_disjoint.
-      1: specialize (TPath_CPath r1_tpath) as HQ.
+      1: specialize (TPath_CPath r1_tpath') as HQ.
       2: specialize (TPath_CPath r3_tpath) as HQ.
       1,2:cbn in HQ;rewrite ne_map_nl_rcons in HQ;eauto. (* <-- Hdep *)
       - eapply dep_eq_impl_head_eq in Hdep;eauto; destruct Hdep as [_ Hdep'];eauto.
@@ -152,21 +226,17 @@ Section disj.
   Qed. 
 
   Global Instance Prefix_dec (A : eqType) (l l' : list A) : dec (Prefix l l').
-  clear.
-  revert l.
-  induction l';intros l.
-  - destruct l;[left; eapply prefix_nil|]. right. intro N. inversion N.
-  - destruct l.
-    + left. eapply prefix_nil. 
-    + decide (a = e).
-      * subst. destruct (IHl' (e :: l)).
-        -- left. econstructor. eauto.
-        -- decide (l = l').
-           ++ left. subst. econstructor.
-           ++ right. contradict n0. inversion n0;eauto.
-              subst. contradiction.
-      * admit.
-  Admitted. 
+  Proof.
+    clear.
+    revert l;induction l';intros l.
+    - destruct l;[left; eapply prefix_nil|]. right. intro N. inversion N.
+    - destruct (IHl' l).
+      + left. econstructor;eauto.
+      + decide (l = a :: l').
+        * left. subst. econstructor.
+        * right. contradict n. inversion n;subst;[contradiction|].
+          eauto.
+  Qed.
   
   Lemma lc_neq_disj
         (Hjneq : j1 <> j2)
