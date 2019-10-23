@@ -271,7 +271,7 @@ Section disj.
         eapply path_contains_front;eauto.
       + eapply IHl2';eauto. inversion Hpath'. subst. eauto.
   Qed.    
-    
+
   (* misc *)
 
   Global Instance Path_dec (L : eqType) (e : L -> L -> bool) (x y : L) (π : ne_list L)

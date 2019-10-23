@@ -122,7 +122,7 @@ Section cfg.
   Qed.
 
   Global Instance eq_loop_proper_deq_loop1 (p : Lab)
-    : Proper (eq_loop ==> Basics.impl) (fun q => deq_loop q p).
+    : Proper (eq_loop ==> Basics.impl) ((Basics.flip deq_loop) p).
   unfold Proper. unfold respectful. unfold Basics.impl.
   intros. eapply eq_loop1; eauto.
   Qed.
@@ -137,6 +137,17 @@ Section cfg.
   Proof.
     unfold Proper, respectful, Basics.impl.
     intros. split;eapply H. 
+  Qed.
+
+  Global Instance eq_loop_depth
+    : Proper (eq_loop ==> eq) depth.
+  Proof.
+    clear.
+    unfold Proper,respectful. intros.
+    destruct H.
+    eapply deq_loop_depth in H.
+    eapply deq_loop_depth in H0.
+    omega.
   Qed.
   
   Lemma eq_loop_same (h h' : Lab)

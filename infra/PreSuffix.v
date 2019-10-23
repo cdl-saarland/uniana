@@ -480,6 +480,17 @@ Section Pre.
   Global Instance Postfix_Reflexive : Reflexive (@Postfix A).
   Proof.
     econstructor.
+  Qed.  Global Instance Prefix_dec (A : eqType) (l l' : list A) : dec (Prefix l l').
+  Proof.
+    clear.
+    revert l;induction l';intros l.
+    - destruct l;[left; eapply prefix_nil|]. right. intro N. inversion N.
+    - destruct (IHl' l).
+      + left. econstructor;eauto.
+      + decide (l = a :: l').
+        * left. subst. econstructor.
+        * right. contradict n. inversion n;subst;[contradiction|].
+          eauto.
   Qed.
 
 End Pre.

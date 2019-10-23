@@ -12,8 +12,7 @@ Section disj.
   Proof.
     eapply dep_eq_impl_head_eq in Hdep;eauto.
   Qed.
-
-  (* this lemma relies on Hdep ! *)
+  
   Lemma ex_entry_r1 h i
         (Hel : (h,i) ∈ r1)
         (Hndeq : ~ deq_loop q1 h)
@@ -41,10 +40,20 @@ Section disj.
     - rewrite s_eq_q1. contradict Hndeq. eapply loop_contains_deq_loop;eauto.
     - eapply lc_succ_rt1;eauto.
   Qed.
+End disj.
+
+(** Close and reopen section to instantiate with other variables **)
+
+Section disj.
+  
+  Load X_notations.
+  Load X_vars.
+
+  Hypothesis (Hdep : depth s = depth q1).
 
   Section same_tag.
     Variable (r3 : list (Lab * Tag)) (q3 : Lab).
-    Hypotheses (Hpre : Prefix r3 r2) (Hhd : ne_front (r3 >: (s,k)) = (q3,j1)).
+    Hypotheses (Hpre : Prefix r3 r2) (Hhd : ne_front (r3 >: (s,k)) = (q3,j1)) (Hneq3 : r1 <> r3).
 
     Lemma r3_tpath
       : TPath (s,k) (q3,j1) (r3 >: (s,k)).
@@ -123,38 +132,63 @@ Section disj.
         rewrite <-nlconc_to_list. simpl_nl. rewrite <-app_cons_assoc. eexists. reflexivity.
       - simpl_nl. eapply r3_tpath.
     Qed.
+    
+    Lemma q3_eq_loop
+      : eq_loop q3 q1.
+    Proof.
+      decide (r3 = []).
+      { 
+        subst. cbn in Hhd. inversion Hhd. subst.
+        eapply s_eq_q1;eauto.
+      }
+      enough (deq_loop q3 q1).
+      {
+        split;auto.
+        eapply deq_loop_depth_eq;eauto.
+        setoid_rewrite <-tag_depth at 2.
+        - erewrite tag_depth.
+          + reflexivity.
+          + eapply Hpath1.
+          + eapply path_contains_front;eauto.
+        - eapply t3_tpath.
+        - eapply path_contains_front;eauto. eapply t3_tpath.
+      }
+      rewrite Hloop.
+      replace q3 with (fst (q3,j1)) by (cbn;eauto).
+      eapply r2_in_head_q.
+      3: eapply Hlc.
+      all:eauto.
+      destruct r3;[contradiction|]. cbn in Hhd.
+      eapply prefix_incl;eauto. left. eauto.
+    Qed.
 
+    Lemma last_common_t3_r3
+      : last_common' t3 t1 r3 r1 (s,k).
+    Proof.
+      unfold last_common' in *. destructH. split_conj;eauto.
+      - eapply t3_postfix;eauto.
+      - eapply Disjoint_sym. eapply disjoint3.
+      - contradict Hlc5. eapply prefix_incl;eauto.
+    Qed.
+
+    Hint Resolve t3_tpath t3_prefix t3_postfix last_common_t3_r3 q3_eq_loop.
+    
     Lemma ex_entry_r3 h i
           (Hel : (h,i) ∈ r3)
           (Hndeq : ~ deq_loop q1 h)
           (Hexit : exists e, exited h e /\ deq_loop q1 e)
       : (h,0 :: tl i) ∈ r3.
     Proof.
-      specialize t3_tpath as Hpath3.
-      eapply ex_entry_elem in Hpath3 as Hentry.
-      - enough ((h, 0 :: tl i) ∈ (r3 :r: (s,k))).
-        { eapply In_rcons in H. destruct H;[|auto].
-          exfalso. inversion H. subst h.
-          specialize (s_eq_q1) as Q. destruct Q. contradiction.
-        }
-        specialize t3_postfix as Hpre3.
-        eapply postfix_eq in Hpre3. destructH.
-        eapply succ_NoDup_app.
-        3: eapply In_rcons;left;reflexivity.
-        + setoid_rewrite <-Hpre3. eauto.
-        + setoid_rewrite <-Hpre3. eapply tpath_NoDup;eauto.
-      - split.
-        + eapply loop_contains_self.
-          destructH. unfold exited,exit_edge in Hexit0. destructH.
-          eapply loop_contains_loop_head;eauto.
-        + eapply deq_loop_refl.
-      - rewrite s_eq_q1. contradict Hndeq. eapply loop_contains_deq_loop;eauto.
-      - eapply lc_succ_rt1;eauto.
-        instantiate (1:=r1). instantiate (1:=t1).
-        unfold last_common' in *. destructH. split_conj;eauto.
-        + eapply t3_postfix;eauto.
-        + eapply Disjoint_sym. eapply disjoint3.
-        + contradict Hlc5. eapply prefix_incl;eauto.
+      eapply ex_entry_r1.
+      3: eapply last_common_t3_r3.
+      1: eapply t3_tpath.
+      1: eapply Hpath1.
+      all: eauto.
+      - rewrite q3_eq_loop. eauto.
+      - specialize eq_loop_proper_deq_loop1 as HS.
+        contradict Hndeq. eapply HS;eauto.
+      - destructH' Hexit. eapply eq_loop_proper_deq_loop1 in Hexit1;eauto.
+        symmetry. eauto.
     Qed.
     
     Lemma disj_inst_impl
@@ -171,7 +205,7 @@ Section disj.
       - eapply impl_tlist_implode_nodes in Hx as Himpl.
         destruct Himpl ;[contradiction|].
         do 3 destructH.
-        eapply ex_entry_r1 in Htl;eauto. cbn in Htl.
+        eapply ex_entry_r1 in Hlc as Hlc';eauto. cbn in Hlc'. 
         eapply ex_entry_r3 in Htl';eauto. cbn in Htl'.
         eapply disjoint3;eauto.
     Qed.
@@ -219,25 +253,12 @@ Section disj.
         (Hjeq : j1 = j2)
     : Disjoint (map fst r1) (map fst r2).
   Proof.
-    eapply disj_node;[reflexivity|].
+    eapply disj_node; [reflexivity| |eauto].
     unfold last_common' in Hlc. destructH.
     eapply postfix_path in Hpath2;eauto. 
     eapply path_front in Hpath2. rewrite Hjeq. eauto.
   Qed. 
 
-  Global Instance Prefix_dec (A : eqType) (l l' : list A) : dec (Prefix l l').
-  Proof.
-    clear.
-    revert l;induction l';intros l.
-    - destruct l;[left; eapply prefix_nil|]. right. intro N. inversion N.
-    - destruct (IHl' l).
-      + left. econstructor;eauto.
-      + decide (l = a :: l').
-        * left. subst. econstructor.
-        * right. contradict n. inversion n;subst;[contradiction|].
-          eauto.
-  Qed.
-  
   Lemma lc_neq_disj
         (Hjneq : j1 <> j2)
     : exists r', Prefix ((get_innermost_loop' q1) :: r') (map fst r2)
