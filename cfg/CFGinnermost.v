@@ -27,6 +27,11 @@ Section cfg.
   Proof.
     unfold deq_loop;firstorder.
   Qed.
+  
+  Global Instance deq_loop_Reflexive : Reflexive deq_loop.
+  Proof.
+    unfold Reflexive. intros. eapply deq_loop_refl.
+  Qed.
 
   (** * Transitivity **)
   
@@ -38,13 +43,12 @@ Section cfg.
     unfold deq_loop in *. intros. eapply H1,H2;eauto.
   Qed.
 
-  Program Instance deq_loop_PreOrder : PreOrder deq_loop.
-  Next Obligation.
-    unfold Reflexive. eapply deq_loop_refl.
-  Qed.
-  Next Obligation.
+  Global Instance deq_loop_Transitive : Transitive deq_loop.
+  Proof.
     unfold Transitive; eapply deq_loop_trans.
   Qed.
+  
+  Program Instance deq_loop_PreOrder : PreOrder deq_loop.
 
   (** * deq_loop facts **)
   
