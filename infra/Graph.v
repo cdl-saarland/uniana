@@ -55,13 +55,16 @@ Section graph.
 
   
   Ltac path_simpl' H :=
+    let Q := fresh "Q" in 
     lazymatch type of H with
-    | Path ?edge ?x ?y (?z :<: ?π) => let Q := fresh "Q" in
-                                     eapply path_front in H as Q;
+    | Path ?edge ?x ?y (?z :<: ?π) => eapply path_front in H as Q;
                                      cbn in Q; subst z
-    | Path ?edge ?x ?y (?π :>: ?z) => let Q := fresh "Q" in
-                                     eapply path_back in H as Q;
+    | Path ?edge ?x ?y (?π :>: ?z) => eapply path_back in H as Q;
                                      cbn in Q; subst z
+    | Path ?edge ?x ?y (?z :< ?π) => replace y with z in *;
+                                    [|destruct π;cbn in H;inversion H;subst;eauto]
+(*    | Path ?edge ?x ?y (?π >: ?z) => replace x with z in *;
+                                    [|destruct π;cbn in H;inversion H;subst;eauto]*)
     end.
 
   Lemma path_dec p q π :
@@ -478,13 +481,16 @@ Proof.
 Qed.
 
 Ltac path_simpl' H :=
+  let Q := fresh "Q" in 
   lazymatch type of H with
-  | Path ?edge ?x ?y (?z :<: ?π) => let Q := fresh "Q" in
-                                   eapply path_front in H as Q;
+  | Path ?edge ?x ?y (?z :<: ?π) => eapply path_front in H as Q;
                                    cbn in Q; subst z
-  | Path ?edge ?x ?y (?π :>: ?z) => let Q := fresh "Q" in
-                                   eapply path_back in H as Q;
+  | Path ?edge ?x ?y (?π :>: ?z) => eapply path_back in H as Q;
                                    cbn in Q; subst z
+  | Path ?edge ?x ?y (?z :< ?π) => replace y with z in *;
+                                  [|destruct π;cbn in H;inversion H;subst;eauto]
+  (*    | Path ?edge ?x ?y (?π >: ?z) => replace x with z in *;
+                                    [|destruct π;cbn in H;inversion H;subst;eauto]*)
   end.
 
 Lemma path_contains_front {L : Type} (x y : L) e l

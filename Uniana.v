@@ -433,6 +433,7 @@ Section uniana.
     (* Now take the paths br -->* qe1 -> e1 and br --> qe2 -> ledge. These construct a loop_split *)
     (* FIXME *)
     eapply lc_disj_exits_lsplits with (h0:=h) (e3:=e1) (e4:=e2) (i0:=l'++j) in Hlc as Hsplit;eauto.
+    4: { intro N. inversion N. contradiction. }
     replace splits' with (loop_splits _ ) in Hsplit by admit.
     all: cycle 1.
     {
