@@ -119,7 +119,8 @@ Section cfg.
 
   
   Global Instance eq_loop_Eq : Equivalence eq_loop.
-  econstructor.
+  Proof.
+    econstructor.
   - econstructor;apply deq_loop_refl.
   - econstructor; destruct H;eauto.
   - econstructor; destruct H,H0; eapply deq_loop_trans;eauto.
@@ -127,13 +128,15 @@ Section cfg.
 
   Global Instance eq_loop_proper_deq_loop1 (p : Lab)
     : Proper (eq_loop ==> Basics.impl) ((Basics.flip deq_loop) p).
-  unfold Proper. unfold respectful. unfold Basics.impl.
-  intros. eapply eq_loop1; eauto.
+  Proof.
+    unfold Proper. unfold respectful. unfold Basics.impl.
+    intros. eapply eq_loop1; eauto.
   Qed.
   
   Global Instance eq_loop_proper_deq_loop2 (p : Lab) : Proper (eq_loop ==> Basics.impl) (deq_loop p).
-  unfold Proper. unfold respectful. unfold Basics.impl.
-  intros. eapply eq_loop2; eauto.
+  Proof.
+    unfold Proper. unfold respectful. unfold Basics.impl.
+    intros. eapply eq_loop2; eauto.
   Qed.
 
   Global Instance eq_loop_proper_contains (h : Lab)

@@ -62,6 +62,39 @@ Section tcfg.
       | left _ => (`p,i) ∈ t
       | _ =>  exists n, (`p,n :: i) ∈ t
       end.
-    Admitted.
+  Admitted.  
+
+  Lemma impl_tlist_length h p i t
+        (Hel : (p,i) ∈ impl_tlist h t)
+    : @depth _ _ _ _ (local_impl_CFG C h) p <= depth h.
+    clear - Hel.
+  Admitted.
+
+  Lemma impl_tlist_skip h p i t
+        (Himpl : impl_list'_cond1 h p (map fst t))
+    : impl_tlist h ((p,i) :: t) = impl_tlist h t.
+    clear - Himpl.
+  Admitted.
+
+  Lemma impl_tlist_cons h p i t
+        (Himpl : impl_list'_cond2 h p (map fst t))
+    : exists i', impl_tlist h ((p,i) :: t)
+            = (impl_of_original' (impl_list'2_implode_nodes Himpl),i') :: impl_tlist h t.
+    clear - Himpl.
+  Admitted.
+
+  Lemma impl_tlist_tag_prefix p t h i i'
+        (Himpl : impl_list'_cond2 h p (map fst t))
+        (Heq : impl_tlist h ((p,i) :: t)
+               = (impl_of_original' (impl_list'2_implode_nodes Himpl),i') :: impl_tlist h t)
+    : Prefix i' i.
+    clear - Himpl Heq.
+  Admitted.
+
+  Lemma impl_tlist_incl (t t' : list Coord) h
+        (Hincl : t ⊆ t')
+    : impl_tlist h t ⊆ impl_tlist h t'.
+    clear - Hincl.
+  Admitted.
   
 End tcfg.

@@ -11,13 +11,6 @@ Local Definition prefix_nincl' {A : Type} `{EqDec A eq} (a : A) l
 Section aux.
 
   Context {A : Type} `{EqDec A eq}.
-
-  Lemma app_cons_assoc (a : A) l l'
-  : l ++ a :: l' = l :r: a ++ l'.
-  Proof.
-    induction l; cbn; eauto.
-    f_equal. rewrite IHl. reflexivity.
-  Qed.
   
   Lemma postfix_nincl_rcons_a (a : A) (l : list A)
     : postfix_nincl a (l :r: a) = postfix_nincl a l.

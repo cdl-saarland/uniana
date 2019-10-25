@@ -269,6 +269,36 @@ Proof.
         -- cbn. econstructor. eapply splinter_strict_prefix in Hdom1. transitivity ϕ;eauto.
 Qed.
 
+Lemma implode_CFG_loop_contains:
+  forall (Lab : finType) (edge : Lab -> Lab -> bool) (root : Lab) (a_edge : Lab -> Lab -> bool)
+    (H : redCFG edge root a_edge) (h7 h p : Lab) (Hhe : head_exits_property H h7),
+    (exists x : Lab,
+        (restrict_edge' edge (implode_nodes h7) ∖ restrict_edge' a_edge (implode_nodes h7)) x h = true) ->
+    loop_contains' edge a_edge h p ->
+    (implode_nodes h7) p ->
+    loop_contains' (restrict_edge' edge (implode_nodes h7)) (restrict_edge' a_edge (implode_nodes h7))
+                   h p.
+Proof.
+  intros Lab edge root a_edge H h7 h p Hhe H0 H1 H2.
+  
+  
+  rewrite loop_contains'_basic in H1.
+  fold (loop_head' (restrict_edge' edge (implode_nodes h7))
+                   (restrict_edge' a_edge (implode_nodes h7)) h) in H0.
+  unfold loop_contains in H1.
+  destructH.
+  eapply all_latches_stay_latches in H0;eauto.
+  exists p0.
+  eapply implode_nodes_path_inv in H1;eauto.
+  2: { unfold back_edge' in H0. unfold_edge_op' H0. destructH. auto. }
+  destructH. exists ϕ. split_conj;eauto.
+  contradict H5. clear - H6 H5.
+  eapply splinter_strict_rev in H6.
+  destruct (rev ϕ);cbn in *;[contradiction|].
+  inversion H6;subst;cbn in *.
+  + eapply splinter_strict_incl;eauto.
+  + eapply splinter_strict_incl;eauto.
+Qed.
 
 Instance implode_CFG `(H : redCFG) h7 (Hhe : head_exits_property H h7)
   : @redCFG (finType_sub_decPred (implode_nodes h7))
@@ -319,22 +349,7 @@ Proof.
            eapply eq_loop_exiting in H3.
            unfold implode_nodes. cbn. left. 
            eapply eq_loop2;eauto.
-  - rewrite loop_contains'_basic in H1.
-    fold (loop_head' (restrict_edge' edge (implode_nodes h7))
-                     (restrict_edge' a_edge (implode_nodes h7)) h) in H0.
-    unfold loop_contains in H1.
-    destructH.
-    eapply all_latches_stay_latches in H0;eauto.
-    exists p0.
-    eapply implode_nodes_path_inv in H1;eauto.
-    2: { unfold back_edge' in H0. unfold_edge_op' H0. destructH. auto. }
-    destructH. exists ϕ. split_conj;eauto.
-    contradict H5. clear - H6 H5.
-    eapply splinter_strict_rev in H6.
-    destruct (rev ϕ);cbn in *;[contradiction|].
-    inversion H6;subst;cbn in *.
-    + eapply splinter_strict_incl;eauto.
-    + eapply splinter_strict_incl;eauto.
+  - eapply implode_CFG_loop_contains;eauto.
 Qed.
 
 Lemma implode_CFG_elem `{C : redCFG} (p h : Lab) (Himpl : implode_nodes h p)
@@ -770,3 +785,13 @@ Lemma impl_list_disjoint `(C : redCFG) h π ϕ s p q
 Proof.
   split;intros;[eapply impl_list_disj1;eauto|].
 Admitted.
+
+Lemma impl_CFG_deq_loop `(C : redCFG) (h : Lab) (p q : local_impl_CFG_type C h)
+      (Hdeq : deq_loop (C:=C) (` p) (` q))
+  : deq_loop (C:=local_impl_CFG C h) p q.
+Proof.
+  destruct p, q. cbn in Hdeq. push_purify p. push_purify p0.
+  intros h' Hh.
+  (* it holds because loop containment is equivalent for nodes that are present in the imploded case *)
+Admitted.
+

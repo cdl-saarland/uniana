@@ -57,14 +57,10 @@ Proof.
   econstructor. eapply IHl2; eauto. eapply prefix_cons; eauto.
 Qed.
 
-Lemma prefix_cons_cons {A : Type} (a a' : A) l l' :
-  Prefix (a :: l) (a' :: l') -> Prefix l l'.
+Global Instance Prefix_Transitive (A : Type) : Transitive (@Prefix A).
 Proof.
-  intros H. dependent induction H; cbn.
-  - econstructor.
-  - destruct l'.
-    + inversion H.
-    + econstructor. eapply IHPrefix; eauto.
+  unfold Transitive.
+  eapply prefix_trans.
 Qed.
 
 Lemma in_prefix_in {A : Type} `{EqDec A eq} (a : A) l l' :
@@ -491,6 +487,39 @@ Section Pre.
         * left. subst. econstructor.
         * right. contradict n. inversion n;subst;[contradiction|].
           eauto.
+  Qed.
+
+  Lemma prefix_antisym (l l' : list A)
+        (H : Prefix l l')
+        (Q : Prefix l' l)
+    : l = l'.
+  Proof.
+    eapply prefix_eq in H.
+    eapply prefix_eq in Q.
+    do 2 destructH.
+    rewrite Q in H.
+    rewrite app_assoc in H.
+    induction (l2'0 ++ l2') eqn:E.
+    - destruct l2'0.
+      + cbn in E. rewrite E in Q. cbn in Q. eauto.
+      + cbn in E. congruence.
+    - exfalso. cbn in H. clear - H.
+      revert dependent a. revert l0. induction l';intros.
+      + congruence.
+      + destruct l0;cbn in H.
+        * inversion H. subst. eapply IHl'. instantiate (1:=nil). cbn. eapply H2.
+        * inversion H. subst. eapply IHl'. rewrite app_cons_assoc in H2.
+          eapply H2.
+  Qed.
+
+  Lemma prefix_cons_cons (a a' : A) l l' :
+    Prefix (a :: l) (a' :: l') -> Prefix l l'.
+  Proof.
+    intros H. dependent induction H; cbn.
+    - econstructor.
+    - destruct l'.
+      + inversion H.
+      + econstructor. eapply IHPrefix; eauto.
   Qed.
 
 End Pre.

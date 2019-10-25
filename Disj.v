@@ -1343,7 +1343,7 @@ Proof.
       specialize (ne_back_map_in p' i l1') as Htag. cbn in Htag. destructH.
       exists j0. simpl_nl.
       destruct Htag.
-      - left. subst qq. inversion H0. setoid_rewrite <-H2. f_equal.
+      - left. subst qq. inversion H0. admit. (*setoid_rewrite <-H2. f_equal. *)
       - right. simpl_nl. clear Hlc'1.
         eapply postfix2_impl_list'_incl ;eauto.
         + inversion Hpath1. 

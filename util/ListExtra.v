@@ -199,6 +199,13 @@ Section Rcons.
       eapply rcons_length; eauto.
   Qed.
 
+  Lemma app_cons_assoc (a : A) l l'
+  : l ++ a :: l' = l :r: a ++ l'.
+  Proof.
+    induction l; cbn; eauto.
+    f_equal. rewrite IHl. reflexivity.
+  Qed.
+
   Lemma incl_cons_hd (* unused *) (a : A) l l'
         (Hincl : (a :: l) ⊆ l')
     : a ∈ l'.

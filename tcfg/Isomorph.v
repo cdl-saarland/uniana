@@ -1,7 +1,7 @@
 Require Export ImplodeTCFG.
 
 Section Iso.
-  (*Context `(C : redCFG).*)
+  Context `(C : redCFG).
   Variables (Lab1 Lab2 : finType)
             (root1 : Lab1) (root2 : Lab2)
             (edge1 a_edge1 : Lab1 -> Lab1 -> bool)
@@ -28,7 +28,8 @@ Section Iso.
   Admitted.
   
 End Iso.
-Lemma impl_iso (h h' : Lab)
+
+Lemma impl_iso `(C : redCFG) (h h' : Lab)
       (Heq : eq_loop h h')
   : iso_cfg (local_impl_CFG C h) (local_impl_CFG C h').      
 Admitted.
