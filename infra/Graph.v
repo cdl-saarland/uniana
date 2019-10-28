@@ -23,9 +23,9 @@ Section graph.
   Local Notation "p -->b q" := (edge p q) (at level 55, right associativity).
   Local Notation "p --> q" := (p -->b q = true) (at level 55, right associativity).
   
-  Inductive Path : L -> L -> ne_list L -> Prop :=
-  | PathSingle a : Path a a (ne_single a)
-  | PathCons {a b c π} : Path a b π -> b --> c -> Path a c (c :<: π).
+  Inductive Path : L -> L -> list L -> Prop :=
+  | PathSingle a : Path a a [a]
+  | PathCons {a b c π} : Path a b π -> b --> c -> Path a c (c :: π).
 
   Local Notation "p -->* q" := (exists π, Path p q π) (at level 55).
 
@@ -40,60 +40,78 @@ Section graph.
   Proof.
     intros π Hπ. induction Hπ;cbn;eauto.
   Qed.
-  
-  Lemma path_front p q π :
-    Path p q π -> ne_front π = q.
+
+  Lemma path_front p q r π
+        (Hπ : Path p q (r :: π))
+    : q = r.
   Proof.
-    intro H. induction H; cbn; eauto.
-  Qed.
-  
-  Lemma path_back p q π :
-    Path p q π -> ne_back π = p.
-  Proof.
-    intro H. induction H; cbn; eauto.
+    inversion Hπ;reflexivity.
   Qed.
 
+  Ltac isabsurd :=
+    match goal with
+    | H : Path _ _ [] |- _ => inversion H
+    | _ => try congruence'
+    end.
+
+  Lemma path_back p q r π
+        (Hπ : Path p q (π ++ [r]))
+    : p = r.
+  Proof.
+    revert dependent q.
+    induction π;intros q Hπ;inversion Hπ;subst;cbn in *;eauto;try isabsurd.
+  Qed.
   
   Ltac path_simpl' H :=
     let Q := fresh "Q" in 
     lazymatch type of H with
-    | Path ?edge ?x ?y (?z :<: ?π) => eapply path_front in H as Q;
-                                     cbn in Q; subst z
-    | Path ?edge ?x ?y (?π :>: ?z) => eapply path_back in H as Q;
-                                     cbn in Q; subst z
-    | Path ?edge ?x ?y (?z :< ?π) => replace y with z in *;
-                                    [|destruct π;cbn in H;inversion H;subst;eauto]
-(*    | Path ?edge ?x ?y (?π >: ?z) => replace x with z in *;
-                                    [|destruct π;cbn in H;inversion H;subst;eauto]*)
+    | Path ?x ?y (?z :: ?π) => replace z with y in *;
+                                   [|eapply path_front;eauto]
+    | Path ?x ?y (?π ++ [?z]) => replace z with x in *;
+                                      [|eapply path_back;eauto]
     end.
 
   Lemma path_dec p q π :
     {Path p q π} + {~ Path p q π}.
   Proof.
     revert q; induction π; intros q.
-    - decide' (p == a); decide' (q == p). 1: left; econstructor.
-      all: right; intro N; inversion N; firstorder.
-    - decide' (q == a);
-        [destruct (edge (ne_front π) q) eqn:E;
-         [destruct (IHπ (ne_front π))|]|].
-      1: left; econstructor; eauto.
-      all: right; intro N; inversion N;subst. 3: eapply c; reflexivity.
-      all: eapply path_front in H0 as H0'; subst b. 1:contradiction.
-      rewrite <-not_true_iff_false in E. contradiction.
+    - right. intro N. inversion N.
+    - destruct π.
+      + decide' (p == a).
+        * decide' (p == q);[left;econstructor|].
+          right. intro N. eapply c. inversion N;reflexivity.
+        * right. intro N. eapply c. inversion N;subst. reflexivity. isabsurd. 
+      + decide' (q == a).
+        * specialize (IHπ l). destruct IHπ.
+          -- destruct (l -->b q) eqn:E.
+             ++ left. econstructor;eauto.
+             ++ right. intro N. inversion N. subst. path_simpl' H0. congruence. 
+          -- right. contradict n. inversion n;subst;eauto. path_simpl' H0. eauto.
+        * right. intro N. inversion N;subst. congruence.
+  Qed.
+
+  Inductive ne_l : list L -> Prop :=
+  | neCons a l : ne_l (a :: l).
+
+  Lemma path_non_empty p q π
+        (Hπ : Path p q π)
+    : ne_l π.
+  Proof.
+    inversion Hπ;subst;econstructor.
   Qed.
   
-  Lemma path_app_conc π ϕ p q q' r : Path p q π -> q --> q' -> Path q' r ϕ -> Path p r (ϕ :+: π).
+  Lemma path_app π ϕ p q q' r : Path p q π -> q --> q' -> Path q' r ϕ -> Path p r (ϕ ++ π).
   Proof.
     intros Hπ Hedge Hϕ.
     induction Hϕ;cbn;econstructor;eauto.
   Qed.
   
-  Lemma path_app π ϕ p q r : Path p q π -> Path q r ϕ -> Path p r (ϕ :+ tl π).
+  Lemma path_app' π ϕ p q r : Path p q π -> Path q r ϕ -> Path p r (ϕ ++ tl π).
   Proof.
     intros Hpath1 Hpath2.
-    destruct π;cbn;inversion Hpath1;subst;eauto. 
-    rewrite <-nlconc_neconc.
-    eapply path_app_conc;eauto.
+    destruct π;cbn;inversion Hpath1;subst;eauto.
+    - rewrite app_nil_r. eauto.
+    - eapply path_app;eauto.
   Qed.
 
   (* this is not used : { *)
@@ -147,9 +165,28 @@ Section graph.
     destruct l; cbn in *; congruence.
   Qed.
 
-  Lemma path_prefix_path p q (π ϕ : ne_list L) : Path p q π -> Prefix ϕ π -> Path p (ne_front ϕ) ϕ.
+  Ltac turn_cons a l :=
+    let Q := fresh "Q" in
+    let a' := fresh a in
+    let l' := fresh l in
+    rename l into l';
+    rename a into a';
+    specialize (cons_rcons a' l') as Q;
+    destruct Q as [a [l Q]];
+    rewrite Q in *.
+
+  Lemma path_prefix_path p q r (π ϕ : list L)
+    : Path p q π -> Prefix (r :: ϕ) π -> Path p r (r :: ϕ).
   Proof.
-    intros Hpq Hpre. revert dependent q. dependent induction Hpre; intros q Hpq.
+    intros Hpq Hpre.
+    turn_cons r ϕ.
+    (* FIXME *)
+    induction ϕ. cbn in *.
+    replace p with 
+    specialize (cons_rcons r ϕ) as Hrc. destruct Hrc as [a' [l' Hrc]].
+    revert dependent q. dependent induction Hpre; intros q Hpq.
+    - inversion Hpq;subst.
+      + 
     - eapply ne_to_list_inj in x. subst. erewrite path_front; eauto.
     - destruct π.
       + inversion x. subst l'. inversion Hpre; subst. destruct ϕ; cbn in H2; congruence.
