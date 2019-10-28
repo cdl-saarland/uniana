@@ -90,7 +90,22 @@ Lemma impl_lift `(C : redCFG) (s q1' : Lab) (h q1 q2 e1 e2 : local_impl_CFG_type
           /\ TPath (C:=C') (↓ purify_implode q1', start_tag) (e2, i) ((e2, i) :<: (q2, j2) :< t2')
           /\ depth s' = depth q1.
 Admitted.
-  
+
+
+(*  TODO: adapt this form :
+Theorem lc_disj_exits_lsplits' `{redCFG}
+          (s e1 e2 q1 q2 h : Lab) (j1 j2 k : Tag) (t1 t2 : ne_list Coord) (r1 r2 : list Coord)
+          (Hlc : last_common' t1 t2 r1 r2 (s,k))
+          (Hexit1 : exit_edge h q1 e1)
+          (Hexit2 : exit_edge h q2 e2)
+          (Hpath1 : TPath (root,start_tag) (q1,j1) t1)
+          (Hpath2 : TPath (root,start_tag) (q2,j2) t2)
+          (Hneq : r1 <> r2)
+          (Htag : tl j1 = tl j2)
+          (Htagle : hd 0 j1 < hd 0 j2)
+  : exists (qq qq' : Lab), (s,qq,qq') ∈ splits' h e1 \/ (s,qq,qq') ∈ splits' h e2.
+ *)
+
 Theorem lc_disj_exits_lsplits' `{redCFG}
           (s e1 e2 q1 q2 h : Lab) (i j1 j2 k : Tag) (t1 t2 r1 r2 : list Coord)
           (Hlc : last_common' ((q1,j1) :< t1) ((q2,j2) :< t2) r1 r2 (s,k))
