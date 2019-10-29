@@ -59,6 +59,15 @@ Definition loop_splits__imp `{C : redCFG} (h e : Lab)
               end in
      map (thrice (@proj1_sig Lab _)) (loop_splits__imp' h e).
 
+Lemma splits'_loop_splits__imp `(C : redCFG) (h' : Lab) (h e s' qq qq' : local_impl_CFG_type C h')
+      (Heq :  eq_loop (`h) h')
+      (Hsp : (s', qq, qq') ∈ @splits' _ _ _ _ (local_impl_CFG C h') h e)
+  : (` s', ` qq, ` qq') ∈ loop_splits__imp (`h) (`e).
+Proof.
+  unfold loop_splits__imp.
+  eapply in_map_iff.
+Admitted.
+
 Parameter splits'_spec
   : forall `{redCFG} h e sp, sp ∈ splits' h e
                         <-> sp ∈ loop_splits__imp h e
