@@ -8,14 +8,21 @@ Section disj.
 
   Variables  (e1 e2 h : Lab).
   Hypotheses (Hexit1 : exit_edge h q1 e1)
-             (Hexit2 : exit_edge h q2 e2)
-             (Hle : hd 0 j1 <= hd 0 j2).
+             (Hexit2 : exit_edge h q2 e2).
   
-  Theorem lc_disj_exits_lsplits_base
+  Theorem lc_disj_exits_lsplits_base'
+          (Hdep : depth s = depth q1)
+    : exists (qq qq' : Lab), (s,qq,qq') ∈ loop_splits__imp h e1 \/ (s,qq,qq') ∈ loop_splits__imp h e2.
+  Proof.
+  Admitted.
+  
+  Corollary lc_disj_exits_lsplits_base
           (Hdep : depth s = depth q1)
     : exists (qq qq' : Lab), (s,qq,qq') ∈ splits' h e1 \/ (s,qq,qq') ∈ splits' h e2.
   Proof.
-  Admitted.
+    eapply lc_disj_exits_lsplits_base' in Hdep. destructH. do 2 eexists.
+    setoid_rewrite splits'_spec. destruct Hdep;[left|right];left;eauto.
+  Qed.
 
   Lemma splits'_edge1 qq qq'
     (Hsp : (s,qq,qq') ∈ splits' h e1)
@@ -27,33 +34,6 @@ Section disj.
     : edge s qq' = true.
   Admitted.
 
-(*  Lemma t1_tpath
-    : TPath (root,start_tag) (q1,j1) ((q1,j1) :< t1).
-  Proof.
-    inversion Hpath1.
-    path_simpl' H0. eauto.
-  Qed.
-
-  Lemma t2_tpath
-    : TPath (root,start_tag) (q2,j2) ((q2,j2) :< t2).
-  Proof.
-    inversion Hpath2.
-    path_simpl' H0. eauto.
-  Qed.
-
-  Lemma r_neq
-    : r1 <> r2.
-  Proof.
-    unfold last_common' in Hlc. destructH.
-    destruct r1,r2; try (intro N;congruence).
-    - exfalso. cbn in *. simpl_nl' Hlc0. simpl_nl' Hlc2.
-      eapply postfix_hd_eq in Hlc0.
-      eapply postfix_hd_eq in Hlc2.
-      inversion Hlc0; inversion Hlc2;subst. congruence. 
-    - intro N. inversion N. subst.
-      eapply Hlc1;eauto.
-  Qed.
-*)
   Lemma q1_eq_q2
     : eq_loop q1 q2.
   Proof.
@@ -62,19 +42,37 @@ Section disj.
     rewrite <-Hexit1, <-Hexit2.
     reflexivity.
   Qed.
+
+  Definition max_cont_cont_loop h p q
+    := loop_contains h p /\ ~ loop_contains h q
+       /\ forall h', loop_contains h' h -> ~ loop_contains h q -> h = h'.
+
+  Variable (s' : Lab).
+  Hypotheses (Hmcc1 : max_cont_cont_loop s' s q1)
+             (Hmcc2 : max_cont_cont_loop s' s q2).
+           
+  
 (*
-  Lemma tl_j_eq
-    : tl j1 = tl j2.
-  Proof.
-    inversion Hpath1.
-    inversion Hpath2.
-    path_simpl' H0.
-    path_simpl' H5.
-    eapply tag_exit_iff in H3. destruct H3 as [_ H3].
-    eapply tag_exit_iff in H8. destruct H8 as [_ H8].
-    rewrite <-H3. rewrite <-H8. reflexivity.
-    - admit.
-    - admit.
+
+last_common' ?t1 ?t2 ?r1 ?r2 (s, ?k)
+
+subgoal 2 (ID 1839) is:
+ TPath (root, start_tag) (?q1, ?j1) ?t1
+subgoal 3 (ID 1840) is:
+ TPath (root, start_tag) (?q2, ?j2) ?t2
+subgoal 4 (ID 1841) is:
+ exit_edge (` s') ?q1 (` qq)
+subgoal 5 (ID 1842) is:
+ exit_edge (` s') ?q2 (` qq')
+subgoal 6 (ID 1843) is:
+ ?r1 <> ?r2
+subgoal 7 (ID 1844) is:
+ n = depth s - depth ?q1
+subgoal 8 (ID 1845) is:
+ tl ?j1 = tl ?j2
+subgoal 9 (ID 1846) is:
+ hd 0 ?j1 <= hd 0 ?j2
+
   Admitted. *)
     
 End disj.
@@ -123,6 +121,7 @@ Proof.
   - exists x, y. right. firstorder.
 Qed.
 
+
 (* TODO: I should define s' properly and prove its properties gradually *)
 
 Theorem lc_disj_exits_lsplits' `{redCFG}
@@ -155,22 +154,34 @@ Proof.
     eapply impl_lift in Hlc as Hlc';eauto.
     destructH.
     eapply lc_disj_exits_lsplits_base in Hlc'1. 2-11:eauto. 2:admit.
-    destruct Hlc'0 as [qq [qq' [Hlc'0|Hlc'0]]]. setoid_rewrite splits'_spec.
+    setoid_rewrite splits'_spec.
     eapply exists_or_exists_switch.
     destructH.
     exists (`s'), (`qq), (`qq').
-    assert (exists qe1, exit_edge (` s') qe1 (` qq)) as Hqe1 by admit.
-    assert (exists qe2, exit_edge (` s') qe2 (` qq')) as Hqe2 by admit. do 2 destructH.
+    assert (exists qe1 j1', exit_edge (` s') qe1 (` qq) /\ (qe1,j1') ∈ (r1 >: (s,k))) as Hqe by admit.
+    assert (exists qe2 j2', exit_edge (` s') qe2 (` qq') /\ (qe2,j2') ∈ (r2 >: (s,k))) as Hqe' by admit.
+    do 2 destructH.
     destruct Hlc'1;[left|right].
     + cbn. split.
       * cstr_subtype He1. cstr_subtype Hh. eapply splits'_loop_splits__imp.
         1: eapply eq_loop_exiting;eauto. eauto.
-      * eapply IHn. 4,5: eauto. all:eauto. 1,2: admit. clear - Hlc'9 Heqn Hqe1.
-        cbn in Heqn.
-        assert (depth qe1 = depth (`s')) by admit. rewrite H0.
-        setoid_rewrite Hlc'9.
-        assert (depth (C:=local_impl_CFG H q1) (↓ purify Hq1) = depth q1) by admit.
-        setoid_rewrite H1. omega.
+      * eapply path_to_elem in Hqe1. 2: eapply r1_tpath;eauto.
+        eapply path_to_elem in Hqe'1. 2: eapply r2_tpath;eauto.
+        do 2 destructH.
+        eapply IHn.
+        4,5: eauto.
+        -- admit. (* last_common prefix *)
+        -- admit. (* prefix path *)
+        -- admit. (* prefix path *)
+        -- admit. (* non-nil & disjoint *)
+        -- clear - Hlc'9 Heqn Hqe0.
+           cbn in Heqn.
+           assert (depth qe1 = depth (`s')) by admit. rewrite H0.
+           setoid_rewrite Hlc'9.
+           assert (depth (C:=local_impl_CFG H q1) (↓ purify Hq1) = depth q1) by admit.
+           setoid_rewrite H1. omega.
+        -- admit. (* tl j1' = j1 = tl j2' *)
+        -- edestruct (Nat.le_ge_cases) as [Q|Q];eapply Q.
     + 
       (* show that qq & qq' are exit_edges of s' on H, then construct the coresponding paths to them
        * and show that last_common holds for these paths, bc they are subpaths. 

@@ -200,6 +200,13 @@ Section disj.
     eapply postfix_path in Hlc0;eauto.
   Qed.
 
+  Lemma r2_tpath
+    : TPath (s,k) (q2,j2) (r2 >: (s,k)).
+  Proof.
+    unfold last_common' in Hlc. destructH.
+    eapply postfix_path in Hlc2;eauto.
+  Qed.
+
   Lemma postfix_tl_rev (A : Type) (l l' : list A)
         (Hpost : Postfix l l')
     : Postfix (rev (tl (rev l))) (rev (tl (rev l'))).
