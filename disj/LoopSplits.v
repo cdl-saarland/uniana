@@ -43,13 +43,6 @@ Section disj.
     reflexivity.
   Qed.
 
-  Definition max_cont_cont_loop h p q
-    := loop_contains h p /\ ~ loop_contains h q
-       /\ forall h', loop_contains h' h -> ~ loop_contains h q -> h = h'.
-
-  Variable (s' : Lab).
-  Hypotheses (Hmcc1 : max_cont_cont_loop s' s q1)
-             (Hmcc2 : max_cont_cont_loop s' s q2).
            
   
 (*
@@ -78,6 +71,34 @@ subgoal 9 (ID 1846) is:
 End disj.
 
 Hint Resolve q1_eq_q2.
+
+Definition max_cont_cont_loop `{C : redCFG} h p q
+  := loop_contains h p /\ ~ deq_loop q h
+     /\ forall h', loop_contains h' h -> ~ loop_contains h q -> h = h'.
+
+Lemma ex_max_cont_cont `(C : redCFG) (h' p q : Lab)
+      (Hinp : loop_contains h' p)
+      (Hinq : loop_contains h' q)
+      (Hndeq : ~ deq_loop q p)
+  : exists h, max_cont_cont_loop h p q.
+Admitted.
+                                
+Section maxcont.
+  Context `(C : redCFG).
+  Variables (h p q : Lab) (i j : Tag) (t t' : list (Lab * Tag)).
+  Hypotheses (Hpath : TPath (root,start_tag) (q,j) (t' >: (p,i) :+ t))
+             (Hmcc : max_cont_cont_loop h p q).
+
+  Lemma mcc_in_t
+    : (h,take_r (|j|) i) ∈ t.
+  Admitted.
+
+  Lemma ex_exit_mcc
+    : exists qe e j', exit_edge h qe e /\ (e,j) ≻ (qe, j') | t' /\ tl j' = j.
+  Admitted.
+
+End maxcont.
+
 
 Lemma impl_lift_exit_edge `(C : redCFG) (q' : Lab) (h q e : local_impl_CFG_type C q')
       (Hexit : exit_edge (`h) (`q) (`e))
@@ -165,14 +186,73 @@ Proof.
     + cbn. split.
       * cstr_subtype He1. cstr_subtype Hh. eapply splits'_loop_splits__imp.
         1: eapply eq_loop_exiting;eauto. eauto.
-      * eapply path_to_elem in Hqe1. 2: eapply r1_tpath;eauto.
-        eapply path_to_elem in Hqe'1. 2: eapply r2_tpath;eauto.
-        do 2 destructH.
+      * (*eapply path_to_elem in Hqe1 as Hr.
+        2: eapply r1_tpath;eauto. destruct Hr as [rr1 [Hrr1 Hrpre1]].
+        eapply path_to_elem in Hqe'1 as Hr'.
+        2: eapply r2_tpath;eauto. destruct Hr' as [rr2 [Hrr2 Hrpre2]].*)
+        (*eapply path_to_elem in Hpath1 as [tt1 [Htt1 Hpre1]].
+        2: { eapply postfix_incl. unfold last_common' in Hlc. destructH. simpl_nl. eauto.
+             simpl_nl' Hqe1. eauto. }
+        eapply path_to_elem in Hpath2 as [tt2 [Htt2 Hpre2]].
+        2: { eapply postfix_incl. unfold last_common' in Hlc. destructH. simpl_nl. eauto.
+             simpl_nl' Hqe'1. eauto. }*)
+          Lemma last_common_app_eq1 (A : Type) `{EqDec A eq} (l1 l2 l1' l2' : list A) x
+                (Hlc : last_common' l1 l2 l1' l2' x)
+            : l1 = l1' ++ [x] ++ prefix_nincl x l1.
+          Admitted.
+          Lemma last_common_app_eq2 (A : Type) `{EqDec A eq} (l1 l2 l1' l2' : list A) x
+                (Hlc : last_common' l1 l2 l1' l2' x)
+          : l2 = l2' ++ [x] ++ prefix_nincl x l2.
+          Proof.
+            eapply last_common'_sym in Hlc. eapply last_common_app_eq1;eauto.
+          Qed.
+          eapply last_common_app_eq1 in Hlc as Htt1.
+          eapply last_common_app_eq2 in Hlc as Htt2.
+          pose (rr1 := prefix_nincl (` qq,j1') r1).
+          pose (rr2 := prefix_nincl (` qq',j2') r2).
+        pose (tt1 := rr1 >: (s,k) :+ prefix_nincl (s,k) t1).
+        pose (tt2 := rr2 >: (s,k) :+ prefix_nincl (s,k) t2).
         eapply IHn.
-        4,5: eauto.
-        -- admit. (* last_common prefix *)
-        -- admit. (* prefix path *)
-        -- admit. (* prefix path *)
+        4,5: eauto. 
+        -- 
+          Lemma last_common_prefix (A : Type) `{EqDec A eq} (ll1 ll2 l1 l2 : list A)
+                (l1' l2' : list A) (x : A)
+                (Hlc : last_common' (l1 ++ [x] ++ ll1) (l2 ++ [x] ++ ll2) l1 l2 x)
+                (Hpre1 : Prefix l1' l1)
+                (Hpre2 : Prefix l2' l2)
+          : last_common' (l1' ++ [x] ++ ll1) (l2' ++ [x] ++ ll2) l1' l2' x.
+          Proof.
+          Admitted. 
+                
+          instantiate (5:=tt1). instantiate (4:=tt2).
+          subst tt1 tt2. simpl_nl. do 2 rewrite <-nlconc_to_list. simpl_nl. unfold rcons.
+          do 2 rewrite <-app_assoc.
+          eapply last_common_prefix.
+          setoid_rewrite <-Htt1 at 1. setoid_rewrite <-Htt2. eapply Hlc.
+          Lemma prefix_nincl_prefix' (A : Type) `{EqDec A eq} (l : list A) a
+            : Prefix (prefix_nincl a l) l.
+          Proof.
+            induction l;cbn;eauto.
+            - econstructor.
+            - destruct (a == a0).
+              + econstructor. econstructor.
+              + econstructor. eauto.
+          Qed.
+          1,2: subst rr1 rr2; eapply prefix_nincl_prefix'.
+        -- subst tt1.
+           fold (tl ((s,k) :: prefix_nincl (s,k) t1)). setoid_rewrite nlcons_to_list.
+           eapply path_app.
+           ++ eapply path_prefix_path;[eapply Hpath1|]. simpl_nl. eapply prefix_nincl_prefix.
+              Lemma last_common_in1 (A : Type) `{EqDec A eq} (l1 l2 : list A) x
+                    (Hlc : last_common l1 l2 x)
+                : x ∈ l1.
+              Admitted.
+              eapply last_common_in1. eapply last_common'_iff. do 2 eexists;eauto.
+           ++ simpl_nl. specialize (r1_tpath Hlc Hpath1) as Hr1.
+              eapply path_prefix_path in Hr1;cycle 1.
+              ** simpl_nl. eapply prefix_rcons. eapply prefix_nincl_prefix'.
+              ** subst rr1. admit.
+        -- admit. 
         -- admit. (* non-nil & disjoint *)
         -- clear - Hlc'9 Heqn Hqe0.
            cbn in Heqn.
