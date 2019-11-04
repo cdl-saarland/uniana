@@ -64,8 +64,8 @@ subgoal 7 (ID 1844) is:
 subgoal 8 (ID 1845) is:
  tl ?j1 = tl ?j2
 subgoal 9 (ID 1846) is:
- hd 0 ?j1 <= hd 0 ?j2
-
+ hd 0 ?j1 <= hd 0 ?j
+2
   Admitted. *)
     
 End disj.

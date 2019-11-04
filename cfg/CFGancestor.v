@@ -77,7 +77,8 @@ Section cfg.
     - cbn in *. intros. eapply loop_contains_outermost in H. destructH.
       eapply n;eauto.
   Qed.                  
-  
+
+  (*
   Lemma LPath_loop_contains (* unused *) h h' p π
         (Hpath : LPath h p π)
         (Hin : h' ∈ tl π)
@@ -91,7 +92,7 @@ Section cfg.
       + admit.
       + eapply IHπ;auto. inversion Hpath; subst; eauto.
         admit.
-  Admitted.
+        *)
   
   Lemma ex_LPath (* unused *)p
     : exists h, (forall h', loop_contains h' p -> loop_contains h h') /\ exists π, LPath h p π.
@@ -108,11 +109,11 @@ Section cfg.
   Definition ex_near_ancestor_opt (* unused *)p q
     := finType_sig_or_never (DecPred (fun a => near_ancestor a p q)).
 
+  (*
   Lemma near_ancestor_same (* unused *) h p q a
         (Hloop : innermost_loop h p)
         (Hanc1 : near_ancestor a h q)
-    : near_ancestor a p q.
-  Admitted.
+    : near_ancestor a p q.*)
 
   (* show:
    * ancestors are exactly LPath p ∩ LPath q ∪ {root}

@@ -389,11 +389,11 @@ Section disj.
   Proof.
     exists (map fst (while (DecPred (fun x : Coord => Prefix j1 (snd x))) r2)).
     split.
-    - admit. (*bc j1 <> j2 the front of while... is not (_,q2), thus strictly a prefix and 
-               a backedge source *)
+    - admit. (*bc j1 <> j2 the front of while... is not (_,q2), thus strictly a prefix and
+               a backedge source *) (* FIXME *)
     - eapply disj_node.
       + eapply while_prefix. reflexivity.
-      + (* bc backedge source front of while... has tag j1 *) admit.
+      + (* bc backedge source front of while... has tag j1 *) (* FIXME *)  admit.
   Admitted.
 
 End disj.

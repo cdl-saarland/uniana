@@ -85,18 +85,48 @@ Section cfg.
         (Hdeq : deq_loop p h)
         (Hhead : loop_head h)
     : loop_contains h p.
-  Admitted.
+  Proof.
+    eapply Hdeq.
+    eapply loop_contains_self.
+    eauto.
+  Qed.
   
   Lemma deq_loop_depth p q
         (Hdeq : deq_loop p q)
     : depth q <= depth p.
-  Admitted.
+  Proof.
+    unfold depth.
+    eapply NoDup_incl_length.
+    - eapply NoDup_iff_dupfree.
+      eapply dupfree_filter.
+      eapply dupfree_elements. 
+    - intros x Hx.
+      eapply in_filter_iff in Hx. cbn in Hx.
+      eapply in_filter_iff. cbn. destruct Hx. split;auto.
+  Qed.
   
+  Lemma deq_loop_depth_leq p q
+        (Hdeq : deq_loop p q)
+        (Hdep : depth p <= depth q)
+    : deq_loop q p.
+  Proof.
+    unfold depth in Hdep.
+    eapply NoDup_length_incl in Hdep.
+    - unfold incl in Hdep. setoid_rewrite in_filter_iff in Hdep. cbn in Hdep.
+      intros a Ha. eapply Hdep;eauto.
+    - eapply NoDup_iff_dupfree. eapply dupfree_filter. eapply dupfree_elements.
+    - unfold incl. setoid_rewrite in_filter_iff. intros.
+      cbn in *. destructH. eapply Hdeq in H1. eauto.
+  Qed.
+    
   Lemma deq_loop_depth_eq p q
         (Hdeq : deq_loop p q)
         (Hdep : depth q = depth p)
     : deq_loop q p.
-  Admitted.
+  Proof.
+    eapply deq_loop_depth_leq;eauto.
+    omega.
+  Qed.
 
   (** * Equivalence relation eq_loop **)
 

@@ -329,6 +329,12 @@ Section Rcons.
     - eapply IHl;auto.
   Qed.
 
+  Lemma NoDup_iff_dupfree (A : Type) (l : list A)
+    : NoDup l <-> dupfree l.
+  Proof.
+    split;intro H; induction H;try econstructor;eauto.
+  Qed.
+
 End Rcons.
   
 (** * take_r 

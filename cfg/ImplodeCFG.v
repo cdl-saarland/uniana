@@ -793,5 +793,5 @@ Proof.
   destruct p, q. cbn in Hdeq. push_purify p. push_purify p0.
   intros h' Hh.
   (* it holds because loop containment is equivalent for nodes that are present in the imploded case *)
-Admitted.
+Admitted. (* FIXME *)
 

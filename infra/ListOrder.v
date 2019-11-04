@@ -536,13 +536,17 @@ Section succ_rt.
         (Hel : y ∈ l)
     : x ∈ l.
     clear - Hsucc Hnd Hel.
-    revert dependent l.
-    induction l';intros;cbn in *;try rewrite app_nil_r in *.
-    - eapply splinter_in. eapply Hsucc.
-    - destruct l;[contradiction|].
-      admit.
-  Admitted.
-
+    revert dependent l'.
+    induction l;intros;cbn in *.
+    - contradiction.
+    - destruct Hel.
+      + inversion Hsucc;subst;[left;reflexivity|exfalso].
+        eapply splinter_incl in H2. inversion Hnd;subst. apply H1. eapply H2. right;left. reflexivity.
+      + inversion Hsucc;subst;[left;reflexivity|right].
+        inversion Hnd;subst.
+        eapply IHl;eauto.
+  Qed.
+  
   Ltac find_in_succ_rt := eapply splinter_incl; eauto; firstorder.
   
   Lemma postfix_succ_in (a b : A) l l'

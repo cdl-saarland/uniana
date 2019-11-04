@@ -66,6 +66,7 @@ Lemma splits'_loop_splits__imp `(C : redCFG) (h' : Lab) (h e s' qq qq' : local_i
 Proof.
   unfold loop_splits__imp.
   eapply in_map_iff.
+  (* FIXME *)
 Admitted.
 
 Parameter splits'_spec

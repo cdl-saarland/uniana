@@ -132,6 +132,7 @@ Section cfg.
     eexists;eauto.
   Qed.
 
+  (*
   Lemma edge_head_same_loop (* unused *)p h h'
         (Hedge : edge p h = true)
         (Hhead : loop_head h)
@@ -139,7 +140,7 @@ Section cfg.
     : loop_contains h' h.
   Proof.
     eapply no_exit_head in Hhead;[contradiction|].
-  Admitted.
+   *)
   
   Lemma root_loop_root h
     : loop_contains h root -> h = root.

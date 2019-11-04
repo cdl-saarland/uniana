@@ -631,14 +631,14 @@ Section eval.
     cbn in *. unfold TPath'. simpl_nl' Htr. cbn in *.
     eapply path_back in Htr as Hback. cbn in Hback. unfold Coord in *. rewrite Hback;eauto.
   Qed.
-  
+
   Lemma tr_lift_succ l q q' j j'
         (Hpath : Tr l)
         (Hsucc : (q',j') ≻ (q,j) | map fst l)
     : exists r r', (q',j',r') ≻ (q,j,r) | l.
   Proof.
     (* just pick the state corresponding to (q',j') and (q,j) in l, which is unique since tagging is unique *)
-  Admitted.
+  Admitted. (* FIXME *)
   
   Lemma tr_succ_eff' p q q' br i j k s r r' r0 l
         (Htr : Tr ((p, i, s) :< l))
@@ -646,14 +646,14 @@ Section eval.
         (Heff : eff' (br,r0) = Some (q',r'))
     : q = q'.
     (* the effect is deterministic, thus (q,r) being a successor of (br,r0) implies q = q' *)
-  Admitted.
-
+  Admitted. (* FIXME *)
   
   Lemma succ_in_rcons2 {A : Type} (a b : A) l
     : a ≻ b | l :r: a :r: b.
   Proof.
     exists nil, l. unfold rcons. rewrite <-app_assoc. rewrite <-app_comm_cons. cbn. reflexivity.
   Qed.
+
   
   Lemma succ_in_tpath_eff_tag p q i j t
         (Hpath : TPath' t)
@@ -661,7 +661,7 @@ Section eval.
     : eff_tag q p j = i.
   Proof.
     (* tagging is deterministic thus (p,i) succeeding (q,j) implies that i is the tag of p coming from qj *)
-  Admitted.
+   Admitted. (* FIXME *)
 
   Lemma eff_tcfg p q i j s r
         (Heff : eff (p,i,s) = Some (q,j,r))
