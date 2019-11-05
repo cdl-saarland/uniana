@@ -142,7 +142,50 @@ Proof.
   - exists x, y. right. firstorder.
 Qed.
 
+Lemma exists_or_exists_destruct (X : Type) (P P' Q Q' : X -> X -> Prop)
+  : (exists (x y : X), (P x y \/ Q x y)
+                  \/ (P' x y \/ Q' x y))
+    -> (exists (x y : X), P x y \/ P' x y)
+                   \/ exists (x y : X), Q x y \/ Q' x y.
+Proof.
+  firstorder.
+Qed.
 
+Lemma last_common_app_eq1 (A : Type) `{EqDec A eq} (l1 l2 l1' l2' : list A) x
+      (Hlc : last_common' l1 l2 l1' l2' x)
+  : l1 = l1' ++ [x] ++ prefix_nincl x l1.
+Admitted.
+
+Lemma last_common_app_eq2 (A : Type) `{EqDec A eq} (l1 l2 l1' l2' : list A) x
+      (Hlc : last_common' l1 l2 l1' l2' x)
+  : l2 = l2' ++ [x] ++ prefix_nincl x l2.
+Proof.
+  eapply last_common'_sym in Hlc. eapply last_common_app_eq1;eauto.
+Qed.
+
+Lemma last_common_in1 (A : Type) `{EqDec A eq} (l1 l2 : list A) x
+      (Hlc : last_common l1 l2 x)
+  : x ∈ l1.
+Admitted.
+
+Lemma last_common_prefix (A : Type) `{EqDec A eq} (ll1 ll2 l1 l2 : list A)
+      (l1' l2' : list A) (x : A)
+      (Hlc : last_common' (l1 ++ [x] ++ ll1) (l2 ++ [x] ++ ll2) l1 l2 x)
+      (Hpre1 : Prefix l1' l1)
+      (Hpre2 : Prefix l2' l2)
+  : last_common' (l1' ++ [x] ++ ll1) (l2' ++ [x] ++ ll2) l1' l2' x.
+Proof.
+Admitted. 
+
+Lemma prefix_nincl_prefix' (A : Type) `{EqDec A eq} (l : list A) a
+  : Prefix (prefix_nincl a l) l.
+Proof.
+  induction l;cbn;eauto.
+  - econstructor.
+  - destruct (a == a0).
+    + econstructor. econstructor.
+    + econstructor. eauto.
+Qed.
 (* TODO: I should define s' properly and prove its properties gradually *)
 
 Theorem lc_disj_exits_lsplits' `{redCFG}
@@ -175,17 +218,28 @@ Proof.
     eapply impl_lift in Hlc as Hlc';eauto.
     destructH.
     eapply lc_disj_exits_lsplits_base in Hlc'1. 2-11:eauto. 2:admit.
+    setoid_rewrite splits'_spec in Hlc'1.    
+    eapply exists_or_exists_destruct in Hlc'1.
+    destruct Hlc'1 as [Hlc'1|Hlc'1].
+    {
+      cbn.
+      destructH.
+      exists (`x), (`y).
+      destruct Hlc'1;[left|right]; rewrite splits'_spec; left. all: admit.
+    }
     setoid_rewrite splits'_spec.
     eapply exists_or_exists_switch.
-    destructH.
+    destruct Hlc'1 as [qq [qq' Hlc'1]].
     exists (`s'), (`qq), (`qq').
-    assert (exists qe1 j1', exit_edge (` s') qe1 (` qq) /\ (qe1,j1') ∈ (r1 >: (s,k))) as Hqe by admit.
+    assert (exists qe1 j1', exit_edge (` s') qe1 (` qq) /\ (`qq,j1) ≻ (qe1,j1') | (r1 >: (s,k)))
+      as Hqe by admit.
+    (* critical *)
     assert (exists qe2 j2', exit_edge (` s') qe2 (` qq') /\ (qe2,j2') ∈ (r2 >: (s,k))) as Hqe' by admit.
     do 2 destructH.
     destruct Hlc'1;[left|right].
     + cbn. split.
       * cstr_subtype He1. cstr_subtype Hh. eapply splits'_loop_splits__imp.
-        1: eapply eq_loop_exiting;eauto. eauto.
+        1: eapply eq_loop_exiting;eauto. rewrite splits'_spec. eauto.
       * (*eapply path_to_elem in Hqe1 as Hr.
         2: eapply r1_tpath;eauto. destruct Hr as [rr1 [Hrr1 Hrpre1]].
         eapply path_to_elem in Hqe'1 as Hr'.
@@ -196,73 +250,42 @@ Proof.
         eapply path_to_elem in Hpath2 as [tt2 [Htt2 Hpre2]].
         2: { eapply postfix_incl. unfold last_common' in Hlc. destructH. simpl_nl. eauto.
              simpl_nl' Hqe'1. eauto. }*)
-          Lemma last_common_app_eq1 (A : Type) `{EqDec A eq} (l1 l2 l1' l2' : list A) x
-                (Hlc : last_common' l1 l2 l1' l2' x)
-            : l1 = l1' ++ [x] ++ prefix_nincl x l1.
-          Admitted.
-          Lemma last_common_app_eq2 (A : Type) `{EqDec A eq} (l1 l2 l1' l2' : list A) x
-                (Hlc : last_common' l1 l2 l1' l2' x)
-          : l2 = l2' ++ [x] ++ prefix_nincl x l2.
-          Proof.
-            eapply last_common'_sym in Hlc. eapply last_common_app_eq1;eauto.
-          Qed.
-          eapply last_common_app_eq1 in Hlc as Htt1.
-          eapply last_common_app_eq2 in Hlc as Htt2.
-          pose (rr1 := prefix_nincl (` qq,j1') r1).
-          pose (rr2 := prefix_nincl (` qq',j2') r2).
+        eapply last_common_app_eq1 in Hlc as Htt1.
+        eapply last_common_app_eq2 in Hlc as Htt2.
+        pose (rr1 := prefix_nincl (` qq,j1') r1).
+        pose (rr2 := prefix_nincl (` qq',j2') r2).
         pose (tt1 := rr1 >: (s,k) :+ prefix_nincl (s,k) t1).
         pose (tt2 := rr2 >: (s,k) :+ prefix_nincl (s,k) t2).
         eapply IHn.
-        4,5: eauto. 
-        -- 
-          Lemma last_common_prefix (A : Type) `{EqDec A eq} (ll1 ll2 l1 l2 : list A)
-                (l1' l2' : list A) (x : A)
-                (Hlc : last_common' (l1 ++ [x] ++ ll1) (l2 ++ [x] ++ ll2) l1 l2 x)
-                (Hpre1 : Prefix l1' l1)
-                (Hpre2 : Prefix l2' l2)
-          : last_common' (l1' ++ [x] ++ ll1) (l2' ++ [x] ++ ll2) l1' l2' x.
-          Proof.
-          Admitted. 
-                
-          instantiate (5:=tt1). instantiate (4:=tt2).
-          subst tt1 tt2. simpl_nl. do 2 rewrite <-nlconc_to_list. simpl_nl. unfold rcons.
-          do 2 rewrite <-app_assoc.
-          eapply last_common_prefix.
-          setoid_rewrite <-Htt1 at 1. setoid_rewrite <-Htt2. eapply Hlc.
-          Lemma prefix_nincl_prefix' (A : Type) `{EqDec A eq} (l : list A) a
-            : Prefix (prefix_nincl a l) l.
-          Proof.
-            induction l;cbn;eauto.
-            - econstructor.
-            - destruct (a == a0).
-              + econstructor. econstructor.
-              + econstructor. eauto.
-          Qed.
-          1,2: subst rr1 rr2; eapply prefix_nincl_prefix'.
+        4,5: eauto.
+        -- instantiate (5:=tt1). instantiate (4:=tt2).
+           subst tt1 tt2. simpl_nl. do 2 rewrite <-nlconc_to_list. simpl_nl. unfold rcons.
+           do 2 rewrite <-app_assoc.
+           eapply last_common_prefix.
+           setoid_rewrite <-Htt1 at 1. setoid_rewrite <-Htt2. eapply Hlc.
+           1,2: subst rr1 rr2; eapply prefix_nincl_prefix'.
         -- subst tt1.
            fold (tl ((s,k) :: prefix_nincl (s,k) t1)). setoid_rewrite nlcons_to_list.
            eapply path_app.
            ++ eapply path_prefix_path;[eapply Hpath1|]. simpl_nl. eapply prefix_nincl_prefix.
-              Lemma last_common_in1 (A : Type) `{EqDec A eq} (l1 l2 : list A) x
-                    (Hlc : last_common l1 l2 x)
-                : x ∈ l1.
-              Admitted.
               eapply last_common_in1. eapply last_common'_iff. do 2 eexists;eauto.
            ++ simpl_nl. specialize (r1_tpath Hlc Hpath1) as Hr1.
               eapply path_prefix_path in Hr1;cycle 1.
               ** simpl_nl. eapply prefix_rcons. eapply prefix_nincl_prefix'.
-              ** subst rr1. admit.
-        -- admit. 
-        -- admit. (* non-nil & disjoint *)
+              ** subst rr1. admit. (* critical *)
+        -- admit. (* analogous *)
+        -- admit. (* non-nil <-- but why ? & disjoint *)
         -- clear - Hlc'9 Heqn Hqe0.
            cbn in Heqn.
-           assert (depth qe1 = depth (`s')) by admit. rewrite H0.
+           assert (depth qe1 = depth (`s')).
+           { eapply eq_loop_exiting in Hqe0. rewrite Hqe0. reflexivity. }
+           rewrite H0.
            setoid_rewrite Hlc'9.
            assert (depth (C:=local_impl_CFG H q1) (↓ purify Hq1) = depth q1) by admit.
            setoid_rewrite H1. omega.
         -- admit. (* tl j1' = j1 = tl j2' *)
         -- edestruct (Nat.le_ge_cases) as [Q|Q];eapply Q.
-    + 
+    + (* analogous *)
       (* show that qq & qq' are exit_edges of s' on H, then construct the coresponding paths to them
        * and show that last_common holds for these paths, bc they are subpaths. 
        * then exploit IHn, use resulting qq_ih & qq'_ih as witnesses, choose the complicated case,
