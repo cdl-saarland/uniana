@@ -80,8 +80,13 @@ Parameter rel_splits_spec (* unused *)
   : forall `{redCFG} p q sp, sp ∈ rel_splits p q
                         <-> exists h e, e -a>* p (* acyclic, bc. otw. path could use back_edge of outer loop *)
                                  /\ loop_contains h q
-                                 /\ sp ∈ loop_splits h e.
-(* sp ∈ splits' h e. <--- deprecated *)
+                                 /\ sp ∈ splits' h e.
+(* sp ∈ loop_splits h e. <--- deprecated,
+   because: assume h_q is the innermost loop of q and h the next loop strictly containing h_q.
+   now if h_q & q dominate the only exit of h and if there is a loop h' with q ∉ h' 
+   which is has loop split and has one exit towards h_q and another to a latch of h, 
+   then this is a glsplit of h and q can be reached with different tags because of that.
+ *)
 
 Parameter splits_spec
   : forall `{redCFG} p sp, sp ∈ splits p

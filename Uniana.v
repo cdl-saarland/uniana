@@ -434,7 +434,6 @@ Section uniana.
     (* FIXME *)
     eapply lc_disj_exits_lsplits with (h0:=h) (e3:=e1) (e4:=e2) (i0:=l'++j) in Hlc as Hsplit;eauto.
     4: { intro N. inversion N. contradiction. }
-    replace splits' with (loop_splits _ ) in Hsplit by admit.
     all: cycle 1.
     {
       clear - ηeq1 Hη1 Hexit__edge1 Hexit__succ1 Htr1. unfold TPath'. econstructor. cbn.
@@ -538,7 +537,7 @@ Section uniana.
         clear - Hexit__edge1 Hexit__edge2; unfold exit_edge in *;unfold exited;
           [|exists qe2]; firstorder 0.
       Unshelve. all: eauto.
-  Admitted.
+  Qed.
   
   Lemma unch_same_tag p u i s1 s2 j1 j2 r1 r2 l1 l2 x uni unch
         (Hunibr : join_andb (map ((uni_branch uni) ∘ fst ∘ fst) (rel_splits p u)) = true)
