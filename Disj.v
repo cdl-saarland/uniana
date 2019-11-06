@@ -10,6 +10,23 @@ Require Import Coq.Logic.Eqdep_dec.
 
 Require Export Tagged Evaluation Disjoint MaxPreSuffix SplitsDef.
 
+
+Parameter splits'_spec
+  : forall `{redCFG} h e sp, sp ∈ splits' h e
+                        <-> sp ∈ loop_splits__imp h e
+                          \/ exists br q q', (br,q,q') ∈ loop_splits__imp h e
+                                       /\ (sp ∈ splits' br q
+                                          \/ sp ∈ splits' br q').
+Parameter splits_spec
+  : forall `{redCFG} p sp, sp ∈ splits p
+                      <-> sp ∈ path_splits__imp p (* usual split *)
+                        \/ (exists h, (* lsplits of exited loops: *)
+                              sp ∈ splits' h p)
+                        \/ exists br q q',(br,q,q') ∈ path_splits__imp p
+                                    (* loop_split of splitting heads *)
+                                    /\ (sp ∈ splits' br q
+                                       \/ sp ∈ splits' br q').
+
 (*Lemma in_loop_CFG `{C : redCFG} (p h : Lab)
       (Hhead : loop_head h)
       (Hinner : get_innermost_loop p = h)

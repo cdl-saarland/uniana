@@ -61,7 +61,7 @@ Definition loop_splits__imp `{C : redCFG} (h e : Lab)
 
 Lemma splits'_loop_splits__imp `(C : redCFG) (h' : Lab) (h e s' qq qq' : local_impl_CFG_type C h')
       (Heq :  eq_loop (`h) h')
-      (Hsp : (s', qq, qq') ∈ @splits' _ _ _ _ (local_impl_CFG C h') h e)
+      (Hsp : (s', qq, qq') ∈ @loop_splits _ _ _ _ (local_impl_CFG C h') h e)
   : (` s', ` qq, ` qq') ∈ loop_splits__imp (`h) (`e).
 Proof.
   unfold loop_splits__imp.
@@ -71,7 +71,7 @@ Admitted.
 
 Parameter splits'_spec
   : forall `{redCFG} h e sp, sp ∈ splits' h e
-                        <-> sp ∈ loop_splits__imp h e
+                        <-> sp ∈ loop_splits h e
                           \/ exists br q q', (br,q,q') ∈ loop_splits__imp h e
                                        /\ (sp ∈ splits' br q
                                           \/ sp ∈ splits' br q').
@@ -90,7 +90,7 @@ Parameter rel_splits_spec (* unused *)
 
 Parameter splits_spec
   : forall `{redCFG} p sp, sp ∈ splits p
-                      <-> sp ∈ path_splits__imp p (* usual split *)
+                      <-> sp ∈ path_splits p (* usual split *)
                         \/ (exists h, (* lsplits of exited loops: *)
                               sp ∈ splits' h p)
                         \/ exists br q q',(br,q,q') ∈ path_splits__imp p
