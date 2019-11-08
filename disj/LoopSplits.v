@@ -25,6 +25,7 @@ Section disj.
         (Hdep : depth s = depth q1)
         (Htaglt : hd 0 j1 < hd 0 j2)
     : ( s, qs1, qs2) ∈ loop_splits C h e1.
+  Proof.
   Admitted.
   
   Lemma lc_disj_exits_lsplits_base_eq π
@@ -36,11 +37,30 @@ Section disj.
   Proof.
   Admitted.
 
+  Lemma hd_tl_len_eq (A : Type) (l l' : list A) (a : A)
+        (Hheq : hd a l = hd a l')
+        (Hteq : tl l = tl l')
+        (Hleq : | l | = | l' |)
+    : l = l'.
+  Proof.
+    clear - Hheq Hteq Hleq.
+    revert dependent l'. induction l; intros; destruct l';cbn in *;eauto. 1,2: congruence.
+    f_equal;eauto.
+  Qed.                          
+
   Lemma hd_eq_eq
         (Hheq : hd 0 j1 = hd 0 j2)
     : j1 = j2.
-    clear - Hexit1 Hexit2 Hpath1 Hpath2 Hheq.
-  Admitted.
+  Proof.
+    clear - Hexit1 Hexit2 Hpath1 Hpath2 Hheq Htag.
+    eapply eq_loop_exiting in Hexit1.
+    eapply eq_loop_exiting in Hexit2.
+    eapply hd_tl_len_eq;eauto.
+    erewrite tag_depth. 2:eapply Hpath1.
+    erewrite tag_depth. 2:eapply Hpath2.
+    2,3: eapply path_contains_front;eauto.
+    rewrite <-Hexit1. rewrite <-Hexit2. reflexivity.
+  Qed.
   
   Corollary lc_disj_exits_lsplits_base
           (Hdep : depth s = depth q1)
@@ -63,18 +83,101 @@ Section disj.
     eapply lc_disj_exits_lsplits_base;eauto.
   Qed.
 
+  Lemma dom_self_loop p π
+        (Hpath : CPath p p π)
+        (Hinl : innermost_loop h p)
+        (Hnin : h ∉ π)
+    : π = ne_single p.
+  Admitted.
+  
+  Lemma exit_edge_innermost q e
+        (Hexit : exit_edge h q e)
+    : innermost_loop h q.
+  Admitted.
+  
   Lemma disj_latch_path_or
         (Heq : j1 = j2)
     : exists π, (CPath q2 h (π >: q2) /\ Disjoint (map fst r1) π)
            \/ (CPath q1 h (π >: q1) /\ Disjoint (map fst r2) π).
-  Admitted.
-
-  Lemma splits'_edge1 
-    : edge s qs1 = true.
-  Admitted.
-  
-  Lemma splits'_edge2
-    : edge s qs2 = true.
+  Proof.
+    destruct Hexit1 as [Hin1 [Hnin1 Hedge1]].
+    destruct Hexit2 as [Hin2 [Hnin2 Hedge2]].
+    copy Hin1 Hin1'. copy Hin2 Hin2'.
+    unfold loop_contains in Hin1, Hin2.
+    destruct Hin1 as [p1 [ϕ1 [Hb1 [Hp1 Htl1]]]].
+    destr_r ϕ1.
+    replace a with q1 in * by admit. clear a.
+    decide (exists x, x ∈ map fst r2 /\ x ∈ (h :: l)).
+    - destruct Hin2 as [p2 [ϕ2 [Hb2 [Hp2 Htl2]]]].
+      destr_r ϕ2.
+      replace a with q2 in * by admit.
+      decide (exists y, y ∈ map fst r1 /\ y ∈ (h :: l0)).
+      +
+        (*assert (h ∉ map fst r1) as Hh1.
+        { intro N. eapply no_head;eauto. }
+        assert (h ∉ map fst r2) as Hh2.
+        { intro N. eapply no_head. 1:eapply last_common'_sym. all:eauto.
+          symmetry;eauto. rewrite Heq;eauto. }
+        destruct l,l0.
+        1-3: exists [h];cbn. 1-2: right. 3: left.
+               1-3:split;[econstructor;eauto using back_edge_incl
+                         |intros z R1 R2;destruct R2;[subst|];contradiction]. *)
+        exfalso.
+        rename e into Hx.
+        rename e0 into Hy.
+        do 2 destructH.
+        destruct Hy1;[subst y;eapply no_head;eauto|].
+        destruct Hx1.
+        {
+          subst x. eapply no_head. 1: eapply last_common'_sym. all: eauto.
+          - symmetry;eauto.
+          - rewrite Heq. eauto.
+        }
+        destruct l;[inversion H0|].
+        destruct l0;[inversion H|].
+        cbn in Hp1, Hp2.
+        rewrite nl_cons_lr_shift in Hp1.
+        rewrite nl_cons_lr_shift in Hp2.
+        eapply path_nlrcons_edge in Hp1 as Hedge1'.
+        eapply path_nlrcons_edge in Hp2 as Hedge2'.
+        eapply path_rcons_inv in Hp1. destructH.
+        eapply path_rcons_inv in Hp2. destructH.
+        replace (ne_back (e :< l)) with p in *.
+        2: { symmetry. eapply path_back;eauto. }
+        replace (ne_back (e0 :< l0)) with p0 in *.
+        2: { symmetry. eapply path_back;eauto. }
+        (* construct paths to the q's *)
+        specialize (r1_tpath Hlc Hpath1) as Hr1.
+        eapply TPath_CPath in Hr1. cbn in Hr1. rewrite ne_map_nl_rcons in Hr1. cbn in Hr1.
+        specialize (r2_tpath Hlc Hpath2) as Hr2.
+        eapply TPath_CPath in Hr2. cbn in Hr2. rewrite ne_map_nl_rcons in Hr2. cbn in Hr2.
+        eapply path_from_elem in Hr1;eauto.
+        2: { simpl_nl;eapply In_rcons;right. eauto. }
+        eapply path_from_elem in Hr2;eauto.
+        2: simpl_nl; eapply In_rcons;right;eauto.
+        (* construct paths to x & y *)
+        eapply path_to_elem in Hp2.
+        2: simpl_nl;eauto.
+        eapply path_to_elem in Hp1.
+        2: simpl_nl;eauto.
+        do 4 destructH.
+        eapply path_app in Hr0 as HQ;eauto.
+        eapply path_app_conc in Hedge1';eauto.
+        eapply path_app in Hedge1';eauto.
+        eapply path_rcons in Hedge1';eauto.
+        eapply dom_self_loop in Hedge1'.
+        * clear - Hedge1'.
+          destruct ϕ4;admit.
+        * 
+          eapply exit_edge_innermost;eapply Hexit2.
+        * admit.
+      (* q2 ->+ y ->* q1 ->+ x ->* q2 *)
+      + exists (h :: l0). left. cbn. split.
+        * econstructor;eauto. eapply back_edge_incl;eauto.
+        * do 2 simpl_dec' n. intros x H. destruct (n x);[contradiction|auto].
+    - exists (h :: l). right. cbn. split.
+      + econstructor;eauto. eapply back_edge_incl;eauto.
+      + do 2 simpl_dec' n. intros x H. destruct (n x);[contradiction|auto].
   Admitted.
 
   Lemma q1_eq_q2
