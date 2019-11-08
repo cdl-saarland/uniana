@@ -317,7 +317,8 @@ Section disj.
     eapply path_front in Hpath1 as Hfront1.
     eapply path_front in Hpath2 as Hfront2.
     destruct r1, r2.
-    - contradiction.
+    - eapply lc_nil1 in Hlc. rewrite hd_error_ne_front in Hlc. inversion Hlc.
+      setoid_rewrite Hfront1 in H0. inversion H0. subst. destruct Hinner. eauto. 
     - eapply lc_nil1 in Hlc.
       rewrite hd_error_ne_front in Hlc. setoid_rewrite Hfront1 in Hlc. inversion Hlc. subst s k.
       unfold innermost_loop in Hinner. destructH; auto.

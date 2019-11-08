@@ -83,13 +83,13 @@ Section disj.
     - reflexivity.
     - cbn. omega.
   Qed.
-  
+
   Lemma same_tag_impl1 p i
         (Hel : (p,i) ∈ impl_tlist s r1)
     : i = j1.
   Proof.
     specialize (@prefix_tag_r1 _ _ _ _ _ t1 t2 r1 r2 q1 q2 s j1 j2 k Hlc) as Hpre.
-    do 6 exploit' Hpre.
+    do 5 exploit' Hpre.
     specialize k_eq_j1 as Hkeqj. subst k.
     specialize (r1_in_head_q) as Hhq.
     specialize (Hhq _ _ _ _ _ _ _ _ _ _ Hlc Hpath1 Hpath2). exploit Hhq.
@@ -169,7 +169,7 @@ Section disj.
 
   Section same_tag.
     Variable (r3 : list (Lab * Tag)) (q3 : Lab).
-    Hypotheses (Hpre : Prefix r3 r2) (Hhd : ne_front (r3 >: (s,k)) = (q3,j1)) (Hneq3 : r1 <> r3).
+    Hypotheses (Hpre : Prefix r3 r2) (Hhd : ne_front (r3 >: (s,k)) = (q3,j1)). (*(Hneq3 : r1 <> r3).*)
 
     Lemma r3_tpath
       : TPath (s,k) (q3,j1) (r3 >: (s,k)).
@@ -376,7 +376,7 @@ Section disj.
         (Hjeq : j1 = j2)
     : Disjoint (map fst r1) (map fst r2).
   Proof.
-    eapply disj_node; [reflexivity| |eauto].
+    eapply disj_node; [reflexivity| ].
     unfold last_common' in Hlc. destructH.
     eapply postfix_path in Hpath2;eauto. 
     eapply path_front in Hpath2. rewrite Hjeq. eauto.
