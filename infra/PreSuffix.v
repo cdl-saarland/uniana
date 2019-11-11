@@ -521,5 +521,15 @@ Section Pre.
       + inversion H.
       + econstructor. eapply IHPrefix; eauto.
   Qed.
+  
+  Lemma prefix_nincl_prefix' `{EqDec A eq} (l : list A) a
+    : Prefix (prefix_nincl a l) l.
+  Proof.
+    induction l;cbn;eauto.
+    - econstructor.
+    - destruct (a == a0).
+      + econstructor. econstructor.
+      + econstructor. eauto.
+  Qed.
 
 End Pre.

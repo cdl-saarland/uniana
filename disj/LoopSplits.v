@@ -255,41 +255,73 @@ End maxcont.
  *)
 
 
-Lemma impl_lift_exit_edge `(C : redCFG) (q' : Lab) (h q e : local_impl_CFG_type C q')
-      (Hexit : exit_edge (`h) (`q) (`e))
-      (Heq : eq_loop (`q) q')
-  : exit_edge (redCFG:= local_impl_CFG C q') h q e.
-Admitted.
 
-Section lift.
+Definition imploding_head `(C : redCFG) h p := exists e, exited p e /\ deq_loop h e.
+
+Section lift_one.
+
   Context `(C : redCFG).
-  Variables (s q1 : Lab) (h' q1' q2' e1' e2' : local_impl_CFG_type C q1)
-            (t1 t2 : ne_list (Lab * Tag)) (r1 r2 : list (Lab * Tag)) (k i j1 j2 : Tag).
-  Hypotheses (Hlc : last_common' t1 t2 r1 r2 (s, k))
-             (Hpath1 : TPath (root, start_tag) (`q1', j1) t1)
-             (Hpath2 : TPath (root, start_tag) (`q2', j2) t2)
-             (Hexit1 : exit_edge (`h') (`q1') (`e1'))
-             (Hexit2 : exit_edge (`h') (`q2') (`e2'))
-             (Hextra : j1 = j2 -> exists π, CPath (` q2') (` h') (π >: `q2') /\ Disjoint (map fst r1) π)
-             (Heq : eq_loop q1 (`q1')).
+  Variables (s q : Lab) (h' q' e' : local_impl_CFG_type C q)
+            (t : ne_list (Lab * Tag)) (r : list (Lab * Tag)) (j : Tag).
+  Local Definition C'' := local_impl_CFG C q.
 
-Lemma impl_lift
-      (r1' := impl_tlist q1 r1)
-      (r2' := impl_tlist q1 r2)
-      (C' := local_impl_CFG C q1)
-  : exists s' (t1' t2' : ne_list (local_impl_CFG_type C q1 * Tag)),
-    impl_tlist q1 t1 = t1'
-    /\ impl_tlist q1 t2 = t2'
-    /\ last_common' t1' t2' r1' r2' (s',j1)
-    /\ TPath (C:=C') (↓ purify_implode q1, start_tag) (q1', j1) t1'
-    /\ TPath (C:=C') (↓ purify_implode q1, start_tag) (q2', j2) t2'
-    /\ exit_edge (redCFG:=C') h' q1' e1'
-    /\ exit_edge (redCFG:=C') h' q2' e2'
-    /\ (j1 = j2 -> exists π, CPath q2' h' (π >: q2') /\ Disjoint (map fst r1') π)
-    /\ depth (`s') = S (depth q1').
-Admitted.
+  Hypotheses (Hpath : TPath (root,start_tag) (`q',j) t)
+             (Hexit : exit_edge (`h') (`q') (`e'))
+             (Heq : eq_loop q (`q'))
+             (Hndeq : ~ deq_loop q s)
+             (Hdeq : deq_loop s q).
 
-End lift.
+  Definition s'' : local_impl_CFG_type C q.
+    clear - Heq Hdeq Hndeq.
+  Admitted.
+
+  Lemma s_in_s
+    : loop_contains (`s'') s.
+  Admitted.
+  
+  Lemma q_ndeq_s'
+    : ~ deq_loop q (`s'').
+  Admitted.
+
+  Lemma s_imploding_head
+    : imploding_head C q (`s'').
+  Admitted.
+  
+  Lemma impl_lift_exit_edge
+    : exit_edge (redCFG:= local_impl_CFG C q) h' q' e'.
+    clear - Hexit.
+  Admitted.
+
+  Local Definition t' := match impl_tlist q t with
+                         | nil => ne_single (h',j) (* never happening *)
+                         | a :: l => a :< l
+                         end.
+
+  Lemma impl_tlist_eq
+    : impl_tlist q t = t'.
+  Proof.
+    eapply impl_tlist_tpath with (h:=q) in Hpath as Hpath'.
+    Unshelve.
+    2: { eapply implode_nodes_root_inv. } 2: { left. eapply Heq. }
+    destruct Hpath'. destruct H.
+    unfold t'. destruct impl_tlist.
+    - destruct x;cbn in H0;congruence.
+    - simpl_nl. reflexivity.
+  Qed.
+  
+  Lemma ex_s_exit (x' : local_impl_CFG_type C q) i i'
+        (Hsucc : (x',i') ≻ (s'',i) | t')
+    : exited (` s'') (` x').
+  Proof.
+  Admitted.
+  
+  Lemma impl_lift_tpath
+    : TPath (C:=C'') (↓ purify_implode q, start_tag) (q', j) t'.
+    clear - Hpath.
+  Admitted.
+
+End lift_one.
+
 Lemma exists_or_exists_switch (X : Type) (P P' : X -> X -> Prop)
       (Q Q' : X -> X -> X -> Prop) (R : X -> X -> X -> X -> X -> Prop)
   : (exists v w z, (Q v w z \/ Q' v w z) /\ exists x y, R x y v w z)
@@ -309,55 +341,6 @@ Proof.
   firstorder.
 Qed.
 
-Lemma last_common_app_eq1 (A : Type) `{EqDec A eq} (l1 l2 l1' l2' : list A) x
-      (Hlc : last_common' l1 l2 l1' l2' x)
-  : l1 = l1' ++ [x] ++ prefix_nincl x l1.
-Admitted.
-
-Lemma last_common_app_eq2 (A : Type) `{EqDec A eq} (l1 l2 l1' l2' : list A) x
-      (Hlc : last_common' l1 l2 l1' l2' x)
-  : l2 = l2' ++ [x] ++ prefix_nincl x l2.
-Proof.
-  eapply last_common'_sym in Hlc. eapply last_common_app_eq1;eauto.
-Qed.
-
-Lemma last_common_in1 (A : Type) `{EqDec A eq} (l1 l2 : list A) x
-      (Hlc : last_common l1 l2 x)
-  : x ∈ l1.
-Admitted.
-
-Lemma last_common_prefix (A : Type) `{EqDec A eq} (ll1 ll2 l1 l2 : list A)
-      (l1' l2' : list A) (x : A)
-      (Hlc : last_common' (l1 ++ [x] ++ ll1) (l2 ++ [x] ++ ll2) l1 l2 x)
-      (Hpre1 : Prefix l1' l1)
-      (Hpre2 : Prefix l2' l2)
-  : last_common' (l1' ++ [x] ++ ll1) (l2' ++ [x] ++ ll2) l1' l2' x.
-Proof.
-Admitted. 
-
-Lemma prefix_nincl_prefix' (A : Type) `{EqDec A eq} (l : list A) a
-  : Prefix (prefix_nincl a l) l.
-Proof.
-  induction l;cbn;eauto.
-  - econstructor.
-  - destruct (a == a0).
-    + econstructor. econstructor.
-    + econstructor. eauto.
-Qed.
-
-Lemma ex_s_exit `(C : redCFG) (j i : Tag) (h q : Lab) (e' s' q' : local_impl_CFG_type C q)
-      (t : ne_list (Lab * Tag)) (t' : ne_list (local_impl_CFG_type C q * Tag))
-      (Hqeq : eq_loop q (` q'))
-      (Hpath : TPath (root, start_tag) (` q', j) t)
-      (Hexit : exit_edge h (` q') (` e'))
-      (Hel : (s', i) ∈ t')
-      (Ht' : impl_tlist q t = t')
-      (Hdep' : depth (` s') = S (depth (C:=local_impl_CFG C q) q'))
-      (qs' := fst (get_succ (s', i) (e', tl j) t'))
-  : exited (` s') (` qs').
-Proof.
-Admitted.
-
 Lemma exit_succ_exiting `(C : redCFG) (p q h e : Lab) (k i j : Tag) r
       (Hpath : TPath (p,k) (q,j) (r >: (p,k)))
       (Hexit : exited h e)
@@ -373,6 +356,38 @@ Admitted.
 Lemma splits'_sym `(C : redCFG) (s h e q q' : Lab)
               (Hsp : (s,q,q') ∈ splits' h e)
   : (s,q',q) ∈ splits' h e.
+Admitted.
+
+Lemma get_succ_cons (A : eqType) (l : list A) (a b : A)
+      (Hel : a ∈ l)
+  : get_succ a b l ≻ a | b :: l.
+Proof.
+Admitted.
+
+Lemma succ_in_prefix_nd (A : Type) (l l' : list A) (a b c : A)
+      (Hpre : Prefix (c :: l) l')
+      (Hel : a ∈ l)
+      (Hsucc : b ≻ a | l')
+      (Hnd : NoDup l')
+  : b ≻ a | c :: l.
+Admitted.
+
+Lemma exit_edge_tcfg_edge `(C : redCFG) (h p q : Lab) (j : Tag)
+      (Hexit : exit_edge h q p)
+  : tcfg_edge (q,j) (p,tl j) = true.
+Proof.
+  cbn. conv_bool.
+  unfold eff_tag. 
+  decide (q ↪ p).
+  - exfalso. eapply no_exit_head;eauto. exists q. auto.
+  - unfold exit_edge in Hexit. destructH. split;[auto|].
+    decide (exists h0, exit_edge h0 q p).
+    + reflexivity.
+    + exfalso. eapply n0. exists h. unfold exit_edge. eauto.
+Qed.
+
+Lemma impl_depth_max `(C : redCFG) (q : Lab) (p : local_impl_CFG_type C q)
+  : depth (C:=local_impl_CFG C q) p <= depth (C:=C) q.
 Admitted.
 
 Lemma tpath_shift `(C : redCFG) (q qe s : Lab) (j i k : Tag) (q' e' s' : local_impl_CFG_type C q) n
@@ -401,34 +416,91 @@ Proof.
         admit. (* critical *) 
 Admitted.
 
-Lemma succ_in_prefix_nd (A : Type) (l l' : list A) (a b c : A)
-      (Hpre : Prefix (c :: l) l')
-      (Hel : a ∈ l)
-      (Hsucc : b ≻ a | l')
-      (Hnd : NoDup l')
-  : b ≻ a | c :: l.
-Admitted.
+Module lift.
+Section lift.
+  Load X_vars_lift.
+  
+  Lemma impl_tlist_eq1
+    : impl_tlist q1 t1 = t1'.
+  Proof.
+    eapply impl_tlist_eq;eauto.
+  Qed.
+  
+  Lemma impl_tlist_eq2
+    : impl_tlist q1 t2 = t2'.
+  Proof.
+    eapply impl_tlist_eq;eauto.
+    rewrite <-Hloop. eapply Heq.
+  Qed.
 
-Lemma exit_edge_tcfg_edge `(C : redCFG) (h p q : Lab) (j : Tag)
-      (Hexit : exit_edge h q p)
-  : tcfg_edge (q,j) (p,tl j) = true.
-Proof.
-  cbn. conv_bool.
-  unfold eff_tag. 
-  decide (q ↪ p).
-  - exfalso. eapply no_exit_head;eauto. exists q. auto.
-  - unfold exit_edge in Hexit. destructH. split;[auto|].
-    decide (exists h0, exit_edge h0 q p).
-    + reflexivity.
-    + exfalso. eapply n0. exists h. unfold exit_edge. eauto.
-Qed.
+  Lemma impl_lift_tpath1
+    : TPath (C:=C') (↓ purify_implode q1, start_tag) (q1', j1) t1'.
+  Proof.
+    eapply impl_lift_tpath;eauto.
+  Qed.
 
-Lemma get_succ_cons (A : eqType) (l : list A) (a b : A)
-      (Hel : a ∈ l)
-  : get_succ a b l ≻ a | b :: l.
-Proof.
-Admitted.
+  Lemma impl_lift_tpath2
+    : TPath (C:=C') (↓ purify_implode q1, start_tag) (q2', j2) t2'.
+  Proof.
+    eapply impl_lift_tpath;eauto.
+  Qed.
 
+  Lemma impl_lift_exit1
+    : exit_edge (redCFG:=C') h' q1' e1'.
+  Proof.
+    eapply impl_lift_exit_edge;eauto.
+  Qed.
+
+  Lemma impl_lift_exit2
+    : exit_edge (redCFG:=C') h' q2' e2'.
+  Proof.
+    eapply impl_lift_exit_edge;eauto.
+  Qed.
+
+  Lemma impl_lift_extra
+    : j1 = j2 -> exists π, CPath (H:=C') q2' h' (π >: q2') /\ Disjoint (map fst r1') π.
+  Admitted.
+
+  (* step case *)
+
+  Hypotheses (Hsdeq : deq_loop s q1)
+             (Hndeq : ~ deq_loop q1 s).
+  
+  Local Definition s' := s'' Heq Hndeq Hsdeq.
+
+  Lemma impl_lift_lc
+    : last_common' t1' t2' r1' r2' (s',j1).
+  Admitted.
+                             
+  Local Definition qs1' := fst (get_succ (s', j1) (e1', tl j1) t1').
+  Local Definition qs2' := fst (get_succ (s', j1) (e2', tl j2) t2').
+  
+  Lemma ex_s_exit1
+    : exited (` s') (` qs1').
+  Proof.
+    eapply ex_s_exit;eauto.
+  Admitted.
+
+  Lemma ex_s_exit2
+    : exited (` s') (` qs2').
+  Proof.
+    eapply ex_s_exit;eauto.
+  Admitted.
+
+End lift.
+End lift.
+
+Section disj.
+
+Load X_vars_lift.
+Variables (qs1 qs2 : Lab) (js1 js2 : Tag).
+Hypotheses (Hsucc1 : (qs1,js1) ≻ (s,k) | (`e1',tl j1) :: t1)
+           (Hsucc2 : (qs2,js2) ≻ (s,k) | (`e2',tl j2) :: t2)
+           (Htag : tl j1 = tl j2)
+           (Htagle : hd 0 j1 <= hd 0 j2).
+
+(*Goal (s,qs1,qs2) ∈ splits' (`h') (`e1').*)
+  
 Theorem lc_disj_exits_lsplits' `{redCFG}
         (s e1 e2 q1 q2 qs1 qs2 h : Lab) (j1 j2 k js1 js2 : Tag)
         (t1 t2 : ne_list Coord) (r1 r2 : list Coord)
@@ -446,7 +518,7 @@ Theorem lc_disj_exits_lsplits' `{redCFG}
 Proof.
   remember (depth s - depth q1).
   revert Htag Htagle.
-  revert dependent Lab. 
+  revert dependent Lab.
   revert j1 j2 k js1 js2.
   induction n;intros.
   - eapply lc_disj_exits_lsplits_base';eauto.
@@ -467,16 +539,23 @@ Proof.
     (* Construct the imploded type for them *)
     cstr_subtype Hq1. cstr_subtype Hq2. cstr_subtype He1. cstr_subtype He2. cstr_subtype Hh.
     (* Lift all some properties to the imploded graph *)
-    eapply impl_lift in Hlc as Hlc';eauto.
-    destruct Hlc' as
-        [s' [t1' [t2' [Ht1' [Ht2' [Hlc' [Hpath1' [Hpath2' [Hexit1' [Hexit2' [Hextra' Hdep']]]]]]]]]]].
+    eapply impl_lift_lc in Hlc as Hlc';eauto.
+    eapply impl_lift_exit1 in Hexit1 as Hexit1'.
+    eapply impl_lift_exit2 in Hexit2 as Hexit2'.
+    eapply impl_lift_tpath1 in Hpath1 as Hpath1'.
+    eapply impl_lift_tpath2 in Hpath2 as Hpath2'.
     assert ((s',j1) ∈ t1') as Hel1'.
     { eapply last_common_in1. eapply last_common'_iff. do 2 eexists;eauto. }
     assert ((s',j1) ∈ t2') as Hel2'.
     { eapply last_common_in1. eapply last_common_sym. eapply last_common'_iff. do 2 eexists;eauto. }
     eapply lc_disj_exits_lsplits_base in Hlc'. 2-8,12:solve [eauto].
     2,3: rewrite <-surjective_pairing;eapply get_succ_cons;eauto.
-    2: admit. (* FIXME *)
+    2: {
+      eapply Nat.le_antisymm.
+      - setoid_rewrite impl_depth_self_eq at 2;[|cbn;reflexivity].
+        eapply impl_depth_max.
+      - eapply deq_loop_depth. admit. (* FIXME *)
+    } 
     setoid_rewrite splits'_spec.
     right.
     pose (qs1' := fst (get_succ (s',j1) (↓ purify He1, tl j1) t1')).
