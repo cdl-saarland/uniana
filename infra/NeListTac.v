@@ -10,6 +10,8 @@ Ltac simpl_nl :=
          | [ |- context[(ne_to_list _ >: _)]] => rewrite <-nercons_nlrcons
          | [ |- context[ne_to_list (_ :< _)]] => rewrite <-nlcons_to_list
          | [ |- context[ne_to_list (_ >: _)]] => rewrite <-rcons_nl_rcons
+         | [ |- context[ne_to_list (_ :+: _)]] => rewrite <-neconc_app
+         | [ |- context[ne_to_list (_ :+ _)]] => rewrite <-nlconc_to_list
          | [ |- context[ne_map ?f (_ :< _)]] => rewrite ne_map_nlcons
          | [ |- context[ne_to_list (_ :>: _)]] => rewrite <-rcons_necons
          end.

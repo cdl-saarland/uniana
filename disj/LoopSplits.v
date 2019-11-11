@@ -88,11 +88,13 @@ Section disj.
         (Hinl : innermost_loop h p)
         (Hnin : h ∉ π)
     : π = ne_single p.
+    clear - Hpath Hinl Hnin.
   Admitted.
   
   Lemma exit_edge_innermost q e
         (Hexit : exit_edge h q e)
     : innermost_loop h q.
+    clear - Hexit.
   Admitted.
   
   Lemma disj_latch_path_or
@@ -106,11 +108,11 @@ Section disj.
     unfold loop_contains in Hin1, Hin2.
     destruct Hin1 as [p1 [ϕ1 [Hb1 [Hp1 Htl1]]]].
     destr_r ϕ1.
-    replace a with q1 in * by admit. clear a.
+    path_simpl' Hp1.
     decide (exists x, x ∈ map fst r2 /\ x ∈ (h :: l)).
     - destruct Hin2 as [p2 [ϕ2 [Hb2 [Hp2 Htl2]]]].
       destr_r ϕ2.
-      replace a with q2 in * by admit.
+      path_simpl' Hp2.
       decide (exists y, y ∈ map fst r1 /\ y ∈ (h :: l0)).
       +
         (*assert (h ∉ map fst r1) as Hh1.
@@ -151,10 +153,16 @@ Section disj.
         eapply TPath_CPath in Hr1. cbn in Hr1. rewrite ne_map_nl_rcons in Hr1. cbn in Hr1.
         specialize (r2_tpath Hlc Hpath2) as Hr2.
         eapply TPath_CPath in Hr2. cbn in Hr2. rewrite ne_map_nl_rcons in Hr2. cbn in Hr2.
+        destruct r1 as [|b rr1];[cbn in Hy0;contradiction|].
+        destruct r2 as [|c rr2];[cbn in Hx0;contradiction|].
+        cbn in Hr1,Hr2.
+        rewrite nl_cons_lr_shift in Hr1,Hr2.
+        eapply path_rcons_inv in Hr1. destruct Hr1 as [rp1 Hr1].
+        eapply path_rcons_inv in Hr2. destruct Hr2 as [rp2 Hr2].
         eapply path_from_elem in Hr1;eauto.
-        2: { simpl_nl;eapply In_rcons;right. eauto. }
+        2: { simpl_nl;eauto. }
         eapply path_from_elem in Hr2;eauto.
-        2: simpl_nl; eapply In_rcons;right;eauto.
+        2: simpl_nl;eauto.
         (* construct paths to x & y *)
         eapply path_to_elem in Hp2.
         2: simpl_nl;eauto.
@@ -167,10 +175,34 @@ Section disj.
         eapply path_rcons in Hedge1';eauto.
         eapply dom_self_loop in Hedge1'.
         * clear - Hedge1'.
-          destruct ϕ4;admit.
-        * 
-          eapply exit_edge_innermost;eapply Hexit2.
-        * admit.
+          destruct ϕ4;cbn in *.
+          all: destruct ϕ;[|destruct ϕ].
+          all: destruct ϕ0;[|destruct ϕ0].
+          all: destruct ϕ3;cbn in *;congruence.
+        * eapply exit_edge_innermost;eapply Hexit2.
+        * simpl_nl.
+          eapply path_contains_front in Hr0.
+          specialize (no_head Hlc Hpath1 Hpath2) as Hnh1. do 3 exploit' Hnh1. specialize (Hnh1 h).
+          specialize (no_head (last_common'_sym Hlc) Hpath2 Hpath1) as Hnh2.
+          exploit' Hnh2;[symmetry;eauto|]. rewrite Heq in Hnh2.
+          do 2 exploit' Hnh2. specialize (Hnh2 h).
+          clear - Htl2 Htl1 Hp4 Hr3 Hr4 Hp4 Hp3 Hnh1 Hnh2 Hin1' Hin2' Hr0.
+          intro N. eapply in_app_or in N.
+          simpl_nl' Htl2. simpl_nl' Htl1. simpl_nl' Hp3. simpl_nl' Hp4. simpl_nl' Hr3. simpl_nl' Hr4.
+          rewrite rev_rcons in Htl1.
+          rewrite rev_rcons in Htl2.
+          unfold tl in Htl1,Htl2.
+          rewrite <-in_rev in Htl1,Htl2.
+          destruct N. (* special cases : q2 = h & h = s *)
+          -- eapply in_app_or in H.
+             destruct H;[|eapply Htl2;eapply prefix_incl;eauto;eapply tl_incl;eauto].
+             eapply in_app_or in H.
+             destruct H;[|eapply Hnh1;[eapply postfix_incl;eauto|eauto]].
+             eapply in_app_or in H.
+             destruct H;[|eapply Htl1;eapply prefix_incl;eauto;eapply tl_incl;eauto].
+             eapply Hnh2;[eapply postfix_incl;eauto|eauto].
+          -- cbn in H. destruct H;[|contradiction]. subst a0. eapply Hnh2;eauto.
+             eapply postfix_incl; eauto.
       (* q2 ->+ y ->* q1 ->+ x ->* q2 *)
       + exists (h :: l0). left. cbn. split.
         * econstructor;eauto. eapply back_edge_incl;eauto.
@@ -178,7 +210,7 @@ Section disj.
     - exists (h :: l). right. cbn. split.
       + econstructor;eauto. eapply back_edge_incl;eauto.
       + do 2 simpl_dec' n. intros x H. destruct (n x);[contradiction|auto].
-  Admitted.
+  Qed.
 
   Lemma q1_eq_q2
     : eq_loop q1 q2.

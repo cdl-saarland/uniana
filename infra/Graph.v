@@ -480,6 +480,15 @@ Proof.
   eapply intersection_subgraph1.
 Qed.
 
+Lemma path_nlrcons (L : Type) (x y z : L) (l : list L) e
+      (Hpath : Path e x y (l >: z))
+  : z = x.
+Proof.
+  revert dependent y.
+  induction l;intros;cbn in *;inversion Hpath;subst;auto.
+  eapply IHl;eauto.
+Qed.                                 
+
 Ltac path_simpl' H :=
   let Q := fresh "Q" in 
   lazymatch type of H with
@@ -489,9 +498,17 @@ Ltac path_simpl' H :=
                                    cbn in Q; subst z
   | Path ?edge ?x ?y (?z :< ?π) => replace y with z in *;
                                   [|destruct π;cbn in H;inversion H;subst;eauto]
-  (*    | Path ?edge ?x ?y (?π >: ?z) => replace x with z in *;
-                                    [|destruct π;cbn in H;inversion H;subst;eauto]*)
+  | Path ?edge ?x ?y (?π >: ?z) => replace x with z in *;
+                                    [|eapply path_nlrcons;eauto]
   end.
+
+Goal forall (L : Type) (x y z : L) (l : list L) e
+      (Hpath : Path e x y (l >: z)),
+    x = z.
+  intros.
+  path_simpl' Hpath.
+  reflexivity.
+Qed.
 
 Lemma path_contains_front {L : Type} (x y : L) e l
       (Hpath : Path e x y l)

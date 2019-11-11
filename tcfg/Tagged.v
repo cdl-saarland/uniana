@@ -202,7 +202,7 @@ Proof.
   {
     rewrite nlcons_to_list in Hsucc. eapply ne_to_list_inj. rewrite Hsucc.
     simpl_nl.
-    rewrite <-nlconc_to_list. simpl_nl. repeat rewrite app_cons_assoc. reflexivity.
+    repeat rewrite app_cons_assoc. reflexivity.
   }
   rewrite Hsucc' in Hpath.
   unfold TPath' in Hpath.
