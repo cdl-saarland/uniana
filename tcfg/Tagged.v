@@ -226,6 +226,26 @@ Proof.
    eapply eff_tag_fresh in HIn;eauto.
 Qed.
 
+Lemma exit_edge_tcfg_edge (h p q : Lab) (j : Tag)
+      (Hexit : exit_edge h q p)
+  : tcfg_edge (q,j) (p,tl j) = true.
+Proof.
+  cbn. conv_bool.
+  unfold eff_tag. 
+  decide (q ↪ p).
+  - exfalso. eapply no_exit_head;eauto. exists q. auto.
+  - unfold exit_edge in Hexit. destructH. split;[auto|].
+    decide (exists h0, exit_edge h0 q p).
+    + reflexivity.
+    + exfalso. eapply n0. exists h. unfold exit_edge. eauto.
+Qed.
+
+Lemma exit_succ_exiting (p q h e : Lab) (k i j : Tag) r
+      (Hpath : TPath (p,k) (q,j) (r >: (p,k)))
+      (Hexit : exited h e)
+      (Hel : (e,i) ∈ r)
+  : exists qe n, exit_edge h qe e /\ (e,i) ≻ (qe,n :: i) | r :r: (p,k).
+Admitted. (* FIXME *)
 (*Section tagged.
   
   Context `{C : redCFG}.*)

@@ -73,6 +73,17 @@ Section Facts.
     induction l;cbn;firstorder.
   Qed.
 
+  Lemma hd_tl_len_eq (l l' : list A) (a : A)
+        (Hheq : hd a l = hd a l')
+        (Hteq : tl l = tl l')
+        (Hleq : | l | = | l' |)
+    : l = l'.
+  Proof.
+    clear - Hheq Hteq Hleq.
+    revert dependent l'. induction l; intros; destruct l';cbn in *;eauto. 1,2: congruence.
+    f_equal;eauto.
+  Qed.
+
 End Facts.
 
 (** * iter **)

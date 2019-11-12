@@ -99,3 +99,8 @@ Parameter splits_spec
                                        \/ sp ∈ splits' br q').
 
 Arguments loop_splits : default implicits.
+
+Lemma splits'_sym `(C : redCFG) (s h e q q' : Lab)
+              (Hsp : (s,q,q') ∈ splits' h e)
+  : (s,q',q) ∈ splits' h e.
+Admitted.

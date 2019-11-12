@@ -1,4 +1,4 @@
-Require Export EqNeqDisj SplitsDef.
+Require Export EqNeqDisj SplitsDef GetSucc.
 
 Section disj.
   Context `(C : redCFG).
@@ -12,21 +12,12 @@ Section disj.
              (Hsucc1 : (qs1, js1) ≻ (s, k) | (e1, tl j1) :: t1)
              (Hsucc2 : (qs2, js2) ≻ (s, k) | (e2, tl j2) :: t2).
 
-  Fixpoint get_succ (A : eqType) (a e : A) (l : list A)
-    := match l with
-       | nil => e
-       | b :: l => if decision (a = b) then e else get_succ a b l
-       end.
-
-(*  Local Definition qq := fst (get_succ (s,k) (e1,tl j1) t1).
-  Local Definition qq' := fst (get_succ (s,k) (e2, tl j2) t2). *)
-
   Lemma lc_disj_exits_lsplits_base_lt
         (Hdep : depth s = depth q1)
         (Htaglt : hd 0 j1 < hd 0 j2)
     : ( s, qs1, qs2) ∈ loop_splits C h e1.
   Proof.
-  Admitted.
+  Admitted. (* FIXME *)
   
   Lemma lc_disj_exits_lsplits_base_eq π
           (Hdep : depth s = depth q1)
@@ -35,18 +26,7 @@ Section disj.
           (Hlatchd : Disjoint (map fst r1) π)
     : (s,qs1,qs2) ∈ loop_splits C h e1.
   Proof.
-  Admitted.
-
-  Lemma hd_tl_len_eq (A : Type) (l l' : list A) (a : A)
-        (Hheq : hd a l = hd a l')
-        (Hteq : tl l = tl l')
-        (Hleq : | l | = | l' |)
-    : l = l'.
-  Proof.
-    clear - Hheq Hteq Hleq.
-    revert dependent l'. induction l; intros; destruct l';cbn in *;eauto. 1,2: congruence.
-    f_equal;eauto.
-  Qed.                          
+  Admitted. (* FIXME *)
 
   Lemma hd_eq_eq
         (Hheq : hd 0 j1 = hd 0 j2)
@@ -82,20 +62,6 @@ Section disj.
     rewrite splits'_spec. left.
     eapply lc_disj_exits_lsplits_base;eauto.
   Qed.
-
-  Lemma dom_self_loop p π
-        (Hpath : CPath p p π)
-        (Hinl : innermost_loop h p)
-        (Hnin : h ∉ π)
-    : π = ne_single p.
-    clear - Hpath Hinl Hnin.
-  Admitted.
-  
-  Lemma exit_edge_innermost q e
-        (Hexit : exit_edge h q e)
-    : innermost_loop h q.
-    clear - Hexit.
-  Admitted.
   
   Lemma disj_latch_path_or
         (Heq : j1 = j2)
@@ -114,17 +80,7 @@ Section disj.
       destr_r ϕ2.
       path_simpl' Hp2.
       decide (exists y, y ∈ map fst r1 /\ y ∈ (h :: l0)).
-      +
-        (*assert (h ∉ map fst r1) as Hh1.
-        { intro N. eapply no_head;eauto. }
-        assert (h ∉ map fst r2) as Hh2.
-        { intro N. eapply no_head. 1:eapply last_common'_sym. all:eauto.
-          symmetry;eauto. rewrite Heq;eauto. }
-        destruct l,l0.
-        1-3: exists [h];cbn. 1-2: right. 3: left.
-               1-3:split;[econstructor;eauto using back_edge_incl
-                         |intros z R1 R2;destruct R2;[subst|];contradiction]. *)
-        exfalso.
+      + exfalso.
         rename e into Hx.
         rename e0 into Hy.
         do 2 destructH.
@@ -256,50 +212,50 @@ End maxcont.
 
 Definition imploding_head `(C : redCFG) h p := exists e, exited p e /\ eq_loop h e.
 
-Lemma get_succ_cons (A : eqType) (l : list A) (a b : A)
-      (Hel : a ∈ l)
-  : get_succ a b l ≻ a | b :: l.
-Proof.
-Admitted.
-
 Section lift_one.
 
   Context `(C : redCFG).
-  Variables (s q : Lab) (h' q' e' : local_impl_CFG_type C q)
-            (t : ne_list (Lab * Tag)) (j : Tag).
-  Local Definition C'' := local_impl_CFG C q.
-
+  Variables (s q : Lab).
   Hypotheses (Hndeq : ~ deq_loop q s)
              (Hdeq : deq_loop s q).
 
-  Definition s'' : local_impl_CFG_type C q.
-    clear - Hdeq Hndeq.
-  Admitted.
-
-  Lemma s_in_s
+  (* Let s'' be the outermost loop such that
+   * - loop_contains (`s'') s (i.e. in the non-imploded CFG it contains s)
+   * - ~ deq_loop q (`s'') (i.e. in the non-imploded CFG it does not contain q *)
+  Parameter s'' : local_impl_CFG_type C q.
+  Axiom s_in_s
     : loop_contains (`s'') s.
-    clear - Hdeq Hndeq.
-  Admitted.
-  
-  Lemma q_ndeq_s'
+  Axiom q_ndeq_s'
     : ~ deq_loop q (`s'').
-    clear - Hdeq Hndeq.
-  Admitted.
+  Axiom outermost_s'
+    : forall x : Lab, loop_contains x s -> ~ deq_loop q x
+           -> deq_loop x (`s'').
 
+  Variables (h' q' e' : local_impl_CFG_type C q)
+            (t : ne_list (Lab * Tag)) (j : Tag).
+  Local Definition C'' := local_impl_CFG C q.
+(*
   Lemma s_imploding_head
     : imploding_head C q (`s'').
     clear - Hdeq Hndeq.
-  Admitted.
+*)
   
   Lemma S_depth_s
     : S (depth (C:=local_impl_CFG C q) s'') = depth (`s'').
     clear - Hdeq Hndeq.
+    (* as s'' is the an outermost loop head not containing q, 
+     * implosion reduces its depth by one *)
   Admitted.
   
   Lemma impl_lift_exit_edge 
         (Hexit : exit_edge (`h') (`q') (`e'))
     : exit_edge (redCFG:= local_impl_CFG C q) h' q' e'.
+  Proof.
     clear - Hexit.
+    (* if a q' -> e' is a loop exit of h' in C
+     * and q',e' and h' all still exist in the imploded CFG
+     * then this edge is still such a loop exit,
+     * because implosion only removes edges adjacent to removed nodes *)
   Admitted.
 
   Local Definition t' := match impl_tlist q t with
@@ -336,68 +292,6 @@ Section lift_one.
 
 End lift_one.
 
-Lemma exists_or_exists_switch (X : Type) (P P' : X -> X -> Prop)
-      (Q Q' : X -> X -> X -> Prop) (R : X -> X -> X -> X -> X -> Prop)
-  : (exists v w z, (Q v w z \/ Q' v w z) /\ exists x y, R x y v w z)
-    -> exists (x y : X), (P x y \/ exists v w z, Q v w z /\ R x y v w z)
-                   \/ (P' x y \/ exists v w z, Q' v w z /\ R x y v w z).
-Proof.
-  intro N. destructH. destruct N0.
-  all: exists x, y;firstorder.
-Qed.
-
-Lemma exists_or_exists_destruct (X : Type) (P P' Q Q' : X -> X -> Prop)
-  : (exists (x y : X), (P x y \/ Q x y)
-                  \/ (P' x y \/ Q' x y))
-    -> (exists (x y : X), P x y \/ P' x y)
-                   \/ exists (x y : X), Q x y \/ Q' x y.
-Proof.
-  firstorder.
-Qed.
-
-Lemma exit_succ_exiting `(C : redCFG) (p q h e : Lab) (k i j : Tag) r
-      (Hpath : TPath (p,k) (q,j) (r >: (p,k)))
-      (Hexit : exited h e)
-      (Hel : (e,i) ∈ r)
-  : exists qe n, exit_edge h qe e /\ (e,i) ≻ (qe,n :: i) | r :r: (p,k).
-Admitted.      
-
-Lemma impl_depth_self_eq `(C : redCFG) (q : Lab) (q' : local_impl_CFG_type C q)
-      (Heq : eq_loop q (` q'))
-  : depth (C:=local_impl_CFG C q) q' = depth q.
-Admitted.
-
-Lemma splits'_sym `(C : redCFG) (s h e q q' : Lab)
-              (Hsp : (s,q,q') ∈ splits' h e)
-  : (s,q',q) ∈ splits' h e.
-Admitted.
-
-Lemma succ_in_prefix_nd (A : Type) (l l' : list A) (a b c : A)
-      (Hpre : Prefix (c :: l) l')
-      (Hel : a ∈ l)
-      (Hsucc : b ≻ a | l')
-      (Hnd : NoDup l')
-  : b ≻ a | c :: l.
-Admitted.
-
-Lemma exit_edge_tcfg_edge `(C : redCFG) (h p q : Lab) (j : Tag)
-      (Hexit : exit_edge h q p)
-  : tcfg_edge (q,j) (p,tl j) = true.
-Proof.
-  cbn. conv_bool.
-  unfold eff_tag. 
-  decide (q ↪ p).
-  - exfalso. eapply no_exit_head;eauto. exists q. auto.
-  - unfold exit_edge in Hexit. destructH. split;[auto|].
-    decide (exists h0, exit_edge h0 q p).
-    + reflexivity.
-    + exfalso. eapply n0. exists h. unfold exit_edge. eauto.
-Qed.
-
-Lemma impl_depth_max `(C : redCFG) (q : Lab) (p : local_impl_CFG_type C q)
-  : depth (C:=local_impl_CFG C q) p <= depth (C:=C) q.
-Admitted.
-
 Lemma tpath_shift `(C : redCFG) (q qe s : Lab) (j i k : Tag) (q' e' s' : local_impl_CFG_type C q) n
       (t : ne_list Coord) (t' : ne_list (local_impl_CFG_type C q * Tag)) r
       (Heq : eq_loop q (` q'))
@@ -424,7 +318,7 @@ Proof.
         admit. (* critical *) 
 Admitted.
 
-Module lift.
+Module Lift.
 Section lift.
   Load X_vars_lift.
   
@@ -479,15 +373,19 @@ Section lift.
   Lemma eqn_ndeq n
         (Heqn : S n = depth s - depth q1)
     : ~ deq_loop q1 s.
+  Proof.
     clear - Heqn.
-  Admitted.
+    intro N.
+    eapply deq_loop_depth in N.
+    omega.
+  Qed.
   
   (** step case **)
   
   Hypotheses (Hndeq : ~ deq_loop q1 s)
              (Hsdeq : deq_loop s q1).
     
-  Local Definition s' := s'' Hndeq Hsdeq.
+  Local Definition s' := s'' C q1.
 
   Lemma impl_lift_lc
     : last_common' t1' t2' r1' r2' (s',j1).
@@ -533,14 +431,14 @@ Section lift.
   Lemma ex_s_exit1
     : exited (` s') (` qs1').
   Proof.
-    eapply ex_s_exit.
+    eapply ex_s_exit;eauto.
     eapply impl_lift_succ1.
   Qed.
 
   Lemma ex_s_exit2
     : exited (` s') (` qs2').
   Proof.
-    eapply ex_s_exit.
+    eapply ex_s_exit;eauto.
     eapply impl_lift_succ2.
   Qed.
 
@@ -566,8 +464,6 @@ Section lift.
   Local Definition rr2 := prefix_nincl (` qs2',j1) r2.
   Local Definition tt1 := rr1 >: (s,k) :+ prefix_nincl (s,k) t1.
   Local Definition tt2 := rr2 >: (s,k) :+ prefix_nincl (s,k) t2.
-
-  
   
   Lemma impl_shift_lc
     : last_common' tt1 tt2 rr1 rr2 (s, k).
@@ -634,9 +530,9 @@ Section lift.
   Admitted.
   
 End lift.
-End lift.
+End Lift.
 
-Import lift.
+Import Lift.
 
 Theorem lc_disj_exits_lsplits' `(C : redCFG)
         (s e1 e2 q1 q2 qs1 qs2 h : Lab) (j1 j2 k js1 js2 : Tag)
@@ -680,7 +576,6 @@ Proof.
     eapply eqn_ndeq in Heqn as Hndeq;eauto.
     eapply eqn_sdeq in Heqn as Hsdeq;eauto.
     eapply impl_lift_lc in Hlc as Hlc';eauto.
-    Unshelve. 2,3:eauto.
     eapply impl_lift_exit1 in Hexit1 as Hexit1'.
     eapply impl_lift_exit2 in Hexit2 as Hexit2'.
     eapply impl_lift_tpath1 in Hpath1 as Hpath1'.
@@ -691,9 +586,9 @@ Proof.
     2: { setoid_rewrite impl_depth_self_eq at 2;[|eauto]. eapply dep_eq;eauto. }
     setoid_rewrite splits'_spec.
     right.
-    pose (s' := s'' Hndeq Hsdeq).
-    pose (t1' := lift.t1' (↓ purify Hh) t1 j1).
-    pose (t2' := lift.t2' (↓ purify Hh) t2 j2).
+    pose (s' := s'' C q1). 
+    pose (t1' := Lift.t1' (↓ purify Hh) t1 j1).
+    pose (t2' := Lift.t2' (↓ purify Hh) t2 j2).
     pose (qs1' := fst (get_succ (s',j1) (↓ purify He1, tl j1) t1')).
     pose (qs2' := fst (get_succ (s',j1) (↓ purify He2, tl j2) t2')).
     exists (`s'), (`qs1'), (`qs2').
@@ -729,7 +624,7 @@ Proof.
         rewrite H.
         unfold s'.
         setoid_rewrite <-S_depth_s;eauto.
-        setoid_rewrite dep_eq. 2: eauto.
+        setoid_rewrite dep_eq;eauto.
         clear - Heqn Hsdeq.
         eapply deq_loop_depth in Hsdeq;eauto.
         cbn in *. omega.
@@ -753,8 +648,7 @@ Proof.
         eapply last_common'_sym in Hlc. eapply last_common_in1.
         eapply last_common'_iff. do 2 eexists;eauto.
       }
-(*    assert ((qs1, js1) ≻ (s, k) | t1) as HSucc1 by admit.
-      assert ((qs2, js2) ≻ (s, k) | t2) as HSucc2 by admit. (* otw. qs1 would be a double exit *) *)
+(*     *)
       assert ((qs1, js1) ≻ (s, k) | (` qs1', j1) :: tt1) as Hsucctt1.
       { eapply impl_shift_succ1;eauto. }      
       assert ((qs2, js2) ≻ (s, k) | (` qs2', j1) :: tt2) as Hsucctt2.
@@ -799,8 +693,15 @@ Lemma tl_eq `(C : redCFG) (h q1 q2 e1 e2 : Lab) (i j1 j2 : Tag) t1 t2
           (Hexit2 : exit_edge h q2 e2)
   : tl j1 = tl j2.
 Proof.
-Admitted.
-  
+  inversion Hpath1;inversion Hpath2;subst.
+  path_simpl' H0. path_simpl' H5.
+  eapply tag_exit_iff' in H3.
+  eapply tag_exit_iff' in H8.
+  destruct H3,H8.
+  rewrite <-H1, <-H3;auto.
+  all: eexists;eauto.
+Qed.
+
 Theorem lc_disj_exits_lsplits `{redCFG}
           (s e1 e2 q1 q2 h : Lab) (i j1 j2 k : Tag) (t1 t2 : list Coord)
           (Hlc : last_common ((q1,j1) :: t1) ((q2,j2) :: t2) (s,k))

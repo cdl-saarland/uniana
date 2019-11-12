@@ -550,4 +550,20 @@ Section cfg.
        | None => root
        end.
 
+  (** * innermost loop facts **)
+  
+  Lemma exit_edge_innermost h q e
+        (Hexit : exit_edge h q e)
+    : innermost_loop h q.
+    clear - Hexit.
+  Admitted. (* FIXME *)
+  
+  Lemma dom_self_loop h p π
+        (Hpath : CPath p p π)
+        (Hinl : innermost_loop h p)
+        (Hnin : h ∉ π)
+    : π = ne_single p.
+    clear - Hpath Hinl Hnin.
+  Admitted. (* FIXME *)
+
 End cfg.

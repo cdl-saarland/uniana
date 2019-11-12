@@ -595,6 +595,15 @@ Section succ_rt.
     - symmetry in Hsucc. eapply eq_incl in Hsucc. eapply Hsucc.
       clear Hsucc. induction l2;cbn;firstorder.
   Qed.
-
+  
+  Lemma succ_in_prefix_nd (l l' : list A) (a b c : A)
+        (Hpre : Prefix (c :: l) l')
+        (Hel : a ∈ l)
+        (Hsucc : b ≻ a | l')
+        (Hnd : NoDup l')
+    : b ≻ a | c :: l.
+  Proof.
+  Admitted.
+  
 End succ_rt.
 

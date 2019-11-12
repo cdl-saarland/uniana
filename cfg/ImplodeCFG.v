@@ -795,3 +795,11 @@ Proof.
   (* it holds because loop containment is equivalent for nodes that are present in the imploded case *)
 Admitted. (* FIXME *)
 
+Lemma impl_depth_self_eq `(C : redCFG) (q : Lab) (q' : local_impl_CFG_type C q)
+      (Heq : eq_loop q (` q'))
+  : depth (C:=local_impl_CFG C q) q' = depth q.
+Admitted.
+
+Lemma impl_depth_max `(C : redCFG) (q : Lab) (p : local_impl_CFG_type C q)
+  : depth (C:=local_impl_CFG C q) p <= depth (C:=C) q.
+Admitted.
