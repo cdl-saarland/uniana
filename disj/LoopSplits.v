@@ -254,15 +254,19 @@ Section maxcont.
 End maxcont.
  *)
 
+Definition imploding_head `(C : redCFG) h p := exists e, exited p e /\ eq_loop h e.
 
-
-Definition imploding_head `(C : redCFG) h p := exists e, exited p e /\ deq_loop h e.
+Lemma get_succ_cons (A : eqType) (l : list A) (a b : A)
+      (Hel : a ∈ l)
+  : get_succ a b l ≻ a | b :: l.
+Proof.
+Admitted.
 
 Section lift_one.
 
   Context `(C : redCFG).
   Variables (s q : Lab) (h' q' e' : local_impl_CFG_type C q)
-            (t : ne_list (Lab * Tag)) (r : list (Lab * Tag)) (j : Tag).
+            (t : ne_list (Lab * Tag)) (j : Tag).
   Local Definition C'' := local_impl_CFG C q.
 
   Hypotheses (Hpath : TPath (root,start_tag) (`q',j) t)
@@ -272,19 +276,27 @@ Section lift_one.
              (Hdeq : deq_loop s q).
 
   Definition s'' : local_impl_CFG_type C q.
-    clear - Heq Hdeq Hndeq.
+    clear - Hdeq Hndeq.
   Admitted.
 
   Lemma s_in_s
     : loop_contains (`s'') s.
+    clear - Hdeq Hndeq.
   Admitted.
   
   Lemma q_ndeq_s'
     : ~ deq_loop q (`s'').
+    clear - Hdeq Hndeq.
   Admitted.
 
   Lemma s_imploding_head
     : imploding_head C q (`s'').
+    clear - Hdeq Hndeq.
+  Admitted.
+  
+  Lemma S_depth_s
+    : S (depth (C:=local_impl_CFG C q) s'') = depth (`s'').
+    clear - Hdeq Hndeq.
   Admitted.
   
   Lemma impl_lift_exit_edge
@@ -308,17 +320,19 @@ Section lift_one.
     - destruct x;cbn in H0;congruence.
     - simpl_nl. reflexivity.
   Qed.
-  
-  Lemma ex_s_exit (x' : local_impl_CFG_type C q) i i'
-        (Hsucc : (x',i') ≻ (s'',i) | t')
-    : exited (` s'') (` x').
-  Proof.
-  Admitted.
-  
+
   Lemma impl_lift_tpath
     : TPath (C:=C'') (↓ purify_implode q, start_tag) (q', j) t'.
     clear - Hpath.
   Admitted.
+    
+  Lemma ex_s_exit (x' : local_impl_CFG_type C q) i i'
+        (Hsucc : (x',i') ≻ (s'',i) | (e',tl j) :: t')
+    : exited (` s'') (` x').
+  Proof.
+    clear - Hndeq Hdeq Hsucc.
+  Admitted.
+  (* TODO : inline most hypotheses in lift_one *)
 
 End lift_one.
 
@@ -356,12 +370,6 @@ Admitted.
 Lemma splits'_sym `(C : redCFG) (s h e q q' : Lab)
               (Hsp : (s,q,q') ∈ splits' h e)
   : (s,q',q) ∈ splits' h e.
-Admitted.
-
-Lemma get_succ_cons (A : eqType) (l : list A) (a b : A)
-      (Hel : a ∈ l)
-  : get_succ a b l ≻ a | b :: l.
-Proof.
 Admitted.
 
 Lemma succ_in_prefix_nd (A : Type) (l l' : list A) (a b c : A)
@@ -459,14 +467,27 @@ Section lift.
 
   Lemma impl_lift_extra
     : j1 = j2 -> exists π, CPath (H:=C') q2' h' (π >: q2') /\ Disjoint (map fst r1') π.
+    intro H. exploit Hextra.
+    clear - Hextra.
   Admitted.
 
-  (* step case *)
+  Lemma eqn_sdeq n
+        (Heqn : S n = depth s - depth q1)
+    : deq_loop s q1.
+  Admitted.
 
-  Hypotheses (Hsdeq : deq_loop s q1)
-             (Hndeq : ~ deq_loop q1 s).
+  Lemma eqn_ndeq n
+        (Heqn : S n = depth s - depth q1)
+    : ~ deq_loop q1 s.
+    clear - Heqn.
+  Admitted.
   
-  Local Definition s' := s'' Heq Hndeq Hsdeq.
+  (** step case **)
+  
+  Hypotheses (Hndeq : ~ deq_loop q1 s)
+             (Hsdeq : deq_loop s q1).
+    
+  Local Definition s' := s'' Hndeq Hsdeq.
 
   Lemma impl_lift_lc
     : last_common' t1' t2' r1' r2' (s',j1).
@@ -474,18 +495,54 @@ Section lift.
                              
   Local Definition qs1' := fst (get_succ (s', j1) (e1', tl j1) t1').
   Local Definition qs2' := fst (get_succ (s', j1) (e2', tl j2) t2').
+
+  Lemma s_in_t1'
+    : (s',j1) ∈ t1'.
+  Proof.
+    eapply last_common_in1. eapply last_common'_iff. do 2 eexists;eauto using impl_lift_lc.
+  Qed.
+    
+  Lemma s_in_t2'
+    :(s',j1) ∈ t2'.
+  Proof.
+    eapply last_common_in1. eapply last_common_sym. eapply last_common'_iff.
+    do 2 eexists;eauto using impl_lift_lc.
+  Qed.
+
+  Lemma dep_eq
+    : depth (C:=C') s' = depth q1.
+  Proof.
+    eapply Nat.le_antisymm.
+    - eapply impl_depth_max.
+    - setoid_rewrite <-impl_depth_self_eq at 1. 2:eauto.
+      clear - Hndeq Hsdeq.
+  Admitted.
+  
+  Lemma impl_lift_succ1
+    : (qs1',j1) ≻ (s',j1) | (e1', tl j1) :: t1'.
+    (* the tag j1 is correct, because in the step case there would be a double exit otherwise 
+     * the assumption has to be stated with the (e,tl j1) :: ..  because in the base case 
+     * qs = e might hold 
+     *)
+  Admitted.
+
+  Lemma impl_lift_succ2
+    : (qs2',j1) ≻ (s',j1) | (e2', tl j2) :: t2'.
+  Admitted.
   
   Lemma ex_s_exit1
     : exited (` s') (` qs1').
   Proof.
-    eapply ex_s_exit;eauto.
-  Admitted.
+    eapply ex_s_exit.
+    eapply impl_lift_succ1.
+  Qed.
 
   Lemma ex_s_exit2
     : exited (` s') (` qs2').
   Proof.
-    eapply ex_s_exit;eauto.
-  Admitted.
+    eapply ex_s_exit.
+    eapply impl_lift_succ2.
+  Qed.
 
 End lift.
 End lift.
@@ -493,14 +550,13 @@ End lift.
 Section disj.
 
 Load X_vars_lift.
-Variables (qs1 qs2 : Lab) (js1 js2 : Tag).
-Hypotheses (Hsucc1 : (qs1,js1) ≻ (s,k) | (`e1',tl j1) :: t1)
-           (Hsucc2 : (qs2,js2) ≻ (s,k) | (`e2',tl j2) :: t2)
-           (Htag : tl j1 = tl j2)
+Hypotheses (Htag : tl j1 = tl j2)
            (Htagle : hd 0 j1 <= hd 0 j2).
 
-(*Goal (s,qs1,qs2) ∈ splits' (`h') (`e1').*)
-  
+Import lift.
+
+Goal (s,qs1,qs2) ∈ splits' (`h') (`e1').
+  (*
 Theorem lc_disj_exits_lsplits' `{redCFG}
         (s e1 e2 q1 q2 qs1 qs2 h : Lab) (j1 j2 k js1 js2 : Tag)
         (t1 t2 : ne_list Coord) (r1 r2 : list Coord)
@@ -514,19 +570,20 @@ Theorem lc_disj_exits_lsplits' `{redCFG}
         (Hextra : j1 = j2 -> exists π, CPath q2 h (π >: q2) /\ Disjoint (map fst r1) π)
         (Hsucc1 : (qs1,js1) ≻ (s,k) | (e1,tl j1) :: t1)
         (Hsucc2 : (qs2,js2) ≻ (s,k) | (e2,tl j2) :: t2)
-  : (s,qs1,qs2) ∈ splits' h e1.
+  : (s,qs1,qs2) ∈ splits' h e1.*)
 Proof.
   remember (depth s - depth q1).
   revert Htag Htagle.
-  revert dependent Lab.
+  revert dependent Lab. clear.
   revert j1 j2 k js1 js2.
   induction n;intros.
   - eapply lc_disj_exits_lsplits_base';eauto.
-    enough (depth q1 <= depth s) by omega.
+    rewrite Heq in Heqn.
+    enough (depth (`q1') <= depth s) by omega.
     eapply deq_loop_depth.
     eapply s_deq_q;eauto.
   - (* Show that some interesting nodes are in the imploded CFG *)
-    assert (implode_nodes (head_exits_CFG H q1) q1 q1) as Hq1.
+    (*assert (implode_nodes (head_exits_CFG C q1) q1 q1) as Hq1.
     { left. reflexivity. }
     assert (eq_loop q1 q2) as Heq by (eapply q1_eq_q2;eauto).
     enough (implode_nodes (head_exits_CFG H q1) q1 q2) as Hq2.
@@ -535,35 +592,33 @@ Proof.
     enough (implode_nodes (head_exits_CFG H q1) q1 h) as Hh.
     2-5: eapply head_exits_implode_nodes_inv1;left; eauto using deq_loop_exited.
     2: eapply eq_loop_exiting;eauto. 3: destruct Heq;eauto.
-    2: transitivity q2;destruct Heq;eauto;eapply deq_loop_exited;eauto.
+    2: transitivity q2;destruct Heq;eauto;eapply deq_loop_exited;eauto. 
     (* Construct the imploded type for them *)
-    cstr_subtype Hq1. cstr_subtype Hq2. cstr_subtype He1. cstr_subtype He2. cstr_subtype Hh.
+    cstr_subtype Hq1. cstr_subtype Hq2. cstr_subtype He1. cstr_subtype He2. cstr_subtype Hh. *)
     (* Lift all some properties to the imploded graph *)
+    assert (eq_loop q1 (`q2')) as Heq2.
+    1: rewrite Heq;auto.
+    eapply eqn_ndeq in Heqn as Hndeq;eauto.
+    eapply eqn_sdeq in Heqn as Hsdeq;eauto.
     eapply impl_lift_lc in Hlc as Hlc';eauto.
+    Unshelve. 2,3:eauto.
     eapply impl_lift_exit1 in Hexit1 as Hexit1'.
     eapply impl_lift_exit2 in Hexit2 as Hexit2'.
     eapply impl_lift_tpath1 in Hpath1 as Hpath1'.
     eapply impl_lift_tpath2 in Hpath2 as Hpath2'.
-    assert ((s',j1) ∈ t1') as Hel1'.
-    { eapply last_common_in1. eapply last_common'_iff. do 2 eexists;eauto. }
-    assert ((s',j1) ∈ t2') as Hel2'.
-    { eapply last_common_in1. eapply last_common_sym. eapply last_common'_iff. do 2 eexists;eauto. }
-    eapply lc_disj_exits_lsplits_base in Hlc'. 2-8,12:solve [eauto].
-    2,3: rewrite <-surjective_pairing;eapply get_succ_cons;eauto.
-    2: {
-      eapply Nat.le_antisymm.
-      - setoid_rewrite impl_depth_self_eq at 2;[|cbn;reflexivity].
-        eapply impl_depth_max.
-      - eapply deq_loop_depth. admit. (* FIXME *)
-    } 
+    eapply lc_disj_exits_lsplits_base in Hlc'. 2-8: solve [eauto].
+    5: { intros jeq; exploit' Hextra; eapply impl_lift_extra;eauto. }
+    2,3: eauto using impl_lift_succ2, impl_lift_succ1.
+    2: { setoid_rewrite impl_depth_self_eq at 2;[|eauto]. eapply dep_eq;eauto. }
     setoid_rewrite splits'_spec.
     right.
-    pose (qs1' := fst (get_succ (s',j1) (↓ purify He1, tl j1) t1')).
-    pose (qs2' := fst (get_succ (s',j1) (↓ purify He2, tl j2) t2')).
+    pose (s' := s'' Hndeq Hsdeq).
+    pose (qs1' := fst (get_succ (s',j1) (e1', tl j1) t1')).
+    pose (qs2' := fst (get_succ (s',j1) (e2', tl j2) t2')).
     exists (`s'), (`qs1'), (`qs2').
     split.
     + eapply splits'_loop_splits__imp. cbn.
-      * eapply eq_loop_exiting;eauto.
+      * rewrite Heq. eapply eq_loop_exiting;eauto.
       * eauto. 
     (* consequence of Hlc' *)
     + (* we will apply the IH in four similar cases in two different ways, 
@@ -571,22 +626,21 @@ Proof.
       assert (exists qe1 n1, exit_edge (` s') qe1 (` qs1') /\ (`qs1',j1) ≻ (qe1,n1 :: j1) | (r1 :r: (s,k)))
         as [qe1 [n1 [Hqee1 Hqes1]]].
       {
-        eapply (exit_succ_exiting (C:=H)).
+        eapply (exit_succ_exiting (C:=C)).
         - eapply r1_tpath;eauto.
-        - eapply ex_s_exit in Hdep';eauto.
+        - eapply ex_s_exit1;eauto. 
         - subst qs1'. admit.
           (* r1 is non-nil, because otherwise there would be a double exit *)
       }
-      assert (depth (C:=local_impl_CFG H q1) (↓ purify Hq1) = depth q1) as Hdep''.
-      { rewrite impl_depth_self_eq;cbn; reflexivity. }
-      setoid_rewrite Hdep'' in Hdep'. clear Hdep''.
+      (*assert (depth (C:=C') (q1') = depth q1) as Hdep''.
+      { setoid_rewrite impl_depth_self_eq;[reflexivity| cbn; eauto]. }
+      setoid_rewrite Hdep'' in Hdep'. clear Hdep''.*)
       assert (exists qe2 n2, exit_edge (` s') qe2 (` qs2') /\ (`qs2',j1) ≻ (qe2,n2 :: j1) | (r2 :r: (s,k)))
         as [qe2 [n2 [Hqee2 Hqes2]]].
       {
-        eapply (exit_succ_exiting (C:=H)).
+        eapply (exit_succ_exiting (C:=C)).
         - eapply r2_tpath;eauto.
-        - eapply ex_s_exit. 3: cbn;eauto. all:eauto.
-          rewrite impl_depth_self_eq;eauto using q1_eq_q2.
+        - eapply ex_s_exit2;eauto.
         - subst qs2'. admit.
           (* r2 is non-nil, because otherwise there would be a double exit *)
       }
@@ -598,7 +652,7 @@ Proof.
       pose (tt2 := rr2 >: (s,k) :+ prefix_nincl (s,k) t2).
       assert (last_common' tt1 tt2 rr1 rr2 (s, k)) as Hlc_ih.
       {
-        subst tt1 tt2. simpl_nl. do 2 rewrite <-nlconc_to_list. simpl_nl. unfold rcons.
+        subst tt1 tt2. simpl_nl. unfold rcons.
         do 2 rewrite <-app_assoc.
         eapply last_common_prefix.
         setoid_rewrite <-Htt1 at 1. setoid_rewrite <-Htt2. eapply Hlc.
@@ -608,12 +662,15 @@ Proof.
       specialize (r2_tpath Hlc Hpath2) as Hr2.
       assert (n = depth s - depth qe1) as Hdep1.
       {
-        clear - Hdep' Heqn Hqee1.
         cbn in Heqn.
         assert (depth qe1 = depth (`s')).
         { eapply eq_loop_exiting in Hqee1. rewrite Hqee1. eauto. }
-        rewrite H0.
-        setoid_rewrite Hdep'.
+        rewrite H.
+        unfold s'.
+        setoid_rewrite <-S_depth_s;eauto.
+        setoid_rewrite dep_eq. 2: eauto.
+        clear - Heqn Hsdeq.
+        eapply deq_loop_depth in Hsdeq;eauto.
         omega.
       }
       assert (n = depth s - depth qe2) as Hdep2.
@@ -645,7 +702,7 @@ Proof.
           + eapply prefix_eq.
             eapply prefix_nincl_prefix in Hel1.
             eapply prefix_eq in Hel1. destructH.
-            exists ((e1, tl j1) :: l2').
+            exists ((`e1', tl j1) :: l2').
             rewrite Htt1.
             subst tt1 rr1.
             setoid_rewrite Hel1 at 1.
@@ -669,7 +726,7 @@ Proof.
           enough ((` qs2',j1) ∈ r2) as Hel2.
           + eapply prefix_nincl_prefix in Hel2.
             eapply prefix_eq in Hel2. destructH.
-            exists ((e2, tl j2) :: l2').
+            exists ((`e2', tl j2) :: l2').
             rewrite Htt2.
             subst tt2 rr2. setoid_rewrite Hel2 at 1.
             rewrite <-nlconc_to_list. simpl_nl.
@@ -688,8 +745,8 @@ Proof.
          because the IHn can be applied in two different, symmetrical ways *)
       specialize (Nat.lt_trichotomy n1 n2) as Nrel.
       destruct Nrel as [Nlt|[Neq|Nlt]]; [left| |right].
-      * eapply IHn. 
-        1-5,9: solve [eauto]. 2-4: solve [cbn;eauto].
+      * eapply IHn. 1:eauto. 1: eapply Hpathtt1.
+        1-5,9: eauto. 2-4: solve [cbn;eauto].
         -- intro N. exfalso. inversion N. clear - Nlt H1. omega. 
         -- cbn. clear - Nlt. omega.
       * eapply f_equal with (f:=fun x => hd 0 (x :: j1)) in Neq as Neq'.
