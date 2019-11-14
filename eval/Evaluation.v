@@ -14,8 +14,6 @@ Section eval.
   Context `{C : redCFG}.
 
   Notation "p --> q" := (edge p q = true) (at level 55,right associativity).
-  
-  Parameter root_no_pred' : forall p, p --> root -> False.
 
   Parameter Var : Type.
   Parameter Var_dec (* unused *): EqDec Var eq.
@@ -270,7 +268,7 @@ Section eval.
     unfold start_coord in H.
     cut (is_effect_on p root); intros.
     apply edge_spec in H0.
-    eapply root_no_pred'. eassumption.
+    eapply root_no_pred. eassumption.
     unfold is_effect_on.
     exists i, i', s, s'. 
     assumption.
@@ -349,7 +347,7 @@ Section eval.
     - destruct Hin as [Hin|Hin]; [inversion Hin; eauto|contradiction].
     - destruct Hin.
       + exfalso. destruct (ne_front l) as [[q j] r].
-        eapply root_no_pred'. subst a.
+        eapply root_no_pred. subst a.
         apply edge_spec. unfold is_effect_on. exists j,i,r,s. eapply H2.
       + eapply IHl; eauto.
   Qed.

@@ -12,11 +12,6 @@ Section unch.
   Context `{C : redCFG}.
   
   Notation "p --> q" := (edge p q = true) (at level 55,right associativity).
-  
-  Lemma root_no_pred' : forall p, p --> root -> False.
-  Proof.
-    eapply root_no_pred.
-  Qed.
 
   Definition Unch := Lab -> Var -> set Lab.
 
@@ -56,8 +51,8 @@ Section unch.
     cut (preds root = nil); intros.
     + unfold unch_trans, unch_trans_ptw. 
       destruct (Lab_dec' root root); firstorder.
-    + cut (forall q, ~ List.In q (preds root)); intros; eauto using list_emp_in, root_no_pred'.
-      rewrite in_preds. intros H. eapply root_no_pred'; eauto.
+    + cut (forall q, ~ List.In q (preds root)); intros; eauto using list_emp_in, root_no_pred.
+      rewrite in_preds. intros H. eapply root_no_pred; eauto.
   Qed.
   
   Lemma unch_trans_lem u to x unch :
@@ -200,5 +195,5 @@ Section unch.
       + clear - H. destruct t; cbn in H; inversion t; subst x.
         * congruence.
         * inversion H2. subst; eauto.
-  Qed.
+  Qed. Print Assumptions unch_correct.
 End unch.

@@ -34,8 +34,6 @@ Section uniana.
          | None => forall q q' : Lab, edge p q = true -> p --> q' -> q = q'
          end.
 
-  Parameter root_no_pred' (* unused *): forall p, p --> root -> False.
-
   Definition UniState := Var -> bool.
   
   Parameter abs_uni_eff : UniState -> UniState.
@@ -683,7 +681,7 @@ Section uniana.
         destruct HIn as [q [j [r [HIn Hstep]]]].
         destruct HIn' as [q' [j' [r' [HIn' Hstep']]]].
         assert (q ∈ (preds p)) as Hqpred
-            by (eapply in_preds;eauto using step_conf_implies_edge,root_no_pred').
+            by (eapply in_preds;eauto using step_conf_implies_edge,root_no_pred).
 
         eapply prefix_in_list in HIn as Hpre1. destruct Hpre1 as [l1 Hpre1].
         eapply prefix_in_list in HIn' as Hpre2. destruct Hpre2 as  [l2 Hpre2].
