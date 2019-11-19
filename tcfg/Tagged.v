@@ -160,6 +160,12 @@ Lemma tag_eq_loop_exit `{redCFG} p q i j j'
     | None => False
     end.
 Proof.
+  
+  eapply tcfg_edge_destruct in Htag.
+  eapply tcfg_edge_destruct in Htag'.
+  
+  destruct Htag as [Q|[Q|[Q|Q]]].
+    destruct Htag' as [R|[R|[R|R]]].
 Admitted. (* FIXME *)
 (*
   unfold exit_edge. set (h := get_innermost_loop q).
@@ -331,13 +337,24 @@ Admitted. (* FIXME *)
         (Hpath : TPath (root, start_tag) (p,i) l)
         (Hprec : Precedes fst l (h,j))
     : Prefix j i.
+  Proof.
   Admitted. (* FIXME *)
 
   Lemma root_tag_nil p i j l
         (HPath : TPath (root,start_tag) (p,i) l)
         (Hin : (root,j) ∈ l)
     : j = nil.
-  Admitted. (* FIXME *)
+  Proof.
+    revert dependent p. revert i.
+    induction l;intros.
+    - inversion HPath. subst a0 p i a. cbn in Hin. destruct Hin;[|contradiction].
+      inversion H;subst. eauto.
+    - destruct a. cbn in Hin.
+      destruct Hin.
+      + exfalso. inversion H. subst. inversion HPath. subst. destruct b.
+        eapply root_no_pred. eapply tcfg_edge_spec; eauto.
+      + inversion HPath. subst. destruct b. eapply IHl;eauto.
+  Qed.
   
   Lemma tag_prefix_ancestor (* unused *)a p q i j l
         (Hanc : ancestor a p q)
@@ -352,7 +369,6 @@ Admitted. (* FIXME *)
   Qed.
 
   Hint Unfold Coord.
-  
 
   Lemma tag_prefix_ancestor_elem (* unused *)a p q r i j k l
         (Hanc : ancestor a p q)
@@ -426,32 +442,7 @@ Admitted. (* FIXME *)
         (Hprec__q: Precedes fst ((p,i) :: l) (q,j))
     : (q,j) ≻* (a,k) | (p,i) :: l.
   Admitted. 
-
-
-  Lemma tag_prefix_same_head (* unused *)p h1 h2 i1 i2 j1 j2 t1 t2
-        (Hpath1 : TPath (root,start_tag) (p,i1) t1)
-        (Hpath2 : TPath (root,start_tag) (p,i2) t2)
-        (Hloop1 : loop_contains h1 p)
-        (Hloop2 : loop_contains h2 p)
-        (Hprec1 : Precedes fst t1 (h1,j1))
-        (Hprec2 : Precedes fst t2 (h2,j2))
-        (Hlen : length j1 = length j2)
-    : h1 = h2.
-  Admitted.
-  
-  Lemma tag_prefix_same_head_elem (* unused *)p q h1 h2 i1 i2 j1 j2 k1 k2 t1 t2
-        (Hpath1 : TPath (root,start_tag) (p,i1) t1)
-        (Hpath2 : TPath (root,start_tag) (p,i2) t2)
-        (Hloop1 : loop_contains h1 q)
-        (Hloop2 : loop_contains h2 q)
-        (Hin1 : (q,j1) ∈ t1)
-        (Hin2 : (q,j2) ∈ t2)
-        (Hprec1 : Precedes fst t1 (h1,k1))
-        (Hprec2 : Precedes fst t2 (h2,k2))
-        (Hlen : length j1 = length j2)
-    : h1 = h2.
-  Admitted. (* FIXME *)
-  
+    
   Lemma ancestor_level_connector (* unused *)p q a i j k t
         (Hpath : TPath (root,start_tag) (p,i) t)
         (Hin : (q,j) ∈ t)
@@ -486,13 +477,15 @@ Admitted. (* FIXME *)
 
   Hint Resolve tpath_tpath'.
   Hint Resolve precedes_in.
-
-  Lemma dom_dom_in_between (* unused *)p q r i j k l
+  
+  Lemma dom_dom_in_between (* unused *) (p q r : Lab) (i j k : Tag) l
         (Hdom1 : Dom edge root r q)
         (Hdom2 : Dom edge root q p)
-        (Hpath : TPath' l)
-        (Hnd : NoDup l)
-    : (p,i) ≻* (q,j) ≻* (r,k) | l.
+        (Hprec : Precedes fst ((p,i) :< l) (q,j))
+        (Hin : (r,k) ∈ ((p,i) :: l))
+        (Hpath : TPath (root,start_tag) (p,i) ((p,i) :< l))
+    : (q,j) ≻* (r,k) | (p,i) :: l.
+    
   Admitted.
   
   Lemma loop_cutting (* unused *)q p t
@@ -507,6 +500,10 @@ Admitted. (* FIXME *)
         (Hexit : exited h e)
     : (e,j) ∉ t.
   Proof.
+    intro N.
+    eapply PathCons in Hpath;cycle 1.
+    - unfold exited in Hexit. destructH.
+      eapply exit_pred_loop in Hexit.
   Admitted. (* FIXME *)
   
   Lemma loop_cutting_elem (* unused *)q p t i j

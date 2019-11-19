@@ -368,18 +368,22 @@ Section uniana.
       eapply prec_tpath_tpath in Hanc22;eauto. destructH.
       eapply prefix_length_eq;eauto;eapply tpath_tag_len_eq;eauto.
     }
+      
 
     enough ((u,j1) ≻* (a,j) | (p,i) :: l1) as Hib1.
     enough ((u,j2) ≻* (a,j) | (p,i) :: l2) as Hib2.
-    2: eapply dom_dom_in_between with (l:= (p,i) :< l2) in Hunch;eauto.
-    3: eapply dom_dom_in_between with (l:= (p,i) :< l1) in Hunch;eauto.
-    2,3: unfold Tag in *; simpl_nl' Hunch; find_succ_rel.
+
+    2: eapply dom_dom_in_between;eauto.
+    4: eapply dom_dom_in_between;eauto.
+    2,4: simpl_nl; econstructor;cbn;eauto.
+    2,3: simpl_nl' Hanc21; simpl_nl' Hanc22;eapply precedes_in;eauto.
 
     assert (Prefix j i) as Hprei by (eapply tag_prefix_ancestor;[eapply ancestor_sym| |];eauto).
     assert (Prefix j j1) as Hprej1
-        by (simpl_nl' Hanc21;eapply tag_prefix_ancestor_elem with (l:=l1);eauto).
+      by (simpl_nl' Hanc21;eapply tag_prefix_ancestor_elem with (l:=l1);eauto).
     assert (Prefix j j2) as Hprej2
         by (simpl_nl' Hanc22;eapply tag_prefix_ancestor_elem with (l:=l2);eauto).
+    (* uses hib12 *)
 
     assert (exists j1', j1 = j1' ++ j) as [j1' Hj1] by (eapply prefix_eq;eauto).
     assert (exists j2', j2 = j2' ++ j) as [j2' Hj2] by (eapply prefix_eq;eauto).
@@ -412,14 +416,27 @@ Section uniana.
       simpl_nl;eauto using precedes_in.
     do 2 destructH.
     (* show that it is the same head in both traces *)
-    assert (h0 = h);[eapply tag_prefix_same_head_elem
-                       with (h1:=h0) (t1:=(p,i):<l1) (j3:=j1) (j4:=j2);
-                     eauto;simpl_nl;eauto|subst h0].
-    1: eapply tpath_tag_len_eq_elem with (l3:=(p,i):<l1);eauto;simpl_nl;eauto.
+    assert (h0 = h);[|subst h0].
+    {
+      eapply eq_loop_same. 2,3: eauto using loop_contains_loop_head.
+      eapply loop_contains_either in Hocc3;eauto.
+      destruct Hocc3.
+      - eapply loop_contains_deq_loop in H. split;auto.
+        eapply deq_loop_depth_eq;eauto.
+        erewrite <-tag_depth;eauto.
+        erewrite <-tag_depth. 3:eauto. 2:eauto.
+        cbn. reflexivity.
+      - eapply loop_contains_deq_loop in H. split;auto.
+        eapply deq_loop_depth_eq;eauto.
+        erewrite <-tag_depth. 3:eauto. 2:eauto.
+        erewrite <-tag_depth. 3:eauto. 2:eauto.
+        cbn. reflexivity.
+    }
     (* find node on ancestor-depth that is between u & p *)
-    eapply2 ancestor_level_connector Hanc21 Hanc22.
+    eapply2 ancestor_level_connector Hanc21 Hanc22. (* uses hib12 *)
     4,8: split;[eapply ancestor_sym|];eauto. all: simpl_nl;eauto.
     2,3: clear - Ha_near;intros;destructH;eauto.
+    (*clear Hib1 Hib2.*)
     destruct Hanc21 as [a1' [Hanc21 Hanc11]]. destruct Hanc22 as [a2' [Hanc22 Hanc12]].
     assert (Prefix j (l' ++ j)) as Hexit1.
     { eapply prefix_eq. eexists;reflexivity. }
@@ -553,7 +570,6 @@ Section uniana.
       eapply (tpath_exit_nin (h:=h) (q:=qe1));eauto;
         clear - Hexit__edge1 Hexit__edge2; unfold exit_edge in *;unfold exited;
           [|exists qe2]; firstorder 0.
-      Unshelve. all: eauto.
   Qed.
   
   Lemma unch_same_tag p u i s1 s2 j1 j2 r1 r2 l1 l2 x uni unch
@@ -775,16 +791,17 @@ End uniana.
 
 tr_succ_eff' PROVEN
 tr_lift_succ PROVEN
-tpath_tag_len_eq_elem
+tpath_tag_len_eq_elem PROVEN
+tag_prefix_same_head_elem REFUTED & REMOVED
+root_tag_nil PROVEN
+tag_prefix_ancestor_elem PROVEN
+succ_in_tpath_eff_tag PROVEN
+
+tag_eq_loop_exit
+tag_prefix_head
 tpath_tag_len_eq
 tpath_exit_nin
 tpath_deq_loop_prefix
-tag_prefix_same_head_elem
-tag_prefix_head
-tag_prefix_ancestor_elem PROVEN
-tag_eq_loop_exit
-succ_in_tpath_eff_tag PROVEN
-root_tag_nil
 loop_cutting_elem
 first_occ_tag_elem
 find_loop_exit
