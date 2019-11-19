@@ -22,6 +22,28 @@ Section unch.
                         exists j r, Precedes' (`t) (u, j, r) (to, i, s) /\
                                r x = s x.
   
+  Definition unch_meet (u1 u2 : Unch) : Unch
+    := fun (p : Lab) (x : Var) => set_union Lab_dec' (u1 p x) (u2 p x).
+
+  Infix "⊓" := unch_meet (at level 70).
+  
+  Lemma unch_concr_meet_preserve (u1 u2 : Unch) (t : trace)
+    : unch_concr (u1 ⊓ u2) t <-> unch_concr u1 t /\ unch_concr u2 t.
+  Proof.
+    split;intros H. 
+    - unfold unch_concr in *. split;intros.
+      1,2: specialize (H to i s u x H0); exploit H;eauto.
+      1,2: unfold unch_meet.
+      + eapply set_union_intro1;eauto.
+      + eapply set_union_intro2;eauto.
+    - destruct H.
+      unfold unch_concr in *.
+      intros.
+      eapply set_union_elim in H2. destruct H2.
+      + eapply H;eauto.
+      + eapply H0;eauto.
+  Qed.
+  
   Definition unch_join_ptw (d d' : set Lab) := set_inter Lab_dec' d d'. 
 
   Definition unch_join (* unused *)(u u' : Unch) : Unch :=

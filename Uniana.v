@@ -55,6 +55,25 @@ Section uniana.
                                  In (p, i, s') (`t') ->
                                  u p x = true -> s x = s' x.
 
+  Definition uni_meet (u1 u2 : Uni) : Uni
+    := fun (p : Lab) (x : Var) => u1 p x || u2 p x.
+
+  Infix "⊓" := uni_meet (at level 70).
+
+  Lemma uni_concr_meet_preserve (u1 u2 : Uni) (ts : Traces)
+    : uni_concr (u1 ⊓ u2) ts <-> uni_concr u1 ts /\ uni_concr u2 ts.
+  Proof.
+    split;intros H.
+    - unfold uni_concr in *. split;intros.
+      1: eapply H;cycle 2;eauto 1.
+      2: symmetry;eapply H;cycle 2;eauto 1.
+      all: unfold uni_meet;conv_bool.
+      1: left. 2: right. all: eauto.
+    - unfold uni_concr;intros. destruct H. unfold uni_meet in H4. conv_bool. destruct H4.
+      + eapply H;cycle 2;eauto.
+      + eapply H5;cycle 2;eauto.
+  Qed.
+
   Definition uni_branch (uni : Uni) :=
     (fun s : Lab
      => match (branch s) with
