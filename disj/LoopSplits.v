@@ -736,7 +736,7 @@ Proof.
     3,4: eapply last_common_in1;eapply last_common'_iff;do 2 eexists;eauto.
     + omega.
     + intro N. rewrite N in Hneq. contradiction.
-Qed.
+Admitted.
 
 Corollary lc_disj_exit_lsplits `{redCFG} (s e q1 q2 h : Lab) (i j1 j2 k : Tag) (t1 t2 : list Coord)
           (Hlc : last_common ((q1,j1) :: t1) ((q2,j2) :: t2) (s,k))

@@ -465,7 +465,6 @@ Section eval.
     Tr (k' :<: (`t)) ->
     Precedes' (k' :<: (`t)) (q', j', r') (p, i, s).
   Proof.
-    Set Printing All.
     intros Hprec Heff Hneq Htr.
     destruct Hprec as [t' [Hpre Hprec]].
     exists (nlcons (q,j,r) t').
@@ -635,32 +634,119 @@ Section eval.
         (Hsucc : (q',j') ≻ (q,j) | map fst l)
     : exists r r', (q',j',r') ≻ (q,j,r) | l.
   Proof.
-    (* just pick the state corresponding to (q',j') and (q,j) in l, which is unique since tagging is unique *)
-  Admitted. (* FIXME *)
+    unfold succ_in in Hsucc. destructH.
+    revert dependent l1. revert dependent l.
+    induction l2;intros;cbn in Hsucc.
+    - revert dependent l1. revert q q' j j'. induction l;intros.
+      + cbn in *. congruence.
+      + cbn in *. inversion Hpath;subst.
+        exploit' IHl. destruct l1.
+        * destruct a. inversion H1;subst;cbn in Hsucc; inversion Hsucc;[subst q j|].
+          -- cbn in *. 
+             exists s0, s, nil, nil. cbn. reflexivity.
+          -- exfalso. destruct l0; cbn in H6; congruence.
+        * destruct a. cbn in *. destruct c.
+          specialize (IHl e q t j l1). inversion Hsucc;subst. exploit IHl. destructH.
+          exists r', s, ((e,t,r) :: (tl (tl l))), nil. cbn.
+          unfold succ_in in IHl. destructH.
+          destruct l2;cycle 1.
+          { exfalso.
+            cbn in IHl. rewrite IHl in H3. cbn in H3.
+            inversion H3.
+            inversion H1;subst.
+            - destruct l2; cbn in IHl; congruence.
+            - destruct k. destruct c0. eapply Tr_EPath in H1. 2: cbn;reflexivity.
+              destructH. eapply EPath_TPath in H1. cbn in H1.
+              eapply tpath_NoDup in H1. cbn in H1. inversion H1. subst. apply H8.
+              clear - Hsucc IHl.
+              cbn in *. inversion Hsucc. subst. inversion IHl. subst.
+              rewrite <-to_list_ne_map. setoid_rewrite H1.
+              clear.
+              induction l2;cbn in *.
+              + left. auto.
+              + right. auto.
+          }
+          assert (l1 = map fst l0).
+          {
+            cbn in IHl. clear - IHl H3.
+            destruct l. 1: cbn in IHl; congruence.
+            cbn in IHl, H3. inversion IHl; inversion H3; subst.
+            destruct l;cbn in H4; inversion H4.
+            - cbn in H1. destruct l0; cbn in H1;[|congruence]. cbn. auto.
+            - cbn in IHl. inversion IHl. rewrite H7. reflexivity.
+          } 
+          rewrite H in H3. cbn in IHl.
+          f_equal.
+          inversion H1;subst.
+          -- exfalso. cbn in *. congruence.
+          -- cbn in Hsucc,H2,H3. destruct k. cbn in Hsucc,H3. inversion H0;subst.
+             ++ cbn. destruct c. inversion IHl. f_equal.
+             ++ cbn. destruct c. inversion IHl. f_equal.
+    - destruct l; cbn.
+      + exfalso. destruct l2;cbn in Hsucc; inversion Hsucc.
+      + cbn in Hsucc. inversion Hsucc. inversion Hpath;subst.
+        eapply IHl2 in H1;eauto. destructH. do 2 eexists. eapply succ_cons. eauto.
+  Qed.
   
   Lemma tr_succ_eff' p q q' br i j k s r r' r0 l
         (Htr : Tr ((p, i, s) :< l))
         (Hsucc : (q, j, r) ≻ (br, k, r0) | (p, i, s) :< l)
         (Heff : eff' (br,r0) = Some (q',r'))
     : q = q'.
-    (* the effect is deterministic, thus (q,r) being a successor of (br,r0) implies q = q' *)
-  Admitted. (* FIXME *)
+  Proof.
+    unfold succ_in in Hsucc. destructH.
+    revert dependent l1. revert dependent l. revert p i s.
+    induction l2;intros.
+    - cbn in Hsucc.
+      destruct l. 1: cbn in *; congruence.
+      cbn in *.  destruct p0. destruct p0. inversion Hsucc. subst. simpl_nl' H3. inversion H3.
+      subst. inversion Htr. subst. simpl_nl' H2.
+      unfold eff in H2. destruct (eff' (br, r0));[|congruence].
+      destruct p. inversion Heff. inversion H2. subst. auto.
+    - cbn in Hsucc.
+      destruct l. 1: cbn in *; destruct l2; cbn in Hsucc;congruence.
+      destruct p0. destruct p0.
+      eapply IHl2.
+      + cbn in Htr. inversion Htr. eapply H1.
+      + cbn in Hsucc. inversion Hsucc;subst. eauto.
+  Qed.
   
   Lemma succ_in_rcons2 {A : Type} (a b : A) l
     : a ≻ b | l :r: a :r: b.
   Proof.
     exists nil, l. unfold rcons. rewrite <-app_assoc. rewrite <-app_comm_cons. cbn. reflexivity.
   Qed.
-
   
   Lemma succ_in_tpath_eff_tag p q i j t
         (Hpath : TPath' t)
         (Hsucc : (p,i) ≻ (q,j) | t)
     : eff_tag q p j = i.
   Proof.
-    (* tagging is deterministic thus (p,i) succeeding (q,j) implies that i is the tag of p coming from qj *)
-   Admitted. (* FIXME *)
-
+    induction t.
+    - exfalso. unfold succ_in in Hsucc. destructH. cbn in Hsucc.
+      destruct l2;cbn in Hsucc;try congruence. destruct l2; cbn in Hsucc; try congruence.
+    - decide (a = (p,i)).
+      + unfold TPath' in Hpath. eapply tpath_NoDup in Hpath as Hnd.
+        cbn in Hnd. inversion Hnd. subst.
+        cbn in Hsucc.
+        unfold succ_in in Hsucc. destructH.
+        destruct l2;cycle 1.
+        { cbn in Hsucc. inversion Hsucc. rewrite H3 in H1. exfalso. eapply H1. clear.
+          induction l2;cbn;eauto.
+        }
+        cbn in Hsucc. cbn in Hpath.
+        inversion Hsucc. rewrite nlcons_to_list in H0. eapply ne_to_list_inj in H0.
+        rewrite H0 in Hpath. eapply tcfg_edge_spec.
+        inversion Hpath. path_simpl' H3. auto.
+      + eapply IHt.
+        * unfold TPath' in Hpath. cbn in Hpath. inversion Hpath. subst. destruct a.
+          destruct (ne_back t). inversion Hpath. destruct b0.
+          eapply tpath_tpath'; eauto.
+        * cbn in Hsucc. unfold succ_in in Hsucc. destructH.
+          destruct l2. 1: exfalso;cbn in Hsucc;inversion Hsucc;subst;contradiction.
+          cbn in Hsucc. inversion Hsucc. exists l1, l2;eauto.
+  Qed.
+  
   Lemma eff_tcfg p q i j s r
         (Heff : eff (p,i,s) = Some (q,j,r))
     : tcfg_edge (p,i) (q,j) = true.

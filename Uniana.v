@@ -767,5 +767,30 @@ Section uniana.
           -- specialize (HCuni t1 t2 Hts1 Hts2).
              reduce_uni_concr HCuni Hprec0 Hprec'0.  
   Qed.
+  Print Assumptions uni_correct.
   
 End uniana.
+
+(* 18 lemmas that should be addressed 
+
+tr_succ_eff' PROVEN
+tr_lift_succ PROVEN
+tpath_tag_len_eq_elem
+tpath_tag_len_eq
+tpath_exit_nin
+tpath_deq_loop_prefix
+tag_prefix_same_head_elem
+tag_prefix_head
+tag_prefix_ancestor_elem PROVEN
+tag_eq_loop_exit
+succ_in_tpath_eff_tag PROVEN
+root_tag_nil
+loop_cutting_elem
+first_occ_tag_elem
+find_loop_exit
+exit_cascade 
+dom_tpath_prec
+dom_dom_in_between
+ancestor_level_connector
+
+*)

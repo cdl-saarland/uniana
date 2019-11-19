@@ -160,7 +160,7 @@ Lemma tag_eq_loop_exit `{redCFG} p q i j j'
     | None => False
     end.
 Proof.
-Admitted.
+Admitted. (* FIXME *)
 (*
   unfold exit_edge. set (h := get_innermost_loop q).
   assert (get_innermost_loop q = h) as Heq by (subst;reflexivity).
@@ -288,12 +288,24 @@ Admitted. (* FIXME *)
       + cbn in H0;contradiction.
       + eapply IHHprec1;eauto.
   Qed.
-  
+
   Lemma tpath_tag_len_eq (* unused *)p j1 j2 l1 l2
         (Hpath1 : TPath (root, start_tag) (p, j1) l1)
         (Hpath2 : TPath (root, start_tag) (p, j2) l2)
     : length j1 = length j2.
-  Admitted.
+  Proof.
+    revert dependent l2. revert dependent p. revert j1 j2.
+    induction l1;intros;inversion Hpath1.
+    - inversion Hpath2.
+      + reflexivity.
+      + exfalso. subst a1 a0 p j1 a c. destruct b. eapply tcfg_edge_spec in H4.
+        eapply root_no_pred. eapply H4.
+    - destruct b. subst c a0 a π.
+      eapply tcfg_edge_destruct in H4.
+      destruct H4 as [Hedge|[Hedge|[Hedge|Hedge]]].
+      + subst t.
+          
+  Admitted. (* FIXME *)
   
   Lemma tpath_tag_len_eq_elem p q i1 i2 j1 j2 l1 l2
         (Hpath1 : TPath (root, start_tag) (p, i1) l1)
@@ -301,7 +313,12 @@ Admitted. (* FIXME *)
         (Hin1 : (q,j1) ∈ l1)
         (Hin2 : (q,j2) ∈ l2)
     : length j1 = length j2.
-  Admitted.
+  Proof.
+    eapply path_to_elem in Hin1;eauto.
+    eapply path_to_elem in Hin2;eauto.
+    do 2 destructH.
+    eapply tpath_tag_len_eq in Hin0;eauto.
+  Qed.
 
   Lemma dom_tpath_prec (* unused *)p q i l
         (Hdom : Dom edge root q p)
@@ -314,13 +331,13 @@ Admitted. (* FIXME *)
         (Hpath : TPath (root, start_tag) (p,i) l)
         (Hprec : Precedes fst l (h,j))
     : Prefix j i.
-  Admitted.
+  Admitted. (* FIXME *)
 
   Lemma root_tag_nil p i j l
         (HPath : TPath (root,start_tag) (p,i) l)
         (Hin : (root,j) ∈ l)
     : j = nil.
-  Admitted.
+  Admitted. (* FIXME *)
   
   Lemma tag_prefix_ancestor (* unused *)a p q i j l
         (Hanc : ancestor a p q)
@@ -343,8 +360,36 @@ Admitted. (* FIXME *)
         (Hprec : Precedes fst ((r,k) :: l) (a,j))
         (Hib : (p,i) ≻* (a,j) | (r,k) :: l)
     : Prefix j i.
-  Proof.   
-  Admitted.
+  Proof.
+    eapply splinter_in in Hib as Hin. rewrite nlcons_to_list in Hin.
+    eapply path_to_elem in Hin;eauto. destructH.
+    decide (i = j).
+    { subst. reflexivity. }
+    eapply tag_prefix_ancestor;eauto.
+    eapply path_contains_front in Hin0 as Hfront.
+    eapply tpath_NoDup in Hin0. simpl_nl' Hin0.
+    eapply tpath_NoDup in Hpath. simpl_nl' Hpath.
+    clear - Hprec Hib Hin1 Hpath Hin0 n Hfront. simpl_nl' Hin1. set (l' := (r,k) :: l) in *.
+    eapply prefix_eq in Hin1. destructH.
+    revert dependent l'. revert dependent ϕ. induction l2';intros.
+    - cbn in Hin1. rewrite Hin1 in Hprec. eauto.
+    - destruct l'. 1: inversion Hprec.
+      inversion Hin1.
+      eapply IHl2'. 6:eauto. 1,2:eauto.
+      + inversion Hpath. subst. eauto.
+      + inversion Hprec;subst.
+        * exfalso.
+          inversion Hib; subst. 1: contradiction.
+          inversion Hpath. subst.
+          eapply splinter_cons in H1. eapply splinter_in in H1. contradiction.
+        * eauto.
+      + subst. clear Hin1. inversion Hib;subst.
+        * exfalso.
+          inversion Hpath;subst.
+          eapply H2.
+          eapply in_or_app. right;auto.
+        * eauto.
+  Qed.
 
   Lemma first_occ_tag (* unused *)j j1 j2 p t
         (Htag : j = j1 ++ j2)
@@ -405,7 +450,7 @@ Admitted. (* FIXME *)
         (Hprec2 : Precedes fst t2 (h2,k2))
         (Hlen : length j1 = length j2)
     : h1 = h2.
-  Admitted.
+  Admitted. (* FIXME *)
   
   Lemma ancestor_level_connector (* unused *)p q a i j k t
         (Hpath : TPath (root,start_tag) (p,i) t)
@@ -429,7 +474,7 @@ Admitted. (* FIXME *)
         (Hpath : TPath' t)
         (Hpre : Prefix j i)
     : (q,j) ≻* (p,i) | t.
-  Admitted.
+  Admitted. (* FIXME *)
   
   Lemma tpath_tpath' r i0 p i t
         (Hpath : TPath (r,i0) (p,i) t)
@@ -462,7 +507,7 @@ Admitted. (* FIXME *)
         (Hexit : exited h e)
     : (e,j) ∉ t.
   Proof.
-  Admitted.
+  Admitted. (* FIXME *)
   
   Lemma loop_cutting_elem (* unused *)q p t i j
         (Hpath : TPath' ((p,i) :< t))
@@ -526,4 +571,3 @@ Admitted. (* FIXME *)
   
 End tagged.
 
-(* FIXME give intuition for unfinished proofs *)
