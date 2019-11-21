@@ -783,7 +783,6 @@ Section uniana.
           -- specialize (HCuni t1 t2 Hts1 Hts2).
              reduce_uni_concr HCuni Hprec0 Hprec'0.  
   Qed.
-  Print Assumptions uni_correct.
   
 End uniana.
 
