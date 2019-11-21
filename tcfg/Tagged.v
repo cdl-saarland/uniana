@@ -26,7 +26,7 @@ Section tagged.
                       let (q,j) := c' in
                       edge p q && ( (tag p q i) ==b j)).
 
-  Definition eff_tag `{redCFG} p q i : Tag
+  Definition eff_tag p q i : Tag
     := if decision (p ↪ q)
        then match i with
             | nil => nil
@@ -145,13 +145,13 @@ Section tagged.
   
   Definition TPath := Path tcfg_edge.
 
-  Lemma tag_depth (* unused *)`{redCFG} p i q j t
+  Lemma tag_depth (* unused *) p i q j t
         (Hpath : TPath (root,start_tag) (p,i) t)
         (Hin : (q,j) ∈ t)
     : length j = depth q.
   Admitted.  
 
-Lemma tag_eq_loop_exit `{redCFG} p q i j j'
+Lemma tag_eq_loop_exit p q i j j'
       (Htag : (q,j ) -t> (p,i))
       (Htag': (q,j') -t> (p,i))
       (Hneq : j <> j')
@@ -179,7 +179,7 @@ Admitted. (* FIXME *)
     induction all_lab. destruct (back_edge_b p q). *)
 
 
-Lemma TPath_CPath `{redCFG} c c' π :
+Lemma TPath_CPath  c c' π :
   TPath c c' π -> CPath (fst c) (fst c') (ne_map fst π).
 Proof.
   intros Q. dependent induction Q; [|destruct b,c]; econstructor; cbn in *.
@@ -190,15 +190,15 @@ Qed.
 Definition TPath' π := TPath (ne_back π) (ne_front π) π.
 
 
-Parameter eff_tag_fresh : forall `{redCFG} p q q0 i j j0 l,
+Parameter eff_tag_fresh : forall p q q0 i j j0 l,
     TPath (q0,j0) (q,j) l -> eff_tag q p j = i -> forall i', In (p, i') l -> i' <> i.
 
-Parameter eff_tag_det : forall `{redCFG} q j p i i',
+Parameter eff_tag_det : forall  q j p i i',
     eff_tag q p j = i ->
     eff_tag q p j = i' ->
     i = i'.
 
-Lemma tpath_succ_eff_tag (* unused *)`{redCFG} p q r i j s t
+Lemma tpath_succ_eff_tag (* unused *) p q r i j s t
       (Hpath : TPath' ((r,s) :< t))
       (Hsucc : (q,j) ≻ (p,i) | (r,s) :: t)
   : eff_tag p q i = j.
@@ -214,21 +214,21 @@ Proof.
   unfold TPath' in Hpath.
   eapply postfix_path with (l:=l2 :r: (q,j)) (p:=(p,i)) in Hpath.
   - eapply path_prefix_path with (ϕ:= (q,j) :<: ne_single (p,i)) in Hpath.
-    + inversion Hpath;subst;eauto. unfold tcfg_edge,tcfg_edge' in H4. cbn in H4. destruct b. conv_bool.
-      inversion H1;subst. destruct H4. eauto.
+    + inversion Hpath;subst;eauto. unfold tcfg_edge,tcfg_edge' in H3. cbn in H3. destruct b. conv_bool.
+      inversion H0;subst. destruct H3. eauto.
     + cbn; simpl_nl. clear. induction l2; cbn; econstructor; eauto.
   - cbn; simpl_nl. clear. induction l2; cbn; destruct l1; cbn; simpl_nl; eauto using postfix_cons.
     1,2: repeat (eapply postfix_cons; try econstructor). eapply postfix_nil.
 Qed.
 
-Lemma tpath_NoDup `{redCFG} p q t
+Lemma tpath_NoDup  p q t
       (Hpath : TPath p q t)
   : NoDup t.
 Proof.
   induction Hpath.
   - econstructor; eauto. econstructor.
   - cbn. econstructor;eauto.
-   destruct c. intro HIn. unfold tcfg_edge,tcfg_edge' in H0. destruct a, b. conv_bool. destruct H0.
+   destruct c. intro HIn. unfold tcfg_edge,tcfg_edge' in H. destruct a, b. conv_bool. destruct H.
    eapply eff_tag_fresh in HIn;eauto.
 Qed.
 

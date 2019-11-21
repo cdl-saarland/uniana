@@ -217,5 +217,5 @@ Section unch.
       + clear - H. destruct t; cbn in H; inversion t; subst x.
         * congruence.
         * inversion H2. subst; eauto.
-  Qed. Print Assumptions unch_correct.
+  Qed.
 End unch.

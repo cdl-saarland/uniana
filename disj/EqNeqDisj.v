@@ -126,16 +126,13 @@ Section disj.
         * setoid_rewrite (@tag_depth (local_impl_CFG_type C s)) at 1.
           setoid_rewrite (@tag_depth Lab). 
           eapply Hlen. 
-          2: eapply Hpath1.
-          2: eapply Hkin.
-          1: eapply (local_impl_CFG C s).
-          1: eapply C.
+          1: eapply Hpath1.
+          1: eapply Hkin.
           -- instantiate (1:=t').
              Unshelve. 2: left;eapply Hsq. 2,3:shelve. eauto.
           -- eapply impl_tlist_incl in Hpost. setoid_rewrite <-Heq in Hpost. eapply Hpost.
              rewrite Hcons. left;eauto.
         * setoid_rewrite (@tag_depth);cycle 1.
-          1,4: eapply (local_impl_CFG C q1).
           -- eapply Hpath1'.
           -- eapply path_contains_front;eauto.
           -- eapply Hpath1'.
