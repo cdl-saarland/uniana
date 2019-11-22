@@ -6,3 +6,6 @@ Execution of
 $ make
 yields compiles the whole development.
 
+Alternatively you can browse the coqdoc stored in html/.
+
+To use the links in the paper use the copy of the submission in this directory.
