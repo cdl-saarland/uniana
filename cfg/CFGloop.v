@@ -133,7 +133,7 @@ Section cfg.
   Qed.
 
   (*
-  Lemma edge_head_same_loop (* unused *)p h h'
+  Lemma edge_head_same_loop p h h'
         (Hedge : edge p h = true)
         (Hhead : loop_head h)
         (Hloop : loop_contains h' p)
@@ -218,7 +218,7 @@ Section cfg.
           rewrite rev_rcons in Hr0. inversion Hr0;subst. eapply in_rev in N; contradiction.
   Qed.
   
-  Lemma dom_path (* unused *)p q
+  Lemma dom_path p q
     : Dom edge root p q -> p -->* q.
   Proof.
     intros Hdom.
@@ -226,7 +226,7 @@ Section cfg.
     eapply path_from_elem in Hπ; eauto using Lab_dec. firstorder.
   Qed.
 
-  Lemma loop_contains_not_dom (* unused *)h q 
+  Lemma loop_contains_not_dom h q 
     : loop_contains h q -> h <> q -> exists p, p ↪ h /\ ~ Dom edge q h p.
   Proof.
     intros Hloop Hneq. unfold loop_contains in Hloop. destructH.
@@ -273,7 +273,7 @@ Section cfg.
     - edestruct (back_edge_dec p0 h); firstorder.
       Unshelve. all:eauto. (*TODO: remove *)
   Qed.
-    Lemma loop_contains_path (* unused *)h q π
+    Lemma loop_contains_path h q π
     : CPath h q π -> loop_contains h q -> NoDup π -> forall p, p ∈ π -> loop_contains h p.
   Proof.
     intros Hπ Hin Hnd p Hp. 
@@ -474,7 +474,7 @@ Section cfg.
         contradict Hnloop. eapply loop_contains_trans;eauto.
   Qed.
   
-  Lemma exit_edge_in_loop (* unused *) (h1 h2 p2 e2 : Lab)
+  Lemma exit_edge_in_loop  (h1 h2 p2 e2 : Lab)
         (Hexit' : exit_edge h2 p2 e2)
         (Hloop : loop_contains h1 h2)
         (Hneq : h1 <> h2)

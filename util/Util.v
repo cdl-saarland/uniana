@@ -41,13 +41,13 @@ End Join.
 
 Section Option.
   
-Definition option_fst (* unused *){A B : Type} (ab : option (A*B)) : option A :=
+Definition option_fst {A B : Type} (ab : option (A*B)) : option A :=
   match ab with
   | Some ab => Some (fst ab)
   | _ => None
   end.
 
-Definition option_prod (* unused *){A B : Type} (a : option A) (b : option B) : option (A*B) :=
+Definition option_prod {A B : Type} (a : option A) (b : option B) : option (A*B) :=
   match a,b with
   | Some a, Some b => Some (a,b)
   | _,_ => None

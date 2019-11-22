@@ -343,7 +343,7 @@ Section disj.
       eapply loop_contains_loop_head;eauto.
   Qed. 
 
-  Lemma dep_eq_impl_head_eq (* unused *): depth s = depth q1 -> eq_loop s q1.
+  Lemma dep_eq_impl_head_eq : depth s = depth q1 -> eq_loop s q1.
   Proof.
     intros Hdep.
     split;[eapply s_deq_q|].

@@ -1,7 +1,7 @@
 Require Export PreSuffix NeList.
 
 
-Lemma postfix_map (* unused *){A B : Type} (f : A -> B) :
+Lemma postfix_map {A B : Type} (f : A -> B) :
   forall l l', Postfix l l' -> Postfix (map f l) (map f l').
 Proof.
   intros ? ? Hpost.

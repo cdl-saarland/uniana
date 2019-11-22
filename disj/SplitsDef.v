@@ -27,7 +27,7 @@ Arguments exited {_ _ _ _ _} _.
 Definition path_splits__imp `{C : redCFG} (p : Lab)
   := map (thrice (@proj1_sig Lab _)) (path_splits__imp' p).
 
-Lemma exited_head (* unused *)`{C : redCFG} (h e : Lab)
+Lemma exited_head `{C : redCFG} (h e : Lab)
       (H : exited h e)
   : loop_head C h.
 Proof.
@@ -76,7 +76,7 @@ Parameter splits'_spec
                                        /\ (sp ∈ splits' br q
                                           \/ sp ∈ splits' br q').
 
-Parameter rel_splits_spec (* unused *)
+Parameter rel_splits_spec 
   : forall `{redCFG} p q sp, sp ∈ rel_splits p q
                         <-> exists h e, e -a>* p (* acyclic, bc. otw. path could use back_edge of outer loop *)
                                  /\ loop_contains h q

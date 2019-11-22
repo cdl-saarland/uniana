@@ -22,7 +22,7 @@ Proof.
     + subst. eapply postfix_nil.
 Qed.
 
-Lemma while_prefix (* unused *){A : Type} (P : decPred A) (l l' : list A)
+Lemma while_prefix {A : Type} (P : decPred A) (l l' : list A)
       (H : while P l = l')
   : Prefix l' l.
 Proof.
@@ -73,7 +73,7 @@ Proof.
 Qed.
     
   
-Lemma while_max (* unused *){A : Type} (P : decPred A) (l l' : list A) a
+Lemma while_max {A : Type} (P : decPred A) (l l' : list A) a
       (Hpre : Prefix (a :: l') l)
       (Hw : while P l = l')
   : ~ P a.

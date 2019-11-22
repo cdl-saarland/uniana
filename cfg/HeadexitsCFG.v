@@ -115,7 +115,7 @@ Proof.
       eexists; eauto using path_app.
 Qed.
 
-Lemma head_exits_same_connected' (* unused *)`{redCFG} h p q π
+Lemma head_exits_same_connected' `{redCFG} h p q π
       (Hpath : Path (edge ∪ (head_exits_edge h)) p q π)
   : exists ϕ, Path edge p q ϕ.
 Proof.
@@ -362,7 +362,7 @@ Proof.
   split;eauto. 
 Qed.
 
-Lemma head_exits_property_a_edge (* unused *)`{C : redCFG} qh 
+Lemma head_exits_property_a_edge `{C : redCFG} qh 
   : head_exits_property C qh -> forall h p q : Lab, exit_edge _ h p q -> ~ loop_contains h qh -> a_edge h q = true.
 Proof.
   intros.

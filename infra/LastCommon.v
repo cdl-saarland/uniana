@@ -18,7 +18,7 @@ Section Lc.
     induction l; cbn; eauto.
   Qed.
   
-  Lemma rcons_eq (* unused *)(a a' : A) l l' :
+  Lemma rcons_eq (a a' : A) l l' :
     a = a' /\ l = l' <-> l :r: a = l' :r: a'.
   Proof.
     split.
@@ -265,14 +265,14 @@ Section Lc.
     unfold last_common in *; firstorder.
   Qed.
 
-  Lemma last_common_singleton1 (* unused *)`{EqDec A eq} (s a : A) l
+  Lemma last_common_singleton1 `{EqDec A eq} (s a : A) l
         (Hlc : last_common (a :: nil) l s)
     : a = s.
   Proof.
     unfold last_common in Hlc. destructH. eapply postfix_rcons_nil_eq in Hlc0. firstorder.
   Qed.
 
-  Lemma last_common_singleton2 (* unused *)`{EqDec A eq} (s a : A) l
+  Lemma last_common_singleton2 `{EqDec A eq} (s a : A) l
         (Hlc : last_common l (a :: nil) s)
     : a = s.
   Proof.

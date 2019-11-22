@@ -8,7 +8,7 @@ Proof.
   unfold equiv_decb; destruct (a == c); firstorder.
 Qed.
 
-Lemma beq_false (* unused *){A : Type} `{EqDec A} (a b : A) :
+Lemma beq_false {A : Type} `{EqDec A} (a b : A) :
   (a ==b b) = false <-> (a =/= b).
 Proof.
   unfold equiv_decb; destruct (a == b); firstorder.
@@ -20,7 +20,7 @@ Proof.
   unfold nequiv_decb, equiv_decb. rewrite negb_true_iff. destruct (a == c); firstorder.
 Qed.
 
-Lemma bne_false (* unused *){A : Type} `{EqDec A} (a b : A) :
+Lemma bne_false {A : Type} `{EqDec A} (a b : A) :
   (a <>b b) = false <-> (a === b).
 Proof.
   unfold nequiv_decb, equiv_decb. rewrite negb_false_iff. destruct (a == b); firstorder.

@@ -24,7 +24,7 @@ Proof.
     + exists a, a0, nil, (a1 :: l1), (a2 :: l2). split_conj; eauto.
 Qed.
 
-Lemma first_diff (* unused *) (A : Type) `{EqDec A eq} (l1 l2 : list A)
+Lemma first_diff  (A : Type) `{EqDec A eq} (l1 l2 : list A)
       (Hneq : l1 <> l2)
       (Hlen : length l1 = length l2)
       (Hnnil1 : l1 <> nil)

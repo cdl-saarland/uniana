@@ -72,7 +72,7 @@ Section cfg.
 
   Definition CPath' π := CPath (ne_back π) (ne_front π) π.
 
-  Lemma cpath_cpath' (* unused *)r p t
+  Lemma cpath_cpath' r p t
         (Hpath : CPath r p t)
     : CPath' t.
   Proof.
@@ -200,5 +200,5 @@ Definition exit_edge' (L : finType) (edge a_edge : L -> L -> bool) (h p q : L)
 Definition back_edge'  (L : Type) (edge a_edge : L -> L-> bool) (p q : L)
   := (edge ∖ a_edge) p q = true.
 
-Definition loop_head' (* unused *)(L : Type) (edge a_edge : L -> L-> bool) (h : L)
+Definition loop_head' (L : Type) (edge a_edge : L -> L-> bool) (h : L)
   := exists p, (edge ∖ a_edge) p h = true.

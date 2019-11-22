@@ -4,10 +4,10 @@ Require Export FinTypes.
 Lemma dec_DM_and_iff (X Y : Prop) : dec X -> ~ (X /\ Y) <-> ~ X \/ ~ Y.
   split;[now eapply dec_DM_and|firstorder].
 Qed.
-Lemma dec_DM_and_iff' (* unused *)(X Y : Prop) : dec Y -> ~ (X /\ Y) <-> ~ X \/ ~ Y.
+Lemma dec_DM_and_iff' (X Y : Prop) : dec Y -> ~ (X /\ Y) <-> ~ X \/ ~ Y.
   split;[now eapply dec_DM_and'|firstorder].
 Qed.
-Lemma dec_DN_iff (* unused *)(X : Prop) : dec X -> ~ ~ X <-> X.
+Lemma dec_DN_iff (X : Prop) : dec X -> ~ ~ X <-> X.
   split;[now eapply dec_DN|firstorder].
 Qed.
 Lemma dec_DM_impl_iff (X Y : Prop) : dec X -> dec Y -> ~ (X -> Y) <-> X /\ ~ Y.

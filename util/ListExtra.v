@@ -14,7 +14,7 @@ Infix "∈" := In (at level 50).
 Notation "a '∉' l" := (~ a ∈ l) (at level 50).
 Infix "⊆" := incl (at level 50).
 
-Definition set_eq (* unused *){A : Type} (a b : list A) := a ⊆ b /\ b ⊆ a.
+Definition set_eq {A : Type} (a b : list A) := a ⊆ b /\ b ⊆ a.
 
 Infix "='" := (set_eq) (at level 50).
 
@@ -61,7 +61,7 @@ Section Facts.
     unfold incl. cbn. firstorder.
   Qed.
 
-  Lemma eq_incl (* unused *)(l l':list A) :
+  Lemma eq_incl (l l':list A) :
     l = l' -> incl l l'.
   Proof.
     intros Heql; rewrite Heql;unfold incl; tauto.
@@ -157,7 +157,7 @@ Section Rcons.
     let l' := fresh l in
     specialize (cons_rcons a l) as [a' [l' H]].
 
-  Lemma rev_nil (* unused *)(l : list A) : rev l = nil <-> l = nil.
+  Lemma rev_nil (l : list A) : rev l = nil <-> l = nil.
   Proof.
     split; induction l; cbn in *; eauto; intros.
     - exfalso. induction (rev l); cbn in *; congruence.
@@ -173,7 +173,7 @@ Section Rcons.
     - right. apply cons_rcons.
   Qed.
 
-  Lemma rcons_not_nil (* unused *)(l : list A) a : l :r: a <> nil.
+  Lemma rcons_not_nil (l : list A) a : l :r: a <> nil.
   Proof.
     intro N. induction l; cbn in *; congruence.
   Qed.
@@ -217,7 +217,7 @@ Section Rcons.
     f_equal. rewrite IHl. reflexivity.
   Qed.
 
-  Lemma incl_cons_hd (* unused *) (a : A) l l'
+  Lemma incl_cons_hd  (a : A) l l'
         (Hincl : (a :: l) ⊆ l')
     : a ∈ l'.
   Proof.
@@ -308,7 +308,7 @@ Section Rcons.
     subst. reflexivity.
   Qed.
   
-  Lemma NoDup_rcons (* unused *)(A : Type) (x : A) (l : list A)
+  Lemma NoDup_rcons (A : Type) (x : A) (l : list A)
     : x ∉ l -> NoDup l -> NoDup (l :r: x).
   Proof.
     intros Hnin Hnd. revert x Hnin.

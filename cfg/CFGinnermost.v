@@ -133,7 +133,7 @@ Section cfg.
   Definition eq_loop q p : Prop :=
     deq_loop q p /\ deq_loop p q.
 
-  Lemma eq_loop1 (* unused *) p p' q
+  Lemma eq_loop1  p p' q
     : eq_loop p p' -> deq_loop p q -> deq_loop p' q.
   Proof.
     intros. destruct H.
@@ -260,7 +260,7 @@ Section cfg.
     eapply loop_contains_deq_loop;auto.
   Qed.
 
-  Lemma innermost_loop_deq_loop (* unused *)h p q
+  Lemma innermost_loop_deq_loop h p q
         (Hinner : innermost_loop h p)
         (Hloop : loop_contains h q)
     : deq_loop q p.
@@ -284,7 +284,7 @@ Section cfg.
 
   (** * Uniqueness of innermost loops *)
 
-  Lemma innermost_loop_strict_unique (* unused *)(h h' p : Lab)
+  Lemma innermost_loop_strict_unique (h h' p : Lab)
         (H : innermost_loop_strict h p)
         (Q : innermost_loop_strict h' p)
     : h = h'.
@@ -449,7 +449,7 @@ Section cfg.
       destruct n;unfold innermost_loop in H;firstorder.
   Qed.
 
-  Lemma get_innermost_loop_strict_spec (* unused *)(p : Lab)
+  Lemma get_innermost_loop_strict_spec (p : Lab)
     : match get_innermost_loop_strict p with
       | Some h => innermost_loop_strict h p
       | None => forall h', loop_contains h' p -> h' = p
@@ -464,7 +464,7 @@ Section cfg.
       destructH. specialize (n h'0); contradiction.
   Qed.
   
-  Lemma get_innermost_loop_strict_dep_spec (* unused *)(p : Lab)
+  Lemma get_innermost_loop_strict_dep_spec (p : Lab)
     : match get_innermost_loop_strict_dep p with
       | Some (exist _ h H) => innermost_loop_strict h p
       | None => forall h', loop_contains h' p -> h' = p
@@ -542,7 +542,7 @@ Section cfg.
     - subst. unfold innermost_loop in Hspec. subst. destructH; auto.
     - subst. unfold deq_loop. intros. exfalso; eauto.
   Qed.
-  Definition innermost_loop' (* unused *)`{redCFG} (h p : Lab) := (loop_contains h p \/ h = root) /\ deq_loop h p.
+  Definition innermost_loop' `{redCFG} (h p : Lab) := (loop_contains h p \/ h = root) /\ deq_loop h p.
 
   Definition get_innermost_loop_strict' p
     := match get_innermost_loop_strict p with

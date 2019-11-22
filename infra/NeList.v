@@ -154,7 +154,7 @@ Section NeList.
     induction l; cbn; eauto.
   Qed.
 
-  Lemma ne_rcons_back (* unused *)(a : A) l :
+  Lemma ne_rcons_back (a : A) l :
     ne_back (l :>: a) = a.
   Proof.
     induction l; cbn; eauto.
@@ -194,7 +194,7 @@ Section NeList.
       + right. eauto.
   Qed.
 
-  Lemma ne_map_nl_rcons (* unused *) (l : list A) a (f : A -> B)
+  Lemma ne_map_nl_rcons  (l : list A) a (f : A -> B)
     : ne_map f (l >: a) = (map f l) >: (f a).
   Proof.
     induction l;cbn;eauto. rewrite IHl. reflexivity.
@@ -212,7 +212,7 @@ Section NeList.
     intro N. induction l; cbn in *; congruence.
   Qed.
 
-  Lemma nercons_nlrcons (* unused *)l (a : A)
+  Lemma nercons_nlrcons l (a : A)
     : l :>: a = l >: a.
   Proof.
     induction l;cbn;eauto. rewrite <-IHl. destruct l;eauto.
@@ -224,7 +224,7 @@ Section NeList.
     induction l;cbn;eauto. unfold rcons in IHl. rewrite IHl. reflexivity.
   Qed.
 
-  Lemma ne_list_nlcons (* unused *)(l : ne_list A)
+  Lemma ne_list_nlcons (l : ne_list A)
     : exists a l', l = a :< l'.
   Proof.
     destruct l as [a | a l'];exists a;[exists nil|exists l'];cbn;[|rewrite <-nlcons_necons];reflexivity.
@@ -268,7 +268,7 @@ Proof.
     + right. eapply IHl;eauto.
 Qed.
 
-Lemma find_some' (* unused *)(A : Type) (f : A -> bool) (l : list A) (x : A)
+Lemma find_some' (A : Type) (f : A -> bool) (l : list A) (x : A)
       (Hl : x ∈ l)
       (Hf : f x = true)
   : exists y, Some y = find f l.

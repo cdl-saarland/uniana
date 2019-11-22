@@ -66,7 +66,7 @@ Section disj.
       + clear Hpath2. eapply tag_depth; eauto.
   Qed.
   
-  Lemma r1_in_head_q (* unused *): forall x, x ∈ r1 -> deq_loop (fst x) q1.
+  Lemma r1_in_head_q : forall x, x ∈ r1 -> deq_loop (fst x) q1.
   Proof.
     intros (p,i) Hel h Hh.
     eapply loop_contains_innermost in Hh as Hinner. destructH.
@@ -256,7 +256,7 @@ Section disj.
     - eapply j1_prefix_k.
   Qed.
   
-  Lemma r2_in_head_q (* unused *): forall x, x ∈ r2 -> deq_loop (fst x) q2.
+  Lemma r2_in_head_q : forall x, x ∈ r2 -> deq_loop (fst x) q2.
   Proof.
     intros (p,i) Hel h Hh.
     eapply loop_contains_innermost in Hh as Hinner. destructH. 

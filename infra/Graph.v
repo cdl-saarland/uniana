@@ -517,7 +517,7 @@ Proof.
   induction Hpath; cbn; eauto.
 Qed.
 
-Lemma path_contains_back (* unused *){L : Type} (x y : L) e l
+Lemma path_contains_back {L : Type} (x y : L) e l
       (Hpath : Path e x y l)
   : x ∈ l.
 Proof.

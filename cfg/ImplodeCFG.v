@@ -29,7 +29,7 @@ Definition purify_implode `{redCFG} h :=
   purify (implode_nodes_root_inv h) (D:=decide_pred _).
 
 
-Lemma implode_nodes_back_edge (* unused *)`{redCFG} h p q
+Lemma implode_nodes_back_edge `{redCFG} h p q
       (Hhead : back_edge' (restrict_edge' edge (implode_nodes h)) (restrict_edge' a_edge (implode_nodes h)) p q)
   : p ↪ q.
 Proof.
@@ -378,7 +378,7 @@ Proof.
   eapply head_exits_implode_nodes_inv1;eauto.
 Defined.
 
-Definition impl_of_original (* unused *)`(C : redCFG) (h : Lab)
+Definition impl_of_original `(C : redCFG) (h : Lab)
   : Lab -> option (local_impl_CFG_type C h).
 Proof.
   intro p.

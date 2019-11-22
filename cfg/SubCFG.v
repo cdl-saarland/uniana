@@ -8,7 +8,7 @@ Section Restr.
   Notation "p '-->b' q" := (edge p q) (at level 55).
   Notation "p '-->' q" := (p -->b q = true) (at level 55, right associativity).
   
-  Definition finType_sub_elem (* unused *)(h : Lab) (p : decPred Lab) (H : p h)
+  Definition finType_sub_elem (h : Lab) (p : decPred Lab) (H : p h)
     := (exist (fun x : Lab => pure p x) h (purify H)).
 
   
@@ -50,7 +50,7 @@ Proof.
     unfold restrict_edge. auto.
 Qed.
 
-Definition list_to_ne (* unused *)(A : Type) (l : list A) : option (ne_list A)
+Definition list_to_ne (A : Type) (l : list A) : option (ne_list A)
   := match l with
      | [] => None
      | a :: l => Some (a :< l)

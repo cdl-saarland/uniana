@@ -27,7 +27,7 @@ Section cfg.
        | inright _ => None
        end.
 
-  Definition strict_incl (* unused *)(A : Type) (l l' : list A)
+  Definition strict_incl (A : Type) (l l' : list A)
     := l ⊆ l' /\ exists a, a ∈ l' /\ a ∉ l.
 
   Infix "⊂" := strict_incl (at level 55).
@@ -79,7 +79,7 @@ Section cfg.
   Qed.                  
 
   (*
-  Lemma LPath_loop_contains (* unused *) h h' p π
+  Lemma LPath_loop_contains  h h' p π
         (Hpath : LPath h p π)
         (Hin : h' ∈ tl π)
     : loop_contains h p.
@@ -94,7 +94,7 @@ Section cfg.
         admit.
         *)
   
-  Lemma ex_LPath (* unused *)p
+  Lemma ex_LPath p
     : exists h, (forall h', loop_contains h' p -> loop_contains h h') /\ exists π, LPath h p π.
   Proof.
     remember (get_outermost_loop p) as oh.
@@ -106,11 +106,11 @@ Section cfg.
       eexists. econstructor.
   Qed.
 
-  Definition ex_near_ancestor_opt (* unused *)p q
+  Definition ex_near_ancestor_opt p q
     := finType_sig_or_never (DecPred (fun a => near_ancestor a p q)).
 
   (*
-  Lemma near_ancestor_same (* unused *) h p q a
+  Lemma near_ancestor_same  h p q a
         (Hloop : innermost_loop h p)
         (Hanc1 : near_ancestor a h q)
     : near_ancestor a p q.*)
@@ -121,7 +121,7 @@ Section cfg.
    * thus the nearest ancestor is the last such x
    *)
 
-  Lemma ex_near_ancestor (* unused *)p q
+  Lemma ex_near_ancestor p q
     : exists a, near_ancestor a p q.
   Proof.
 
@@ -188,7 +188,7 @@ Section cfg.
     unfold ancestor;firstorder 0.
   Qed.
   
-  Lemma ancestor_dom2 (* unused *)a p q
+  Lemma ancestor_dom2 a p q
     : ancestor a p q -> Dom edge root a q.
   Proof.
     eauto using ancestor_dom1, ancestor_sym.

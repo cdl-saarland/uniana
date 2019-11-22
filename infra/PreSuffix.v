@@ -118,7 +118,7 @@ Proof.
   exists l1'. inversion leq. reflexivity.
 Qed.
 
-Lemma postfix_app (* unused *){A : Type} (l1 l2 l' : list A) :
+Lemma postfix_app {A : Type} (l1 l2 l' : list A) :
   Postfix (l' ++ l1) (l' ++ l2) -> Postfix l1 l2.
   revert l1 l2. induction l'; intros; cbn; eauto.
   apply IHl'. cbn in H. inversion H. 
@@ -126,7 +126,7 @@ Lemma postfix_app (* unused *){A : Type} (l1 l2 l' : list A) :
   - eapply cons_postfix; eauto.
 Qed.
 
-Lemma postfix_nincl_postfix (* unused *){A : Type} `{EqDec A eq} a l : Postfix (postfix_nincl a l) l.
+Lemma postfix_nincl_postfix {A : Type} `{EqDec A eq} a l : Postfix (postfix_nincl a l) l.
 Proof.
   induction l; cbn; [econstructor; reflexivity|].
   destruct (a == a0); cbn; eauto using postfix_nil, postfix_cons.
@@ -138,7 +138,7 @@ Proof.
   intro H. inversion H; eauto. destruct l'; cbn in H0; congruence.
 Qed.
 
-Lemma prefix_nil_nil (* unused *){A : Type} (l : list A) :
+Lemma prefix_nil_nil {A : Type} (l : list A) :
   Prefix l nil -> l = nil.
 Proof.
   intro H. inversion H; eauto. 
@@ -289,7 +289,7 @@ Proof.
   induction l; econstructor; firstorder.
 Qed.
 
-Lemma prefix_NoDup (* unused *){A : Type} (l l' : list A) : Prefix l l' -> NoDup l' -> NoDup l.
+Lemma prefix_NoDup {A : Type} (l l' : list A) : Prefix l l' -> NoDup l' -> NoDup l.
 Proof.
   intros Hpre Hnd. induction Hpre; eauto.
   inversion Hnd; subst; eauto.
@@ -367,7 +367,7 @@ Section Pre.
     destruct H;[right|left]; eapply postfix_rev_prefix';eauto.
   Qed.
 
-  Lemma prefix_length_eq (* unused *)`{EqDec A eq} (l1 l2 l : list A)
+  Lemma prefix_length_eq `{EqDec A eq} (l1 l2 l : list A)
         (Hlen : length l1 = length l2)
         (Hpre1 : Prefix l1 l)
         (Hpre2 : Prefix l2 l)
@@ -377,7 +377,7 @@ Section Pre.
     destruct Hor as [Hor|Hor]; eapply prefix_length in Hor; eauto; symmetry; eauto.
   Qed.
 
-  Lemma prefix_induction (* unused *){P : list A -> Prop}
+  Lemma prefix_induction {P : list A -> Prop}
     : P nil
       -> (forall (a : A) (l : list A) (l' : list A), P l' -> Prefix (a :: l') l -> P l)
       -> forall l : list A, P l.
@@ -386,7 +386,7 @@ Section Pre.
     eapply Hstep;eauto. econstructor.
   Qed.
 
-  Lemma prefix_ex_cons (* unused *)(l l' : list A) (a : A)
+  Lemma prefix_ex_cons (l l' : list A) (a : A)
     : Prefix l l' -> exists a', Prefix (a' :: l) (a :: l').
   Proof.
     intros Hpre. revert a. induction Hpre; intros b.
