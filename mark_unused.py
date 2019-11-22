@@ -20,15 +20,15 @@ def mark_unused_all(path):
             with open(path + '/' + f_coq_path,'r') as file_coq:
                 coq_data = file_coq.read()
                 coq_data = coq_data.replace(unused_str,"")
-#            with open('unused.dump','r') as file_u:
-#                for line in file_u:
-#                    splitting = re.split('\s|:',line)
-#                    lsplit = splitting[0]
-#                    rsplit = splitting[1]
-#                    if (f_coq_path.startswith(lsplit)):
-#                        print("replacing " + rsplit + " in " + lsplit)
-#                        for key in keyws:
-#                            coq_data = coq_data.replace(build_src(key,rsplit),build_target(key,rsplit))
+            with open('unused.dump','r') as file_u:
+                for line in file_u:
+                    splitting = re.split('\s|:',line)
+                    lsplit = splitting[0]
+                    rsplit = splitting[1]
+                    if (f_coq_path.startswith(lsplit)):
+                        print("replacing " + rsplit + " in " + lsplit)
+                        for key in keyws:
+                            coq_data = coq_data.replace(build_src(key,rsplit),build_target(key,rsplit))
             with open(path + '/' + f_coq_path,'w') as file_coq:
                 file_coq.write(coq_data)
                 print ("wrote " + f_coq_path)

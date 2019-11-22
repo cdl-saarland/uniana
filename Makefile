@@ -8,33 +8,35 @@ COQDOCFLAGS:= \
 export COQDOCFLAGS
 COQMAKEFILE:=Makefile.coq
 COQ_PROJ:=_CoqProject
-VS:=$(shell find . -name '*.v' -a ! -name 'X_*.v') #$(wildcard *.v */*.v */*/*.v)
+VS:=$(shell find . -name '*.v' -a ! -name 'X_*.v' -a ! -name '*\#*.v') #$(wildcard *.v */*.v */*/*.v)
 VS_IN_PROJ:=$(shell grep .v $(COQ_PROJ))
 
-ifeq (,$(VS_IN_PROJ))
-VS_OTHER := $(VS)
+ifeq (,$(VS_IN_PROJ)) # if VS_IN_PROJ is empty, i.e. there are no *.v ressources listed in COQ_PROJ
+VS_OTHER := $(VS) # we use all *.v files found by VS
 else
-VS := $(VS_IN_PROJ)
+VS := $(VS_IN_PROJ) # otw use the ressources listed in COQ_PROJ 
 endif
+
+.PHONY: clean all force cleancoqmake
 
 all: html
 
 clean: $(COQMAKEFILE)
-	@$(MAKE) -f $(COQMAKEFILE) $@
-	rm -f $(COQMAKEFILE)
-	rm -f $(COQMAKEFILE).conf # added by me
-#	rm -f *.vo *.glob */*.vo */*.glob */*/*.vo */*/*.glob
+	@$(MAKE) -f $(COQMAKEFILE) $@ # $@ calls 'clean' in the makefile COQMAKEFILE
+	@$(MAKE) cleancoqmake
 
 html: $(COQMAKEFILE) $(VS)
 	rm -fr html
 	@$(MAKE) -f $(COQMAKEFILE) $@
 	cp $(EXTRA_DIR)/resources/* html
 
+cleancoqmake:
+	@rm -f $(COQMAKEFILE)
+	@rm -f $(COQMAKEFILE).conf # added by me
+
 $(COQMAKEFILE): $(COQ_PROJ) $(VS)
-		coq_makefile -f $(COQ_PROJ) $(VS_OTHER) -o $@
+	coq_makefile -f $(COQ_PROJ) $(VS_OTHER) -o $@
 
 %: $(COQMAKEFILE) force
 	@$(MAKE) -f $(COQMAKEFILE) $@
 force $(COQ_PROJ) $(VS): ;
-
-.PHONY: clean all force

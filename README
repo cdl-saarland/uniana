@@ -1,0 +1,8 @@
+To investigate the Coq proofs first install Coq:
+https://github.com/coq/coq/releases/tag/V8.10.1
+
+There are no further dependencies.
+Execution of
+$ make
+yields compiles the whole development.
+

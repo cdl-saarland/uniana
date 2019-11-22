@@ -265,7 +265,7 @@ Section splinterStrict.
 
   Hint Resolve splinter_strict_nil splinter_strict_prefix splinter_strict_refl.
 
-  Global Instance splinter_strict_trans (A : Type)
+  Global Instance splinter_strict_trans
     : Transitive (@splinter_strict A).
   Proof.
     unfold Transitive. intros.
