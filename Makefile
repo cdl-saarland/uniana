@@ -22,12 +22,17 @@ endif
 all: html
 
 uniana.tar: all
-	rm -f *.vo */*.vo */*/*.vo
-	rm -f *.glob */*.glob */*/*.glob 
-	rm -f *.aux */*.aux */*/*.aux
-	rm -f *~ */*~ */*/*~
-	rm -f *\#* */*\#* */*/*\#*
-	tar -czvf $@ Uniana.v Unchanged.v cfg _CoqProject external infra tcfg Unchanged.v util coqdocjs disj eval html Makefile README Uniana.v uniana.pdf
+	mkdir uniana
+	cp -r Uniana.v Unchanged.v cfg _CoqProject external infra tcfg Unchanged.v util coqdocjs disj eval html Makefile README.md Uniana.v uniana.pdf uniana
+	rm -f uniana/*.vo uniana/*/*.vo uniana/*/*/*.vo
+	rm -f uniana/*.glob uniana/*/*.glob uniana/*/*/*.glob 
+	rm -f uniana/*.aux uniana/*/*.aux uniana/*/*/*.aux
+	rm -f uniana/.*.aux uniana/*/.*.aux uniana/*/*/.*.aux
+	rm -f uniana/*~ uniana/*/*~ uniana/*/*/*~
+	rm -f uniana/*\#* uniana/*/*\#* uniana/*/*/*\#*
+	rm -f $@
+	bsdtar cfv $@ uniana/
+	rm -r uniana
 
 clean: $(COQMAKEFILE)
 	@$(MAKE) -f $(COQMAKEFILE) $@ # $@ calls 'clean' in the makefile COQMAKEFILE
