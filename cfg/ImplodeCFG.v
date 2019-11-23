@@ -191,6 +191,7 @@ Qed.
 
 Lemma implode_nodes_self `(C : redCFG) (h : Lab)
   : (implode_nodes h) h.
+Proof.
   left. eapply deq_loop_refl.
 Qed.
 

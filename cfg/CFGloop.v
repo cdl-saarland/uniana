@@ -479,6 +479,7 @@ Section cfg.
         (Hloop : loop_contains h1 h2)
         (Hneq : h1 <> h2)
     : loop_contains h1 e2.
+  Proof.
     decide (loop_contains h1 e2);[auto|].
     copy Hexit' Hexit''.
     unfold exit_edge in Hexit'. destructH.

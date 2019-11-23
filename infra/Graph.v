@@ -505,6 +505,7 @@ Ltac path_simpl' H :=
 Goal forall (L : Type) (x y z : L) (l : list L) e
       (Hpath : Path e x y (l >: z)),
     x = z.
+Proof.
   intros.
   path_simpl' Hpath.
   reflexivity.

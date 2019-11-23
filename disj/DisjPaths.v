@@ -284,6 +284,7 @@ Section disj.
 
   Global Instance Path_dec (L : eqType) (e : L -> L -> bool) (x y : L) (π : ne_list L)
     : dec (Path e x y π).
+  Proof.
   revert y.
   induction π;intro y;eauto.
   - decide (a = x);decide (a = y);subst. 1: left;econstructor.

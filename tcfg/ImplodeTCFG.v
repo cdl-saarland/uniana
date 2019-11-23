@@ -37,7 +37,8 @@ Section tcfg.
 
   Lemma impl_list_impl_tlist h t
     : map fst (impl_tlist h t) = impl_list' h (map fst t).
-  Admitted.
+  Proof.
+    Admitted.
 
   Lemma impl_tlist_tpath (h p q : Lab) t i j
         (Hpath : TPath (p,i) (q,j) t)
@@ -46,7 +47,8 @@ Section tcfg.
     : exists t', @TPath _ _ _ _ (local_impl_CFG C h) (impl_of_original' Hp,i)
                    (impl_of_original' Hq,j) t'
             /\ ne_to_list t' = impl_tlist h t.
-  Admitted.
+  Proof.
+    Admitted.
 
 (*  Lemma impl_tlist_disj1 h t1 t2
         (Hdisj : Disjoint t1 t2)
@@ -54,7 +56,8 @@ Section tcfg.
   Lemma impl_tlist_implode_nodes h p i t
         (Hel : (p,i) ∈ impl_tlist h t)
     : implode_nodes C h (`p).
-  Admitted.
+  Proof.
+    Admitted.
   
   Lemma impl_tlist_in h p i t
         (Hel : (p,i) ∈ (impl_tlist h t))
@@ -62,26 +65,30 @@ Section tcfg.
       | left _ => (`p,i) ∈ t
       | _ =>  exists n, (`p,n :: i) ∈ t
       end.
-  Admitted.  
+  Proof.
+    Admitted.  
 
   Lemma impl_tlist_length h p i t
         (Hel : (p,i) ∈ impl_tlist h t)
     : @depth _ _ _ _ (local_impl_CFG C h) p <= depth h.
     clear - Hel.
-  Admitted.
+  Proof.
+    Admitted.
 
   Lemma impl_tlist_skip h p i t
         (Himpl : impl_list'_cond1 h p (map fst t))
     : impl_tlist h ((p,i) :: t) = impl_tlist h t.
     clear - Himpl.
-  Admitted.
+  Proof.
+    Admitted.
 
   Lemma impl_tlist_cons h p i t
         (Himpl : impl_list'_cond2 h p (map fst t))
     : exists i', impl_tlist h ((p,i) :: t)
             = (impl_of_original' (impl_list'2_implode_nodes Himpl),i') :: impl_tlist h t.
     clear - Himpl.
-  Admitted.
+  Proof.
+    Admitted.
 
   Lemma impl_tlist_tag_prefix p t h i i'
         (Himpl : impl_list'_cond2 h p (map fst t))
@@ -89,12 +96,14 @@ Section tcfg.
                = (impl_of_original' (impl_list'2_implode_nodes Himpl),i') :: impl_tlist h t)
     : Prefix i' i.
     clear - Himpl Heq.
-  Admitted.
+  Proof.
+    Admitted.
 
   Lemma impl_tlist_incl (t t' : list Coord) h
         (Hincl : t ⊆ t')
     : impl_tlist h t ⊆ impl_tlist h t'.
     clear - Hincl.
-  Admitted.
+  Proof.
+    Admitted.
   
 End tcfg.

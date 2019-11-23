@@ -555,6 +555,7 @@ Section cfg.
   Lemma exit_edge_innermost h q e
         (Hexit : exit_edge h q e)
     : innermost_loop h q.
+  Proof.
     clear - Hexit.
   Admitted. (* FIXME *)
   
@@ -563,6 +564,7 @@ Section cfg.
         (Hinl : innermost_loop h p)
         (Hnin : h ∉ π)
     : π = ne_single p.
+  Proof.
     clear - Hpath Hinl Hnin.
   Admitted. (* FIXME *)
 

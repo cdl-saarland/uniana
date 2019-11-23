@@ -247,6 +247,7 @@ Qed.
 
 Instance head_exits_CFG `(redCFG) qh
   : redCFG (edge ∪ (head_exits_edge qh)) root (a_edge ∪ (head_exits_edge qh)).
+Proof.
 econstructor;intros.
 { (* loop_head_dom *)
   unfold Dom. intros π Hpath.

@@ -356,6 +356,7 @@ Instance sub_CFG
             (restrict_edge edge P)
             (↓ (purify HP))
             (restrict_edge a_edge P).
+Proof.
 econstructor.
 { (* loop_head_dom *)
   intros.

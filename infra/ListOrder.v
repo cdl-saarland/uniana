@@ -535,6 +535,7 @@ Section succ_rt.
         (Hnd : NoDup (l ++ l'))
         (Hel : y ∈ l)
     : x ∈ l.
+  Proof.
     clear - Hsucc Hnd Hel.
     revert dependent l'.
     induction l;intros;cbn in *.

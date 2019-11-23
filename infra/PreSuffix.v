@@ -120,6 +120,7 @@ Qed.
 
 Lemma postfix_app {A : Type} (l1 l2 l' : list A) :
   Postfix (l' ++ l1) (l' ++ l2) -> Postfix l1 l2.
+Proof.
   revert l1 l2. induction l'; intros; cbn; eauto.
   apply IHl'. cbn in H. inversion H. 
   - rewrite H2. econstructor.
@@ -176,6 +177,7 @@ Proof.
 Qed.
 
 Lemma postfix_incl {A : Type} (l l' : list A) : Postfix l l' -> incl l l'.
+Proof.
   intros post. induction post.
   - apply incl_refl.
   - apply incl_appl; eauto.
@@ -211,6 +213,7 @@ Qed.
 
 Lemma postfix_step_left {A : Type} (l l' : list A) a :
   Postfix (l :r: a) l' -> Postfix l l'.
+Proof.
   intros.
   remember (l :r: a) as l0.
   induction H. subst l0.

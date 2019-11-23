@@ -90,19 +90,23 @@ Section tagged.
     Lemma tag_exit_lt
           (Hgt : |j| < |i|)
       : j = tl i.
+    Proof.
     Admitted.
 
     Lemma tag_entry_lt
           (Hlt : |i| < |j|)
       : j = O :: i.
+    Proof.
     Admitted.
 
     Lemma tag_normal_iff
       : j = i <-> eq_loop p q.
+    Proof.
     Admitted.
     
     Lemma tag_entry_iff
       : j = O :: i <-> entry_edge p q.
+    Proof.
     Admitted.
 
     Lemma tag_back_edge_iff
@@ -110,14 +114,17 @@ Section tagged.
         | Some n => S n :: tl i = j
         | None => False
         end <-> p ↪ q.
+    Proof.
     Admitted.
 
     Lemma tag_deq_le
       : |i| <= |j| <-> deq_loop q p.
+    Proof.
     Admitted.
 
     Lemma tag_deq_ge
       : |i| >= |j| <-> deq_loop p q.
+    Proof.
     Admitted.
     
     Lemma tag_deq_total
@@ -131,6 +138,7 @@ Section tagged.
 
     Lemma tag_deq_or_entry
       : deq_loop p q \/ entry_edge p q.
+    Proof.
     Admitted.
 
     Lemma tcfg_edge_destruct
@@ -138,6 +146,7 @@ Section tagged.
         \/ j = O :: i (* entry *)
         \/ match hd_error i with Some n => S n :: tl i = j | None => False end (* back *)
         \/ j = tl i. (* exit *)
+    Proof.
     Admitted.
     
   End eff_tag_facts.
@@ -149,7 +158,8 @@ Section tagged.
         (Hpath : TPath (root,start_tag) (p,i) t)
         (Hin : (q,j) ∈ t)
     : length j = depth q.
-  Admitted.  
+  Proof.
+    Admitted.  
 
 Lemma tag_eq_loop_exit p q i j j'
       (Htag : (q,j ) -t> (p,i))
@@ -251,7 +261,8 @@ Lemma exit_succ_exiting (p q h e : Lab) (k i j : Tag) r
       (Hexit : exited h e)
       (Hel : (e,i) ∈ r)
   : exists qe n, exit_edge h qe e /\ (e,i) ≻ (qe,n :: i) | r :r: (p,k).
-Admitted. (* FIXME *)
+Proof.
+    Admitted. (* FIXME *)
 (*Section tagged.
   
   Context `{C : redCFG}.*)
@@ -330,7 +341,8 @@ Admitted. (* FIXME *)
         (Hdom : Dom edge root q p)
         (Hpath : TPath (root,start_tag) (p,i) l)
     : exists j, Precedes fst l (q,j).
-  Admitted.
+  Proof.
+    Admitted.
   
   Lemma tag_prefix_head h p i j l 
         (Hloop : loop_contains h p)
@@ -411,20 +423,23 @@ Admitted. (* FIXME *)
         (Htag : j = j1 ++ j2)
         (Hpath : TPath (root,start_tag) (p,j) t)
     : exists h, loop_contains h p /\ Precedes fst t (h,j2).
-  Admitted.
+  Proof.
+    Admitted.
   
   Lemma first_occ_tag_elem i j j1 j2 p q t
         (Htag : j = j1 ++ j2)
         (Hpath : TPath (root,start_tag) (p,i) t)
         (Hin : (q,j) ∈ t)
     : exists h, loop_contains h q /\ Precedes fst t (h,j2) /\ (q,j) ≻* (h, j2) | t.
-  Admitted.
+  Proof.
+    Admitted.
 
   Lemma prec_prec_eq l (q : Lab) (j j' : Tag)
         (Hprec1 : Precedes fst l (q,j))
         (Hprec2 : Precedes fst l (q,j'))
     : j = j'.
-  Admitted.
+  Proof.
+    Admitted.
   
   Lemma prefix_prec_prec_eq l l' (p q : Lab) (i j j' : Tag)
         (Hpre : Prefix ((p,i) :: l') l)
@@ -433,7 +448,8 @@ Admitted. (* FIXME *)
         (Hnd : NoDup l)
         (Hib : (p,i) ≻* (q,j) | l)
     : j' = j.
-  Admitted.
+  Proof.
+    Admitted.
 
   Lemma ancestor_in_before_dominating a p q (i j k : Tag) l
         (Hdom : Dom edge root q p)
@@ -441,7 +457,8 @@ Admitted. (* FIXME *)
         (Hprec__a: Precedes fst ((p,i) :: l) (a,k))
         (Hprec__q: Precedes fst ((p,i) :: l) (q,j))
     : (q,j) ≻* (a,k) | (p,i) :: l.
-  Admitted. 
+  Proof.
+    Admitted. 
     
   Lemma ancestor_level_connector p q a i j k t
         (Hpath : TPath (root,start_tag) (p,i) t)
@@ -450,7 +467,8 @@ Admitted. (* FIXME *)
         (Hprec : Precedes fst t (a,k))
         (Hib : (q,j) ≻* (a,k) | t)
     : exists a', Precedes fst t (a',k) /\ (p,i) ≻* (a',k) ≻* (q,j) | t.
-  Admitted.
+  Proof.
+    Admitted.
 
   Lemma find_loop_exit h a p i j k n l
         (Hpath : TPath (root,start_tag) (p,i) l)
@@ -458,14 +476,16 @@ Admitted. (* FIXME *)
         (Hib : (a,k) ≻* (h, n :: j) | l)
         (Hprec : Precedes fst l (h, n :: j))
     : exists qe e, (a,k) ≻* (e,j) ≻* (qe,n :: j) ≻* (h, n :: j) | l /\ (e,j) ≻ (qe,n :: j) | l /\ exit_edge h qe e.
-  Admitted.
+  Proof.
+    Admitted.
   
   Lemma tpath_deq_loop_prefix p q i j t
         (Hdeq : deq_loop p q)
         (Hpath : TPath' t)
         (Hpre : Prefix j i)
     : (q,j) ≻* (p,i) | t.
-  Admitted. (* FIXME *)
+  Proof.
+    Admitted. (* FIXME *)
   
   Lemma tpath_tpath' r i0 p i t
         (Hpath : TPath (r,i0) (p,i) t)
@@ -486,13 +506,15 @@ Admitted. (* FIXME *)
         (Hpath : TPath (root,start_tag) (p,i) ((p,i) :< l))
     : (q,j) ≻* (r,k) | (p,i) :: l.
     
-  Admitted.
+  Proof.
+    Admitted.
   
   Lemma loop_cutting q p t
         (Hpath : CPath q p t)
         (Hnoh : forall h, loop_contains h q -> h ∉ t)
     : exists t', Path a_edge q p t'.
-  Admitted.
+  Proof.
+    Admitted.
 
   Lemma tpath_exit_nin h q e n j t
         (Hpath : TPath (root, start_tag) (q,n :: j) t)
@@ -511,7 +533,8 @@ Admitted. (* FIXME *)
         (Hib : (p,i) ≻* (q,j) | (p,i) :: t)
         (Hnoh : forall h k, loop_contains h q -> ~ (p,i) ≻* (h,k) ≻* (q,j) | (p,i) :: t)
     : exists t', Path a_edge q p t'.
-  Admitted.
+  Proof.
+    Admitted.
 
   Lemma exit_cascade u p t i j k
         (Hdom : Dom edge root u p)
@@ -521,7 +544,8 @@ Admitted. (* FIXME *)
     (* otw. there would be a path through this q to p without visiting u *)
     (* this could even be generalized to CPaths *)
     (* TODO: lift on tpaths, on cpaths we might have duplicates, thus it doesn't work there *)
-  Admitted.
+  Proof.
+    Admitted.
   
   
   Lemma tpath_depth_eq (p q : Lab) (i j : Tag) pi qj t
@@ -530,14 +554,16 @@ Admitted. (* FIXME *)
         (Hel2 : (q,j) ∈ t)
         (Heq : |i| = |j|)
     : depth p = depth q.
-  Admitted.
+  Proof.
+    Admitted.
   Lemma tpath_depth_lt (p q : Lab) (i j : Tag) pi qj t
         (Hpath : TPath pi qj t)
         (Hel1 : (p,i) ∈ t)
         (Hel2 : (q,j) ∈ t)
         (Hlt : |i| < |j|)
     : depth p < depth q.
-  Admitted.
+  Proof.
+    Admitted.
   
   Lemma loop_tag_dom (h p : Lab) (i j : Tag) t
     (Hloop : loop_contains h p)
@@ -545,7 +571,8 @@ Admitted. (* FIXME *)
     (Htagle : j ⊴ i)
     (Hdep : |j| = depth h)
     : (h,j) ∈ t.
-  Admitted.
+  Proof.
+    Admitted.
   
   Lemma deq_loop_le p i j q t t'
         (Hdeq : deq_loop p q)
@@ -564,7 +591,8 @@ Admitted. (* FIXME *)
     (Hel : (q,j) ∈ t)
     (Hlen : |j| <= |i|)
     : j ⊴ i.
-  Admitted.
+  Proof.
+    Admitted.
   
 End tagged.
 
