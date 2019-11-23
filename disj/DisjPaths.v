@@ -2,7 +2,15 @@ Require Export DisjDef MaxPreSuffix.
 
 Section disj.
 
-  Load X_notations.
+
+  Context `{C : redCFG}.
+
+  Infix "⊴" := Tagle (at level 70).
+
+  Notation "p '-a>b' q" := (a_edge p q) (at level 55).
+  Notation "p '-a>' q" := (p -a>b q = true) (at level 55).
+  Notation "p '-->b' q" := (edge p q) (at level 55).
+  Notation "p '-->' q" := (p -->b q = true) (at level 55, right associativity).
   
   (* TODO: remove *)
   Definition prec_loop_contains (qh q : Lab) (k j : Tag)
@@ -306,7 +314,14 @@ Section disj.
      *) 
   Admitted.
   
-  Load X_vars.
+  Variable (t1 t2 : ne_list (Lab * Tag)) (r1 r2 : list (Lab * Tag)) (q1 q2 s : Lab) (j1 j2 k : Tag).
+  Hypotheses (Hlc : last_common' t1 t2 r1 r2 (s,k))
+             (Hpath1 : TPath (root,start_tag) (q1,j1) t1)
+             (Hpath2 : TPath (root,start_tag) (q2,j2) t2)
+             (*           (Hneq : r1 <> r2) (* <-> r1 <> nil \/ r2 <> nil *)*)
+             (Hloop : eq_loop q1 q2)
+             (Htag : tl j1 = tl j2)
+             (Htagleq : hd 0 j1 <= hd 0 j2). 
 
   Lemma s_deq_q : deq_loop s q1.
   Proof.
