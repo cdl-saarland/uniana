@@ -19,7 +19,9 @@ endif
 
 .PHONY: clean all force cleancoqmake
 
-all: html
+all:
+	rm -fr html
+	$(MAKE) html
 
 uniana.tar: all
 	mkdir uniana
@@ -50,6 +52,7 @@ cleancoqmake:
 $(COQMAKEFILE): $(COQ_PROJ) $(VS)
 	coq_makefile -f $(COQ_PROJ) $(VS_OTHER) -o $@
 
-%: $(COQMAKEFILE) force
-	@$(MAKE) -f $(COQMAKEFILE) $@
-force $(COQ_PROJ) $(VS): ;
+#%: $(COQMAKEFILE) force
+#	@$(MAKE) -f $(COQMAKEFILE) $@
+force: clean
+	@$(MAKE) all
