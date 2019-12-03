@@ -55,3 +55,19 @@ Ltac destr_r x :=
   let l := fresh "l" in
   destruct Q as [a [l Q]];
   rewrite Q in *.
+
+Require Import PreSuffix.
+Require Import Coq.Program.Equality.
+
+Lemma postfix_front {A : Type} (l l' : ne_list A) :
+  Postfix l l'
+  -> ne_front l = ne_front l'.
+Proof.
+  intros H. dependent induction H.
+  - apply ne_to_list_inj in x; rewrite x; eauto.
+  - rewrite rcons_nl_rcons in x. apply ne_to_list_inj in x. 
+    rewrite <-x. destruct l'0.
+    + exfalso. inversion H; [eapply ne_to_list_not_nil|eapply rcons_not_nil]; eauto.
+    + cbn. erewrite IHPostfix; eauto; [|rewrite nlcons_to_list; reflexivity].
+      simpl_nl; reflexivity.
+Qed.      

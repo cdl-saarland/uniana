@@ -175,65 +175,112 @@ Section graph.
     destruct Q as [a [l Q]];
     rewrite Q in *.
 
+
+  Lemma prefix_rcons_eq: forall (A : Type) (a b : A) (l l' : list A), Prefix (l ++ [a]) (l' ++ [b]) -> a = b.
+  Proof.
+    intros. eapply postfix_hd_eq. eapply prefix_rev_postfix'. cbn.
+    do 2 rewrite rev_involutive. eauto.
+  Qed.
+  
   Lemma path_prefix_path p q r (π ϕ : list L)
     : Path p q π -> Prefix (r :: ϕ) π -> Path p r (r :: ϕ).
   Proof.
     intros Hpq Hpre.
     turn_cons r ϕ.
-    (* FIXME *)
-    induction ϕ. cbn in *.
-    replace p with 
-    specialize (cons_rcons r ϕ) as Hrc. destruct Hrc as [a' [l' Hrc]].
-    revert dependent q. dependent induction Hpre; intros q Hpq.
-    - inversion Hpq;subst.
-      + 
-    - eapply ne_to_list_inj in x. subst. erewrite path_front; eauto.
-    - destruct π.
-      + inversion x. subst l'. inversion Hpre; subst. destruct ϕ; cbn in H2; congruence.
-      + rewrite nlcons_to_list in x. eapply ne_to_list_inj in x.
-        eapply IHHpre; cycle 1.
-        * instantiate (1:=π). destruct l';[cbn in x;congruence|].
-          cbn in x. inversion x. simpl_nl. reflexivity.
-        * instantiate (1:= ne_front π). inversion Hpq; subst. erewrite path_front; eauto.
-        * reflexivity.
+    replace r with p in *;cycle 1.
+    { destr_r' π;subst π. 1: inversion Hpq.
+      path_simpl' Hpq. symmetry. eapply prefix_rcons_eq. eauto.
+    }
+    enough (exists r, Path p r (ϕ :r: p)).
+    { destructH. rewrite <-Q in *. path_simpl' H. auto. }
+    clear Q.
+    revert dependent q.
+    dependent induction Hpre;intros.
+    - path_simpl' Hpq. eauto. 
+    - inversion Hpq;subst. 1: inversion Hpre; congruence'.
+      destr_r' l';subst l'. 1: inversion H3. path_simpl' H3.
+      eapply IHHpre;eauto.
   Qed.
-
+  
   Lemma path_rcons p q r π
         (Hπ : Path p q π)
         (Hedge : r --> p)
-    : Path r q (π :>: r).
+    : Path r q (π ++ [r]).
   Proof.
-    eapply path_app_conc;eauto. econstructor.
+    eapply path_app;eauto. econstructor.
   Qed.
 
   Lemma path_rcons_inv q r π
-        (Hπ : Path r q (π :>: r))
-    : exists p, Path p q π.
+        (Hπ : Path r q (q :: π :r: r))
+    : exists p, Path p q (q :: π).
   Proof.
     revert dependent q. induction π; intros q Hπ.
-    - exists a. inversion Hπ;subst;econstructor.
-    - cbn in Hπ. eapply path_front in Hπ as Hfront. cbn in Hfront. subst a.
-      inversion Hπ;subst. unfold ne_rcons in IHπ.
-      specialize (IHπ b H0). destructH.
+    - eexists. econstructor.
+    - cbn in *. inversion Hπ. subst. path_simpl' H0. eapply IHπ in H0. destructH.
       eexists. econstructor;eauto.
   Qed.
 
-  
-  Lemma path_postfix_path p q (π ϕ : ne_list L) : Path p q π -> Postfix ϕ π -> Path (ne_back ϕ) q ϕ.
+  Lemma rcons_cons'
+     : forall (A : Type) (a : A) (l : list A),
+      l ++ [a] = hd a l :: (tl (l ++ [a])).
   Proof.
-    intros Hπ Hϕ.
-    revert dependent p. dependent induction Hϕ; intros p Hπ.
-    - simpl_nl' x. subst ϕ. eapply path_back in Hπ as Hπ'. subst;eauto.
-    - inversion Hπ; subst;destruct l'. 2: repeat (destruct l';cbn in x;try congruence). 
-      1,2: exfalso;eapply ne_to_list_not_nil;eauto; symmetry; eapply postfix_nil_nil;eauto.
-      rewrite rcons_nl_rcons in x. simpl_nl' x. rewrite <-x in Hπ.
-      rewrite nlcons_to_list in Hπ.
-      rewrite <-nercons_nlrcons in Hπ. eapply path_back in Hπ as Hback;simpl_nl' Hback; subst.
-      eapply path_rcons_inv in Hπ. destructH.
-      specialize (IHHϕ (l :< l') ϕ). eapply IHHϕ;eauto.
-      simpl_nl;reflexivity.
+    intros.
+    induction l;cbn;eauto.
   Qed.
+  
+  Lemma rcons_cons
+    : forall (A : Type) (a' : A) (l' : list A), exists (a : A) (l : list A), l' :r: a' = a :: l.
+  Proof.
+    intros. eexists. eexists. eapply rcons_cons'.
+  Qed.
+  
+  Ltac turn_rcons l a :=
+    let Q := fresh "Q" in
+    let a' := fresh a in
+    let l' := fresh l in
+    rename l into l';
+    rename a into a';
+    specialize (rcons_cons a' l') as Q;
+    destruct Q as [a [l Q]];
+    rewrite Q in *.
 
+  Lemma rcons_inj (A : Type) (l l' : list A) (a b : A)
+    : l ++ [a] = l' ++ [b] -> l = l' /\ a = b.
+  Proof.
+    revert dependent l'.
+    induction l;intros.
+    - cbn in H. destruct l';cbn in *;eauto.
+      + split;inversion H;eauto.
+      + inversion H. congruence'.
+    - destruct l';cbn in *.
+      + inversion H. congruence'.
+      + inversion H. subst. split;[f_equal|];eapply IHl;eauto.
+  Qed.              
+  
+  Lemma path_postfix_path p q r (π ϕ : list L)
+    : Path p q π -> Postfix (ϕ ++ [r]) π -> Path r q (ϕ ++ [r]).
+  Proof.
+    intros Hπ Hpost. 
+    turn_rcons ϕ r.
+    replace r with q in *;cycle 1.
+    { destruct π. 1: inversion Hπ.
+      path_simpl' Hπ. symmetry. eapply postfix_hd_eq;eauto.
+    }
+    enough (exists r, Path r q (q :: ϕ)).
+    { destructH. rewrite <-Q in *.  path_simpl' H. auto. }
+    clear Q.
+    dependent induction Hpost generalizing p Hπ;intros;subst.
+    - eauto.
+    - inversion Hπ;subst.
+      + rewrite cons_rcons' in H2. eapply rcons_inj in H2. cbn in H2. destruct H2. subst l' q.
+        inversion Hpost. congruence'.
+      + destruct l';cbn in *.
+        * inversion Hpost. congruence'.
+        * path_simpl' Hπ. rewrite <-cons_rcons_assoc in Hπ. path_simpl' Hπ.
+          rewrite cons_rcons_assoc in Hπ. eapply path_rcons_inv in Hπ. destructH.
+          eapply IHHpost;eauto.
+  Qed.
+  
   Lemma path_NoDup' p q ϕ : Path p q ϕ -> exists π, Path p q π /\ NoDup π.
   Proof.
     intros Hto.
@@ -242,11 +289,10 @@ Section graph.
     - destruct IHHto as [ψ [IHHto IHnodup]].
       destruct (@In_dec _ _ _ c ψ).
       + eapply prefix_nincl_prefix in H0.
-        exists (c :< prefix_nincl c ψ). split.
-        * rewrite nlcons_to_list in H0.
-          eapply path_prefix_path in H0; eauto; cbn in *; simpl_nl' H0; eauto.
-        * eapply prefix_NoDup; eauto. simpl_nl; eauto.
-      + exists (c :<: ψ). split;econstructor;eauto.
+        exists (c :: prefix_nincl c ψ). split.
+        * eapply path_prefix_path in H0; eauto; cbn in *; simpl_nl' H0; eauto.
+        * eapply prefix_NoDup; eauto. 
+      + exists (c :: ψ). split;econstructor;eauto.
   Qed.
   
   Lemma path_NoDup p q : p -->* q -> exists π, Path p q π /\ NoDup π.
@@ -254,57 +300,31 @@ Section graph.
     intros [ϕ Hto]. eapply path_NoDup';eauto.
   Qed.
 
-  Lemma in_nlcons {A : Type} `{EqDec A eq} (l : list A) (a b : A)
-    : a ∈ (b :< l) <-> a = b \/ a ∈ l.
-  Proof.
-    split; intro Q.
-    - revert dependent b. induction l; cbn in *;intros b Q;[firstorder|].
-      destruct Q;[firstorder|].
-      right. specialize (IHl a0 H0). firstorder.
-    - revert dependent b. induction l; cbn in *;intros b Q;[firstorder|].
-      destruct Q;[firstorder|].
-      right. eapply IHl. firstorder.
-  Qed.
-
-  Lemma in_ne_conc {A : Type} `{EqDec A eq} (l l' : ne_list A)
-    : forall a, a ∈ (l :+: l') <-> a ∈ l \/ a ∈ l'.
-  Proof.
-    split; revert a; induction l;intros b Q; cbn in *; firstorder 0.
-  Qed.
-
-  Lemma in_nl_conc {A : Type} `{EqDec A eq} (l : ne_list A) l' (a : A)
-    : a ∈ (l :+ l') <-> a ∈ l \/ a ∈ l'.
-  Proof.
-    split;revert a;induction l'; intros b Q; cbn in *; [firstorder| |firstorder|].
-    - eapply in_ne_conc in Q. repeat destruct Q; eauto. eapply in_nlcons in H0. destruct H0;eauto.
-    - eapply in_ne_conc. repeat destruct Q; eauto. right. eapply in_nlcons. firstorder.
-  Qed.
-
-
   Lemma path_to_elem p q r π : Path p q π -> r ∈ π -> exists ϕ, Path p r ϕ /\ Prefix ϕ π.
   Proof.
     revert dependent q.
     induction π; intros q Hpath Hin; cbn in *; eauto.
-    - destruct Hin;[subst|contradiction].
-      eapply path_front in Hpath as Hfront. eapply path_back in Hpath as Hback. subst p q; cbn in *.
-      eexists; split; eauto. econstructor.
-    - destruct Hin.
-      + subst a. eapply path_back in Hpath as Hback. eapply path_front in Hpath as Hfront.
-        subst p q; cbn in *. exists (r :<: π); split; eauto.
-        econstructor.
-      + inversion Hpath; subst. specialize (IHπ b H4 H) as [ϕ [Hϕ Hpre]].
-        eexists;split;eauto. econstructor;eauto.
-  Qed.
-  
+    - contradiction. 
+    - path_simpl' Hpath. destruct Hin.
+      + subst q. inversion Hpath.
+        * eapply path_front in Hpath as Hfront. subst.
+          eexists. split;econstructor.
+        * subst; cbn in *. exists (r :: π); split; eauto.
+          econstructor.
+      + inversion Hpath; subst. 1: contradiction.
+        eapply IHπ in H1;eauto. destructH. eexists.
+        split;eauto.
+        econstructor. eauto.
+  Qed.  
 
   Lemma path_from_elem' p q r π : Path p q π -> r ∈ π ->
-                                  let ϕ := postfix_nincl r π >: r in
+                                  let ϕ := postfix_nincl r π ++ [r] in
                                   Path r q ϕ /\ Postfix ϕ π.
   Proof. 
     intros Hpath Hin.
-    assert (Postfix (postfix_nincl r π >: r) π) as H;[|split];eauto.
+    assert (Postfix (postfix_nincl r π ++ [r]) π) as H;[|split];eauto.
     - simpl_nl. eapply postfix_nincl_spec; eauto.
-    - eapply path_postfix_path in Hpath;eauto. simpl_nl' Hpath;eauto.
+    - eapply path_postfix_path in Hpath;eauto. 
   Qed.
   
   Lemma path_from_elem p q r π : Path p q π -> r ∈ π -> exists ϕ, Path r q ϕ /\ Postfix ϕ π.
@@ -312,17 +332,30 @@ Section graph.
     intros. eexists;eapply path_from_elem';eauto.
   Qed.
   
-  Lemma path_from_elem_to_elem (p q r1 r2 : L) (π : ne_list L)
+  Lemma path_from_elem_to_elem (p q r1 r2 : L) (π : list L)
         (Hπ : Path p q π)
         (Hprec : r2 ≻* r1 | π)
-    : exists ϕ : ne_list L, Path r1 r2 ϕ. 
+    : exists ϕ : list L, Path r1 r2 ϕ. 
   Proof.
     eapply succ_rt_prefix in Hprec.
     destructH' Hprec.
-    rewrite nlcons_to_list in Hprec0.
-    eapply path_prefix_path in Hprec0 as Hprec2;eauto. simpl_nl' Hprec2.
-    eapply path_from_elem in Hprec2;simpl_nl;eauto.
+    eapply path_prefix_path in Hprec0 as Hprec2. 2:eauto.
+    eapply path_from_elem in Hprec2;eauto.
     destructH. eauto.
+  Qed.
+
+  Lemma path_front_eq p p' q q' π
+    : Path p q π -> Path p' q' π -> q = q'.
+  Proof.
+    intros Hpq Hpq'.
+    destruct Hpq;inversion Hpq';subst;auto.
+  Qed.
+    
+  Lemma path_back_eq p p' q q' π
+    : Path p q π -> Path p' q' π -> p = p.
+  Proof.
+    intros Hpq Hpq'.
+    destruct Hpq;auto.
   Qed.
 
   Lemma dom_nin r p q π : Dom r p q -> Path r p π -> NoDup π -> q ∈ π -> p = q.
@@ -330,29 +363,41 @@ Section graph.
     intros Hdom Hpath Hnd Hin. eapply path_to_elem in Hpath as Hpath';eauto.
     destruct Hpath' as [ϕ [Hϕ Hpre]].
     inversion Hpre; subst.
-    - eapply ne_to_list_inj in H1. subst. eapply path_front in Hpath. eapply path_front in Hϕ.
-      subst p q; eauto.
-    - exfalso.
-      rewrite nlcons_to_list in H. eapply ne_to_list_inj in H; subst π.
-      eapply path_front in Hpath. cbn in Hpath. simpl_nl' Hpath. subst a.
-      eapply Hdom in Hϕ as Hϕ'. eapply prefix_incl in H1. eapply H1 in Hϕ'.
-      simpl_nl' Hnd. inversion Hnd; subst; contradiction.
+    - subst. eapply path_front_eq in Hpath;eauto. 
+    - path_simpl' Hpath.
+      destruct Hin;[auto|exfalso].
+      eapply Hdom in Hϕ as Hϕ'. eapply prefix_incl in Hϕ';eauto.
+      inversion Hnd;subst. contradiction.
   Qed.
   
   Lemma in_ne_back {A : Type} `{EqDec A eq} (l : ne_list A) : ne_back l ∈ l.
   Proof.
     induction l; cbn; eauto.
   Qed.
+
+  Lemma path_contains_front (x y : L) l
+        (Hpath : Path x y l)
+    : y ∈ l.
+  Proof.
+    induction Hpath; cbn; eauto.
+  Qed.
+
+  Lemma path_contains_back (x y : L) l
+        (Hpath : Path x y l)
+    : x ∈ l.
+  Proof.
+    induction Hpath; cbn; eauto.
+  Qed.
   
   Lemma dom_trans r h p q : r -->* h -> Dom r h p -> Dom r p q -> Dom h p q.
   Proof.
     intros Hϕ Hdom_h Hdom_p π Hπ.
     eapply path_NoDup in Hϕ as [ϕ [Hϕ Hndup]].
-    eapply path_app in Hπ as Hπ';eauto. eapply Hdom_p in Hπ'.
-    eapply in_nl_conc in Hπ'.
+    eapply path_app' in Hπ as Hπ';eauto. eapply Hdom_p in Hπ'.
+    eapply in_app_or in Hπ'.
     destruct Hπ'; eauto.
     enough (h = p).
-    - subst h. eapply path_back in Hπ. subst p; eapply in_ne_back.
+    - subst h. eapply path_contains_back. eauto.
     - eapply dom_nin. 3: eassumption. 1: apply Hdom_h. 1: eauto.
       destruct ϕ; cbn in H; [contradiction|]. right; eauto.
   Qed.
@@ -372,8 +417,8 @@ Section graph.
     intros Hpath1 Hpath2 Hneq Hacy.
     inversion Hpath1;[contradiction|].
     inversion Hpath2;subst;[contradiction|].
-    specialize (Hacy b q (π0 :+: π1) H0). eapply Hacy.
-    eapply path_app_conc;eauto. 
+    specialize (Hacy b q (π0 ++ π1) H0). eapply Hacy.
+    eapply path_app;eauto.
   Qed.
   
   Lemma path_path_acyclic' p q π ϕ : Path p q π -> Path q p ϕ -> acyclic -> p = q.
@@ -388,32 +433,13 @@ Section graph.
     destruct (L_dec p q);[rewrite e in *|];eauto.
   Qed.    
 
-  Lemma postfix_front {A : Type} (l l' : ne_list A) :
-    Postfix l l'
-    -> ne_front l = ne_front l'.
-  Proof.
-    intros H. dependent induction H.
-    - apply ne_to_list_inj in x; rewrite x; eauto.
-    - rewrite rcons_nl_rcons in x. apply ne_to_list_inj in x. 
-      rewrite <-x. destruct l'0.
-      + exfalso. inversion H; [eapply ne_to_list_not_nil|eapply rcons_not_nil]; eauto.
-      + cbn. erewrite IHPostfix; eauto; [|rewrite nlcons_to_list; reflexivity].
-        simpl_nl; reflexivity.
-  Qed.      
-
-  Lemma postfix_path l p q q' l' :
+  Lemma postfix_path l p q q' l' : (* FIXME: duplicate *)
     Path q' q l'
-    -> Postfix (l :r: p) l'
-    -> Path p q (l >: p).
+    -> Postfix (l ++ [p]) l'
+    -> Path p q (l ++ [p]).
   Proof.
-    revert q q' l'. induction l; intros q q' l' Hl Hpost;cbn in *.
-    - enough (ne_front l' = p) by (eapply path_front in Hl;subst;econstructor).
-      destruct l';cbn in *;symmetry;eapply postfix_hd_eq;eauto.
-    - rewrite nlcons_to_list in Hpost.
-      eapply path_postfix_path in Hl as Hl'';eauto.
-      replace (a :< (l ++ p :: nil)) with (a :<: l >: p) in Hl''.
-      + cbn in Hl''. destruct l; simpl_nl' Hl'';cbn in Hl'';eauto.
-      + clear. revert a. induction l; intros b; simpl_nl; cbn; eauto. rewrite <-IHl. reflexivity.
+    intros Hpath Hpost.
+    eapply path_postfix_path in Hpost;eauto.
   Qed.
 
   Lemma succ_in_path_edge π (x y w z : L)
@@ -425,7 +451,7 @@ Section graph.
     - repeat destruct l1,l2; cbn in Hsucc; try congruence.
       destruct l2;cbn in Hsucc; congruence.
     - destruct l2.
-      + cbn in Hsucc. inversion Hsucc;subst. inversion Hpath;subst;inversion H2;subst;eauto.
+      + cbn in Hsucc. inversion Hsucc;subst. inversion Hpath;subst;inversion H;subst;eauto.
       + eapply IHHpath. exists l1, l2. inversion Hsucc; subst; eauto.
   Qed.
 
@@ -449,7 +475,7 @@ Lemma subgraph_path {L : Type} (edge1 edge2 : L -> L -> bool) p q :
 Proof.
   intros Hsub [π Hpath]. unfold sub_graph in Hsub. induction Hpath.
   - exists (ne_single a). econstructor.
-  - destruct IHHpath as [ϕ IHHpath]. exists (c :<: ϕ). econstructor; eauto.
+  - destruct IHHpath as [ϕ IHHpath]. exists (c :: ϕ). econstructor; eauto.
 Qed.
 
 Lemma subgraph_path' {L : Type} (edge1 edge2 : L -> L -> bool) p q π :
@@ -518,46 +544,30 @@ Proof.
 Qed.
 
 Lemma path_nlrcons (L : Type) (x y z : L) (l : list L) e
-      (Hpath : Path e x y (l >: z))
+      (Hpath : Path e x y (l ++ [z]))
   : z = x.
 Proof.
   revert dependent y.
   induction l;intros;cbn in *;inversion Hpath;subst;auto.
-  eapply IHl;eauto.
+  - inversion H3.
+  - congruence'.
+  - eapply IHl;eauto.
 Qed.                                 
 
 Ltac path_simpl' H :=
   let Q := fresh "Q" in 
   lazymatch type of H with
-  | Path ?edge ?x ?y (?z :<: ?π) => eapply path_front in H as Q;
-                                   cbn in Q; subst z
-  | Path ?edge ?x ?y (?π :>: ?z) => eapply path_back in H as Q;
-                                   cbn in Q; subst z
-  | Path ?edge ?x ?y (?z :< ?π) => replace y with z in *;
-                                  [|destruct π;cbn in H;inversion H;subst;eauto]
-  | Path ?edge ?x ?y (?π >: ?z) => replace x with z in *;
-                                    [|eapply path_nlrcons;eauto]
+  | Path ?e ?x ?y (?z :: ?π) => replace z with y in *;
+                           [|eapply path_front;eauto]
+  | Path ?e ?x ?y (?π ++ [?z]) => replace z with x in *;
+                              [|eapply path_back;eauto]
   end.
 
 Goal forall (L : Type) (x y z : L) (l : list L) e
-      (Hpath : Path e x y (l >: z)),
+      (Hpath : Path e x y (l ++ [z])),
     x = z.
 Proof.
   intros.
   path_simpl' Hpath.
   reflexivity.
-Qed.
-
-Lemma path_contains_front {L : Type} (x y : L) e l
-      (Hpath : Path e x y l)
-  : y ∈ l.
-Proof.
-  induction Hpath; cbn; eauto.
-Qed.
-
-Lemma path_contains_back {L : Type} (x y : L) e l
-      (Hpath : Path e x y l)
-  : x ∈ l.
-Proof.
-  induction Hpath; cbn; eauto.
 Qed.

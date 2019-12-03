@@ -251,6 +251,32 @@ Section NeList.
     induction l; intros; cbn ; eauto.
     fold ((ne_rcons (a :< l) b)). rewrite IHl. reflexivity.
   Qed.
+  
+  Lemma in_nlcons (l : list A) (a b : A)
+    : a ∈ (b :< l) <-> a = b \/ a ∈ l.
+  Proof.
+    split; intro Q.
+    - revert dependent b. induction l; cbn in *;intros b Q;[firstorder|].
+      destruct Q;[firstorder|].
+      right. specialize (IHl a0 H). firstorder.
+    - revert dependent b. induction l; cbn in *;intros b Q;[firstorder|].
+      destruct Q;[firstorder|].
+      right. eapply IHl. firstorder.
+  Qed.
+
+  Lemma in_ne_conc (l l' : ne_list A)
+    : forall a, a ∈ (l :+: l') <-> a ∈ l \/ a ∈ l'.
+  Proof.
+    split; revert a; induction l;intros b Q; cbn in *; firstorder 0.
+  Qed.
+
+  Lemma in_nl_conc (l : ne_list A) l' (a : A)
+    : a ∈ (l :+ l') <-> a ∈ l \/ a ∈ l'.
+  Proof.
+    split;revert a;induction l'; intros b Q; cbn in *; [firstorder| |firstorder|].
+    - eapply in_ne_conc in Q. repeat destruct Q; eauto. eapply in_nlcons in H. destruct H;eauto.
+    - eapply in_ne_conc. repeat destruct Q; eauto. right. eapply in_nlcons. firstorder.
+  Qed.
 
 End NeList.
 
@@ -278,5 +304,4 @@ Proof.
   - rewrite Hf. eauto.
   - destruct (f a);eauto.
 Qed.
-
 
