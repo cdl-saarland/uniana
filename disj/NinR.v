@@ -66,7 +66,7 @@ Section disj.
       eapply path_app in Hlc0;eauto. cbn_nl' Hlc0.
       eapply tpath_NoDup in Hlc0. clear - Hlc0 Hel H.
       rewrite <-nlconc_to_list in Hlc0. simpl_nl' Hlc0.
-      unfold rcons in Hlc0. rewrite <-app_assoc in Hlc0.
+      rewrite <-app_assoc in Hlc0.
       eapply NoDup_app;eauto.
     - rewrite Hloop in Hcont.
       assert ((h,l) ∈ t1) as Hel'.
@@ -99,7 +99,6 @@ Section disj.
       eapply splinter_single. 
       unfold last_common' in Hlc. destructH.
       eapply postfix_incl;eauto.
-      eapply In_rcons. eauto.
     }
     copy Hlc Hlc'.
     unfold last_common' in Hlc'. destructH.
@@ -169,12 +168,11 @@ Section disj.
           exploit' H.
           1: { eapply postfix_step_left;eauto. }
           specialize (H e t). exploit H.
-          1: { eapply In_rcons;left;auto. }
           eapply tcfg_edge_destruct in Hpost as Q.
           assert ((p',i') ∈ l) as Helpi.
-          { eapply postfix_incl;eauto. eapply In_rcons;eauto. }
+          { eapply postfix_incl;eauto. }
           assert ((e,t) ∈ l) as Helet.
-          { eapply postfix_incl;eauto.  eapply In_rcons;eauto. right. eapply In_rcons;eauto. }
+          { eapply postfix_incl;eauto. }
           destruct Q as [Q|[Q|[Q|Q]]];subst.
           -- auto. (* normal *)
           -- inversion H;subst. (* entry *)
@@ -194,8 +192,7 @@ Section disj.
                    eapply prefix_incl;eauto. rewrite rev_rcons. left. reflexivity.
                 ** eapply tag_back_edge_iff in Q;eauto.
                    assert ((e,t) ∈ l) as Hel.
-                   { eapply postfix_incl;eauto.
-                     eapply In_rcons. right. eapply In_rcons. left;reflexivity. }
+                   { eapply postfix_incl;eauto. }
                    eapply deq_loop_head_loop_contains.
                    --- eapply deq_loop_depth_eq.
                        +++ eapply Hdeqq;eauto.
@@ -290,7 +287,6 @@ Section disj.
       eapply splinter_single. 
       unfold last_common' in Hlc. destructH.
       eapply postfix_incl;eauto.
-      eapply In_rcons. eauto.
     }
     assert ((h',0 :: tl j2) ∈ r2) as Hr2.
     {

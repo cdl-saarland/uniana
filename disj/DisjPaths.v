@@ -47,8 +47,6 @@ Section disj.
           destruct a.
           destruct (tag_deq_or_entry Hpost) as [Hdeq|Hentry].
           -- eapply deq_loop_trans;eauto. eapply H;eauto.
-             ++ intros;eauto. eapply HForall. eapply In_rcons. right;auto.
-             ++ eapply In_rcons;eauto.
              ++ eapply postfix_step_left;eauto.
           -- eapply tag_entry_iff in Hentry;eauto. subst t0.
              assert (|j| <= |i|) as Hleq.
@@ -66,15 +64,12 @@ Section disj.
                 erewrite tag_depth;eauto.
                 erewrite tag_depth;eauto.
                 ** inversion Hpath;cbn;auto.
-                ** eapply postfix_incl;eauto. eapply In_rcons. right. eapply In_rcons. left;auto.
+                ** eapply postfix_incl;eauto. 
              ++ eapply preds_in_same_loop;cycle 1;eauto 1.
                 ** eapply tcfg_edge_spec in Hpost. destructH. auto.
                 ** eapply H;eauto.
-                   --- intros;eauto. eapply HForall. eapply In_rcons. right. auto.
-                   --- eapply In_rcons. left. auto.
                    --- eapply postfix_step_left;eauto. 
       + eapply H;eauto.
-        * intros;eauto. eapply HForall. eapply In_rcons. right;auto.
         * eapply postfix_step_left;eauto.
   Qed.
   
@@ -106,10 +101,8 @@ Section disj.
           destruct a.
           (* everything outside these brackets [ *)
           exploit' H.
-          1: { intros;eauto. eapply HForall. eapply In_rcons. right;auto. }
           specialize (H t0 e).
           exploit H.
-          1: { eapply In_rcons. left;auto. }
           1: { eapply postfix_step_left;eauto. }
           specialize (tcfg_edge_destruct Hpost) as Hdestr.
           assert (|j| <= |i|) as Hji.
@@ -131,7 +124,6 @@ Section disj.
           -- eapply prefix_trans;eauto. clear; induction i;cbn;econstructor;eauto. econstructor.
           (* ] could be generalized, it is the same in this and the other geq_tag_suffix lemma *)
       + eapply H;eauto.
-        * intros;eauto. eapply HForall. eapply In_rcons. right;auto.
         * eapply postfix_step_left;eauto.
   Qed.
 

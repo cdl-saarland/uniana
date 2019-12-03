@@ -108,7 +108,7 @@ Section cfg.
     - econstructor;eauto. eapply minus_subgraph. eauto.
     - eexists;split;eauto;split;eauto. intro N.
       specialize (ne_list_nlrcons π) as Hπ. destructH. rewrite Hπ in N. cbn in N. simpl_nl' N.
-      rewrite <-nlconc_to_list in N. unfold rcons in N. rewrite app_assoc in N.
+      rewrite <-nlconc_to_list in N. rewrite app_assoc in N.
       rewrite rev_unit in N. cbn in N. eapply in_rev in N.
       eapply in_app_iff in N. destruct N.
       + eapply Hloop3. rewrite in_rev in H. clear - H n Hloop2. remember (rev π0) as l.
@@ -399,7 +399,7 @@ Section cfg.
         eapply path_back in Hpath. simpl_nl' Hpath. subst x.
         destruct ϕ;cbn in *;simpl_nl.
         * inversion Hϕ; subst. rewrite app_nil_r. reflexivity.
-        * inversion Hϕ; subst. unfold rcons. rewrite <-app_assoc. cbn. reflexivity.
+        * inversion Hϕ; subst. rewrite <-app_assoc. cbn. reflexivity.
   Qed.
 
   Lemma acyclic_parallel_exit_path h p q π

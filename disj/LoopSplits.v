@@ -495,7 +495,7 @@ Section lift.
   Lemma impl_shift_lc
     : last_common' tt1 tt2 rr1 rr2 (s, k).
   Proof.
-    unfold tt1, tt2. simpl_nl. unfold rcons.
+    unfold tt1, tt2. simpl_nl. 
     eapply last_common_app_eq1 in Hlc as Htt1.
     eapply last_common_app_eq2 in Hlc as Htt2.
     do 2 rewrite <-app_assoc.
@@ -520,7 +520,7 @@ Section lift.
         setoid_rewrite Hel1 at 1.
         rewrite <-nlconc_to_list. simpl_nl.
         rewrite <-app_assoc. rewrite <-app_comm_cons at 1. setoid_rewrite <-app_comm_cons.
-        unfold rcons. rewrite <-app_assoc. reflexivity.
+        rewrite <-app_assoc. reflexivity.
       + (* because (s',j1) is in t1' and <> the hd of t1', i.e. q1, its successor is in r1 *)
         admit. 
     - unfold tt1. rewrite <-nlconc_to_list. simpl_nl.
@@ -546,7 +546,7 @@ Section lift.
         unfold tt2, rr2. setoid_rewrite Hel2 at 1.
         rewrite <-nlconc_to_list. simpl_nl.
         rewrite <-app_assoc. rewrite <-app_comm_cons at 1. setoid_rewrite <-app_comm_cons.
-        unfold rcons. rewrite <-app_assoc. reflexivity.
+        rewrite <-app_assoc. reflexivity.
       + admit. (* as above *)
     - unfold tt2. rewrite <-nlconc_to_list. simpl_nl.
       eapply in_or_app. left. eapply In_rcons. left. auto.
@@ -776,4 +776,4 @@ Corollary lc_disj_exit_lsplits `{redCFG} (s e q1 q2 h : Lab) (i j1 j2 k : Tag) (
 Proof.
   eapply lc_disj_exits_lsplits in Hlc;eauto.
   destructH. eexists;eexists. destruct Hlc;eauto.
-Qed.
+Qed. 

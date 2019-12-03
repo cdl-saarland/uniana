@@ -41,7 +41,7 @@ Qed.
 Lemma app_rcons_assoc (A : Type) (l l' : list A) (a : A)
   : l ++ l' :r: a = (l ++ l') :r: a.
 Proof.
-  unfold rcons. eapply app_assoc.
+  eapply app_assoc.
 Qed.
 
 Lemma Tagle_app (i j : Tag)

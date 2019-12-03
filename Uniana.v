@@ -172,8 +172,6 @@ Section uniana.
     {
       eapply postfix_succ_in;eauto.
       rewrite cons_rcons'.
-      fold (rcons (rev (tl (rev ((q, j) :: l2'))) :r: hd (q, j) (rev ((q, j) :: l2')))
-                  (br, k)).
       rewrite E.
       eapply succ_in_rcons2.
     } 
@@ -181,7 +179,7 @@ Section uniana.
     * subst'.
       eapply2 tr_tpath_cons2 Htr1 Htr2;eauto.
       eapply tpath_NoDup in Htr1.
-      inversion  Htr1. eapply H1. simpl_nl. eapply postfix_incl;eauto. fold (rcons l2' (br,k)).
+      inversion  Htr1. eapply H1. simpl_nl. eapply postfix_incl;eauto. 
       eapply In_rcons. right.
       rewrite cons_rcons'. eapply In_rcons. left. eauto.
     * eapply succ_cons. eauto.

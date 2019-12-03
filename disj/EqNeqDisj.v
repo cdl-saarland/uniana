@@ -7,8 +7,6 @@ Require Export ImplodeTCFG NinR.
   Proof.
     unfold last_common' in Hlc. destructH.
     eapply postfix_incl;eauto.
-    eapply In_rcons.
-    eauto.
   Qed.
   
   Lemma last_common'_in2 (A : Type) `(EqDec A eq) (l1 l2 l1' l2' : list A) (a : A)
@@ -130,7 +128,6 @@ Section disj.
       destruct Hel.
       + inversion H0. rewrite H2 in *. subst i'.
         exploit Hpre.
-        { cbn. left. reflexivity. }
         eapply impl_tlist_tpath in Hpath1 as Hpath11.
         destruct Hpath11 as [t' [Hpath1' Heq]].
         assert (↓ purify_implode s = impl_of_original' (implode_nodes_root_inv s)) as H1.
@@ -157,7 +154,7 @@ Section disj.
              specialize (Hhq (q,j)). cbn in Hhq. exploit Hhq.
              eapply impl_CFG_deq_loop. rewrite <-H2. cbn. eauto.
       + eapply IHl;eauto.
-        * intros. eapply Hpre. cbn. right. unfold rcons in Hel. eauto.
+        * intros. eapply Hpre. cbn. right. eauto.
         * intros x Hx. eapply Hpost. right;auto.
   Qed.
   
@@ -248,9 +245,9 @@ Section disj.
           * exfalso. inversion Hpath2.
             eapply H1. eapply in_or_app. left. eapply in_or_app. right. left.
             f_equal. rewrite e0. reflexivity.  rewrite e1. reflexivity.
-          * eapply IHl. inversion Hpath2. unfold rcons. eauto.
+          * eapply IHl. inversion Hpath2. eauto.
         + eapply IHl.
-          inversion Hpath2. unfold rcons. eauto.
+          inversion Hpath2. eauto.
     Qed.
 
     Lemma t3_prefix

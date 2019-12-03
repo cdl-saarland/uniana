@@ -217,8 +217,8 @@ Proof.
   assert ((r,s) :< t = l2 >: (q,j) :>: (p,i) :+ l1) as Hsucc'.
   {
     rewrite nlcons_to_list in Hsucc. eapply ne_to_list_inj. rewrite Hsucc.
-    simpl_nl.
-    repeat rewrite app_cons_assoc. reflexivity.
+    simpl_nl. 
+    do 2 rewrite app_cons_assoc. reflexivity.
   }
   rewrite Hsucc' in Hpath.
   unfold TPath' in Hpath.

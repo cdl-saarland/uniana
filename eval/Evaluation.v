@@ -714,7 +714,7 @@ Section eval.
   Lemma succ_in_rcons2 {A : Type} (a b : A) l
     : a ≻ b | l :r: a :r: b.
   Proof.
-    exists nil, l. unfold rcons. rewrite <-app_assoc. rewrite <-app_comm_cons. cbn. reflexivity.
+    exists nil, l. rewrite <-app_assoc. rewrite <-app_comm_cons. cbn. reflexivity.
   Qed.
   
   Lemma succ_in_tpath_eff_tag p q i j t

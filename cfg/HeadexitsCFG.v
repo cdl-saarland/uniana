@@ -169,8 +169,8 @@ Proof.
             ne_r_destruct π0.
             simpl_nl. cbn. rewrite rev_rcons. cbn. simpl_nl' IHPath1.
             rewrite nl_cons_lr_shift in IHPath1. simpl_nl' IHPath1.  rewrite rev_rcons in IHPath1. cbn in *.
-            fold (rcons (rev x0) c) in IHPath1. eapply In_rcons in IHPath1. destruct IHPath1;auto.
-            subst h. exfalso. contradict H1. fold (rcons (rev π) c).
+            eapply In_rcons in IHPath1. destruct IHPath1;auto.
+            subst h. exfalso. contradict H1. 
             ne_r_destruct π.
             simpl_nl. cbn. rewrite rev_rcons. cbn. eapply in_or_app. right;firstorder.
           * eapply head_exits_edge_spec in H3 as Hexit. destruct Hexit as [qe Hexit].
