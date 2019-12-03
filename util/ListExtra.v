@@ -382,3 +382,11 @@ Section Take_r.
   Qed.
 
 End Take_r.
+
+Ltac destr_r' l :=
+  let H := fresh "Hl" in
+  let x := fresh "x" in
+  let l' := fresh "l" in
+  let Hlx := fresh "Hx" in
+  specialize (rcons_destruct l) as H;
+  destruct H as [H|[x [l' Hlx]]].

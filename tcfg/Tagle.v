@@ -65,14 +65,6 @@ Qed.
 Hint Constructors Tagle : tagle.
 Hint Immediate Tagle_app Tagle_le Tagle_refl Tagle_cons : tagle.
 
-Ltac destr_r' l :=
-  let H := fresh "Hl" in
-  let x := fresh "x" in
-  let l' := fresh "l" in
-  let Hlx := fresh "Hx" in
-  specialize (rcons_destruct l) as H;
-  destruct H as [H|[x [l' Hlx]]].
-
 Global Instance Tagle_PreOrder : PreOrder Tagle.
 Proof.
   econstructor.
