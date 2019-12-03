@@ -221,7 +221,7 @@ Section NeList.
   Lemma rcons_necons l (a : A)
     : (ne_to_list l) :r: a = l :>: a.
   Proof.
-    induction l;cbn;eauto. unfold rcons in IHl. rewrite IHl. reflexivity.
+    induction l;cbn;eauto. rewrite IHl. reflexivity.
   Qed.
 
   Lemma ne_list_nlcons (l : ne_list A)
@@ -261,7 +261,7 @@ Proof.
   decide' (a == ne_back l);eauto.
   left. contradict H0. induction l;cbn in *;eauto.
   - destruct H0;eauto. congruence.
-  - fold (rcons (rev l) a0).
+  - fold ((rev l) :r: a0).
     rewrite tl_rcons;[eapply In_rcons;eauto|destruct l;cbn;eauto;erewrite app_length;cbn;omega].
     destruct H0.
     + subst. eauto.

@@ -46,7 +46,7 @@ Section aux.
     destruct Hin;subst.
     - decide' (a == a); [|congruence]. cbn.
       f_equal.
-      fold (rcons (rev l) a). rewrite postfix_nincl_rcons_a.
+      rewrite postfix_nincl_rcons_a.
       rewrite postfix_nincl_invariant; eauto using rev_involutive.
       rewrite <-in_rev. inversion Hnd; eauto.
     - decide' (a == a0);[inversion Hnd;subst;contradiction|cbn].
@@ -233,8 +233,7 @@ Section splinterStrict.
       eapply H; eauto.
     }
     intros ? ? Hsp.
-    induction Hsp; cbn in *; eauto;[econstructor| |];
-      fold (rcons (rev l) a); fold  (rcons (rev l') a);eauto.
+    induction Hsp; cbn in *; eauto;econstructor. 
   Qed.
   
   Lemma splinter_strict_incl (l l' : list A)
@@ -378,7 +377,6 @@ Section splinter.
   Qed.
 
   Hint Constructors splinter.
-  Hint Unfold rcons.
 
   Lemma splinter_rev (l l' : list A)
     : splinter l l' <-> splinter (rev l) (rev l').
@@ -390,8 +388,7 @@ Section splinter.
       eapply H0; eauto.
     }
     intros ? ? Hsp.
-    induction Hsp; cbn in *; eauto;
-      fold (rcons (rev l) a); fold  (rcons (rev l') a);eauto with splinter.
+    induction Hsp; cbn in *; eauto with splinter.
   Qed.
 
   Lemma splinter_app_l (a : A) l0 l l'
@@ -558,7 +555,7 @@ Section succ_rt.
     induction Hpost;eauto.
     eapply IHHpost in Hsucc.
     unfold succ_in in Hsucc. destructH. exists (l1 :r: a0), l2. rewrite Hsucc.
-    rewrite <- cons_rcons_assoc. unfold rcons. rewrite <-app_assoc.
+    rewrite <- cons_rcons_assoc. rewrite <-app_assoc.
     rewrite app_comm_cons. reflexivity.
   Qed.
   

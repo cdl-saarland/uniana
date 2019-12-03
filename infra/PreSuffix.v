@@ -104,11 +104,11 @@ Proof.
   - intro post. induction post.
     + exists nil. apply app_nil_end.
     + destruct IHpost as [l2' IH].
-      exists (l2' :r: a). rewrite IH. unfold rcons. rewrite app_assoc. reflexivity.
+      exists (l2' :r: a). rewrite IH. rewrite app_assoc. reflexivity.
   - intros [l2' H]. subst l2.
     rinduction l2'.
     + rewrite <-app_nil_end. econstructor.
-    + unfold rcons. rewrite app_assoc. econstructor. eauto.
+    + rewrite app_assoc. econstructor. eauto.
 Qed.
 
 Lemma cons_postfix {A : Type} a b (l l': list A) :
@@ -163,7 +163,7 @@ Proof.
     cbn. apply postfix_cons, postfix_nil.
   - cbn. destruct equiv_dec; cbn.
     + destruct e; apply postfix_cons, postfix_nil.
-    + apply postfix_cons. fold (rcons (postfix_nincl a l) a). eauto.
+    + apply postfix_cons. eauto.
 Qed.
 
 Lemma postfix_nincl_invariant {A : Type} `{EqDec A eq} (a : A) l :

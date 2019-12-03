@@ -96,9 +96,7 @@ Fixpoint iter {X : Type} (f : X -> X) (l : X) (n : nat) : X
 
 (** * rcons **)
 
-Definition rcons {A : Type} l a : list A := l ++ [a].
-
-Notation "l ':r:' a" := (rcons l a) (at level 50).
+Notation "l ':r:' a" := (l ++ [a]) (at level 50).
 
 Section Rcons.
 
@@ -113,7 +111,7 @@ Section Rcons.
   Qed.
 
   Lemma rev_rcons (a : A) l : rev (l :r: a) = a :: (rev l).
-    induction l; cbn; eauto. unfold rcons in IHl. rewrite IHl; eauto using  cons_rcons_assoc.
+    induction l; cbn; eauto. rewrite IHl; eauto using  cons_rcons_assoc.
   Qed.
 
   Lemma tl_rcons (a : A) l : length l > 0 -> tl (l :r: a) = tl l :r: a.
@@ -229,7 +227,7 @@ Section Rcons.
   Lemma map_rcons (f : A -> B) :
     forall a l, map f (l :r: a) = map f l :r: f a.
   Proof.
-    intros. induction l;cbn;eauto. unfold rcons in IHl. rewrite IHl. reflexivity.
+    intros. induction l;cbn;eauto. rewrite IHl. reflexivity.
   Qed.
   
   Lemma map_inj_in (f : A -> B) (Hinj : injective f) (l : list A) (a : A)
@@ -268,9 +266,9 @@ Ltac congruence' :=
 Ltac fold_rcons H :=
   match type of H with
   | context C [?a :: ?b :: nil] => fold (app (a :: nil) (b :: nil)) in H;
-                                  fold (rcons (a :: nil) b) in H;
+                                  fold ((a :: nil) :r: b) in H;
                                   repeat rewrite <-cons_rcons_assoc in H
-  | context C [?l ++ ?a :: nil] => fold (rcons l a) in H
+  | context C [?l ++ ?a :: nil] => fold (l :r: a) in H
   end.
 
 Section Rcons.

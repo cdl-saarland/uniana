@@ -28,7 +28,7 @@ Section Lc.
       + split; reflexivity.
       + congruence'.
       + congruence'.
-      + unfold rcons in IHl. specialize (IHl l' H1) as [aeq leq].
+      + specialize (IHl l' H1) as [aeq leq].
         split; subst; reflexivity.
   Qed.  
 
@@ -40,13 +40,11 @@ Section Lc.
     assert (Postfix l1 (l2 :r: a)) as po1.
     {
       eapply postfix_order; eauto.
-      - cbn. apply In_rcons. left. reflexivity.
       - eapply postfix_step_left; eauto.
     }
     assert (Postfix l2 (l1 :r: a)) as po2.
     {
       eapply postfix_order; eauto.
-      - cbn. apply In_rcons. left. reflexivity.
       - eapply postfix_step_left; eauto.
     }
     revert dependent l2.
@@ -241,14 +239,12 @@ Section Lc.
                     specialize (H1 s2). apply In_rcons in H1.
                     * destruct H1;[subst s2; exfalso; apply sneq; reflexivity|eauto].
                     * rewrite <-cons_rcons_assoc. apply In_rcons. left. reflexivity.
-                  - apply In_rcons. left. reflexivity.
                   - apply postfix_cons; eauto.
                 } 
                 split_conj.
                 ** prove_last_common.
                 ** prove_last_common.
                 ** apply disjoint_cons2. split; eauto.
-                   contradict nin_a0. apply In_rcons. right. eauto.
                 ** assumption.
                 ** assert (s2 =/= a0) as sa.
                    {                       

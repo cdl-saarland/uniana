@@ -39,7 +39,6 @@ Proof.
     rewrite <-rev_involutive in Hfi3. eapply rev_injective in Hfi3.
     rewrite rev_app_distr in Hfi3. rewrite rev_cons in Hfi3.
     exists a1, a2, (rev l'), (rev l1'), (rev l2').
-    unfold rcons in Hfi2,Hfi3.
     rewrite <-app_assoc in Hfi2,Hfi3. cbn in *. firstorder.
   - contradict Hneq. eapply rev_injective; eauto.
   - rewrite !rev_length; eauto.
