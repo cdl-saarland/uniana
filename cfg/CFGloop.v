@@ -31,12 +31,13 @@ Section cfg.
       eapply path_NoDup' in Hreach''0;eauto. 
       destructH. exists x, π0. firstorder;eauto.
       + eapply subgraph_path';eauto using a_edge_incl.
-      + eapply NoDup_rev in Hreach''3. eapply path_back in Hreach''2.
+      + eapply NoDup_rev in Hreach''3. 
         remember (rev π0) as l.
         destruct l;cbn in *;eauto.
-        specialize (ne_list_nlrcons π0) as Heql'. destructH. subst π0. cbn in *. simpl_nl' Heql.
-        rewrite rev_rcons in Heql. inversion Heql;subst e l.
-        simpl_nl' Hreach''2. subst. inversion Hreach''3;subst. auto.
+        assert (π0 = rev l ++ [e]).
+        { rewrite rev_rev_eq. rewrite rev_rcons. rewrite rev_involutive. eauto. }
+        rewrite H0 in Hreach''2. eapply path_back in Hreach''2. subst.
+        inversion Hreach''3. subst. assumption.
   Qed.
 
   (** about dominance and more about loops **)
@@ -47,11 +48,14 @@ Section cfg.
     intros q Hq. unfold loop_contains,CPath in *. intros π Hπ.
     destructH. 
     eapply nin_tl_iff in Hq3;eauto.
-    erewrite path_back in Hq3;eauto.
-    eapply path_app in Hq2; eauto.
-    eapply loop_head_dom in Hq2;eauto. eapply in_nl_conc in Hq2.
-    destruct Hq3;[|subst h;eapply path_front in Hπ; subst q; destruct π;cbn;eauto].
-    destruct Hq2;[contradiction|]. clear - H0. destruct π; cbn in *; eauto.
+    destruct Hq3.
+    - eapply path_app' in Hq2. 2: eapply Hπ.
+      eapply loop_head_dom in Hq2. 2:eauto. eapply in_app_or in Hq2.
+      destruct Hq2;[contradiction|]. eapply tl_incl;auto.
+    - eapply path_contains_front in Hπ. enough (h = q);[subst;eauto|].
+      destr_r' π0;cbn in *;subst.
+      + inversion Hq2.
+      + rewrite rev_rcons in H. cbn in H. inversion H. subst. path_simpl'  Hq2. reflexivity.
   Qed.
   
   Lemma dom_dom_acyclic r p q
@@ -80,7 +84,7 @@ Section cfg.
         (p qh : Lab)
         (Hledge : p ↪ qh)
         (q : Lab)
-        (π : ne_list Lab)
+        (π : list Lab)
         (Hpath : Path edge q p π)
         (Hnin : qh ∉ tl (rev π))
         (x : Lab)
@@ -103,22 +107,19 @@ Section cfg.
     unfold loop_contains in Hloop,Hloop'.
     decide (h = h');[subst;eauto|].
     destructH' Hloop'. destructH' Hloop.
-    exists p1. specialize (@path_app _ edge (h' :<: π) π0 p h' p1) as Hϕ.
-    exploit Hϕ.
-    - econstructor;eauto. eapply minus_subgraph. eauto.
-    - eexists;split;eauto;split;eauto. intro N.
-      specialize (ne_list_nlrcons π) as Hπ. destructH. rewrite Hπ in N. cbn in N. simpl_nl' N.
-      rewrite <-nlconc_to_list in N. rewrite app_assoc in N.
-      rewrite rev_unit in N. cbn in N. eapply in_rev in N.
-      eapply in_app_iff in N. destruct N.
-      + eapply Hloop3. rewrite in_rev in H. clear - H n Hloop2. remember (rev π0) as l.
-        destruct l; eauto. cbn. destruct H;subst;eauto. eapply path_back in Hloop2.
-        specialize (ne_list_nlrcons π0) as Hπ0. destructH. rewrite Hπ0 in Heql.
-        simpl_nl' Heql. rewrite rev_rcons in Heql. inversion Heql;subst. simpl_nl' n. contradiction.
-      + assert (h ∈ π).
-        { rewrite Hπ. simpl_nl. eapply In_rcons. right. auto. }
-        eapply loop_contains_ledge_path in H0;eauto.
-        eapply loop_contains_Antisymmetric in Hloop_save. exploit Hloop_save. contradiction.
+    exists p1. specialize (path_app Hloop'2 (back_edge_incl Hloop'0) Hloop2) as Hϕ.
+    exists (π0 ++ π);split;eauto;split;eauto. intro N.    
+    cbn in *. rewrite rev_app_distr in N.
+    destr_r' π;subst;cbn in *. 1: inversion Hloop'2.
+    rewrite rev_rcons in N. cbn in N.
+    eapply in_app_or in N. destruct N.
+    - eapply loop_contains_ledge_path in Hloop'3. 2,3: eauto.
+      + eapply loop_contains_Antisymmetric in Hloop_save. eapply Hloop_save in Hloop'3. contradiction.
+      + eapply In_rcons. right. eapply in_rev. auto.
+    - destr_r' π0;subst;cbn in *;[contradiction|].
+      rewrite rev_rcons in H. destruct H;subst.
+      + path_simpl' Hloop2. contradiction.
+      + rewrite rev_rcons in Hloop3. cbn in Hloop3. contradiction.
   Qed.
   
   Lemma loop_reachs_member (h q : Lab)
@@ -147,7 +148,7 @@ Section cfg.
   Proof.
     intros H.
     eapply dom_loop in H.
-    assert (Path edge root root (ne_single root)) as Hpath;[econstructor|].
+    assert (Path edge root root [root]) as Hpath;[econstructor|].
     eapply H in Hpath. destruct Hpath;[subst;auto|contradiction].
   Qed.
   
@@ -168,23 +169,24 @@ Section cfg.
     eapply postfix_order_destruct in Hr4;eauto.
     destruct Hr4.
     - left. unfold loop_contains in *. do 2 destructH.
-      exists p1. eapply path_app in Hloo2 as Happ;eauto. exists (π1 :+ tl ϕ).
+      exists p1. eapply path_app' in Hloo2 as Happ;eauto. exists (π1 ++ tl ϕ).
       repeat (split;eauto). 2:eauto using subgraph_path',a_edge_incl.
       enough (h1 ∉ tl ϕ).
       + contradict Hloo3. eapply tl_incl in Hloo3. eapply in_rev in Hloo3.
-        eapply in_nl_conc in Hloo3. destruct Hloo3;[|contradiction].
-        destr_r π1. simpl_nl. rewrite rev_rcons. cbn. rewrite <-in_rev.
-        simpl_nl' H1. eapply In_rcons in H1. destruct H1;[|auto]. subst a.
+        eapply in_app_or in Hloo3. destruct Hloo3;[|contradiction].
+        destr_r' π1;subst;[contradiction|]. rewrite rev_rcons. cbn. rewrite <-in_rev.
+        eapply In_rcons in H1. destruct H1;[|auto]. subst x.
         clear - Hloo2 n.
         exfalso. contradict n. revert dependent p1.
         induction l;cbn in *;intros;inversion Hloo2;subst;auto.
-        eapply IHl;eauto.
-      + eapply path_back in Hr2 as Hr2'.
-        eapply path_back in Hr0 as Hr0'.
-        destr_r ϕ0. cbn in Hr2'. simpl_nl' Hr2'. subst a.
-        destr_r ϕ. cbn in Hr0'. simpl_nl' Hr0'. subst a.
-        simpl_nl' H. simpl_nl.
-        eapply acyclic_path_NoDup in Hr2. simpl_nl' Hr2. eapply NoDup_rev in Hr2.
+        * inversion H3.
+        * congruence'.
+        * eapply IHl;eauto.
+      + destr_r' ϕ0;subst. 1: inversion Hr2. 
+        destr_r' ϕ;subst. 1: inversion Hr0.
+        eapply path_back in Hr2 as Hr2'.
+        eapply path_back in Hr0 as Hr0'. subst x x0.
+        eapply acyclic_path_NoDup in Hr2. eapply NoDup_rev in Hr2.
         inversion H;subst.
         * eapply rev_rev_eq in H2;repeat rewrite rev_rcons in H2. inversion H2;subst. contradiction.
         * eapply rev_rev_eq in H0;repeat rewrite rev_rcons in H0. inversion H0;subst.
@@ -192,24 +194,25 @@ Section cfg.
           intro N. eapply tl_incl in N. eapply postfix_incl in N;[|eauto].
           rewrite rev_rcons in Hr2. inversion Hr2;subst. eapply in_rev in N; contradiction.
     - right. unfold loop_contains in *. do 2 destructH.
-      exists p0. eapply path_app in Hlop2 as Happ;eauto. 2: clear Hr0;eauto using subgraph_path',a_edge_incl.
-      exists (π0 :+ tl ϕ0).
+      exists p0. eapply path_app' in Hlop2 as Happ;eauto. 2: clear Hr0;eauto using subgraph_path',a_edge_incl.
+      exists (π0 ++ tl ϕ0).
       repeat (split;eauto). 
       enough (h2 ∉ tl ϕ0).
       + contradict Hlop3. eapply tl_incl in Hlop3. eapply in_rev in Hlop3.
-        eapply in_nl_conc in Hlop3. destruct Hlop3;[|contradiction].
-        destr_r π0. simpl_nl. rewrite rev_rcons. cbn. rewrite <-in_rev.
-        simpl_nl' H1. eapply In_rcons in H1. destruct H1;[|auto]. subst a.
+        eapply in_app_or in Hlop3. destruct Hlop3;[|contradiction].
+        destr_r' π0;subst. 1: inversion Hlop2. rewrite rev_rcons. cbn. rewrite <-in_rev.
+        eapply In_rcons in H1. destruct H1;[|auto]. subst x.
         clear - Hlop2 n0.
         exfalso. contradict n0. revert dependent p0.
         induction l;cbn in *;intros;inversion Hlop2;subst;auto.
-        eapply IHl;eauto.
-      + eapply path_back in Hr2 as Hr2'.
-        eapply path_back in Hr0 as Hr0'.
-        destr_r ϕ0. cbn in Hr2'. simpl_nl' Hr2'. subst a.
-        destr_r ϕ. cbn in Hr0'. simpl_nl' Hr0'. subst a.
-        simpl_nl' H. simpl_nl.
-        eapply acyclic_path_NoDup in Hr0. simpl_nl' Hr0. eapply NoDup_rev in Hr0.
+        * inversion H3.
+        * congruence'.        
+        * eapply IHl;eauto.
+      + destr_r' ϕ0;subst. 1:inversion Hr2.
+        destr_r' ϕ;subst. 1: inversion Hr0.
+        eapply path_back in Hr2 as Hr2'.
+        eapply path_back in Hr0 as Hr0'. subst x x0.
+        eapply acyclic_path_NoDup in Hr0. eapply NoDup_rev in Hr0.
         inversion H;subst.
         * eapply rev_rev_eq in H2;repeat rewrite rev_rcons in H2. inversion H2;subst. contradiction.
         * eapply rev_rev_eq in H0;repeat rewrite rev_rcons in H0. inversion H0;subst.
@@ -232,8 +235,13 @@ Section cfg.
     intros Hloop Hneq. unfold loop_contains in Hloop. destructH.
     unfold Dom; eexists; firstorder; eauto.
     intros H0.
-    eapply nin_tl_iff in Hloop3;eauto. erewrite path_back in Hloop3;eauto.
-    destruct Hloop3;[|subst q;contradiction]. apply H,H0. eauto.
+    copy Hloop2 Hloop1.
+    destr_r' π;subst. 1:inversion Hloop2.
+    rewrite rev_rcons in Hloop3. cbn in Hloop3.
+    eapply Hloop3. eapply H0 in Hloop2.
+    eapply In_rcons in Hloop2. destruct Hloop2;subst.
+    - path_simpl' Hloop1. contradiction.
+    - rewrite <-in_rev. auto.
   Qed.
   
   Lemma not_and_iff (A B : Prop) : decidable A -> (~ (A /\ B) <-> ~ A \/ ~ B).
@@ -273,6 +281,7 @@ Section cfg.
     - edestruct (back_edge_dec p0 h); firstorder.
       Unshelve. all:eauto. (*TODO: remove *)
   Qed.
+  
     Lemma loop_contains_path h q π
     : CPath h q π -> loop_contains h q -> NoDup π -> forall p, p ∈ π -> loop_contains h p.
   Proof.

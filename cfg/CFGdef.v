@@ -12,7 +12,7 @@ Require Import finiteTypes.BasicDefinitions.*)
 
 Require Export FinTypes.
 
-Require Export Graph SimplDec NeList.
+Require Export Graph SimplDec.
 
 (*  Notation "p '-->*' q" := (exists π, Path p q π) (at level 55, right associativity).*)
 
@@ -68,19 +68,6 @@ Section cfg.
   Notation "p '-->b' q" := (edge p q) (at level 55).
   Notation "p '-->' q" := (p -->b q = true) (at level 55, right associativity).
 
-  (** * abbreviation for CPath **)
-
-  Definition CPath' π := CPath (ne_back π) (ne_front π) π.
-
-  Lemma cpath_cpath' r p t
-        (Hpath : CPath r p t)
-    : CPath' t.
-  Proof.
-    unfold CPath'. eapply path_back in Hpath as Hback.
-    eapply path_front in Hpath as Hfront.
-    rewrite Hfront,Hback. assumption.
-  Qed.
-
 
   (** * decidable properties on redCFG **)
   
@@ -133,7 +120,7 @@ Section cfg.
 
   (** * Some basic facts **)
   
-  Lemma reachability (q : Lab) : exists π : ne_list Lab, Path edge root q π.
+  Lemma reachability (q : Lab) : exists π : list Lab, Path edge root q π.
   Proof.
     specialize (a_reachability q) as Hreach. destructH. exists π. eapply subgraph_path';eauto. 
   Qed.

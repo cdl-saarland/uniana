@@ -9,7 +9,7 @@ Require Import Lists.List.
 Require Import Coq.Program.Equality.
 Require Import Coq.Program.Utils.
 
-Require Export ConvBoolTac NeListTac ListOrder DecTac.
+Require Export ConvBoolTac ListOrder DecTac.
 
 (** Graph **)  
 
@@ -130,7 +130,7 @@ Section graph.
       + econstructor 2; eauto. eapply IHl1. inversion Huq; [contradiction|eauto].
   Qed.
   
-  Lemma path_glue_loop p r (π0 π1 : ne_list L) :
+  Lemma path_glue_loop p r (π0 π1 : list L) :
     Path p r π0
     -> uniqueIn r π0 -> uniqueIn r π1
     -> uniqueIn r (π1 ++ tl π0).
@@ -158,12 +158,12 @@ Section graph.
   Qed.
   (* } *)
 
-  Lemma prefix_single {A : Type} (a : A) (l : ne_list A)
-    : Prefix (ne_single a) l -> ne_back l = a.
+(*  Lemma prefix_single {A : Type} (a : A) (l : list A)
+    : Prefix [a] l -> hd_error (rev l) = Some a.
   Proof.
     intro H. induction l; inversion H; cbn; eauto; subst. inversion H2.
     destruct l; cbn in *; congruence.
-  Qed.
+  Qed.*)
 
   Ltac turn_cons a l :=
     let Q := fresh "Q" in
@@ -285,12 +285,12 @@ Section graph.
   Proof.
     intros Hto.
     induction Hto.
-    - exists (ne_single a). split;econstructor;eauto. econstructor.
+    - exists ([a]). split;econstructor;eauto. econstructor.
     - destruct IHHto as [ψ [IHHto IHnodup]].
       destruct (@In_dec _ _ _ c ψ).
       + eapply prefix_nincl_prefix in H0.
         exists (c :: prefix_nincl c ψ). split.
-        * eapply path_prefix_path in H0; eauto; cbn in *; simpl_nl' H0; eauto.
+        * eapply path_prefix_path in H0; eauto; cbn in *; eauto.
         * eapply prefix_NoDup; eauto. 
       + exists (c :: ψ). split;econstructor;eauto.
   Qed.
@@ -323,7 +323,7 @@ Section graph.
   Proof. 
     intros Hpath Hin.
     assert (Postfix (postfix_nincl r π ++ [r]) π) as H;[|split];eauto.
-    - simpl_nl. eapply postfix_nincl_spec; eauto.
+    - eapply postfix_nincl_spec; eauto.
     - eapply path_postfix_path in Hpath;eauto. 
   Qed.
   
@@ -370,10 +370,10 @@ Section graph.
       inversion Hnd;subst. contradiction.
   Qed.
   
-  Lemma in_ne_back {A : Type} `{EqDec A eq} (l : ne_list A) : ne_back l ∈ l.
+(*  Lemma in_ne_back {A : Type} `{EqDec A eq} (l : list A) : hd  ∈ l.
   Proof.
     induction l; cbn; eauto.
-  Qed.
+  Qed.*)
 
   Lemma path_contains_front (x y : L) l
         (Hpath : Path x y l)
@@ -455,8 +455,6 @@ Section graph.
       + eapply IHHpath. exists l1, l2. inversion Hsucc; subst; eauto.
   Qed.
 
-  Definition Path' π := Path (ne_back π) (ne_front π) π.
-
 End graph.
 
 Arguments Path {L}.
@@ -474,7 +472,7 @@ Lemma subgraph_path {L : Type} (edge1 edge2 : L -> L -> bool) p q :
   sub_graph edge1 edge2 -> (exists π, Path edge1 p q π) -> (exists ϕ, Path edge2 p q ϕ).
 Proof.
   intros Hsub [π Hpath]. unfold sub_graph in Hsub. induction Hpath.
-  - exists (ne_single a). econstructor.
+  - exists ([a]). econstructor.
   - destruct IHHpath as [ϕ IHHpath]. exists (c :: ϕ). econstructor; eauto.
 Qed.
 

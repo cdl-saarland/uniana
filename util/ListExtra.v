@@ -388,3 +388,18 @@ Ltac destr_r' l :=
   let Hlx := fresh "Hx" in
   specialize (rcons_destruct l) as H;
   destruct H as [H|[x [l' Hlx]]].
+
+Lemma nin_tl_iff (A : Type) `{EqDec A eq} (a : A) (l : list A)
+  : a ∉ tl (rev l) -> a ∉ l \/ Some a = hd_error (rev l).
+Proof.
+  intros.
+  destr_r' l;subst.
+  - left. cbn. exact id.
+  - rewrite rev_rcons in H0. cbn in H0.
+    rewrite rev_rcons. cbn.
+    destruct (x == a).
+    + right. rewrite e. reflexivity.
+    + left. contradict H0. rewrite <-in_rev. eapply  In_rcons in H0. destruct H0. subst.
+      * exfalso;apply c; reflexivity.
+      * auto.
+Qed.
