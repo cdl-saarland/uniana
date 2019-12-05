@@ -3,21 +3,7 @@ Require Import LastCommonTac DecTac.
 Section Lc.
   
   Variable A : Type.
-  
-  Lemma ne_back_E_rcons `{EqDec A} (l : ne_list A) a
-    : ne_back l = a -> exists l', l' :r: a = l.
-  Proof.
-    intro Hback. induction l; cbn in *.
-    - exists nil. subst a0. cbn. reflexivity.
-    - apply IHl in Hback. destruct Hback as [ l' Hback]. exists (a0 :: l'). rewrite <-Hback.
-      apply cons_rcons_assoc.
-  Qed.
-
-  Lemma ne_back_cons (l : ne_list A) a : ne_back (a :<: l) = ne_back l.
-  Proof.
-    induction l; cbn; eauto.
-  Qed.
-  
+    
   Lemma rcons_eq (a a' : A) l l' :
     a = a' /\ l = l' <-> l :r: a = l' :r: a'.
   Proof.
@@ -108,51 +94,71 @@ Section Lc.
     eapply Disjoint_sym. auto.
   Qed.
 
-  Lemma ne_last_common `{EqDec A eq} (l1 l2 : ne_list A) :
-    ne_back l1 = ne_back l2
-    -> exists s, last_common l1 l2 s.
+  Require Import ListOrder.
+  
+
+  Lemma ne_last_common `{EqDec A eq} (l1 l2 : list A) (a : A) :
+    exists s, last_common (l1 ++ [a]) (l2 ++ [a]) s.
   Proof.
     unfold last_common.
+
+
+(*    revert l2.
+    induction l1; intros l2.
+    - admit.
+    - specialize (IHl1 l2). destructH.
+      exists s, (a0 :: l1'), l2'. split_conj;eauto.
+      + cbn. eapply postfix_cons. eauto.
+      + admit. (* nope *)
+      + *)
+
+    
     revert l2.
-    induction l1; intros l2 beq; induction l2; cbn in *.
-    - subst a0. exists a; exists nil; exists nil; cbn.
+    induction l1; intros l2; induction l2; cbn in *.
+    - exists a; exists nil; exists nil; cbn.
       prove_last_common.
-    - exists a. exists nil. specialize (IHl2 beq).
+    - exists a. exists nil. 
       destruct IHl2 as [s [l1' [l2' [post [post' [disj [in1 in2]]]]]]]. cbn.
       destruct (a == a0). 
       + destruct e. exists nil. prove_last_common.
       + exists (a0 :: l2'). prove_last_common.
-    - exists a0. specialize (IHl1 (ne_single a0) beq).
+    - exists a. specialize (IHl1 nil).
       destruct IHl1 as [s [l1' [l2' [post [post' [disj [in1 in2]]]]]]].
       destruct (a == a0).
-      + destruct e. exists nil. exists nil. prove_last_common.
-      + exists ((a :: l1')). exists nil. cbn in post'. prove_last_common.
-    - specialize (IHl2 beq).
-      erewrite <-ne_back_cons with (l:=l2) in beq.
-      specialize (IHl1 (a0 :<: l2) beq).
+      + destruct e. exists nil, nil. cbn. prove_last_common.
+      + exists ((a0 :: l1')), nil. cbn in post'. prove_last_common. 
+    - specialize (IHl1 (a1 :: l2)).
+      rename a1 into a2. rename a0 into a1.
       
       destruct IHl1 as [s1 [l11 [l12 [post11 [post12 [disj1 [in11 in12]]]]]]].
       destruct IHl2 as [s2 [l21 [l22 [post21 [post22 [disj2 [in21 in22]]]]]]].
 
-      destruct (s1 == a0). 
-      + destruct e. exists s1. destruct (a == s1).
+      destruct (s1 == a2). 
+      + destruct e. exists s1. destruct (a1 == s1).
         * destruct e. exists nil. exists nil. prove_last_common.
-        * exists ((a :: l11)). exists nil. prove_last_common.
-      + destruct (s2 == a).
-        * destruct e. exists s2, nil. destruct (s2 == a0).
+        * exists ((a1 :: l11)). exists nil. prove_last_common.
+      + destruct (s2 == a1).
+        * destruct e. exists s2, nil. destruct (s2 == a2).
           -- destruct e. exists nil. prove_last_common.
-          -- exists ((a0 :: l22)). prove_last_common.
-        * destruct (a == a0).
-          -- destruct e. exists a, nil, nil. prove_last_common.
-          -- destruct (@In_dec _ _ _ s1 l22).
-             ++ exists s1, (a :: l11), l12.
-                split_conj.
+          -- exists ((a2 :: l22)). prove_last_common.
+        * destruct (a1 == a2).
+          -- destruct e. exists a1, nil, nil. prove_last_common.
+          -- (*destruct l12 as [|b l12].
+             { cbn in post12. eapply postfix_hd_eq in post12. subst. exfalso. apply c. reflexivity. }
+             replace b with a2 in *.  2: (cbn in post12; symmetry; eapply postfix_hd_eq;eauto).
+             clear b.
+             destruct l21 as [|b l21].
+             { cbn in post21. eapply postfix_hd_eq in post21. subst. exfalso. apply c0. reflexivity. }
+             replace b with a1 in *. 2: cbn in post21;symmetry; eapply postfix_hd_eq;eauto. clear b.*)
+             destruct (In_dec _ s1 l22).
+             ++ exists s1, (a1 :: l11), l12. split_conj.
                 ** prove_last_common.
-                ** prove_last_common.
-                ** apply disjoint_cons1. split; eauto. 
-                   assert (Postfix l12 (a0 :: l22)).
+                ** prove_last_common. 
+                ** apply disjoint_cons1. split; auto.
+
+                   assert (Postfix l12 (a2 :: l22)).
                    {
-                     eapply postfix_order with (a1:=s1); eauto.
+                     eapply postfix_order with (a0:=s1); eauto.
                      (*- econstructor 2; eauto.*)
                      - eapply postfix_step_left; eauto.
                      - cbn. apply postfix_cons. eapply postfix_step_left; eauto.
@@ -160,16 +166,15 @@ Section Lc.
                    apply postfix_incl in H1. apply id in disj2 as disj2'.
                    unfold Disjoint in disj2'.
                    unfold incl in H1. intro In12. apply H1 in In12. cbn in In12.
-                   destruct In12 as [In12|In12]; [subst a; apply c1; reflexivity|].
+                   destruct In12 as [In12|In12]; [subst a1; apply c1; reflexivity|].
                    clear disj2.
-                   assert (a ∉ l21) as disj2.
+                   assert (a1 ∉ l21) as disj2.
                    { intro N. eapply disj2'. eauto. eapply In12. }
                    apply disj2. apply postfix_elem in post21; eauto.
                    --- eapply In_rcons in post21.
-                       destruct post21; [subst a; exfalso; apply c0; reflexivity|assumption].
+                       destruct post21; [subst a1; exfalso; apply c0; reflexivity|assumption].
                    --- destruct l21; cbn. omega. rewrite app_length. omega.
-                       
-                ** assert (s1 =/= a) as sa.
+                ** assert (s1 =/= a1) as sa.
                    {
                      intro N. destruct N. apply postfix_elem in post21.
                      apply In_rcons in post21.
@@ -181,23 +186,33 @@ Section Lc.
                 ** assumption.
              ++ destruct (s1 == s2) as [seq|sneq].
                 {
+(*                  destruct l12 as [|b l12].
+                  { cbn in post12. eapply postfix_hd_eq in post12. subst.
+                    exfalso. apply c. reflexivity. }
+                  replace b with a2 in *.  2: (cbn in post12; symmetry; eapply postfix_hd_eq;eauto).
+                  clear b.
+                  destruct l21 as [|b l21].
+                  { cbn in post21. eapply postfix_hd_eq in post21. subst.
+                    exfalso. apply c0. reflexivity. }
+                  replace b with a1 in *. 2: cbn in post21;symmetry; eapply postfix_hd_eq;eauto.
+                  clear b.*)
                   destruct seq.
-                  assert (l21 = a :: l11 /\ l12 = a0 :: l22) as [lleq1 lleq2].
+                  assert (l21 = a1 :: l11 /\ l12 = a2 :: l22) as [lleq1 lleq2].
                   {
                     split.
                     - eapply postfix_first_occ_eq; eauto.
                       + contradict in11. inversion in11.
-                        * subst a; exfalso; apply c0; reflexivity.
+                        * subst a1; exfalso; apply c0; reflexivity.
                         * eauto.
                       + rewrite cons_rcons_assoc. apply postfix_cons. eauto.
                     - eapply postfix_first_occ_eq; eauto.
                       + contradict in22. inversion in22.
-                        * subst a0; exfalso; apply c; reflexivity.
+                        * subst a2; exfalso; apply c; reflexivity.
                         * eauto.
                       + rewrite cons_rcons_assoc. apply postfix_cons. eauto.
                   }
                   subst l12 l21.
-                  exists s1, (a :: l11), (a0 :: l22).
+                  exists s1, (a1 :: l11), (a2 :: l22).
                   split_conj.
                   - prove_last_common.
                   - prove_last_common.
@@ -206,17 +221,16 @@ Section Lc.
                     destruct (disj2) as [disj2' _].
                     cbn in disj2'. specialize (disj2' _ (or_introl eq_refl)).
                     contradict disj2'. cbn in disj2'.
-                    destruct disj2'; [subst a0; exfalso; apply c1; reflexivity|eauto].
+                    destruct disj2'; [subst a2; exfalso; apply c1; reflexivity|eauto].
                   - eauto.
                   - eauto.
                 }
-                destruct (@In_dec _ _ _ a0 (l21 :r: s2)) as [in_a0|nin_a0].
+                destruct (In_dec _ a2 (l21 :r: s2)) as [in_a0|nin_a0].
                 {
-                  exists a0, (postfix_nincl a0 l21), nil.
+                  exists a2, (postfix_nincl a2 l21), nil.
                   split_conj.
-                  - 
-                    apply In_rcons in in_a0. destruct in_a0.
-                    + subst a0.
+                  - apply In_rcons in in_a0. destruct in_a0.
+                    + subst a2.
                       apply postfix_nincl_invariant in in21. rewrite in21. eauto.
                     + eapply postfix_nincl_spec in H1.
                       eapply postfix_trans; eauto. eapply postfix_step_left; eauto.
@@ -225,28 +239,13 @@ Section Lc.
                   - apply postfix_nincl_nincl.
                   - tauto.
                 }
-                exists s2, l21, (a0 :: l22).
-                assert (In s2 l12) as Hin11.
-                {
-                  assert (~ In s1 (a0 :: l22 :r: s2)).
-                  { contradict H0. inversion H0;eauto. subst. exfalso; apply c; reflexivity.
-                    apply In_rcons in H1.
-                    destruct H1; [subst s1; exfalso; apply sneq; reflexivity|eauto].
-                  }
-                  eapply postfix_order with (l':=a0 :: l2) (l4:=l12 :r: s1) in H1; eauto.
-                  - apply postfix_incl in H1.
-                    clear - sneq H1.
-                    specialize (H1 s2). apply In_rcons in H1.
-                    * destruct H1;[subst s2; exfalso; apply sneq; reflexivity|eauto].
-                    * rewrite <-cons_rcons_assoc. apply In_rcons. left. reflexivity.
-                  - apply postfix_cons; eauto.
-                } 
+                exists s2, l21, (a2 :: l22).
                 split_conj.
                 ** prove_last_common.
                 ** prove_last_common.
                 ** apply disjoint_cons2. split; eauto.
                 ** assumption.
-                ** assert (s2 =/= a0) as sa.
+                ** assert (s2 =/= a2) as sa.
                    {                       
                      intro N. destruct N. apply nin_a0.
                      apply In_rcons. left. reflexivity.

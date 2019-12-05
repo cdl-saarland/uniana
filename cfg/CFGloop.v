@@ -378,17 +378,7 @@ Section cfg.
         destruct ϕ;cbn;[rewrite <-in_rev;auto|].
         rewrite rev_rcons. cbn.
         intro N. eapply in_app_or in N. destruct N as [N|[N|N]].
-        * Lemma postfix_rcons_rcons (A : Type) (l l' : list A) (a a' : A)
-          : Postfix (l ++ [a]) (l' ++ [a']) -> Postfix l l'.
-          Proof.
-            intros Hpost.
-            eapply postfix_eq in Hpost. destructH.
-            revert dependent a. revert a' l.
-            induction l2';intros.
-            - rewrite app_nil_r in Hpost. eapply rcons_inj in Hpost. destructH. subst. constructor.
-            - eapply postfix_step_left. eapply IHl2'. rewrite <-app_cons_assoc. eauto.
-          Qed.
-          eapply postfix_rcons_rcons in Hϕ1. eapply postfix_incl in Hϕ1.
+        * eapply postfix_rcons_rcons in Hϕ1. eapply postfix_incl in Hϕ1.
           eapply Hnin. eapply Hϕ1. right. rewrite in_rev. auto.
         * cbn in Hϕ0. path_simpl' Hϕ0. subst.
           eapply postfix_rcons_rcons in Hϕ1.

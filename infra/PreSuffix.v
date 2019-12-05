@@ -402,8 +402,32 @@ Section Pre.
   Proof.
     intros. eapply postfix_rev_prefix in H. eapply prefix_ex_cons in H. destructH.
     exists a'. eapply prefix_rev_postfix'. do 2 rewrite rev_rcons. eauto.
-  Qed.  
+  Qed.
 
+  Lemma rcons_inj (l l' : list A) (a b : A)
+    : l ++ [a] = l' ++ [b] -> l = l' /\ a = b.
+  Proof.
+    revert dependent l'.
+    induction l;intros.
+    - cbn in H. destruct l';cbn in *;eauto.
+      + split;inversion H;eauto.
+      + inversion H. congruence'.
+    - destruct l';cbn in *.
+      + inversion H. congruence'.
+      + inversion H. subst. split;[f_equal|];eapply IHl;eauto.
+  Qed.              
+  
+  Lemma postfix_rcons_rcons (l l' : list A) (a a' : A)
+    : Postfix (l ++ [a]) (l' ++ [a']) -> Postfix l l'.
+  Proof.
+    intros Hpost.
+    eapply postfix_eq in Hpost. destructH.
+    revert dependent a. revert a' l.
+    induction l2';intros.
+    - rewrite app_nil_r in Hpost. eapply rcons_inj in Hpost. destructH. subst. constructor.
+    - eapply postfix_step_left. eapply IHl2'. rewrite <-app_cons_assoc. eauto.
+  Qed.
+  
   Lemma tl_prefix (l : list A)
     : Prefix (tl l) l.
   Proof.

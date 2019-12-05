@@ -1,4 +1,4 @@
-Require Export NeList PreSuffix Decidable Disjoint.
+Require Export PreSuffix Decidable Disjoint.
 
 Ltac prove_not_In H Q b :=
   (contradict H; inversion H; eauto; subst b; exfalso; apply Q; reflexivity).
@@ -35,3 +35,5 @@ Ltac prove_last_common :=
   | [ H : Postfix ?a ?b |- _ ] => cbn in H
   | [ |- _ ] => idtac
   end; split_conj; prove_last_common'.
+
+

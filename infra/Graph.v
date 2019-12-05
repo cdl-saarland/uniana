@@ -243,19 +243,6 @@ Section graph.
     specialize (rcons_cons a' l') as Q;
     destruct Q as [a [l Q]];
     rewrite Q in *.
-
-  Lemma rcons_inj (A : Type) (l l' : list A) (a b : A)
-    : l ++ [a] = l' ++ [b] -> l = l' /\ a = b.
-  Proof.
-    revert dependent l'.
-    induction l;intros.
-    - cbn in H. destruct l';cbn in *;eauto.
-      + split;inversion H;eauto.
-      + inversion H. congruence'.
-    - destruct l';cbn in *.
-      + inversion H. congruence'.
-      + inversion H. subst. split;[f_equal|];eapply IHl;eauto.
-  Qed.              
   
   Lemma path_postfix_path p q r (π ϕ : list L)
     : Path p q π -> Postfix (ϕ ++ [r]) π -> Path r q (ϕ ++ [r]).
