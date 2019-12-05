@@ -352,10 +352,13 @@ Section graph.
   Qed.
     
   Lemma path_back_eq p p' q q' π
-    : Path p q π -> Path p' q' π -> p = p.
+    : Path p q π -> Path p' q' π -> p = p'.
   Proof.
-    intros Hpq Hpq'.
-    destruct Hpq;auto.
+    intros Hpq Hpq'. revert dependent q'.
+    induction Hpq;intros;inversion Hpq';subst;auto.
+    - inversion H3.
+    - inversion Hpq.
+    - eauto. 
   Qed.
 
   Lemma dom_nin r p q π : Dom r p q -> Path r p π -> NoDup π -> q ∈ π -> p = q.

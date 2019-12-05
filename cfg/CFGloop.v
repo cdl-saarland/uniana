@@ -260,29 +260,30 @@ Section cfg.
     intros Hloop Hnloop.
     decide (p = q); [subst;contradiction|].
     unfold loop_contains in Hloop. destructH.
-    eapply nin_tl_iff in Hloop3;eauto; erewrite path_back in Hloop3;eauto.
-    destruct Hloop3 as [Hloop3|Hloop3];[|subst q;eapply dominant_self]. rename π into π1.
-    intros π Hπ.
+    eapply nin_tl_iff in Hloop3;eauto. 
+    destruct Hloop3 as [Hloop3|Hloop3].
+    2: { destr_r' π;subst π;[inversion Hloop2|]. rewrite rev_rcons in Hloop3.
+         cbn in Hloop3. inversion Hloop3. subst. path_simpl' Hloop2. eapply dominant_self. }
+    intros ϕ Hϕ.
 (*    assert (p ∈ all_lab) as H0 by (eapply path_in_alllab1;eauto).*)
-    specialize reachability as Hϕ.
+    specialize reachability as Hη.
     unfold loop_contains in Hnloop.
     rewrite DM_not_exists in Hnloop. setoid_rewrite DM_not_exists in Hnloop.
-    eapply path_app in Hloop2;eauto.
-    specialize (Hnloop p0 (π1 :+ tl π)).
+    eapply path_app' in Hloop2;eauto.
+    specialize (Hnloop p0 (π ++ tl ϕ)).
     setoid_rewrite not_and_iff in Hnloop; [setoid_rewrite not_and_iff in Hnloop|].
     - destruct Hnloop as [Hnloop|Hnloop]; [contradiction|destruct Hnloop].
       + contradiction.
       + clear - Hloop3 H.
         eapply not_not in H.
-        * eapply in_tl_in in H. eapply in_rev in H. eapply in_nl_conc in H. destruct H;[contradiction|].
+        * eapply in_tl_in in H. eapply in_rev in H. eapply in_app_or in H. destruct H;[contradiction|].
           eapply in_tl_in;eauto.
-        * eapply In_dec;eauto.
-    - edestruct path_dec;eauto; firstorder.
+        * decide (h ∈ tl (rev (π ++ tl ϕ)));[left|right]; eauto.
+    - firstorder. 
     - edestruct (back_edge_dec p0 h); firstorder.
-      Unshelve. all:eauto. (*TODO: remove *)
   Qed.
   
-    Lemma loop_contains_path h q π
+  Lemma loop_contains_path h q π
     : CPath h q π -> loop_contains h q -> NoDup π -> forall p, p ∈ π -> loop_contains h p.
   Proof.
     intros Hπ Hin Hnd p Hp. 
@@ -293,14 +294,11 @@ Section cfg.
       eapply dom_loop_contains in N; eauto; cycle 1.
       eapply postfix_incl in Hp1 as Hp1'; eauto.
       dependent induction Hp1.
-      + simpl_nl' x. subst ϕ. 
-        eapply Hph. eapply path_back in Hp0; eapply path_back in Hπ. rewrite <-Hp0. eauto.
+      + eapply Hph. eapply path_back_eq;eauto. 
       + clear IHHp1. unfold Dom in N.
         eapply postfix_incl in Hp1. eapply Hp1 in N; eauto.
-        rewrite rcons_nl_rcons in x. eapply ne_to_list_inj in x. rewrite <-x in Hnd.
-        eapply f_equal with (f:=@ne_back Lab) in x. simpl_nl' x. eapply path_back in Hπ. rewrite Hπ in x.
-        subst a.
-        eapply NoDup_nin_rcons; eauto. rewrite rcons_nl_rcons. assumption.
+        unfold CPath in Hπ. path_simpl' Hπ.
+        eapply NoDup_nin_rcons in Hnd. contradiction.
   Qed.
 
   Lemma loop_contains_splinter h1 h2 p π
@@ -332,9 +330,11 @@ Section cfg.
     unfold loop_contains in Hl.
     destructH.
     eapply path_rcons in Hl2 as Hl2';eauto.
-    exists p0, (π :>: q). repeat (split;eauto).
-    simpl_nl. rewrite rev_rcons. cbn. eapply nin_tl_iff in Hl3;auto.
-    destruct Hl3 as [Hl3|Hl3];[contradict Hl3;eapply in_rev;auto|eapply path_back in Hl2;subst;auto].
+    exists p0, (π ++ [q]). repeat (split;eauto).
+    rewrite rev_rcons. cbn. eapply nin_tl_iff in Hl3;auto.
+    destruct Hl3 as [Hl3|Hl3];[contradict Hl3;eapply in_rev;auto|].
+    destr_r' π;subst;[inversion Hl2|]. rewrite rev_rcons in *. cbn in Hl3. path_simpl' Hl2.
+    inversion Hl3. contradiction.
   Qed.
 
   (** * other facts **)
@@ -356,61 +356,65 @@ Section cfg.
         (Hq : loop_contains h q)
     : forall x, x ∈ π -> loop_contains h x.
   Proof.
+
     enough (h ∉ tl (rev π)) as Hnin.
     - intros.
       eapply subgraph_path' in Hpath;eauto.
       eapply (path_from_elem) in Hpath as Hϕ;eauto. destructH.
       unfold loop_contains in Hq.
       destructH.
-      exists p0, (π0 :+ tl ϕ); split_conj; auto.
-      + eapply path_app;eauto.
-      + destruct ϕ;cbn;[auto|].
-        assert (e = q) by (clear - Hϕ0; inversion Hϕ0; subst; eauto);subst.
-        rewrite <-nlconc_neconc.
-        rewrite <-neconc_app. rewrite rev_app_distr.
-        replace (tl (rev ϕ ++ rev π0)) with ((tl (rev ϕ)) ++ rev π0).
-        * intro N. eapply in_app_or in N.
-          destruct N.
-          -- apply Hnin. clear - Hϕ1 H0. destruct (ne_list_nlrcons π). destructH. subst. simpl_nl' Hϕ1. simpl_nl.
-             rewrite rev_rcons. cbn.
-             eapply postfix_rev_prefix in Hϕ1. rewrite rev_rcons in Hϕ1.
-             destruct (ne_list_nlrcons ϕ). destructH;subst. simpl_nl' Hϕ1.
-             rewrite nl_cons_lr_shift in Hϕ1. simpl_nl' Hϕ1. rewrite rev_rcons in Hϕ1.
-             simpl_nl' H0. rewrite rev_rcons in H0. cbn in H0.
-             eapply prefix_cons_cons in Hϕ1.
-             eapply prefix_incl in Hϕ1. eapply in_rev in H0. 
-             specialize (Hϕ1 h). eapply Hϕ1.
-             rewrite <-in_rev. right;auto.
-          -- eapply nin_tl_iff in Hq3;auto. destruct Hq3 as [Hq3|Hq3]; [eapply Hq3;eapply in_rev;auto|].
-             eapply path_back in Hq2. rewrite Hq2 in Hq3. subst h.
-             eapply Hnin. clear - Hϕ1.
-             destruct (ne_list_nlrcons π). destructH. rewrite H. simpl_nl. rewrite rev_rcons. cbn.
-             rewrite H in Hϕ1. simpl_nl' Hϕ1.
-             destruct l';[exfalso|];inversion Hϕ1; subst; cbn in *; try congruence'.
-             destruct l'; cbn in *. inversion H2. 1,2: destruct l'; cbn in *; congruence.
-             ++ eapply in_or_app. right;firstorder.
-             ++ eapply postfix_hd_eq in Hϕ1. subst. eapply in_or_app. firstorder.
-        * clear. destruct (ne_list_nlrcons ϕ). destructH. rewrite H. simpl_nl. rewrite rev_rcons. cbn. reflexivity.
+      exists p0, (π0 ++ tl ϕ); split_conj; auto.
+      + eapply path_app';eauto.
+      + destr_r' π;subst. 1: inversion Hpath.
+        rename l into π.
+        destr_r' π0;subst. 1: inversion Hq2.
+        rename l into π0.
+        destr_r' ϕ;subst. 1: inversion Hϕ0.
+        rename l into ϕ.
+        rewrite rev_app_distr. 
+        rewrite rev_rcons in *.
+        cbn in *. rewrite <-in_rev in Hq3,Hnin.
+        path_simpl' Hpath. path_simpl' Hq2. path_simpl' Hϕ0.
+        destruct ϕ;cbn;[rewrite <-in_rev;auto|].
+        rewrite rev_rcons. cbn.
+        intro N. eapply in_app_or in N. destruct N as [N|[N|N]].
+        * Lemma postfix_rcons_rcons (A : Type) (l l' : list A) (a a' : A)
+          : Postfix (l ++ [a]) (l' ++ [a']) -> Postfix l l'.
+          Proof.
+            intros Hpost.
+            eapply postfix_eq in Hpost. destructH.
+            revert dependent a. revert a' l.
+            induction l2';intros.
+            - rewrite app_nil_r in Hpost. eapply rcons_inj in Hpost. destructH. subst. constructor.
+            - eapply postfix_step_left. eapply IHl2'. rewrite <-app_cons_assoc. eauto.
+          Qed.
+          eapply postfix_rcons_rcons in Hϕ1. eapply postfix_incl in Hϕ1.
+          eapply Hnin. eapply Hϕ1. right. rewrite in_rev. auto.
+        * cbn in Hϕ0. path_simpl' Hϕ0. subst.
+          eapply postfix_rcons_rcons in Hϕ1.
+          eapply Hnin. eapply postfix_incl;eauto.
+        * rewrite <-in_rev in N. contradiction.
     - intro N.
       specialize (a_reachability p) as [ϕ Hϕ].
       eapply dom_loop in Hp.
       eapply dom_dom_acyclic in Hp.
       eapply Hp in Hϕ as Hin.
-      eapply path_app in Hpath as Hpath';eauto.
-      eapply acyclic_path_NoDup in Hpath' as Hnd. rewrite <-nlconc_to_list in Hnd.
+      eapply path_app' in Hpath as Hpath';eauto.
+      eapply acyclic_path_NoDup in Hpath' as Hnd. 
       enough (π ++ tl ϕ = rev (tl (rev π)) ++ ϕ).
       + rewrite H in Hnd.
         eapply NoDup_app;eauto.
         rewrite <-in_rev. auto.
       + clear - Hpath Hϕ.
-        destruct (ne_list_nlrcons π). destructH. subst.
-        simpl_nl. rewrite rev_rcons. cbn. rewrite rev_involutive.
-        eapply path_back in Hpath. simpl_nl' Hpath. subst x.
-        destruct ϕ;cbn in *;simpl_nl.
-        * inversion Hϕ; subst. rewrite app_nil_r. reflexivity.
-        * inversion Hϕ; subst. rewrite <-app_assoc. cbn. reflexivity.
+        destr_r' π;subst. 1: inversion Hpath. rewrite rev_rcons. cbn.
+        rewrite rev_involutive.
+        eapply path_back in Hpath. subst x.
+        destruct ϕ;cbn in *.
+        * inversion Hϕ; subst. 
+        * inversion Hϕ; subst;auto. rewrite <-app_assoc. cbn. reflexivity.
+          rewrite <-app_cons_assoc. auto.
   Qed.
-
+  
   Lemma acyclic_parallel_exit_path h p q π
         (Hπ : Path a_edge h q π)
         (Hexit : exit_edge h p q)
@@ -418,10 +422,11 @@ Section cfg.
   Proof.
     destruct π;cbn in *;[contradiction|].
     assert (e = q) by (inversion Hπ;cbn in *;subst;auto);subst.
-    inversion Hπ;subst.
+    inversion Hπ;subst. 1: intros;contradiction.
     intros.
     eapply acyclic_path_stays_in_loop;eauto.
-    - eapply loop_contains_self;unfold exit_edge in Hexit; destructH ;eauto using loop_contains_loop_head.
+    - eapply loop_contains_self;unfold exit_edge in Hexit; destructH ;
+        eauto using loop_contains_loop_head.
     - eapply exit_pred_loop;eauto.
       eapply a_edge_incl;eauto.
   Qed.
@@ -429,7 +434,7 @@ Section cfg.
   Lemma loop_contains_ledge qh ql
     : ql ↪ qh -> loop_contains qh ql.
   Proof.
-    intros. exists ql, (ne_single ql). split_conj;[auto|constructor|cbn]. exact (fun x => x).
+    intros. exists ql, ([ql]). split_conj;[auto|constructor|cbn]. exact (fun x => x).
   Qed.
   
   Lemma exit_edge_pred_exiting h p q
@@ -509,7 +514,6 @@ Section cfg.
     : q = h.
   Proof.
     specialize (a_reachability p) as Hreach. destructH.
-    eapply path_front in Hreach as Hfront.
     eapply subgraph_path' in Hreach as Hreach'. 2: eapply a_edge_incl.
     eapply PathCons in Hreach';eauto.
     eapply dom_loop in Hreach' as Hdom;eauto.
@@ -519,10 +523,13 @@ Section cfg.
     unfold loop_contains in *. destructH.
     eapply path_rcons in Hedge;eauto.
     exists p0. eexists. split_conj;eauto.
-    simpl_nl. eapply nin_tl_iff in Hin3;eauto.
+    eapply nin_tl_iff in Hin3;eauto.
     destruct Hin3.
-    - simpl_nl. rewrite rev_rcons. cbn. rewrite <-in_rev. auto.
-    - eapply path_back in Hin2. rewrite Hin2 in H0. symmetry in H0. contradiction.
+    - rewrite rev_rcons. cbn. rewrite <-in_rev. auto.
+    - exfalso.
+      eapply n. destr_r' π0;subst.
+      * inversion Hin2.
+      * path_simpl' Hin2. rewrite rev_rcons in H0. cbn in H0. inversion H0. reflexivity.
   Qed.
 
 End cfg.
