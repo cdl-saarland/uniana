@@ -314,7 +314,7 @@ Section cfg.
   Qed.
   
   Lemma loop_LPath_helper p h π
-        (Hpath : Path a_edge root p (p :<: π))
+        (Hpath : Path a_edge root p (p :: π))
         (Hloop : loop_contains h p)
         (Hin : h ∈ π)
         (Hnolo : forall q : Lab, q ≻* h | π -> toBool _ (D:=decision (loop_contains q p)) = true -> h = q)
@@ -338,20 +338,21 @@ Section cfg.
     specialize (a_reachability p) as Hreach.
     destructH. revert dependent p. revert dependent π.
     specialize (well_founded_ind (R:=(@StrictPrefix' Lab)) (@StrictPrefix_well_founded Lab)
-                                 (fun π : ne_list Lab => forall p, loop_contains h p
+                                 (fun π : list Lab => forall p, loop_contains h p
                                                            -> Path a_edge root p π
-                                                           -> exists (π0 : ne_list Lab), LPath h p π0))
+                                                           -> exists (π0 : list Lab), LPath h p π0))
       as WFind.
     eapply WFind.
     intros;clear WFind.
     destruct x.
     - inversion H1; subst p a e.
-      eapply root_loop_root in H0. subst. repeat econstructor.
     - remember (find (fun h' => decision (loop_contains h' p)) x) as S.
       destruct S; symmetry in HeqS.
       + eapply find_some_strong in HeqS. destructH. decide (loop_contains e0 p);cbn in *;[|congruence].
-        inversion H1;subst.
-        decide (h = e).
+        2: auto.
+        2: { eapply acyclic_path_NoDup in H1. inversion H1;auto. }
+        inversion H1; [subst x ;contradiction|]. subst π a c e.
+        decide (h = p).
         { subst;eexists;econstructor. }
         specialize (@path_to_elem _ a_edge _ _ e0 x H6 HeqS0) as [ϕ [Hϕ0 Hϕ1]].
         specialize (H ϕ). exploit' H.
@@ -367,21 +368,21 @@ Section cfg.
           eapply loop_contains_Antisymmetric in H. exploit H. contradiction.
         } 
         destructH.        
-        exists (e :<: π0).
+        exists (p :: π0).
         econstructor;cycle 1.
-        * instantiate (1:=e0). decide (innermost_loop_strict e0 e);cbn;[auto|exfalso;contradict n0].
+        * instantiate (1:=e0). decide (innermost_loop_strict e0 p);cbn;[auto|exfalso;contradict n0].
           unfold innermost_loop_strict. split;auto. split.
           -- eapply acyclic_path_NoDup in H1. clear - HeqS0 H1. inversion H1; subst.
              contradict H2. subst. auto.
           -- eapply loop_LPath_helper;eauto.
         * auto.
-        * auto.
-        * inversion H1;subst. eapply acyclic_path_NoDup; eauto.
       + decide (h = e); subst.
-        { inversion H1. subst. repeat econstructor. }
+        { inversion H1.
+          - subst x e p a. repeat econstructor.
+          - subst π e c a. repeat econstructor. }
         eapply find_none in HeqS;cycle 1.
         * instantiate (1:=h).
-          enough (h ∈ (e :<: x)) as Hex.
+          enough (h ∈ (e :: x)) as Hex.
           { destruct Hex;[symmetry in H2;contradiction|auto]. }
           eapply dom_dom_acyclic;eauto. eapply dom_loop;auto.
         * exfalso. decide (loop_contains h p); cbn in *; [congruence|contradiction].
@@ -562,7 +563,7 @@ Section cfg.
         (Hpath : CPath p p π)
         (Hinl : innermost_loop h p)
         (Hnin : h ∉ π)
-    : π = ne_single p.
+    : π = [p].
   Proof.
     clear - Hpath Hinl Hnin.
   Admitted. (* FIXME *)

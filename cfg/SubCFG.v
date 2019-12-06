@@ -32,7 +32,7 @@ Open Scope prg.
 
 Lemma original_path (L : Type) (P : decPred L) f π (r p : @subtype _ P (decide_pred P))
       (Hpath : Path (fun x y : subtype P => f (`x) (`y)) r p π)
-  : Path f (`r) (`p) (ne_map (@proj1_sig L _) π).
+  : Path f (`r) (`p) (map (@proj1_sig L _) π).
 Proof.
   induction Hpath.
   - cbn. econstructor.
@@ -41,7 +41,7 @@ Qed.
 
 Lemma original_path' (L : finType) (P : decPred L) f π (r p : @subtype _ P (decide_pred P))
       (Hpath : Path (fun x y : subtype P (D:=decide_pred P) => f (`x) (`y)) r p π)
-  : Path (restrict_edge' f P) (`r) (`p) (ne_map (@proj1_sig L _) π).
+  : Path (restrict_edge' f P) (`r) (`p) (map (@proj1_sig L _) π).
 Proof.
   induction Hpath.
   - cbn. econstructor.
@@ -50,10 +50,10 @@ Proof.
     unfold restrict_edge. auto.
 Qed.
 
-Definition list_to_ne (A : Type) (l : list A) : option (ne_list A)
+Definition list_to_ne (A : Type) (l : list A) : option (list A)
   := match l with
      | [] => None
-     | a :: l => Some (a :< l)
+     | a :: l => Some (a :: l)
      end.     
 
 Lemma toSubList_eq (A : Type) (l : list A) (P : decPred A)
@@ -99,25 +99,31 @@ Ltac push_purify H :=
   subst H.
 
 Lemma original_path_reverse:
-  forall (L : finType) (r : L) (π : ne_list L) (f : L -> L -> bool) (P : decPred L) (Hr : P r) (x : L) (Hx : P x) l,
+  forall (L : finType) (r : L) (π : list L) (f : L -> L -> bool) (P : decPred L) (Hr : P r) (x : L) (Hx : P x) l,
     Path (restrict_edge' f P) r (` (↓ purify Hx (D:=decide_pred P)))
-         (ne_map (proj1_sig (P:=fun x0 : L => pure P x0)) l) ->
+         (map (proj1_sig (P:=fun x0 : L => pure P x0)) l) ->
     forall p : P x, Path (restrict_edge f P) (↓ purify Hr) (↓ purify Hx) l.
 Proof. 
   intros L r π f P Hr x Hx l Hπ p.
   cbn in *.
   revert dependent x.
   induction l;intros;cbn.
-  - destruct a.
+  - inversion Hπ.
+  - (*destruct a.
     cbn in *. assert (x0 = x /\ r = x) as [Q1 Q2] by (split; inversion Hπ;subst;auto);subst.
     push_purify p0.
     collapse Hr Hx. collapse Hx H.
-    econstructor.
-  - destruct a.
+    econstructor.*)
+    destruct a.
     cbn in *. assert (x0 = x) as Q by (inversion Hπ;subst;auto);subst.
     push_purify p0.
     collapse Hx H.
     inversion Hπ;subst.
+    1: {
+      destruct l;cbn in *;[|congruence].
+      cbn in *. 
+      collapse Hr Hx. collapse Hx H.
+      econstructor. }
     assert (P b) as Hb.
     { unfold restrict_edge',minus_edge,intersection_edge in H4; conv_bool. firstorder. }
     cstr_subtype Hb.
@@ -132,41 +138,39 @@ Lemma restrict_edge_path_equiv (L : finType) r x π (f : L -> L -> bool) (P : de
       (Hx : P x)
       (Hπ : Path (restrict_edge' f P) r x π)
   : match toSubList π P with
-    | a :: l => Path (restrict_edge f P) (↓ (purify Hr)) (↓ (purify Hx)) (a :< l)
+    | a :: l => Path (restrict_edge f P) (↓ (purify Hr)) (↓ (purify Hx)) (a :: l)
     | nil => False
     end.
 Proof.
   revert dependent x.
   induction π;intros.
-  - cbn.
+  - cbn. inversion Hπ. (*
     assert (a = x /\ r = x) as [Q1 Q2] by (split;inversion Hπ;auto);subst.
     decide (P x).
     + cbn.
       collapse Hr Hx. collapse Hx p. econstructor.
-    + contradiction. 
+    + contradiction. *)
   - assert (a = x);subst.
-    { inversion Hπ. reflexivity. }
-    rewrite nlcons_necons in Hπ.
+    { destruct π;
+      inversion Hπ;subst; reflexivity. }
     specialize (restrict_path_sat_P Hr Hπ) as Hin.
     cstr_subtype Hx.
     setoid_rewrite <-toSubList_eq with (P:=P) in Hπ.
-    2: { cbn in Hin. intros; eapply Hin. simpl_nl. cbn. firstorder. }
-    rewrite <-ne_map_nlcons in Hπ.
-    cbn.
+    2: { cbn in Hin. intros; eapply Hin. cbn. firstorder. }
+    cbn in *.
     decide (P x).
-    + 
-      collapse Hx p.
+    + collapse Hx p.
       eapply original_path_reverse;eauto.
     + contradiction.
 Qed.
 
-Lemma subtype_ne_map (A : Type) (P : decPred A) (x : @subtype _ P (decide_pred P))
-      (l : ne_list (@subtype _ P (decide_pred P)))
-      (Hin : (` x) ∈ ne_map (proj1_sig (P:=fun x => pure P x)) l)
+Lemma subtype_map (A : Type) (P : decPred A) (x : @subtype _ P (decide_pred P))
+      (l : list (@subtype _ P (decide_pred P)))
+      (Hin : (` x) ∈ map (proj1_sig (P:=fun x => pure P x)) l)
   : x ∈ l.
 Proof.
   induction l.
-  - cbn in *. destruct Hin;[left;eapply subtype_extensionality;auto|contradiction].
+  - cbn in *. destruct Hin. 
   - cbn in *. destruct Hin;[left;eapply subtype_extensionality;auto|].
     auto.
 Qed.
@@ -191,7 +195,7 @@ Proof.
   eapply Hdom in H0 as H0'.
   (*  eapply loop_head_dom with (qh0:=qh) in H0 as H0'.*)
   - cstr_subtype  Hh.
-    eapply subtype_ne_map in H0';auto.
+    eapply subtype_map in H0';auto.
 Qed.
 
 Lemma restrict_back_edge_intersection (L : finType) (edge a_edge : L -> L -> bool) (P : decPred L)
@@ -246,7 +250,6 @@ Proof.
   eapply restrict_back_edge in HloopA0.
   exists x;eexists; split_conj; eauto.
   contradict HloopA3. cstr_subtype H. cbn in *.
-  rewrite <-to_list_ne_map in HloopA3.
   rewrite <-map_rev in HloopA3.
   rewrite <-map_tl in HloopA3.
   rewrite in_map_iff in HloopA3.
@@ -301,11 +304,11 @@ Proof.
   - eapply restrict_edge_path_equiv in Hloop2 as Hloop2'.
     destruct (toSubList π P) eqn:E;
       [contradiction|].
-    exists (↓ (purify p0)), (s :< l).
+    exists (↓ (purify p0)), (s :: l).
     split_conj.
     + unfold minus_edge in *. conv_bool. destruct Hloop0. split_conj; rewrite restrict_edge_intersection;cbn;eauto.
     + eapply Hloop2'.
-    + Set Printing Coercions. simpl_nl. setoid_rewrite <-E. Unset Printing Coercions.
+    + Set Printing Coercions. setoid_rewrite <-E. Unset Printing Coercions.
       contradict Hloop3. rewrite <-toSubList_eq with (P:=P);[|intros;eapply restrict_path_sat_P with (p:=q);eauto].
       2: { apply in_rev. apply tl_incl. auto. }
       eapply in_map_iff. exists (↓ purify Hh). split;cbn;auto.

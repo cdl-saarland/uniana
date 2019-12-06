@@ -32,7 +32,7 @@ Proof.
   unfold exit_edge in H0. destructH.
   eapply loop_reachs_member in H1.
   destructH.
-  exists (q :<: π).
+  exists (q :: π).
   eapply exit_a_edge in Hexit.
   econstructor;eauto.
 Qed.
@@ -50,7 +50,7 @@ Proof.
   - eexists;split;econstructor;eauto. inversion H1;subst;auto. inversion H2.
   - unfold_edge_op' H0. destruct H0.
     + specialize (IHHπ b). exploit IHHπ;[eapply deq_loop_refl|]. destructH.
-      exists (c :<: ϕ). split;[econstructor;eauto|].
+      exists (c :: ϕ). split;[econstructor;eauto|].
       intros. cbn in H2. destruct H2;eauto.
       eapply Hdeq in H1.
       decide (h = c);[left;auto|].
@@ -60,9 +60,9 @@ Proof.
       * eapply head_exits_edge_spec in H0. destructH.
         eapply deq_loop_trans;[eapply deq_loop_exiting;eauto|eapply deq_loop_exited;eauto].
       * destructH.
-        eexists. split;[eauto using path_app,subgraph_path'|].
+        eexists. split;[eauto using path_app',subgraph_path'|].
         intros.
-        eapply in_nl_conc in H2. destruct H2.
+        eapply in_app_or in H2. destruct H2.
         -- left.
            
            eapply head_exits_edge_spec in H0. destructH.
@@ -112,7 +112,7 @@ Proof.
   - destructH. unfold_edge_op' H0. destruct H0.
     + eexists. econstructor;eauto.
     + eapply head_exits_path in H0. destructH.
-      eexists; eauto using path_app.
+      eexists; eauto using path_app'.
 Qed.
 
 Lemma head_exits_same_connected' `{redCFG} h p q π
@@ -125,7 +125,7 @@ Proof.
     + eexists. econstructor;eauto.
     + eapply head_exits_path in H0. destructH.
       eapply subgraph_path' in H0;eauto.
-      eexists; eauto using path_app.
+      eexists; eauto using path_app'.
 Qed.
 
 
@@ -150,29 +150,30 @@ Proof.
     {
       clear. intros.
       induction H0.
-      - exists (ne_single a). split;eauto. econstructor.
+      - exists ([a]). split;eauto. econstructor.
       - exploit' IHPath.
         + cbn in *. contradict H1.
-          specialize (ne_list_nlrcons π) as Hπ. destructH. subst π.
-          simpl_nl. rewrite rev_rcons. cbn. simpl_nl' H1. rewrite rev_rcons in H1. cbn in *.
+          destr_r' π; subst π. 1: inversion H0.
+          rewrite rev_rcons. cbn. rewrite rev_rcons in H1. cbn in *.
           eapply in_or_app. left;auto.
         + unfold_edge_op' H3. destruct H3.
           * exploit IHPath.
             {
               eapply preds_in_same_loop;eauto.
               contradict H1. subst.
-              cbn. ne_r_destruct π. simpl_nl. rewrite rev_rcons. cbn. eapply in_or_app. right;firstorder.
+              cbn. destr_r' π;subst π. 1: inversion H0. rewrite rev_rcons. cbn. eapply in_or_app. right;firstorder.
             }
             destructH.
-            exists (c :<: π0). split;[econstructor;eauto|].
+            exists (c :: π0). split;[econstructor;eauto|].
             contradict IHPath1.
-            ne_r_destruct π0.
-            simpl_nl. cbn. rewrite rev_rcons. cbn. simpl_nl' IHPath1.
-            rewrite nl_cons_lr_shift in IHPath1. simpl_nl' IHPath1.  rewrite rev_rcons in IHPath1. cbn in *.
+            destr_r' π0;subst π0. 1: inversion IHPath0.
+            cbn. rewrite rev_rcons. cbn.
+            rewrite <-cons_rcons_assoc in IHPath1.
+            rewrite rev_rcons in IHPath1. cbn in *.
             eapply In_rcons in IHPath1. destruct IHPath1;auto.
             subst h. exfalso. contradict H1. 
-            ne_r_destruct π.
-            simpl_nl. cbn. rewrite rev_rcons. cbn. eapply in_or_app. right;firstorder.
+            destr_r' π;subst π. 1: inversion H0.
+            cbn. rewrite rev_rcons. cbn. eapply in_or_app. right;firstorder.
           * eapply head_exits_edge_spec in H3 as Hexit. destruct Hexit as [qe Hexit].
             assert (loop_contains h b) as Hloop.
             {
@@ -182,15 +183,15 @@ Proof.
             exploit IHPath.
             destructH.
             eapply head_exits_path in H3. destructH.
-            exists (π1 :+ tl π0).
+            exists (π1 ++ tl π0).
             split.
-            -- eapply subgraph_path' in H3; [eapply path_app|];eauto.
-            -- rewrite <-nlconc_to_list.
-               intro N. rewrite rev_app_distr in N.
+            -- eapply subgraph_path' in H3; [eapply path_app'|];eauto.
+            -- intro N. rewrite rev_app_distr in N.
                enough (h ∉ rev π1).
                {
+                 destr_r' π0;subst π0. 1: inversion IHPath0. rename l into π0.
                  destruct π0;cbn in N;eapply H4;[eapply tl_incl;auto|].
-                 ne_r_destruct π0. cbn in *. simpl_nl' IHPath1. simpl_nl' N. rewrite rev_rcons in N,IHPath1.
+                 cbn in *. rewrite rev_rcons in N,IHPath1.
                  cbn in *.
                  eapply in_app_or in N. destruct N;[exfalso;apply IHPath1|contradiction].
                  eapply in_or_app. left;auto.

@@ -1,4 +1,4 @@
-Require Export CFGinnermost.
+Require Export CFGinnermost ListExtra.
 
 Section cfg.
   Context `{C : redCFG}.

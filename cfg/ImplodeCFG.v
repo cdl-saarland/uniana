@@ -203,7 +203,7 @@ Lemma implode_nodes_path_inv `(C : redCFG) (h : Lab) (Hhe : head_exits_property 
 Proof.
   revert dependent q. revert dependent π.
   specialize (well_founded_ind (R:=(@StrictPrefix' Lab)) (@StrictPrefix_well_founded Lab)
-                               (fun π : ne_list Lab => forall (q : Lab),
+                               (fun π : list Lab => forall (q : Lab),
                                     CPath p q π ->
                                     implode_nodes h q
                                     -> exists π0,
@@ -235,7 +235,7 @@ Proof.
         exploit IHwf.
         -- eapply prefix_ex_cons in Hel1. destructH. econstructor. cbn. eauto.
         -- destructH. 
-           exists (c :<: π0). split.
+           exists (c :: π0). split.
            ++ econstructor;eauto 1. unfold_edge_op. split_conj;eauto 1.
               eapply a_edge_incl.
               eapply head_exits_property_a_edge;eauto.
@@ -249,7 +249,7 @@ Proof.
       * decide (deq_loop h c).
         { exfalso. apply n. left. eapply back_edge_eq_loop in H. rewrite H. auto. }
         decide (c = a).
-        { subst. exists (ne_single a). split;cbn;econstructor. eauto with splinter. }
+        { subst. exists ([a]). split;cbn;econstructor. eauto with splinter. }
         assert (~ loop_contains c a).
         {
           intro N.
@@ -311,7 +311,7 @@ Proof.
   - specialize (a_reachability p) as [π Hπ].
     revert dependent p. revert dependent π.
     specialize (well_founded_ind (R:=(@StrictPrefix' Lab)) (@StrictPrefix_well_founded Lab)
-                                 (fun π : ne_list Lab => forall (p : Lab),
+                                 (fun π : list Lab => forall (p : Lab),
                                       implode_nodes h7 p ->
                                       Path a_edge root p π
                                       -> exists π0, Path (restrict_edge' a_edge (implode_nodes h7)) root p π0))
@@ -343,7 +343,7 @@ Proof.
         exploit IHwf.
         -- eapply prefix_ex_cons in H6. destructH. econstructor. cbn. eauto.
         -- destructH. 
-           exists (c :<: π0). econstructor;eauto. unfold_edge_op. split_conj;eauto.
+           exists (c :: π0). econstructor;eauto. unfold_edge_op. split_conj;eauto.
            eapply head_exits_property_a_edge;eauto.
            contradict n.
            eapply loop_contains_deq_loop in n.
@@ -557,10 +557,10 @@ Proof.
   specialize (@postfix_nincl_nincl _ _ _ h π) as Hnincl.
   set (π' := postfix_nincl h π) in *.
   destruct π';[contradiction|].
-  rewrite nlcons_to_list in Hpfn. rewrite nlcons_to_list in Hnincl.
   eapply path_postfix_nincl_in_loop'.
   2-4:eauto.
-  eapply path_postfix_path in Hpath;eauto. simpl_nl. eauto.
+  rewrite cons_rcons' in Hpost. rewrite cons_rcons'.
+  eapply path_postfix_path in Hpath;eauto.
 Qed.
 
 Lemma implode_nodes_path_inv' `(C : redCFG) (h : Lab) (Hhe : head_exits_property C h) p q π
@@ -572,7 +572,7 @@ Lemma implode_nodes_path_inv' `(C : redCFG) (h : Lab) (Hhe : head_exits_property
 Proof.
   revert dependent q. revert dependent π.
   specialize (well_founded_ind (R:=(@StrictPrefix' Lab)) (@StrictPrefix_well_founded Lab)
-                               (fun π : ne_list Lab => forall (q : Lab),
+                               (fun π : list Lab => forall (q : Lab),
                                     CPath p q π ->
                                     forall HPq : implode_nodes C h q,
                                       let q' := impl_of_original' HPq in
@@ -584,7 +584,7 @@ Proof.
   eapply WFind.
   intros x IHwf ? Hpath Himpl q'. clear WFind.
   destruct Hpath.
-  - exists (ne_single q'). split.
+  - exists ([q']). split.
     + subst q'. collapse_ioo HPp Himpl. econstructor.
     + cbn. decide (deq_loop h a);cbn.
       * f_equal. subst q'. resolve_ioo_eq.
@@ -599,10 +599,8 @@ Proof.
       assert (impl_list'_cond2 h c π).
       { unfold impl_list'_cond2. decide (deq_loop h c);[left;auto|].
         destruct Himpl;[contradiction|right;split;auto].
-        destruct (ne_to_list π) eqn:E;[congruence'|].
-        replace e0 with b in *.
-        2: eapply path_front in Hpath;rewrite nlcons_to_list in E;
-          subst;simpl_nl' E;rewrite E;simpl_nl;auto.
+        destruct π eqn:E; [cbn;auto|].
+        path_simpl' Hpath.
         intro N. eapply implode_nodes_inner_remove in N. 2:right;eapply e. 3: eapply p. 2:auto.
         subst. eapply no_self_loops;eauto.
       }
@@ -611,7 +609,6 @@ Proof.
       eexists;split.
       econstructor;eauto 1.
       1: eapply implode_nodes_edge;eauto.
-      unfold ne_to_list at 1. fold (ne_to_list π).
       rewrite H0. cbn. subst q'. rewrite IHwf1. reflexivity.
     + eapply edge_destruct in H. destruct H.
       * eapply impl_nimpl_ex_headexit in n as Hhexit;cycle 3;eauto.
@@ -626,18 +623,20 @@ Proof.
             destructH. eapply no_exit_head;eauto.
             unfold exited,exit_edge in e1; destructH. eauto using loop_contains_loop_head.
         }
-        specialize (IHwf (h' :< π0)).
-        assert (Prefix (h' :< π0) π).
-        1: { eapply prefix_eq. eexists. rewrite Hπ. simpl_nl. rewrite <-app_cons_assoc;reflexivity. }
+        specialize (IHwf (h' :: π0)).
+        assert (Prefix (h' :: π0) π).
+        1: { eapply prefix_eq.
+             exists (postfix_nincl h' π). rewrite Hπ at 1. setoid_rewrite <-app_cons_assoc at 1.
+             reflexivity. }
         exploit' IHwf.
         {
           eapply prefix_ex_cons in H0. destructH. econstructor. cbn. eauto.
         }
         specialize (IHwf h').
         exploit' IHwf.
-        { eapply path_prefix_path in H0;eauto. simpl_nl' H0. auto. }
+        { eapply path_prefix_path in H0;eauto. }
         exploit' IHwf. unfold q' in IHwf. destructH. 
-        exists (q' :<: ϕ). split.
+        exists (q' :: ϕ). split.
         ++ econstructor;eauto 1. unfold edge'.
            rewrite restrict_edge_intersection. cbn.
            unfold_edge_op. split_conj;eauto 1.
@@ -649,17 +648,16 @@ Proof.
            eapply eq_loop_exiting in Hhexit.
            unfold implode_nodes. cbn. left. 
            eapply eq_loop2;eauto.
-        ++ unfold ne_to_list. fold (ne_to_list π). fold (ne_to_list ϕ).
-           subst q'.
+        ++ subst q'.
            rewrite <-IHwf1.
            rewrite Hπ.
-           simpl_nl. rewrite <-app_cons_assoc.
+           rewrite <-app_cons_assoc.
            erewrite impl_list'_spec2;eauto.
            2: {
              unfold impl_list'_cond2.
              destruct Himpl;[left;auto|].
              exfalso. eapply no_exit_head;eauto.
-             destructH. unfold exited,exit_edge in e1. destructH. eapply loop_contains_loop_head;eauto.
+             destructH. unfold exited,exit_edge in H2. destructH. eapply loop_contains_loop_head;eauto.
            } 
            rewrite impl_list'_remove.
            2: {
@@ -689,19 +687,19 @@ Proof.
         }
         eapply path_from_elem' in Hel;eauto. destructH.
         eapply postfix_eq in Hel1. destruct Hel1 as [π0 Hπ].
-        specialize (IHwf (c :< π0)).
-        assert (Prefix (c :< π0) π) as Hpre.
-        { eapply prefix_eq. eexists. rewrite Hπ. simpl_nl. rewrite <-app_cons_assoc;reflexivity. }
+        specialize (IHwf (c :: π0)).
+        assert (Prefix (c :: π0) π) as Hpre.
+        { eapply prefix_eq. eexists. rewrite Hπ at 1. rewrite <-app_cons_assoc;reflexivity. }
         exploit' IHwf.
         { eapply prefix_ex_cons in Hpre. destructH. econstructor;cbn;eauto. }
         specialize (IHwf c).
         exploit' IHwf.
-        { eapply path_prefix_path in Hpre;eauto. simpl_nl' Hpre. eauto. }
+        { eapply path_prefix_path in Hpre;eauto. }
         exploit' IHwf. unfold q' in IHwf. destructH.
         exists ϕ;split;eauto.
-        unfold ne_to_list at 1. fold (ne_to_list π). rewrite Hπ.
+        rewrite Hπ.
         rewrite <-IHwf1.
-        simpl_nl. rewrite <-app_cons_assoc.
+        rewrite <-app_cons_assoc.
         assert (forall y, y ∈ postfix_nincl c π -> loop_contains c y) as Hy.
         {
           intros. eapply path_postfix_nincl_in_loop;cycle 1.
@@ -740,7 +738,7 @@ Proof.
   unfold edge'. destructH.
   eapply restrict_edge_path_equiv in Hpath0.
   destruct (toSubList ϕ _);[contradiction|].
-  exists (s :< l). eauto.
+  exists (s :: l). eauto.
 Qed.
 
 Require Import Disjoint.
@@ -779,8 +777,8 @@ Proof.
 Qed.
 
 Lemma impl_list_disjoint `(C : redCFG) h π ϕ s p q
-      (Hπ : CPath s p (π >: s))
-      (Hϕ : CPath s q (ϕ >: s))
+      (Hπ : CPath s p (π :r: s))
+      (Hϕ : CPath s q (ϕ :r: s))
       (Hdeq : deq_loop h s)
   : Disjoint π ϕ <-> Disjoint (impl_list' h π) (impl_list' h ϕ).
 Proof.

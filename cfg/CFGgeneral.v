@@ -4,7 +4,7 @@ Lemma all_sat_restrict_edge'
       (L : Type)
       (f : L -> L -> bool)
       (p q : L)
-      (π : ne_list L)
+      (π : list L)
       (Hπ : Path f p q π)
       (P : decPred L)
       (Hsat :  forall x : L, x ∈ π -> P x)
