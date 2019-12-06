@@ -11,7 +11,7 @@ Section disj.
   Notation "p '-->b' q" := (edge p q) (at level 55).
   Notation "p '-->' q" := (p -->b q = true) (at level 55, right associativity).
 
-  Variable (t1 t2 : ne_list (Lab * Tag)) (r1 r2 : list (Lab * Tag)) (q1 q2 s : Lab) (j1 j2 k : Tag).
+  Variable (t1 t2 : list (Lab * Tag)) (r1 r2 : list (Lab * Tag)) (q1 q2 s : Lab) (j1 j2 k : Tag).
   Hypotheses (Hlc : last_common' t1 t2 r1 r2 (s,k))
              (Hpath1 : TPath (root,start_tag) (q1,j1) t1)
              (Hpath2 : TPath (root,start_tag) (q2,j2) t2)
@@ -60,12 +60,10 @@ Section disj.
       rewrite <-app_cons_assoc in Hlc2.
       assert (Prefix ((s,k) :: l2') t2) as Hpre.
       { eapply prefix_eq. eexists;eauto. }
-      rewrite nlcons_to_list in Hpre. eapply path_prefix_path in Hpath2;eauto.
-      rewrite rcons_nl_rcons in Hlc0. eapply path_postfix_path in Hlc0;eauto.
-      simpl_nl' Hpath2. simpl_nl' Hlc0.
-      eapply path_app in Hlc0;eauto. cbn_nl' Hlc0.
+      eapply path_prefix_path in Hpath2;eauto.
+      eapply path_postfix_path in Hlc0;eauto.
+      eapply path_app' in Hlc0;eauto. cbn in Hlc0.
       eapply tpath_NoDup in Hlc0. clear - Hlc0 Hel H.
-      rewrite <-nlconc_to_list in Hlc0. simpl_nl' Hlc0.
       rewrite <-app_assoc in Hlc0.
       eapply NoDup_app;eauto.
     - rewrite Hloop in Hcont.
@@ -87,15 +85,15 @@ Section disj.
     eapply loop_contains_innermost in Hh as Hinner. destructH.
     eapply eq_loop_innermost in Hinner as Hinner'; eauto.
     eapply innermost_loop_deq_loop;eauto. 2:eapply Hloop in Hh;auto.
-    eapply path_front in Hpath1 as Hfront1.
-    eapply path_front in Hpath2 as Hfront2.
+    (*eapply path_front in Hpath1 as Hfront1.
+    eapply path_front in Hpath2 as Hfront2.*)
     cbn. decide (loop_contains h' p);[auto|exfalso].
     eapply ex_entry with (i0:=i) in Hinner;eauto.
     2: {
-      assert (t1 = (q1,j1) :< tl t1).
-      { clear - Hpath1. induction Hpath1;cbn;eauto. simpl_nl. reflexivity. }
-      rewrite H. simpl_nl.
-      econstructor. setoid_rewrite nlcons_to_list at 2. rewrite <-H. clear H.
+      assert (t1 = (q1,j1) :: tl t1).
+      { clear - Hpath1. induction Hpath1;cbn;eauto. }
+      rewrite H. 
+      econstructor. rewrite <-H. clear H.
       eapply splinter_single. 
       unfold last_common' in Hlc. destructH.
       eapply postfix_incl;eauto.
@@ -110,13 +108,8 @@ Section disj.
       rewrite <-app_cons_assoc in Hlc'0.
       setoid_rewrite Hlc'0 in Hinner.
       eapply succ_NoDup_app;eauto. Set Printing Coercions.
-      rewrite app_cons_assoc in Hlc'0. 
-      rewrite rcons_nl_rcons in Hlc'0.
-      rewrite nlconc_to_list in Hlc'0.
-      eapply ne_to_list_inj in Hlc'0.
+      rewrite app_cons_assoc in Hlc'0.
       rewrite app_cons_assoc.
-      rewrite rcons_nl_rcons.
-      rewrite nlconc_to_list. 
       setoid_rewrite <-Hlc'0. Unset Printing Coercions.
       eapply tpath_NoDup;eauto.
     }
@@ -143,32 +136,31 @@ Section disj.
     : Prefix j i.
   Proof.
     clear - Hpath Hnhead Hdeqq.
-    remember (ne_to_list l) as l' in Hpath.
+    remember (l) as l' in Hpath.
     assert (Postfix l' l) as Hpost by (rewrite Heql';econstructor;eauto).
-    assert ((p,i) ∈ l') as Hel by (rewrite Heql';eapply path_contains_back;eauto).
+    assert ((p,i) ∈ l') as Hel.
+    { (rewrite Heql';eapply path_contains_back;subst;eauto). }
     remember p as p'. remember i as i'. rewrite Heqp' in Hpath. rewrite Heqi' in Hpath.
     clear Heql' Heqp' Heqi'.
-    revert p' i' Hel.
+    revert p' i' Hel p i Hpath.
     rinduction l'.
     - contradiction.
     - eapply In_rcons in Hel. destruct Hel.
       + subst a.
         specialize (rcons_destruct l0) as Hl0. destruct Hl0;[|destructH];subst l0.
         * cbn in *.
-          inversion Hpath;subst;eapply postfix_hd_eq in Hpost;
-            inversion Hpost;subst;cbn.
-          -- econstructor;auto.
-          -- clear. induction j;cbn;econstructor;auto. 
-        * copy Hpost Hpost'.
-          eapply postfix_path in Hpost;eauto.
-          rewrite rcons_nl_rcons in Hpost.
-          simpl_nl' Hpost.
-          eapply path_nlrcons_edge in Hpost. simpl_nl' Hpost.
-          destruct a.
+          inversion Hpath;subst. 2: { inversion H4. }
+          destruct l;[inversion Hpost;congruence'|]; eapply postfix_hd_eq in Hpost;
+                                   inversion Hpost;subst;cbn.
+          econstructor;auto.
+        * destruct a.
+          unfold TPath in *. path_simpl' Hpath.
           exploit' H.
           1: { eapply postfix_step_left;eauto. }
-          specialize (H e t). exploit H.
-          eapply tcfg_edge_destruct in Hpost as Q.
+          specialize (H e t). exploit' H. specialize (H e t). exploit H.
+          (* FIXME *)
+          eapply path_rcons_inv in Hpath. 
+          eapply tcfg_edge_destruct in Hpath as Q.
           assert ((p',i') ∈ l) as Helpi.
           { eapply postfix_incl;eauto. }
           assert ((e,t) ∈ l) as Helet.
