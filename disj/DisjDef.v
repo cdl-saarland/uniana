@@ -7,10 +7,10 @@ Parameter loop_splits : forall `{redCFG}, Lab -> Lab -> list (Lab * Lab * Lab).
 
 (* remove branch from splits, we can use the assumed global branch function to get varsets back*)
 Definition pl_split `{redCFG} (qh qe q1 q2 br : Lab) :=
-  (exists π ϕ, CPath br qh (π :>: br)
-          /\ CPath br qe (ϕ :>: br)
-          /\ q1 = ne_back π
-          /\ q2 = ne_back ϕ
+  (exists π ϕ, CPath br qh (π ++ [br])
+          /\ CPath br qe (ϕ :r: br)
+          /\ Some q1 = hd_error (rev π)
+          /\ Some q2 = hd_error (rev ϕ)
           /\ q1 <> q2 (* if π = single or φ = single, then this is not implied by the next condition *)
           /\ Disjoint (tl π) (tl ϕ)).
 
@@ -31,12 +31,13 @@ Parameter rel_splits : forall `{redCFG}, Lab -> Lab -> list (Lab * Lab * Lab).
 (** * Some useful lemmas **)
 
 Lemma path_nlrcons_edge {A : Type} (a b c : A) l f
-      (Hpath : Path f b c (l :>: a))
-  : f a (ne_back l) = true.
+      (Hpath : Path f b c (l :r: a :r: b))
+  : f b a = true.
 Proof.
   revert dependent c.
   induction l; intros; inversion Hpath; subst; cbn in *.
-  - inversion H3. subst b0 b a1. auto.
+  - inversion H3. subst b0 b;auto. inversion H5.
+  - congruence'.
   - eauto.
 Qed.
 
@@ -63,13 +64,6 @@ Proof.
   f_equal.
   eapply postfix_hd_eq;eauto.
 Qed.
-
-Lemma hd_error_ne_front {A : Type} (l : ne_list A)
-  : hd_error l = Some (ne_front l).
-Proof.
-  induction l;cbn;auto.
-Qed.
-
 
 Lemma lc_succ_rt1 {A : Type} `{EqDec A eq} l1 l2 l1' l2' (x y : A)
       (Hlc : last_common' l1 l2 l1' l2' x)

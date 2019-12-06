@@ -14,7 +14,7 @@ Section disj.
   
   (* TODO: remove *)
   Definition prec_loop_contains (qh q : Lab) (k j : Tag)
-    := exists (p : Lab) (π : ne_list Coord),
+    := exists (p : Lab) (π : list Coord),
       p ↪ qh /\ TPath (q,j) (p,k) π /\ qh ∉ tl (rev (map fst π)).
 
   (* TODO: remove *) 
@@ -41,9 +41,7 @@ Section disj.
             inversion Hpost;subst;eapply deq_loop_refl.
         * copy Hpost Hpost'.
           eapply postfix_path in Hpost;eauto.
-          rewrite rcons_nl_rcons in Hpost.
-          simpl_nl' Hpost.
-          eapply path_nlrcons_edge in Hpost. simpl_nl' Hpost.
+          eapply path_nlrcons_edge in Hpost.
           destruct a.
           destruct (tag_deq_or_entry Hpost) as [Hdeq|Hentry].
           -- eapply deq_loop_trans;eauto. eapply H;eauto.
@@ -95,9 +93,7 @@ Section disj.
           -- clear. induction j;cbn;econstructor;auto. econstructor.
         * copy Hpost Hpost'.
           eapply postfix_path in Hpost;eauto.
-          rewrite rcons_nl_rcons in Hpost.
-          simpl_nl' Hpost.
-          eapply path_nlrcons_edge in Hpost. simpl_nl' Hpost.
+          eapply path_nlrcons_edge in Hpost.
           destruct a.
           (* everything outside these brackets [ *)
           exploit' H.
@@ -127,7 +123,7 @@ Section disj.
         * eapply postfix_step_left;eauto.
   Qed.
 
-  Lemma while'_front_In (A : Type) (e : A -> A -> bool) (P : decPred A) (l : ne_list A) (a b : A)
+  Lemma while'_front_In (A : Type) (e : A -> A -> bool) (P : decPred A) (l : list A) (a b : A)
         (Hpath : Path e a b l)
         (HP : P b)
     : b ∈ while' P l.
@@ -166,7 +162,7 @@ Section disj.
         eapply while'_front_In;eauto. cbn. omega. }
       destructH.
       destruct a0 as [h' k].
-      eapply postfix_ex_cons in H1. destructH. erewrite H in H1.
+      eapply postfix_ex_cons in H. destructH. erewrite H1 in H.
       assert (h' = h); [|subst h'].
       { (*
          * h' is a header
@@ -182,23 +178,22 @@ Section disj.
             * rewrite Heqt'. eapply while'_Forall.
             * rewrite H0. eapply In_rcons. left. auto.
           + eapply loop_contains_deq_loop;auto.
-        - rewrite H0 in H1. 
-          eapply postfix_path in H1;eauto 1.
-          instantiate (1:=e).
-          rewrite rcons_nl_rcons in H1. simpl_nl' H1.
-          eapply path_nlrcons_edge in H1. simpl_nl' H1.
-          eapply tcfg_edge_spec in H1. destructH. eauto.
-        - eapply while'_max in H1 as H1';eauto. cbn in H1'. contradict H1'.
+        - rewrite H0 in H. 
+          eapply postfix_path in H;eauto 1.
+          instantiate (1:=e). 
+          eapply path_nlrcons_edge in H. 
+          eapply tcfg_edge_spec in H. destructH. eauto.
+        - eapply while'_max in H as H1';eauto. cbn in H1'. contradict H1'.
           eapply loop_contains_deq_loop in H1'.
           eapply innermost_eq_loop in Hin.
           rewrite Hin in H1'.
-          eapply postfix_incl in H1.
+          eapply postfix_incl in H.
           eapply path_to_elem in Hpath as Hpath'. 
-          2: { eapply H1. eapply In_rcons. left. reflexivity. }
+          2: { eapply H. eapply In_rcons. left. reflexivity. }
           destructH.
           eapply deq_loop_le;cycle 1;eauto.
       }
-      eapply while'_max in H1 as Hmax;[|eauto]. cbn in Hmax.
+      eapply while'_max in H as Hmax;[|eauto]. cbn in Hmax.
       destruct a'. cbn in *. assert (|l| < |j|) as Hmax' by omega.
       assert (|j| <= |k|) as Hjk.
       { assert ((h,k) ∈ t') by (rewrite H0;eapply In_rcons;eauto).
@@ -218,9 +213,9 @@ Section disj.
           - rewrite H0. eapply In_rcons. left. eauto.
         }
         rewrite H2 in H3. cbn in H3. cbn. subst j k.
-        clear - Hpost Heqt' H0 H Hpath Hord Hin Hnin.
+        clear - Hpost Heqt' H0 H H1 Hpath Hord Hin Hnin.
         eapply postfix_eq in Hpost. destructH.
-        rewrite H,Hpost.
+        rewrite H1,Hpost.
         rewrite consAppend. 
         eapply splinter_app; eapply splinter_single.
         * rewrite H0. eapply In_rcons. auto.
@@ -231,18 +226,10 @@ Section disj.
           eapply geq_tag_suffix_deq in Hpath;cycle 1.
           -- eapply while'_postfix. symmetry. eauto.
           -- rewrite Heqt'. eapply while'_Forall.
-          -- rewrite Heqt'. eapply H1.
+          -- rewrite Heqt'. eauto. 
           -- eapply Hnin. eapply Hpath. eapply Hin.
-      + rewrite H0 in H1. eapply postfix_path in H1;eauto.
-        rewrite rcons_nl_rcons in H1. simpl_nl' H1.
-        eapply path_nlrcons_edge in H1. simpl_nl' H1. eauto.
-    (*
-     * define t' as the maximal suffix of t with tag dim >= |j|.
-     * then forall x ∈ t', deq_loop x q thus x ∈ h
-     * by definition t = t' or the maximal suffix starts with a loop enter
-       * if t = t', contradiction bc. p ∈ t = t', and p ∈ h
-       * else, ne_back t' = (h,0 :: tl j) and p ∉ t'
-       *)
+      + rewrite H0 in H. eapply postfix_path in H;eauto.
+        cbn in H. eapply path_nlrcons_edge in H. eauto. 
   Qed.
   
   Lemma ex_entry_elem (h p q q' : Lab) (i j j' : Tag) t
@@ -274,20 +261,22 @@ Section disj.
 
   (* misc *)
 
-  Global Instance Path_dec (L : eqType) (e : L -> L -> bool) (x y : L) (π : ne_list L)
+  Global Instance Path_dec (L : eqType) (e : L -> L -> bool) (x y : L) (π : list L)
     : dec (Path e x y π).
   Proof.
-  revert y.
-  induction π;intro y;eauto.
-  - decide (a = x);decide (a = y);subst. 1: left;econstructor.
-    all: right;contradict n;inversion n;reflexivity.
-  - destruct (IHπ (ne_front π)).
-    1: decide (a = y).
-    1: subst; destruct (e (ne_front π) y) eqn:E.
-    1: left;econstructor;eauto 1.
-    all: right;intro N;inversion N;clear N.
-    all: match goal with [ Q : Path _ _ _ _ |- _] => eapply path_front in Q as Hfront end.
-    all: cbn in Hfront;subst;try contradiction. congruence.
+    revert y.
+    induction π;intro y;eauto.
+    - right. intro N. inversion N.
+    - destruct π.
+      + decide (a = x);decide (a = y);subst. 1: left;econstructor.
+        all: right;contradict n;inversion n;try reflexivity. all: subst π. inversion H0. inversion H3.
+      + destruct (IHπ e0).
+        1: decide (a = y).
+        1: subst; destruct (e e0 y) eqn:E.
+        1: left;econstructor;eauto 1.
+        all: right;intro N;inversion N;clear N.
+        all: match goal with [ Q : Path _ _ _ _ |- _] => eapply path_front in Q as Hfront end.
+        all: cbn in Hfront;subst;try contradiction. congruence.
   Qed.
 
   Lemma ex_back_edge (p h q : Lab) (i j k : Tag) t
@@ -307,7 +296,7 @@ Section disj.
      *) 
   Admitted.
   
-  Variable (t1 t2 : ne_list (Lab * Tag)) (r1 r2 : list (Lab * Tag)) (q1 q2 s : Lab) (j1 j2 k : Tag).
+  Variable (t1 t2 : list (Lab * Tag)) (r1 r2 : list (Lab * Tag)) (q1 q2 s : Lab) (j1 j2 k : Tag).
   Hypotheses (Hlc : last_common' t1 t2 r1 r2 (s,k))
              (Hpath1 : TPath (root,start_tag) (q1,j1) t1)
              (Hpath2 : TPath (root,start_tag) (q2,j2) t2)
@@ -322,23 +311,24 @@ Section disj.
     eapply loop_contains_innermost in Hh as Hinner. destructH.
     eapply eq_loop_innermost in Hinner as Hinner'; eauto.
     eapply innermost_loop_deq_loop;eauto. 2:eapply Hloop in Hh;auto.
-    eapply path_front in Hpath1 as Hfront1.
-    eapply path_front in Hpath2 as Hfront2.
+(*    eapply path_front in Hpath1 as Hfront1.
+    eapply path_front in Hpath2 as Hfront2.*)
+    unfold TPath in *.
     destruct r1, r2.
-    - eapply lc_nil1 in Hlc. rewrite hd_error_ne_front in Hlc. inversion Hlc.
-      setoid_rewrite Hfront1 in H0. inversion H0. subst. destruct Hinner. eauto. 
-    - eapply lc_nil1 in Hlc.
-      rewrite hd_error_ne_front in Hlc. setoid_rewrite Hfront1 in Hlc. inversion Hlc. subst s k.
+    - eapply lc_nil1 in Hlc. destruct t1;inversion Hlc. path_simpl' Hpath1.
+      inversion H0. subst. destruct Hinner. eauto.  
+    - eapply lc_nil1 in Hlc. destruct t1;inversion Hlc. subst p0.
+      replace s with (fst (s,k)) by (cbn;auto). path_simpl' Hpath1. cbn.
       unfold innermost_loop in Hinner. destructH; auto.
-    - eapply last_common'_sym in Hlc. eapply lc_nil1 in Hlc.
-      rewrite hd_error_ne_front in Hlc. setoid_rewrite Hfront2 in Hlc. inversion Hlc. subst s k.
+    - eapply last_common'_sym in Hlc. eapply lc_nil1 in Hlc. destruct t2;inversion Hlc.
+      replace s with (fst (s,k)) by (cbn;auto). path_simpl' Hpath2. cbn. inversion H0.
       unfold innermost_loop in Hinner'. destructH; auto.
     - decide (loop_contains h' s);[auto|exfalso].
       assert (p = (q1,j1)); [|subst p].
-      { eapply lc_cons1 in Hlc;rewrite hd_error_ne_front in Hlc;setoid_rewrite Hfront1 in Hlc. inversion Hlc;auto. }
+      { eapply lc_cons1 in Hlc; destruct t1; inversion Hlc;auto. subst. path_simpl' Hpath1. auto.  }
       assert (p0 = (q2,j2)); [|subst p0].
       { eapply last_common'_sym in Hlc.
-        eapply lc_cons1 in Hlc;rewrite hd_error_ne_front in Hlc;setoid_rewrite Hfront2 in Hlc. inversion Hlc;auto. }
+        eapply lc_cons1 in Hlc; destruct t2; inversion Hlc;auto. subst. path_simpl' Hpath2. auto. }
       copy Hinner Hinner''.
       eapply ex_entry in Hinner;eauto.
       eapply ex_entry in Hinner';eauto.
