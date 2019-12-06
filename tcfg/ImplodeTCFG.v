@@ -44,9 +44,8 @@ Section tcfg.
         (Hpath : TPath (p,i) (q,j) t)
         (Hp : implode_nodes C h p)
         (Hq : implode_nodes C h q)
-    : exists t', @TPath _ _ _ _ (local_impl_CFG C h) (impl_of_original' Hp,i)
-                   (impl_of_original' Hq,j) t'
-            /\ ne_to_list t' = impl_tlist h t.
+    : @TPath _ _ _ _ (local_impl_CFG C h) (impl_of_original' Hp,i)
+                   (impl_of_original' Hq,j) (impl_tlist h t).
   Proof.
     Admitted.
 

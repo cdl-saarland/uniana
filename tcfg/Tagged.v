@@ -190,14 +190,12 @@ Admitted. (* FIXME *)
 
 
 Lemma TPath_CPath  c c' π :
-  TPath c c' π -> CPath (fst c) (fst c') (ne_map fst π).
+  TPath c c' π -> CPath (fst c) (fst c') (map fst π).
 Proof.
   intros Q. dependent induction Q; [|destruct b,c]; econstructor; cbn in *.
   - apply IHQ. 
   - conv_bool. firstorder. 
 Qed.            
-
-Definition TPath' π := TPath (ne_back π) (ne_front π) π.
 
 
 Parameter eff_tag_fresh : forall p q q0 i j j0 l,
@@ -208,26 +206,24 @@ Parameter eff_tag_det : forall  q j p i i',
     eff_tag q p j = i' ->
     i = i'.
 
-Lemma tpath_succ_eff_tag  p q r i j s t
-      (Hpath : TPath' ((r,s) :< t))
+Lemma tpath_succ_eff_tag  p q r i j s t a l
+      (Hpath : TPath (a,l) (r,s) ((r,s) :: t))
       (Hsucc : (q,j) ≻ (p,i) | (r,s) :: t)
   : eff_tag p q i = j.
 Proof.
   unfold succ_in in Hsucc. destructH.
-  assert ((r,s) :< t = l2 >: (q,j) :>: (p,i) :+ l1) as Hsucc'.
+  assert ((r,s) :: t = l2 :r: (q,j) :r: (p,i) ++ l1) as Hsucc'.
   {
-    rewrite nlcons_to_list in Hsucc. eapply ne_to_list_inj. rewrite Hsucc.
-    simpl_nl. 
+    rewrite Hsucc.
     do 2 rewrite app_cons_assoc. reflexivity.
   }
   rewrite Hsucc' in Hpath.
-  unfold TPath' in Hpath.
   eapply postfix_path with (l:=l2 :r: (q,j)) (p:=(p,i)) in Hpath.
-  - eapply path_prefix_path with (ϕ:= (q,j) :<: ne_single (p,i)) in Hpath.
+  - eapply path_prefix_path with (ϕ:= [(p,i)]) (r:=(q,j))in Hpath.
     + inversion Hpath;subst;eauto. unfold tcfg_edge,tcfg_edge' in H3. cbn in H3. destruct b. conv_bool.
-      inversion H0;subst. destruct H3. eauto.
-    + cbn; simpl_nl. clear. induction l2; cbn; econstructor; eauto.
-  - cbn; simpl_nl. clear. induction l2; cbn; destruct l1; cbn; simpl_nl; eauto using postfix_cons.
+      inversion H0;subst. destruct H3. eauto. inversion H5.
+    + cbn; clear. induction l2; cbn in *; econstructor; eauto.
+  - cbn; clear. induction l2; cbn; destruct l1; cbn; eauto using postfix_cons.
     1,2: repeat (eapply postfix_cons; try econstructor). eapply postfix_nil.
 Qed.
 
@@ -257,7 +253,7 @@ Proof.
 Qed.
 
 Lemma exit_succ_exiting (p q h e : Lab) (k i j : Tag) r
-      (Hpath : TPath (p,k) (q,j) (r >: (p,k)))
+      (Hpath : TPath (p,k) (q,j) (r :r: (p,k)))
       (Hexit : exited h e)
       (Hel : (e,i) ∈ r)
   : exists qe n, exit_edge h qe e /\ (e,i) ≻ (qe,n :: i) | r :r: (p,k).
@@ -269,24 +265,24 @@ Proof.
 
   Lemma prec_tpath_pre_tpath p i q j l
         (Hneq : p <> q)
-        (Htr : TPath (root,start_tag) (p,i) ((p, i) :< l))
+        (Htr : TPath (root,start_tag) (p,i) ((p, i) :: l))
         (Hprec : Precedes fst l (q, j))
-    : exists l', TPath (root,start_tag) (q,j) ((q,j) :< l') /\ Prefix ((q,j) :: l') ((p,i) :: l).
+    : exists l', TPath (root,start_tag) (q,j) ((q,j) :: l') /\ Prefix ((q,j) :: l') ((p,i) :: l).
   Proof.
     eapply path_to_elem with (r:= (q,j)) in Htr.
     - destructH. exists (tl ϕ).
-      assert (ϕ = (q,j) :< tl ϕ) as ϕeq.
-      { inversion Htr0;subst a;cbn;simpl_nl;eauto. }
+      assert (ϕ = (q,j) :: tl ϕ) as ϕeq.
+      { inversion Htr0;subst a;cbn;eauto. }
       split;eauto.
       + rewrite ϕeq in Htr0;eauto.        
-      + rewrite ϕeq in Htr1;simpl_nl' Htr1;eauto.
-    - eapply precedes_in. simpl_nl. econstructor;eauto;cbn;eauto.
+      + rewrite ϕeq in Htr1;eauto.
+    - eapply precedes_in. econstructor;eauto;cbn;eauto.
   Qed.
   
   Lemma prec_tpath_tpath p i q j l
-        (Htr : TPath (root,start_tag) (p,i) ((p, i) :< l))
+        (Htr : TPath (root,start_tag) (p,i) ((p, i) :: l))
         (Hprec : Precedes fst ((p,i) :: l) (q, j))
-    : exists l', TPath (root,start_tag) (q,j) ((q,j) :< l').
+    : exists l', TPath (root,start_tag) (q,j) ((q,j) :: l').
   Proof.
     inversion Hprec;subst.
     - firstorder.
@@ -315,8 +311,8 @@ Proof.
     induction l1;intros;inversion Hpath1.
     - inversion Hpath2.
       + reflexivity.
-      + exfalso. subst a1 a0 p j1 a c. destruct b. eapply tcfg_edge_spec in H4.
-        eapply root_no_pred. eapply H4.
+      + exfalso. subst a1 a0 p j1 a c l1. destruct b. eapply tcfg_edge_spec in H5.
+        eapply root_no_pred. eapply H5.
     - destruct b. subst c a0 a π.
       eapply tcfg_edge_destruct in H4.
       destruct H4 as [Hedge|[Hedge|[Hedge|Hedge]]].
@@ -359,13 +355,18 @@ Proof.
   Proof.
     revert dependent p. revert i.
     induction l;intros.
-    - inversion HPath. subst a0 p i a. cbn in Hin. destruct Hin;[|contradiction].
-      inversion H;subst. eauto.
+    - inversion HPath. (*subst a0 p i a. cbn in Hin. destruct Hin;[|contradiction].
+      inversion H;subst. eauto.*)
     - destruct a. cbn in Hin.
       destruct Hin.
-      + exfalso. inversion H. subst. inversion HPath. subst. destruct b.
-        eapply root_no_pred. eapply tcfg_edge_spec; eauto.
-      + inversion HPath. subst. destruct b. eapply IHl;eauto.
+      + inversion H. subst. inversion HPath.
+        * reflexivity.
+        * exfalso.
+          subst a c p i π. destruct b.
+          eapply root_no_pred. eapply tcfg_edge_spec; eauto.
+      + inversion HPath.
+        * subst l. contradiction.
+        * destruct b. eapply IHl;eauto.
   Qed.
   
   Lemma tag_prefix_ancestor a p q i j l
@@ -384,20 +385,20 @@ Proof.
 
   Lemma tag_prefix_ancestor_elem a p q r i j k l
         (Hanc : ancestor a p q)
-        (Hpath : TPath (root,start_tag) (r,k) ((r,k) :< l))
+        (Hpath : TPath (root,start_tag) (r,k) ((r,k) :: l))
         (Hprec : Precedes fst ((r,k) :: l) (a,j))
         (Hib : (p,i) ≻* (a,j) | (r,k) :: l)
     : Prefix j i.
   Proof.
-    eapply splinter_in in Hib as Hin. rewrite nlcons_to_list in Hin.
+    eapply splinter_in in Hib as Hin. 
     eapply path_to_elem in Hin;eauto. destructH.
     decide (i = j).
     { subst. reflexivity. }
     eapply tag_prefix_ancestor;eauto.
     eapply path_contains_front in Hin0 as Hfront.
-    eapply tpath_NoDup in Hin0. simpl_nl' Hin0.
-    eapply tpath_NoDup in Hpath. simpl_nl' Hpath.
-    clear - Hprec Hib Hin1 Hpath Hin0 n Hfront. simpl_nl' Hin1. set (l' := (r,k) :: l) in *.
+    eapply tpath_NoDup in Hin0. 
+    eapply tpath_NoDup in Hpath. 
+    clear - Hprec Hib Hin1 Hpath Hin0 n Hfront. set (l' := (r,k) :: l) in *.
     eapply prefix_eq in Hin1. destructH.
     revert dependent l'. revert dependent ϕ. induction l2';intros.
     - cbn in Hin1. rewrite Hin1 in Hprec. eauto.
@@ -479,31 +480,22 @@ Proof.
   Proof.
     Admitted.
   
-  Lemma tpath_deq_loop_prefix p q i j t
+  Lemma tpath_deq_loop_prefix p q i j t x l y m
         (Hdeq : deq_loop p q)
-        (Hpath : TPath' t)
+        (Hpath : TPath (x,l) (y,m) t)
         (Hpre : Prefix j i)
     : (q,j) ≻* (p,i) | t.
   Proof.
-    Admitted. (* FIXME *)
+  Admitted. (* FIXME *)
   
-  Lemma tpath_tpath' r i0 p i t
-        (Hpath : TPath (r,i0) (p,i) t)
-    : TPath' t.
-  Proof.
-    unfold TPath'. eapply path_back in Hpath as Hback. eapply path_front in Hpath as Hfront.
-    rewrite Hfront,Hback. assumption.
-  Qed.
-
-  Hint Resolve tpath_tpath'.
   Hint Resolve precedes_in.
   
   Lemma dom_dom_in_between  (p q r : Lab) (i j k : Tag) l
         (Hdom1 : Dom edge root r q)
         (Hdom2 : Dom edge root q p)
-        (Hprec : Precedes fst ((p,i) :< l) (q,j))
+        (Hprec : Precedes fst ((p,i) :: l) (q,j))
         (Hin : (r,k) ∈ ((p,i) :: l))
-        (Hpath : TPath (root,start_tag) (p,i) ((p,i) :< l))
+        (Hpath : TPath (root,start_tag) (p,i) ((p,i) :: l))
     : (q,j) ≻* (r,k) | (p,i) :: l.
     
   Proof.
@@ -528,18 +520,18 @@ Proof.
       eapply exit_pred_loop in Hexit.
   Admitted. (* FIXME *)
   
-  Lemma loop_cutting_elem q p t i j
-        (Hpath : TPath' ((p,i) :< t))
+  Lemma loop_cutting_elem q p t i j x l
+        (Hpath : TPath (x,l) (p,i) ((p,i) :: t))
         (Hib : (p,i) ≻* (q,j) | (p,i) :: t)
         (Hnoh : forall h k, loop_contains h q -> ~ (p,i) ≻* (h,k) ≻* (q,j) | (p,i) :: t)
     : exists t', Path a_edge q p t'.
   Proof.
     Admitted.
 
-  Lemma exit_cascade u p t i j k
+  Lemma exit_cascade u p t i j k x l
         (Hdom : Dom edge root u p)
         (Hprec : Precedes fst ((p,i) :: t) (u,j))
-        (Hpath : TPath' ((p,i) :< t))
+        (Hpath : TPath (x,l) (p,i) ((p,i) :: t))
     : forall h, loop_contains h u -> ~ (p,i) ≻* (h,k) ≻* (u,j) | (p,i) :: t.
     (* otw. there would be a path through this q to p without visiting u *)
     (* this could even be generalized to CPaths *)
