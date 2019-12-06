@@ -1,4 +1,4 @@
-Require Import NePreSuffix CFGgeneral.
+Require Import CFGgeneral.
 Require Export HeadexitsCFG SubCFG.
 
 Definition implode_nodes `{C : redCFG} (r : Lab)

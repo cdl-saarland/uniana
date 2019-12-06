@@ -1,5 +1,4 @@
 Require Export CFGloop.
-Require Import NePreSuffix.
 
 Section cfg.
   Context `{C : redCFG}.

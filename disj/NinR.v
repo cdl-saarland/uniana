@@ -244,7 +244,7 @@ Section disj.
       eapply only_inner_heads_tag_prefix;eauto.
       + intros. eapply no_head;eauto.
         eapply postfix_incl.
-        * eapply NePreSuffix.postfix_map.
+        * eapply postfix_map.
           eapply postfix_tl_rev in Hel1. simpl_nl' Hel1.
           rewrite rev_rcons in Hel1. cbn in Hel1. rewrite rev_involutive in Hel1. eauto.
         * eapply in_map with (f:=fst) in H. cbn in H. rewrite map_rev. rewrite <-in_rev. eauto.
