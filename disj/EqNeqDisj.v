@@ -28,7 +28,7 @@ Section disj.
   Notation "p '-->b' q" := (edge p q) (at level 55).
   Notation "p '-->' q" := (p -->b q = true) (at level 55, right associativity).
 
-  Variable (t1 t2 : ne_list (Lab * Tag)) (r1 r2 : list (Lab * Tag)) (q1 q2 s : Lab) (j1 j2 k : Tag).
+  Variable (t1 t2 : list (Lab * Tag)) (r1 r2 : list (Lab * Tag)) (q1 q2 s : Lab) (j1 j2 k : Tag).
   Hypotheses (Hlc : last_common' t1 t2 r1 r2 (s,k))
              (Hpath1 : TPath (root,start_tag) (q1,j1) t1)
              (Hpath2 : TPath (root,start_tag) (q2,j2) t2)
@@ -129,26 +129,26 @@ Section disj.
       + inversion H0. rewrite H2 in *. subst i'.
         exploit Hpre.
         eapply impl_tlist_tpath in Hpath1 as Hpath11.
-        destruct Hpath11 as [t' [Hpath1' Heq]].
+        (*        destruct Hpath11 as [t' |[Hpath1' Heq]].*)
+        
         assert (↓ purify_implode s = impl_of_original' (implode_nodes_root_inv s)) as H1.
         { unfold purify_implode, impl_of_original'. f_equal. eapply pure_eq. }
-        rewrite <-H1 in Hpath1'. 
         eapply prefix_length_eq;eauto.
+        rewrite <-H1 in Hpath11. 
         eapply Nat.le_antisymm.
         * setoid_rewrite (@tag_depth (local_impl_CFG_type C s)) at 1.
           setoid_rewrite (@tag_depth Lab). 
-          eapply Hlen. 
+          eapply Hlen.
           1: eapply Hpath1.
           1: eapply Hkin.
-          -- instantiate (1:=t').
-             Unshelve. 2: left;eapply Hsq. 2,3:shelve. eauto.
-          -- eapply impl_tlist_incl in Hpost. setoid_rewrite <-Heq in Hpost. eapply Hpost.
+          -- eapply Hpath11.
+          -- eapply impl_tlist_incl in Hpost. eapply Hpost. 
              rewrite Hcons. left;eauto.
         * setoid_rewrite (@tag_depth);cycle 1.
-          -- eapply Hpath1'.
+          -- eapply Hpath11.
           -- eapply path_contains_front;eauto.
-          -- eapply Hpath1'.
-          -- eapply impl_tlist_incl in Hpost. setoid_rewrite <-Heq in Hpost. eapply Hpost.
+          -- eapply Hpath11.
+          -- eapply impl_tlist_incl in Hpost. eapply Hpost.
              rewrite Hcons. left;eauto.
           -- eapply deq_loop_depth.
              specialize (Hhq (q,j)). cbn in Hhq. exploit Hhq.
@@ -156,6 +156,7 @@ Section disj.
       + eapply IHl;eauto.
         * intros. eapply Hpre. cbn. right. eauto.
         * intros x Hx. eapply Hpost. right;auto.
+          Unshelve. left;auto.
   Qed.
   
 End disj.
@@ -173,7 +174,7 @@ Section disj.
   Notation "p '-->b' q" := (edge p q) (at level 55).
   Notation "p '-->' q" := (p -->b q = true) (at level 55, right associativity).
 
-  Variable (t1 t2 : ne_list (Lab * Tag)) (r1 r2 : list (Lab * Tag)) (q1 q2 s : Lab) (j1 j2 k : Tag).
+  Variable (t1 t2 : list (Lab * Tag)) (r1 r2 : list (Lab * Tag)) (q1 q2 s : Lab) (j1 j2 k : Tag).
   Hypotheses (Hlc : last_common' t1 t2 r1 r2 (s,k))
              (Hpath1 : TPath (root,start_tag) (q1,j1) t1)
              (Hpath2 : TPath (root,start_tag) (q2,j2) t2)
@@ -193,15 +194,15 @@ Section disj.
 
   Section same_tag.
     Variable (r3 : list (Lab * Tag)) (q3 : Lab).
-    Hypotheses (Hpre : Prefix r3 r2) (Hhd : ne_front (r3 >: (s,k)) = (q3,j1)). (*(Hneq3 : r1 <> r3).*)
+    Hypotheses (Hpre : Prefix r3 r2) (Hhd : hd_error (r3 :r: (s,k)) = Some (q3,j1)).
 
     Lemma r3_tpath
-      : TPath (s,k) (q3,j1) (r3 >: (s,k)).
+      : TPath (s,k) (q3,j1) (r3 :r: (s,k)).
     Proof.
       unfold last_common' in Hlc. destructH.
       eapply postfix_path in Hlc2;eauto.
       eapply path_prefix_path in Hlc2.
-      2: { simpl_nl. eapply prefix_rcons. eauto. }
+      2: { eapply prefix_rcons. eauto. }
       rewrite Hhd in Hlc2. eauto.
     Qed.
 

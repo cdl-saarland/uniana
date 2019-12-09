@@ -128,6 +128,18 @@ Section disj.
     eapply Hlc1;eauto.
   Qed.
 
+  (* TODO : move *)
+  Lemma path_rcons_rinv
+    : forall (L : Type) (edge : L -> L -> bool) (p q r : L) (π : list L),
+      Path edge r p ((π :r: q) :r: r) -> Path edge q p (π :r: q).
+  Proof.
+    clear.
+    intros. revert dependent p. induction π;cbn in *;intros.
+    - path_simpl' H. econstructor.
+    - path_simpl' H. inversion H;[congruence'|subst].
+      econstructor;eauto.
+  Qed.
+  
   (* TODO: move *)
   Lemma only_inner_heads_tag_prefix p i q j l 
         (Hpath : TPath (p, i) (q, j) l)
@@ -146,7 +158,7 @@ Section disj.
     rinduction l'.
     - contradiction.
     - eapply In_rcons in Hel. destruct Hel.
-      + subst a.
+      + subst a. 
         specialize (rcons_destruct l0) as Hl0. destruct Hl0;[|destructH];subst l0.
         * cbn in *.
           inversion Hpath;subst. 2: { inversion H4. }
@@ -154,33 +166,36 @@ Section disj.
                                    inversion Hpost;subst;cbn.
           econstructor;auto.
         * destruct a.
-          unfold TPath in *. path_simpl' Hpath.
+          unfold TPath in Hpath. 
+          assert ((p',i') ∈ l) as Helpi.
+          { eapply postfix_incl;eauto. }
+          replace i' with (snd (p',i')) by (cbn;auto).
+          path_simpl' Hpath. cbn. copy Hpath Hpath'.
+          eapply path_nlrcons_edge in Hpath.
           exploit' H.
           1: { eapply postfix_step_left;eauto. }
           specialize (H e t). exploit' H. specialize (H e t). exploit H.
-          (* FIXME *)
-          eapply path_rcons_inv in Hpath. 
+          1: eapply path_rcons_rinv;eauto.
           eapply tcfg_edge_destruct in Hpath as Q.
-          assert ((p',i') ∈ l) as Helpi.
-          { eapply postfix_incl;eauto. }
           assert ((e,t) ∈ l) as Helet.
           { eapply postfix_incl;eauto. }
           destruct Q as [Q|[Q|[Q|Q]]];subst.
-          -- auto. (* normal *)
-          -- inversion H;subst. (* entry *)
-             ++ exfalso.
-                specialize (Hdeqq p' i'). exploit Hdeqq.
+          -- eauto. (* normal *)
+          -- inversion H;subst. (* entry *) 
+             ++ exfalso.          
+                specialize (Hdeqq p i). exploit Hdeqq.
                 eapply deq_loop_depth in Hdeqq.
-                assert (|i'| < |0 :: i'|) as Q by (cbn;omega). clear Helet.
-                eapply tpath_depth_lt in Q;[| | |eapply path_contains_front];eauto. omega.
+                assert (|i| < |0 :: i|) as Q by (cbn;omega). clear Helet.
+                eapply tpath_depth_lt in Q; [| | |eapply path_contains_front];eauto.
+                omega.
              ++ auto.                 
           -- inversion H.  (* back_edge *)
              ++ subst.
                 exfalso.
                 eapply Hnhead.
-                ** eapply postfix_rev_prefix in Hpost'.
-                   rewrite rev_rcons in Hpost'.
-                   eapply prefix_tl in Hpost'.
+                ** eapply postfix_rev_prefix in Hpost.
+                   rewrite rev_rcons in Hpost.
+                   eapply prefix_tl in Hpost.
                    eapply prefix_incl;eauto. rewrite rev_rcons. left. reflexivity.
                 ** eapply tag_back_edge_iff in Q;eauto.
                    assert ((e,t) ∈ l) as Hel.
@@ -190,23 +205,26 @@ Section disj.
                        +++ eapply Hdeqq;eauto.
                        +++ eapply tpath_depth_eq;eauto.
                            eapply path_contains_front;eauto.
-                   --- exists p';eauto.
-             ++ subst. destruct i';cbn in Q;[contradiction|].
+                   --- exists p;eauto.
+             ++ subst. destruct i;cbn in Q;[contradiction|].
                 inversion Q. subst. econstructor. eauto.
-          -- clear - H;destruct i';cbn in *;[auto|]. inversion H;subst;econstructor;auto.
-      + eapply H;eauto.
+          -- clear - H;destruct i;cbn in *;[auto|]. inversion H;subst;econstructor;auto. 
+      + destruct l0;[cbn in *;contradiction|].
+        unfold TPath in Hpath. path_simpl' Hpath. cbn in Hpath. path_simpl' Hpath.
+        eapply path_rcons_inv in Hpath. destructH. destruct p0.
+        eapply H;eauto.
         eapply postfix_step_left;eauto.
   Qed.
   
   Lemma r1_tpath
-    : TPath (s,k) (q1,j1) (r1 >: (s,k)).
+    : TPath (s,k) (q1,j1) (r1 :r: (s,k)).
   Proof.
     unfold last_common' in Hlc. destructH.
     eapply postfix_path in Hlc0;eauto.
   Qed.
 
   Lemma r2_tpath
-    : TPath (s,k) (q2,j2) (r2 >: (s,k)).
+    : TPath (s,k) (q2,j2) (r2 :r: (s,k)).
   Proof.
     unfold last_common' in Hlc. destructH.
     eapply postfix_path in Hlc2;eauto.
@@ -228,7 +246,6 @@ Section disj.
         (Hel : (p,i) ∈ (r1 :r: (s,k)))
     : Prefix j1 i.
   Proof.
-    rewrite rcons_nl_rcons in Hel.
     eapply path_from_elem in Hel;cycle 1.
     - eauto.
     - eapply r1_tpath.
@@ -237,10 +254,10 @@ Section disj.
       + intros. eapply no_head;eauto.
         eapply postfix_incl.
         * eapply postfix_map.
-          eapply postfix_tl_rev in Hel1. simpl_nl' Hel1.
+          eapply postfix_tl_rev in Hel1. 
           rewrite rev_rcons in Hel1. cbn in Hel1. rewrite rev_involutive in Hel1. eauto.
         * eapply in_map with (f:=fst) in H. cbn in H. rewrite map_rev. rewrite <-in_rev. eauto.
-      + intros. simpl_nl' Hel1. eapply postfix_incl in H;eauto.
+      + intros. eapply postfix_incl in H;eauto.
         eapply In_rcons in H. destruct H.
         * inversion H;subst. eapply s_deq_q;eauto.
         * eapply r1_in_head_q in H. cbn in H. eauto.
@@ -267,15 +284,13 @@ Section disj.
     eapply loop_contains_innermost in Hh as Hinner. destructH. 
     eapply eq_loop_innermost in Hinner as Hinner'; [|symmetry in Hloop];eauto.
     eapply innermost_loop_deq_loop;eauto. 2:eapply Hloop in Hh;auto.
-    eapply path_front in Hpath1 as Hfront1.
-    eapply path_front in Hpath2 as Hfront2.
     cbn. decide (loop_contains h' p);[auto|exfalso].
     eapply ex_entry with (i0:=i) in Hinner;eauto.
     2: {
-      assert (t2 = (q2,j2) :< tl t2).
-      { clear - Hpath2. induction Hpath2;cbn;eauto. simpl_nl. reflexivity. }
-      rewrite H. simpl_nl.
-      econstructor. setoid_rewrite nlcons_to_list at 2. rewrite <-H. clear H.
+      assert (t2 = (q2,j2) :: tl t2).
+      { clear - Hpath2. induction Hpath2;cbn;eauto. }
+      rewrite H. 
+      econstructor. rewrite <-H. clear H.
       eapply splinter_single. 
       unfold last_common' in Hlc. destructH.
       eapply postfix_incl;eauto.
@@ -299,7 +314,6 @@ Section disj.
       eapply s_deq_q;cycle 2;eauto.
     - destructH.
       destruct l;[contradiction|].
-(*      eapply prefix_tagle in Hbacke0.*)
       eapply PreOrder_Transitive in Hbacke1. exploit Hbacke1.
       { eapply prefix_tagle. eapply tl_j2_prefix_k. }                                   
       eapply tagle_prefix_hd_le in Hbacke0;eauto. 
