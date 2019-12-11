@@ -201,9 +201,12 @@ Section disj.
     Proof.
       unfold last_common' in Hlc. destructH.
       eapply postfix_path in Hlc2;eauto.
-      eapply path_prefix_path in Hlc2.
-      2: { eapply prefix_rcons. eauto. }
-      rewrite Hhd in Hlc2. eauto.
+      eapply prefix_rcons in Hpre.
+      rewrite rcons_cons' in Hpre.
+      rewrite rcons_cons' in Hhd. cbn in Hhd. inversion Hhd.
+      eapply path_prefix_path in Hpre.
+      - rewrite <-rcons_cons' in Hpre. eauto.
+      - eauto. 
     Qed.
 
     Lemma disjoint3
@@ -215,23 +218,23 @@ Section disj.
       - unfold last_common' in Hlc. destructH. eauto.
     Qed.
 
-    Local Definition t3 := r3 >: (s,k) :+ prefix_nincl (s,k) t2.
+    Local Definition t3 := r3 :r: (s,k) ++ prefix_nincl (s,k) t2.
 
     Lemma t3_postfix
       : Postfix (r3 :r: (s,k)) t3.
     Proof.
       eapply postfix_eq. exists (prefix_nincl (s,k) t2). unfold t3.
-      rewrite <-nlconc_to_list. simpl_nl. reflexivity.
+      reflexivity.
     Qed.
 
     Lemma t2_eq
-      : t2 = r2 >: (s,k) :+ prefix_nincl (s,k) t2.
+      : t2 = r2 :r: (s,k) ++ prefix_nincl (s,k) t2.
     Proof.
       unfold last_common' in Hlc. destructH.
       clear - Hpath2 Hlc2.
       eapply postfix_eq in Hlc2. destructH.
       enough (l2' = prefix_nincl (s,k) t2).
-      { rewrite <-H. eapply ne_to_list_inj. rewrite <-nlconc_to_list. simpl_nl. eauto. }
+      { rewrite <-H. eauto. }
       rewrite Hlc2. 
       eapply tpath_NoDup in Hpath2.
       setoid_rewrite Hlc2 in Hpath2. clear Hlc2.
@@ -257,7 +260,7 @@ Section disj.
       rewrite t2_eq. eapply prefix_eq.
       unfold t3. eapply prefix_eq in Hpre as Hpre'. destructH' Hpre'.
       rewrite Hpre'. eexists.
-      do 2 rewrite <-nlconc_to_list. simpl_nl. rewrite app_assoc.
+      rewrite app_assoc.
       rewrite <-app_rcons_assoc. reflexivity.
     Qed.
     
@@ -266,12 +269,11 @@ Section disj.
     Proof.
       unfold t3.
       replace (prefix_nincl (s,k) t2) with (tl ((s,k) :: prefix_nincl (s,k) t2)) by (cbn;eauto).
-      rewrite nlcons_to_list.
-      eapply path_app.
+      eapply path_app'.
       - eapply path_prefix_path;eauto.
         eapply prefix_eq. setoid_rewrite t2_eq at 1.
-        rewrite <-nlconc_to_list. simpl_nl. rewrite <-app_cons_assoc. eexists. reflexivity.
-      - simpl_nl. eapply r3_tpath.
+        rewrite <-app_cons_assoc. eexists. reflexivity.
+      - eapply r3_tpath.
     Qed.
     
     Lemma q3_eq_loop
@@ -298,7 +300,7 @@ Section disj.
       replace q3 with (fst (q3,j1)) by (cbn;eauto).
       eapply r2_in_head_q;eauto.
       destruct r3;[contradiction|]. cbn in Hhd.
-      eapply prefix_incl;eauto. left. eauto.
+      eapply prefix_incl;eauto. left. inversion Hhd. reflexivity.
     Qed.
 
     Lemma last_common_t3_r3
@@ -391,7 +393,7 @@ Section disj.
       eapply impl_list_disjoint.
       1: specialize (TPath_CPath r1_tpath') as HQ.
       2: specialize (TPath_CPath r3_tpath) as HQ.
-      1,2:cbn in HQ;rewrite ne_map_nl_rcons in HQ;eauto. (* <-- Hdep *)
+      1,2:cbn in HQ;rewrite map_rcons in HQ;eauto. (* <-- Hdep *)
       - reflexivity. (*eapply dep_eq_impl_head_eq in Hdep;eauto; destruct Hdep as [_ Hdep'];eauto.*)
       - eapply disj_node_impl.
     Qed.
@@ -402,9 +404,12 @@ Section disj.
     : Disjoint (map fst r1) (map fst r2).
   Proof.
     eapply disj_node; [reflexivity| ].
+    instantiate (1:=q2).
     unfold last_common' in Hlc. destructH.
-    eapply postfix_path in Hpath2;eauto. 
-    eapply path_front in Hpath2. rewrite Hjeq. eauto.
+    eapply postfix_path in Hpath2;eauto.
+    rewrite rcons_cons' in Hpath2.
+    eapply path_front in Hpath2. rewrite Hjeq.
+    destruct r2;cbn in *;inversion Hpath2; reflexivity. 
   Qed. 
 
   Lemma lc_neq_disj
