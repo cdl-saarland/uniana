@@ -285,24 +285,7 @@ Section lift_one.
      * because implosion only removes edges adjacent to removed nodes *)
   Admitted.
 
-  Local Definition t' := match impl_tlist q t with
-                         | nil => ne_single (h',j) (* never happening *)
-                         | a :: l => a :< l
-                         end.
-
-  Lemma impl_tlist_eq
-        (Hpath : TPath (root,start_tag) (`q',j) t)
-        (Heq : eq_loop q (`q'))
-    : impl_tlist q t = t'.
-  Proof.
-    eapply impl_tlist_tpath with (h:=q) in Hpath as Hpath'.
-    Unshelve.
-    2: { eapply implode_nodes_root_inv. } 2: { left. eapply Heq. }
-    destruct Hpath'. destruct H.
-    unfold t'. destruct impl_tlist.
-    - destruct x;cbn in H0;congruence.
-    - simpl_nl. reflexivity.
-  Qed.
+  Local Definition t' := impl_tlist q t.
 
   Lemma impl_lift_tpath
         (Hpath : TPath (root,start_tag) (`q',j) t)
@@ -320,28 +303,28 @@ Section lift_one.
 End lift_one.
 
 Lemma tpath_shift `(C : redCFG) (q qe s : Lab) (j i k : Tag) (q' e' s' : local_impl_CFG_type C q) n
-      (t : ne_list Coord) (t' : ne_list (local_impl_CFG_type C q * Tag)) r
+      (t : list Coord) (t' : list (local_impl_CFG_type C q * Tag)) r
       (Heq : eq_loop q (` q'))
       (Hpath : TPath (root, start_tag) (` q', j) t)
-      (Hr : TPath (s, k) (` q', j) (r >: (s, k)))
+      (Hr : TPath (s, k) (` q', j) (r :r: (s, k)))
       (Hel : (s, k) ∈ t)
       (qs' := fst (get_succ (s', i) (e', tl j) t') : local_impl_CFG_type C q)
       (Hqes1 : (` qs', i) ≻ (qe, n :: i) | r :r: (s, k))
       (rr := prefix_nincl (` qs', i) r : list (Lab * Tag))
-      (tt := (rr >: (s, k)) :+ prefix_nincl (s, k) t : ne_list (Lab * Tag))
+      (tt := (rr :r: (s, k)) ++ prefix_nincl (s, k) t : list (Lab * Tag))
   : TPath (root, start_tag) (qe, n :: i) tt.
 Proof.
   subst tt.
-  fold (tl ((s,k) :: prefix_nincl (s,k) t)). setoid_rewrite nlcons_to_list.
-  eapply path_app.
-  ++ eapply path_prefix_path;[eapply Hpath|]. simpl_nl. eapply prefix_nincl_prefix.
+  fold (tl ((s,k) :: prefix_nincl (s,k) t)). 
+  eapply path_app'.
+  ++ eapply path_prefix_path;[eapply Hpath|]. eapply prefix_nincl_prefix.
      eauto.
-  ++ simpl_nl. 
-     eapply path_prefix_path in Hr;cycle 1.
-     ** simpl_nl. eapply prefix_rcons. eapply prefix_nincl_prefix'.
+  ++ eapply path_prefix_path in Hr;cycle 1.
+     ** specialize (prefix_nincl_prefix' r (`qs',i)) as Hrr.
+        eapply prefix_rcons in Hrr. rewrite rcons_cons' in Hrr. eauto.
      ** subst rr.
-        enough ((qe,n :: i) = ne_front (prefix_nincl (` qs',i) r >: (s,k))).
-        { setoid_rewrite H. eapply Hr. }
+        enough ((qe,n :: i) = hd (s,k) (prefix_nincl (` qs',i) r :r: (s,k))).
+        { setoid_rewrite H. admit. }
         admit. (* critical *) 
 Admitted.
 
@@ -349,7 +332,7 @@ Module Lift.
 Section lift.
   Context `(C : redCFG).
   Variables (s q1 qs1 qs2 : Lab) (h' q1' q2' e1' e2' : local_impl_CFG_type C q1)
-            (t1 t2 : ne_list (Lab * Tag)) (r1 r2 : list (Lab * Tag)) (k j1 j2 js1 js2 : Tag).
+            (t1 t2 : list (Lab * Tag)) (r1 r2 : list (Lab * Tag)) (k j1 j2 js1 js2 : Tag).
   Hypotheses (Hlc : last_common' t1 t2 r1 r2 (s, k))
              (Hpath1 : TPath (root, start_tag) (`q1', j1) t1)
              (Hpath2 : TPath (root, start_tag) (`q2', j2) t2)
@@ -358,28 +341,15 @@ Section lift.
              (Hsucc1 : (qs1,js1) ≻ (s,k) | (`e1',tl j1) :: t1)
              (Hsucc2 : (qs2,js2) ≻ (s,k) | (`e2',tl j2) :: t2)
              (Hloop : eq_loop (`q1') (`q2'))
-             (Hextra : j1 = j2 -> exists π, CPath (` q2') (` h') (π >: `q2') /\ Disjoint (map fst r1) π)
+             (Hextra : j1 = j2 -> exists π, CPath (` q2') (` h') (π :r: `q2') /\ Disjoint (map fst r1) π)
              (Heq : eq_loop q1 (`q1')).
 
   Local Definition r1' := impl_tlist q1 r1.
   Local Definition r2' := impl_tlist q1 r2.
   Local Definition C' := C'' C q1.
   Local Definition Lab' := local_impl_CFG_type C q1.
-  Local Definition t1' := t' h' t1 j1.
-  Local Definition t2' := t' h' t2 j2.
-  
-  Lemma impl_tlist_eq1
-    : impl_tlist q1 t1 = t1'.
-  Proof.
-    eapply impl_tlist_eq;eauto.
-  Qed.
-  
-  Lemma impl_tlist_eq2
-    : impl_tlist q1 t2 = t2'.
-  Proof.
-    eapply impl_tlist_eq;eauto.
-    rewrite <-Hloop. eapply Heq.
-  Qed.
+  Local Definition t1' := t' C q1 t1. 
+  Local Definition t2' := t' C q1 t2.
 
   Lemma impl_lift_tpath1
     : TPath (C:=C') (↓ purify_implode q1, start_tag) (q1', j1) t1'.
@@ -406,7 +376,7 @@ Section lift.
   Qed.
 
   Lemma impl_lift_extra
-    : j1 = j2 -> exists π, CPath (H:=C') q2' h' (π >: q2') /\ Disjoint (map fst r1') π.
+    : j1 = j2 -> exists π, CPath (H:=C') q2' h' (π :r: q2') /\ Disjoint (map fst r1') π.
     intro H. exploit Hextra.
     clear - Hextra.
   Admitted.
@@ -508,13 +478,13 @@ Section lift.
   
   Local Definition rr1 := prefix_nincl (` qs1',j1) r1.
   Local Definition rr2 := prefix_nincl (` qs2',j1) r2.
-  Local Definition tt1 := rr1 >: (s,k) :+ prefix_nincl (s,k) t1.
-  Local Definition tt2 := rr2 >: (s,k) :+ prefix_nincl (s,k) t2.
+  Local Definition tt1 := rr1 :r: (s,k) ++ prefix_nincl (s,k) t1.
+  Local Definition tt2 := rr2 :r: (s,k) ++ prefix_nincl (s,k) t2.
   
   Lemma impl_shift_lc
     : last_common' tt1 tt2 rr1 rr2 (s, k).
   Proof.
-    unfold tt1, tt2. simpl_nl. 
+    unfold tt1, tt2. 
     eapply last_common_app_eq1 in Hlc as Htt1.
     eapply last_common_app_eq2 in Hlc as Htt2.
     do 2 rewrite <-app_assoc.
@@ -537,14 +507,13 @@ Section lift.
         rewrite Htt1.
         unfold tt1, rr1.
         setoid_rewrite Hel1 at 1.
-        rewrite <-nlconc_to_list. simpl_nl.
         rewrite <-app_assoc. rewrite <-app_comm_cons at 1. setoid_rewrite <-app_comm_cons.
         rewrite <-app_assoc. reflexivity.
       + (* because (s',j1) is in t1' and <> the hd of t1', i.e. q1, its successor is in r1 *)
         admit. 
-    - unfold tt1. rewrite <-nlconc_to_list. simpl_nl.
+    - unfold tt1. 
       eapply in_or_app. left. eapply In_rcons. left. auto.
-    - rewrite nlcons_to_list. eapply tpath_NoDup. simpl_nl.
+    - eapply tpath_NoDup. 
       econstructor;eauto 1.
       unfold "`".
       eapply exit_edge_tcfg_edge;eauto.
@@ -563,13 +532,12 @@ Section lift.
         exists ((`e2', tl j2) :: l2').
         rewrite Htt2.
         unfold tt2, rr2. setoid_rewrite Hel2 at 1.
-        rewrite <-nlconc_to_list. simpl_nl.
         rewrite <-app_assoc. rewrite <-app_comm_cons at 1. setoid_rewrite <-app_comm_cons.
         rewrite <-app_assoc. reflexivity.
       + admit. (* as above *)
-    - unfold tt2. rewrite <-nlconc_to_list. simpl_nl.
+    - unfold tt2. 
       eapply in_or_app. left. eapply In_rcons. left. auto.
-    - rewrite nlcons_to_list. eapply tpath_NoDup. simpl_nl.
+    - eapply tpath_NoDup. 
       econstructor;eauto 1.
       unfold "`".
       eapply exit_edge_tcfg_edge;eauto.
@@ -582,7 +550,7 @@ Import Lift.
 
 Theorem lc_disj_exits_lsplits' `(C : redCFG)
         (s e1 e2 q1 q2 qs1 qs2 h : Lab) (j1 j2 k js1 js2 : Tag)
-        (t1 t2 : ne_list Coord) (r1 r2 : list Coord)
+        (t1 t2 : list Coord) (r1 r2 : list Coord)
         (Hlc : last_common' t1 t2 r1 r2 (s,k))
         (Hpath1 : TPath (root,start_tag) (q1,j1) t1)
         (Hpath2 : TPath (root,start_tag) (q2,j2) t2)
@@ -590,7 +558,7 @@ Theorem lc_disj_exits_lsplits' `(C : redCFG)
         (Hexit2 : exit_edge h q2 e2)
         (Htag : tl j1 = tl j2)
         (Htagle : hd 0 j1 <= hd 0 j2)
-        (Hextra : j1 = j2 -> exists π, CPath q2 h (π >: q2) /\ Disjoint (map fst r1) π)
+        (Hextra : j1 = j2 -> exists π, CPath q2 h (π :r: q2) /\ Disjoint (map fst r1) π)
         (Hsucc1 : (qs1,js1) ≻ (s,k) | (e1,tl j1) :: t1)
         (Hsucc2 : (qs2,js2) ≻ (s,k) | (e2,tl j2) :: t2)
   : (s,qs1,qs2) ∈ splits' h e1.
@@ -633,8 +601,8 @@ Proof.
     setoid_rewrite splits'_spec.
     right.
     pose (s' := s'' C q1). 
-    pose (t1' := Lift.t1' (↓ purify Hh) t1 j1).
-    pose (t2' := Lift.t2' (↓ purify Hh) t2 j2).
+    pose (t1' := t' C q1 t1).
+    pose (t2' := t' C q1 t2).
     pose (qs1' := fst (get_succ (s',j1) (↓ purify He1, tl j1) t1')).
     pose (qs2' := fst (get_succ (s',j1) (↓ purify He2, tl j2) t2')).
     exists (`s'), (`qs1'), (`qs2').
@@ -656,8 +624,8 @@ Proof.
       { eapply ex_s_exiting2;eauto. }
       pose (rr1 := prefix_nincl (` qs1',j1) r1).
       pose (rr2 := prefix_nincl (` qs2',j1) r2).
-      pose (tt1 := rr1 >: (s,k) :+ prefix_nincl (s,k) t1).
-      pose (tt2 := rr2 >: (s,k) :+ prefix_nincl (s,k) t2).
+      pose (tt1 := rr1 :r: (s,k) ++ prefix_nincl (s,k) t1).
+      pose (tt2 := rr2 :r: (s,k) ++ prefix_nincl (s,k) t2).
       assert (last_common' tt1 tt2 rr1 rr2 (s, k)) as Hlc_ih.
       { eapply impl_shift_lc;eauto. }
       specialize (r1_tpath Hlc Hpath1) as Hr1.
@@ -733,14 +701,18 @@ Proof.
 Qed.
 
 Lemma tl_eq `(C : redCFG) (h q1 q2 e1 e2 : Lab) (i j1 j2 : Tag) t1 t2
-          (Hpath1 : TPath (root,start_tag) (e1,i) ((e1,i) :<: (q1,j1) :< t1))
-          (Hpath2 : TPath (root,start_tag) (e2,i) ((e2,i) :<: (q2,j2) :< t2))
+          (Hpath1 : TPath (root,start_tag) (e1,i) ((e1,i) :: (q1,j1) :: t1))
+          (Hpath2 : TPath (root,start_tag) (e2,i) ((e2,i) :: (q2,j2) :: t2))
           (Hexit1 : exit_edge h q1 e1)
           (Hexit2 : exit_edge h q2 e2)
   : tl j1 = tl j2.
 Proof.
   inversion Hpath1;inversion Hpath2;subst.
-  path_simpl' H0. path_simpl' H5.
+  replace q1 with (fst (q1,j1)) in Hexit1 by (cbn;auto).
+  replace j1 with (snd (q1,j1)) by (cbn;auto).
+  replace q2 with (fst (q2,j2)) in Hexit2 by (cbn;auto). 
+  replace j2 with (snd (q2,j2)) by (cbn;auto). destruct b;destruct b0.
+  path_simpl' H0. path_simpl' H5. cbn.
   eapply tag_exit_iff' in H3.
   eapply tag_exit_iff' in H8.
   destruct H3,H8.
@@ -753,21 +725,24 @@ Theorem lc_disj_exits_lsplits `{redCFG}
           (Hlc : last_common ((q1,j1) :: t1) ((q2,j2) :: t2) (s,k))
           (Hexit1 : exit_edge h q1 e1)
           (Hexit2 : exit_edge h q2 e2)
-          (Hpath1 : TPath (root,start_tag) (e1,i) ((e1,i) :<: (q1,j1) :< t1))
-          (Hpath2 : TPath (root,start_tag) (e2,i) ((e2,i) :<: (q2,j2) :< t2))
+          (Hpath1 : TPath (root,start_tag) (e1,i) ((e1,i) :: (q1,j1) :: t1))
+          (Hpath2 : TPath (root,start_tag) (e2,i) ((e2,i) :: (q2,j2) :: t2))
           (Hneq : j1 <> j2)
   : exists (qq qq' : Lab), (s,qq,qq') ∈ splits' h e1 \/ (s,qq,qq') ∈ splits' h e2.
 Proof.
   assert (tl j1 = tl j2) as Htl_eq by (eapply tl_eq;eauto).
-  do 2 rewrite nlcons_to_list in Hlc.
   rewrite last_common'_iff in Hlc. destructH.
   inversion Hpath1. inversion Hpath2. subst.
+  replace b with (q1,j1) in *. clear b.
+  2: { eapply path_front in H1. auto. }
+  replace b0 with (q2,j2) in *. clear b0.
+  2: { eapply path_front in H6. auto. } 
   path_simpl' H1. path_simpl' H6.
   specialize (Nat.lt_trichotomy (hd 0 j1) (hd 0 j2)) as Nrel.
   destruct Nrel as [Nlt|[Neq|Nlt]];[|exfalso|].
   - do 2 eexists.
     left. eapply lc_disj_exits_lsplits';eauto.
-    3,4:simpl_nl;rewrite <-surjective_pairing;eapply get_succ_cons;simpl_nl' Hlc.
+    3,4:rewrite <-surjective_pairing;eapply get_succ_cons.
     4: eapply last_common'_sym in Hlc.
     3,4: eapply last_common_in1;eapply last_common'_iff;do 2 eexists;eauto.
     + omega.
@@ -777,7 +752,7 @@ Proof.
     right. eapply lc_disj_exits_lsplits'.
     1: eapply last_common'_sym in Hlc;eauto.
     all: eauto.
-    3,4:simpl_nl;rewrite <-surjective_pairing;eapply get_succ_cons;simpl_nl' Hlc.
+    3,4:rewrite <-surjective_pairing;eapply get_succ_cons.
     3: eapply last_common'_sym in Hlc.
     3,4: eapply last_common_in1;eapply last_common'_iff;do 2 eexists;eauto.
     + omega.
@@ -788,8 +763,8 @@ Corollary lc_disj_exit_lsplits `{redCFG} (s e q1 q2 h : Lab) (i j1 j2 k : Tag) (
           (Hlc : last_common ((q1,j1) :: t1) ((q2,j2) :: t2) (s,k))
           (Hexit1 : exit_edge h q1 e)
           (Hexit2 : exit_edge h q2 e)
-          (Hpath1 : TPath (root,start_tag) (e,i) ((e,i) :<: (q1, j1) :< t1))
-          (Hpath2 : TPath (root,start_tag) (e,i) ((e,i) :<: (q2, j2) :< t2))
+          (Hpath1 : TPath (root,start_tag) (e,i) ((e,i) :: (q1, j1) :: t1))
+          (Hpath2 : TPath (root,start_tag) (e,i) ((e,i) :: (q2, j2) :: t2))
           (Hneq : j1 <> j2)
   : exists (qq qq' : Lab), (s,qq,qq') ∈ splits' h e.
 Proof.
