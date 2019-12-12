@@ -111,11 +111,21 @@ Section eval.
     forall p q x, (exists i j s r, eff (p, i, s) = Some (q, j, r) /\ r x <> s x) ->
              is_def x p q = true.
 
-  Inductive Tr : ne_list Conf -> Prop :=
-  | Init : forall s, Tr (ne_single (root, start_tag, s))
-  | Step : forall l k, Tr l -> eff (ne_front l) = Some k -> Tr (k :<: l).
+  Definition option_chain (A B : Type) (f : A -> option B) (a : option A) : option B
+    := match a with
+       | Some a' => f a'
+       | _ => None
+       end.             
+
+  Inductive Tr : list Conf -> Prop :=
+  | Init : forall s, Tr [(root, start_tag, s)]
+  | Step : forall l (k : Conf), Tr l -> option_chain eff (hd_error l) = Some k -> Tr (k :: l).
 
   Definition EPath := Path eval_edge.
+  
+  Inductive HyperTr :=
+  | HyperInit : forall S, HyperTr [S]
+  | HyperStep : forall l (k : Conf), HyperTr l -> option_chain 
 
   Hint Unfold Conf Coord.
   
@@ -177,7 +187,8 @@ Section eval.
                           end.
 
 
-  Definition trace := {l : ne_list Conf | Tr l}.
+  Definition trace := {l : list Conf | Tr l}.
+
 
   Open Scope prg.
 
