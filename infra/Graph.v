@@ -16,12 +16,13 @@ Require Export ConvBoolTac ListOrder DecTac.
 Section graph.
   
   Variable L : Type.
-  Variables edge edge1 edge2 : L -> L -> bool.
+  Variables edge edge1 edge2 : L -> L -> Prop.
+  Variable edge_dec : forall x y, dec (edge x y).
   
   Hypothesis L_dec : EqDec L eq.
 
-  Local Notation "p -->b q" := (edge p q) (at level 55, right associativity).
-  Local Notation "p --> q" := (p -->b q = true) (at level 55, right associativity).
+  Local Notation "p --> q" := (edge p q) (at level 55, right associativity).
+  Local Notation "p -->b q" := (if decision (edge p q) then true else false) (at level 55, right associativity).
   
   Inductive Path : L -> L -> list L -> Prop :=
   | PathSingle a : Path a a [a]
@@ -83,9 +84,9 @@ Section graph.
         * right. intro N. eapply c. inversion N;subst. reflexivity. isabsurd. 
       + decide' (q == a).
         * specialize (IHπ l). destruct IHπ.
-          -- destruct (l -->b q) eqn:E.
+          -- decide (l --> q).
              ++ left. econstructor;eauto.
-             ++ right. intro N. inversion N. subst. path_simpl' H0. congruence. 
+             ++ right. intro N. inversion N. subst. path_simpl' H0. congruence.
           -- right. contradict n. inversion n;subst;eauto. path_simpl' H0. eauto.
         * right. intro N. inversion N;subst. congruence.
   Qed.
@@ -392,13 +393,13 @@ Section graph.
       destruct ϕ; cbn in H; [contradiction|]. right; eauto.
   Qed.
   
-  Definition intersection_edge := fun p q => edge1 p q && edge2 p q.
+  Definition intersection_edge := fun p q => edge1 p q /\ edge2 p q.
 
-  Definition union_edge := fun p q => edge1 p q || edge2 p q.
+  Definition union_edge := fun p q => edge1 p q \/ edge2 p q.
 
-  Definition minus_edge := fun p q => edge1 p q && negb(edge2 p q).
+  Definition minus_edge := fun p q => edge1 p q /\ ~ (edge2 p q).
 
-  Definition sub_graph := forall p q, edge1 p q = true -> edge2 p q = true.
+  Definition sub_graph := forall p q, edge1 p q -> edge2 p q.
 
   Definition acyclic := forall p q π, p --> q -> Path q p π -> False.
   
@@ -435,13 +436,13 @@ Section graph.
   Lemma succ_in_path_edge π (x y w z : L)
         (Hpath : Path x y π)
         (Hsucc : succ_in π w z)
-    : edge z w = true.
+    : edge z w.
   Proof.
     induction Hpath; unfold succ_in in Hsucc;destructH.
     - repeat destruct l1,l2; cbn in Hsucc; try congruence.
       destruct l2;cbn in Hsucc; congruence.
     - destruct l2.
-      + cbn in Hsucc. inversion Hsucc;subst. inversion Hpath;subst;inversion H;subst;eauto.
+      + cbn in Hsucc. inversion Hsucc;subst. inversion Hpath;subst;auto.
       + eapply IHHpath. exists l1, l2. inversion Hsucc; subst; eauto.
   Qed.
 
@@ -458,7 +459,7 @@ Infix "∖" := minus_edge (at level 49).
 Arguments sub_graph {L}.
 Arguments acyclic {L}.
 
-Lemma subgraph_path {L : Type} (edge1 edge2 : L -> L -> bool) p q :
+Lemma subgraph_path {L : Type} (edge1 edge2 : L -> L -> Prop) p q :
   sub_graph edge1 edge2 -> (exists π, Path edge1 p q π) -> (exists ϕ, Path edge2 p q ϕ).
 Proof.
   intros Hsub [π Hpath]. unfold sub_graph in Hsub. induction Hpath.
@@ -466,7 +467,7 @@ Proof.
   - destruct IHHpath as [ϕ IHHpath]. exists (c :: ϕ). econstructor; eauto.
 Qed.
 
-Lemma subgraph_path' {L : Type} (edge1 edge2 : L -> L -> bool) p q π :
+Lemma subgraph_path' {L : Type} (edge1 edge2 : L -> L -> Prop) p q π :
   sub_graph edge1 edge2 -> Path edge1 p q π -> Path edge2 p q π.
 Proof.
   intros Hsub Hpath. unfold sub_graph in Hsub. induction Hpath.
@@ -474,7 +475,7 @@ Proof.
   - econstructor; eauto. 
 Qed.
 
-Lemma acyclic_subgraph_acyclic {L : Type} (edge1 edge2 : L -> L -> bool) :
+Lemma acyclic_subgraph_acyclic {L : Type} (edge1 edge2 : L -> L -> Prop) :
   sub_graph edge1 edge2 -> acyclic edge2 -> acyclic edge1.
 Proof.
   intros Hsub Hacy p q Hedge N. unfold acyclic, sub_graph in *. 
@@ -482,47 +483,46 @@ Proof.
   eapply subgraph_path' in Hp; eauto.
 Qed.
 
-Lemma union_subgraph1 (L : Type) (f g : L -> L -> bool)
+Lemma union_subgraph1 (L : Type) (f g : L -> L -> Prop)
   : sub_graph f (f ∪ g).
 Proof.
-  unfold sub_graph, union_edge. intros. rewrite H. cbn. reflexivity.
+  unfold sub_graph, union_edge. intros. auto. 
 Qed.
 
-Lemma minus_subgraph {L : Type} (edge1 edge2 : L -> L -> bool) :
+Lemma minus_subgraph {L : Type} (edge1 edge2 : L -> L -> Prop) :
   sub_graph (edge1 ∖ edge2) edge1.
 Proof.
   intros p q Hsub. unfold minus_edge in Hsub. conv_bool. firstorder.
 Qed.
 
-Lemma intersection_subgraph1 {L : Type} (edge1 edge2 : L -> L -> bool) :
+Lemma intersection_subgraph1 {L : Type} (edge1 edge2 : L -> L -> Prop) :
   sub_graph (edge1 ∩ edge2) edge1.
 Proof.
   intros p q Hinter. unfold intersection_edge in Hinter. conv_bool. firstorder.
 Qed.
 
-Lemma intersection_subgraph2 {L : Type} (edge1 edge2 : L -> L -> bool) :
+Lemma intersection_subgraph2 {L : Type} (edge1 edge2 : L -> L -> Prop) :
   sub_graph (edge1 ∩ edge2) edge2.
 Proof.
   intros p q Hinter. unfold intersection_edge in Hinter. conv_bool. firstorder.
 Qed.
 
-Lemma intersection2_subgraph {L : Type} (edge edge1 edge2 : L -> L -> bool) :
+Lemma intersection2_subgraph {L : Type} (edge edge1 edge2 : L -> L -> Prop) :
   sub_graph edge1 edge2
   -> sub_graph (edge1 ∩ edge) (edge2 ∩ edge).
 Proof.
   intros Hsub p q Hinter. unfold intersection_edge in *. unfold sub_graph in Hsub.
-  conv_bool. destruct Hinter as [Hinter1 Hinter2]. eapply Hsub in Hinter1.
-  rewrite Hinter1,Hinter2; cbn;eauto.
+  conv_bool. destruct Hinter as [Hinter1 Hinter2]. auto. 
 Qed.
 
-Lemma union_subgraph {L : Type} (edge1 edge1' edge2 edge2' : L -> L -> bool) :
+Lemma union_subgraph {L : Type} (edge1 edge1' edge2 edge2' : L -> L -> Prop) :
   sub_graph edge1 edge1' -> sub_graph edge2 edge2' -> sub_graph (edge1 ∪ edge2) (edge1' ∪ edge2').
 Proof.
   intros Hsub1 Hsub2 p q Hu. unfold union_edge, sub_graph in *.
   conv_bool. destruct Hu as [Hu|Hu];firstorder 1.
 Qed.    
 
-Lemma dom_intersection {L : Type} (edge1 edge2 : L -> L -> bool) r p q :
+Lemma dom_intersection {L : Type} (edge1 edge2 : L -> L -> Prop) r p q :
   Dom edge1 r p q -> Dom (edge1 ∩ edge2) r p q.
 Proof.
   intros Hdom.

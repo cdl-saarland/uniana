@@ -24,15 +24,13 @@ Reserved Infix "-a>*" (at level 55).
 
 Class redCFG
       (Lab : finType)
-      (edge : Lab -> Lab -> bool)
+      (edge : Lab -> Lab -> Prop)
       (root : Lab) 
-      (a_edge : Lab -> Lab -> bool)
+      (a_edge : Lab -> Lab -> Prop)
   :=
     {
-      back_edge_b := minus_edge edge a_edge
-                     where "p -->b q" := (edge p q);
-      back_edge := (fun p q => back_edge_b p q = true)
-                   where "p --> q"  := (p -->b q = true);
+      back_edge := minus_edge edge a_edge
+                   where "p --> q"  := (edge p q);
       (* reducibility *)
       loop_head_dom : forall ql qh, back_edge ql qh -> Dom edge root qh ql
       where "p -a> q" := (a_edge p q = true);
@@ -48,8 +46,8 @@ Class redCFG
       single_exit : forall h p q, exit_edge h p q -> forall h', exit_edge h' p q -> h = h';
       no_exit_head : forall h p q, exit_edge h p q -> ~ loop_head q;
       exit_pred_loop : forall h q qe e, exit_edge h qe e -> q --> e -> loop_contains h q;
-      no_self_loops : forall q p, edge q p = true -> q <> p;
-      root_no_pred : forall p, edge p root <> true
+      no_self_loops : forall q p, edge q p -> q <> p;
+      root_no_pred : forall p, ~ edge p root
     }.
 
 Hint Resolve loop_head_dom a_edge_incl a_edge_acyclic a_reachability.
