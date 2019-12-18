@@ -5,7 +5,7 @@ Open Scope prg.
 Ltac to_loop_contains' :=
   match goal with
   | [C : redCFG ?edge ?root ?a_edge |- context [loop_contains ?h ?p]]
-    => unfold loop_contains,back_edge,back_edge_b;
+    => unfold loop_contains,back_edge;
       fold (loop_contains' edge a_edge h p)
   end.
 

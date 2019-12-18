@@ -4,8 +4,7 @@ Require Export Coq.Logic.Decidable.
 Require Export Coq.Classes.EquivDec.
 Require Export Coq.Bool.Bool.
 Require Export Lists.List.
-Require Export Coq.Program.Equality.
-Require Export Coq.Program.Utils.
+Require Export Coq.Program.Equality Coq.Program.Utils.
 
 (*Require Import finiteTypes.External.
 Require Import finiteTypes.BasicDefinitions.*)
@@ -22,38 +21,42 @@ Reserved Infix "-->b" (at level 55).
 Reserved Infix "-a>" (at level 55).
 Reserved Infix "-a>*" (at level 55).
 
+Definition is_true2 (A B : Type) := fun (f : A -> B -> bool) (a : A) (b : B) => is_true (f a b).
+
 Class redCFG
       (Lab : finType)
-      (edge : Lab -> Lab -> Prop)
-      (root : Lab) 
-      (a_edge : Lab -> Lab -> Prop)
+      (edge : Lab -> Lab -> bool)
+      (root : Lab)
+      (a_edge : Lab -> Lab -> bool)
   :=
     {
-      back_edge := minus_edge edge a_edge
-                   where "p --> q"  := (edge p q);
+      edge__P := is_true2 edge;
+      a_edge__P := is_true2 a_edge;
+      back_edge := minus_edge edge__P a_edge__P
+                   where "p --> q" := ((is_true2 edge) p q);
       (* reducibility *)
-      loop_head_dom : forall ql qh, back_edge ql qh -> Dom edge root qh ql
+      loop_head_dom : forall ql qh, back_edge ql qh -> Dom edge__P root qh ql
       where "p -a> q" := (a_edge p q = true);
-      a_edge_incl : sub_graph a_edge edge
-      where "p '-a>*' q" := (exists π, Path a_edge p q π);
-      a_edge_acyclic : acyclic a_edge;
-      a_reachability : forall q, (exists π, Path a_edge root q π);
+      a_edge_incl : sub_graph a_edge__P edge__P
+      where "p '-a>*' q" := (exists π, Path a_edge__P p q π);
+      a_edge_acyclic : acyclic a_edge__P;
+      a_reachability : forall q, (exists π, Path a_edge__P root q π);
       (* useful definitions *)
       loop_head h := exists p, back_edge p h;
-      loop_contains qh q := exists p π, back_edge p qh /\ Path edge q p π /\ qh ∉ tl (rev π);
+      loop_contains qh q := exists p π, back_edge p qh /\ Path edge__P q p π /\ qh ∉ tl (rev π);
       exit_edge h p q := loop_contains h p /\ ~ loop_contains h q /\ p --> q;
       (* the following restrictions can be easily be met by introducing new blocks *)
       single_exit : forall h p q, exit_edge h p q -> forall h', exit_edge h' p q -> h = h';
       no_exit_head : forall h p q, exit_edge h p q -> ~ loop_head q;
       exit_pred_loop : forall h q qe e, exit_edge h qe e -> q --> e -> loop_contains h q;
-      no_self_loops : forall q p, edge q p -> q <> p;
-      root_no_pred : forall p, ~ edge p root
+      no_self_loops : forall q p, edge q p = true -> q <> p;
+      root_no_pred : forall p, edge p root <> true
     }.
 
 Hint Resolve loop_head_dom a_edge_incl a_edge_acyclic a_reachability.
   
-  Definition CPath `{redCFG} := Path edge.
-  Definition APath `{redCFG} := Path a_edge.
+  Definition CPath `{redCFG} := Path edge__P.
+  Definition APath `{redCFG} := Path a_edge__P.
   Infix "↪" := back_edge (at level 55).
   Notation "p '-->*' q" := (exists π, CPath p q π) (at level 55, right associativity).
   Notation "p '-a>*' q" := (exists π, APath p q π) (at level 55).
@@ -106,8 +109,7 @@ Section cfg.
 
   Lemma back_edge_dec p q : dec (p ↪ q).
   Proof.
-    unfold back_edge, back_edge_b, minus_edge.
-    destruct (edge p q), (a_edge p q);cbn;firstorder.
+    eauto.
   Qed.
 
   Hint Resolve back_edge_dec.
@@ -118,18 +120,18 @@ Section cfg.
 
   (** * Some basic facts **)
   
-  Lemma reachability (q : Lab) : exists π : list Lab, Path edge root q π.
+  Lemma reachability (q : Lab) : exists π : list Lab, Path edge__P root q π.
   Proof.
     specialize (a_reachability q) as Hreach. destructH. exists π. eapply subgraph_path';eauto. 
   Qed.
   
-  Lemma back_edge_incl (p q : Lab) (Hback : p ↪ q) : edge p q = true.
+  Lemma back_edge_incl (p q : Lab) (Hback : p ↪ q) : edge__P p q.
   Proof. 
-    unfold back_edge,back_edge_b in Hback. eapply minus_subgraph. eauto.
+    unfold back_edge in Hback. eapply minus_subgraph. eauto.
   Qed.
 
   Lemma acyclic_path_NoDup p q π
-        (Hπ : Path a_edge p q π)
+        (Hπ : Path a_edge__P p q π)
     : NoDup π.
   Proof.
     induction Hπ.
@@ -144,8 +146,7 @@ Section cfg.
     : p -a> q \/ p ↪ q.
   Proof.
     decide (p -a> q);[left;auto|right].
-    unfold back_edge,back_edge_b. unfold minus_edge. conv_bool. split; auto.
-    eapply eq_true_not_negb in n. auto.
+    unfold back_edge. unfold minus_edge. conv_bool. split; auto.
   Qed.
   
 End cfg.
@@ -168,22 +169,24 @@ Defined.
 
 Open Scope prg.
 
-Definition restrict_edge (A : finType) (f : A -> A -> bool) (p : decPred A)
-  : let L' := finType_sub p (decide_pred p) in L' -> L' -> bool
+Definition restrict_edge (A : finType) (f : A -> A -> Prop) (p : decPred A)
+  : let L' := finType_sub p (decide_pred p) in L' -> L' -> Prop
   := fun x y => (f (`x) (`y)).
 
-Definition restrict_edge' (A : Type) (f : A -> A -> bool) (p : decPred A)
-  := f ∩ ((fun a _ => to_bool (@decision (p a) (decide_pred p a)))
-            ∩ (fun _ b => to_bool (@decision (p b) (decide_pred p b)))).
+Definition restrict_edge' (A : Type) (f : A -> A -> Prop) (p : decPred A)
+  := f ∩ ((fun a _ => p a)
+            ∩ (fun _ b => p b)).
 
-Definition loop_contains' (L : Type) edge a_edge (qh q : L)
-  := exists p π, (edge ∖ a_edge) p qh = true /\ Path edge q p π /\ qh ∉ tl (rev π).
+Definition loop_contains' (L : Type) (edge a_edge : L -> L -> bool) (qh q : L)
+  := exists (p : L)  π, ((is_true2 edge) ∖ (is_true2 a_edge)) p qh
+                   /\ Path (is_true2 edge) q p π
+                   /\ qh ∉ tl (rev π).
 
 Definition exit_edge' (L : finType) (edge a_edge : L -> L -> bool) (h p q : L)
   := loop_contains' edge a_edge h p /\ ~ loop_contains' edge a_edge h q /\ edge p q = true.
 
 Definition back_edge'  (L : Type) (edge a_edge : L -> L-> bool) (p q : L)
-  := (edge ∖ a_edge) p q = true.
+  := ((is_true2 edge) ∖ (is_true2 a_edge)) p q.
 
 Definition loop_head' (L : Type) (edge a_edge : L -> L-> bool) (h : L)
-  := exists p, (edge ∖ a_edge) p h = true.
+  := exists p, ((is_true2 edge) ∖ (is_true2 a_edge)) p h.
