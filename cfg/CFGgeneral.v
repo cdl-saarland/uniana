@@ -2,7 +2,7 @@ Require Export CFGdef CFGTac.
 
 Lemma all_sat_restrict_edge'
       (L : Type)
-      (f : L -> L -> bool)
+      (f : L -> L -> Prop)
       (p q : L)
       (π : list L)
       (Hπ : Path f p q π)

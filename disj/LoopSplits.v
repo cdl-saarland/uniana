@@ -108,31 +108,6 @@ Section disj.
         eapply path_nlrcons_edge in Hp2 as Hedge2'.
         eapply path_rcons_rinv in Hp1.
         eapply path_rcons_rinv in Hp2.
-        Lemma hd_rev_tl_rev_cons (A : Type) (l : list A) (a : A)
-          : hd a (rev (tl (rev (a :: l)))) = a.
-        Proof.
-          clear.
-          rewrite rev_cons. destr_r' l;subst;cbn;auto.
-          rewrite rev_rcons. cbn.  rewrite rev_rcons. cbn. auto.
-        Qed.
-        Lemma path_front'
-     : forall (L : Type) (edge : L -> L -> bool) (p q r : L) (π : list L),
-            Path edge p q π -> q = hd r π.
-        Proof.
-          intros.
-          destruct π.
-          - inversion H.
-          - cbn. eapply path_front;eauto.
-        Qed.
-        Lemma path_back'
-          : forall (L : Type) (edge : L -> L -> bool) (p q r : L) (π : list L),
-            Path edge p q π -> p = hd r (rev π).
-        Proof.
-          intros.
-          destr_r' π;subst.
-          - cbn in *. inversion H.
-          - rewrite rev_rcons. cbn. eapply path_back;eauto.
-        Qed.
         (* construct paths to x & y *)
         eapply path_to_elem in Hp2.
         2: eauto.
