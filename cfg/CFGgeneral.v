@@ -19,7 +19,7 @@ Proof.
 Qed.
 
 Lemma loop_contains'_basic `{redCFG} h p
-  : loop_contains' edge a_edge h p = loop_contains h p.
+  : loop_contains' edge__P a_edge__P h p = loop_contains h p.
 Proof.
   reflexivity.
 Qed.  

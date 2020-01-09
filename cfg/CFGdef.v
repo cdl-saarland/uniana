@@ -177,16 +177,16 @@ Definition restrict_edge' (A : Type) (f : A -> A -> Prop) (p : decPred A)
   := f ∩ ((fun a _ => p a)
             ∩ (fun _ b => p b)).
 
-Definition loop_contains' (L : Type) (edge a_edge : L -> L -> bool) (qh q : L)
-  := exists (p : L)  π, ((is_true2 edge) ∖ (is_true2 a_edge)) p qh
-                   /\ Path (is_true2 edge) q p π
+Definition loop_contains' (L : Type) (edge a_edge : L -> L -> Prop) (qh q : L)
+  := exists (p : L)  π, (edge ∖ a_edge) p qh
+                   /\ Path edge q p π
                    /\ qh ∉ tl (rev π).
 
-Definition exit_edge' (L : finType) (edge a_edge : L -> L -> bool) (h p q : L)
-  := loop_contains' edge a_edge h p /\ ~ loop_contains' edge a_edge h q /\ edge p q = true.
+Definition exit_edge' (L : finType) (edge a_edge : L -> L -> Prop) (h p q : L)
+  := loop_contains' edge a_edge h p /\ ~ loop_contains' edge a_edge h q /\ edge p q.
 
-Definition back_edge'  (L : Type) (edge a_edge : L -> L-> bool) (p q : L)
-  := ((is_true2 edge) ∖ (is_true2 a_edge)) p q.
+Definition back_edge'  (L : Type) (edge a_edge : L -> L -> Prop) (p q : L)
+  := (edge ∖ a_edge) p q.
 
-Definition loop_head' (L : Type) (edge a_edge : L -> L-> bool) (h : L)
-  := exists p, ((is_true2 edge) ∖ (is_true2 a_edge)) p h.
+Definition loop_head' (L : Type) (edge a_edge : L -> L -> Prop) (h : L)
+  := exists p, ((edge) ∖ (a_edge)) p h.

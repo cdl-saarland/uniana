@@ -12,17 +12,17 @@ Ltac to_loop_contains' :=
 
 Ltac fold_lp_cont' :=
   repeat lazymatch goal with
-         | [H : context [exists _ _, (?edge ∖ ?a_edge) _ ?h = true /\ Path ?edge ?q _ _ /\ ?h ∉ tl (rev _) ] |- _]
+         | [H : context [exists _ _, (?edge ∖ ?a_edge) _ ?h /\ Path ?edge ?q _ _ /\ ?h ∉ tl (rev _) ] |- _]
            => unfold finType_sub_decPred in H;
              fold (loop_contains' edge a_edge h q) in H
          | [H : context [loop_contains' ?edge ?a_edge ?h ?p
-                         /\ ~ loop_contains' ?edge ?a_edge ?h ?q /\ ?edge ?p ?q = true] |- _]
+                         /\ ~ loop_contains' ?edge ?a_edge ?h ?q /\ ?edge ?p ?q] |- _]
            => fold (exit_edge' edge a_edge h p q) in H
          | [ |- context [loop_contains' ?edge ?a_edge ?h ?p
                         /\ ~ loop_contains' ?edge ?a_edge ?h ?q
-                        /\ ?edge ?p ?q = true]]
+                        /\ ?edge ?p ?q]]
            => fold (exit_edge' edge a_edge h p q)
-         | |- context [exists _ _, (?edge ∖ ?a_edge) _ ?h = true /\ Path ?edge ?q _ _ /\ ?h ∉ tl (rev _)]
+         | |- context [exists _ _, (?edge ∖ ?a_edge) _ ?h /\ Path ?edge ?q _ _ /\ ?h ∉ tl (rev _)]
            => unfold finType_sub_decPred;
              fold (loop_contains' edge a_edge h q)
          end.

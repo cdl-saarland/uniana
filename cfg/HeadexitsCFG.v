@@ -3,27 +3,26 @@ Require Export CFGinnermost CFGgeneral.
 
 (** * head_exits **)
 
-Definition head_exits_edge `{redCFG} h h' q : bool
-  := if decision (exited h' q /\ ~ loop_contains h' h) then true else false. 
+Definition head_exits_edge `{redCFG} h h' q : Prop
+  := (exited h' q /\ ~ loop_contains h' h).
 
 Lemma head_exits_edge_spec :
-  forall `{redCFG} h h' q, head_exits_edge h h' q = true -> exists p, exit_edge h' p q.
+  forall `{redCFG} h h' q, head_exits_edge h h' q -> exists p, exit_edge h' p q.
 Proof.
   intros. unfold head_exits_edge in H0. decide (exited h' q); cbn;eauto.
   decide (exited h' q /\ ~ loop_contains h' h);[|congruence]. destructH. contradiction.
 Qed.
 
 Lemma head_exits_edge_spec_iff :
-  forall `{redCFG} h h' q, head_exits_edge h h' q = true <-> (exists p, exit_edge h' p q) /\ ~ loop_contains h' h.
+  forall `{redCFG} h h' q, head_exits_edge h h' q <-> (exists p, exit_edge h' p q) /\ ~ loop_contains h' h.
 Proof.
   intros. unfold head_exits_edge. decide (exited h' q /\ ~ loop_contains h' h).
-  - split;intros;[|reflexivity]. firstorder.
-  - split;intros;[congruence|]. simpl_dec' n. destructH. unfold exited in n.
-    destruct n as [n|n];[simpl_dec' n; specialize (n p)|]; contradiction.
+  - split;intros;firstorder.
+  - split;intros;[congruence|]. simpl_dec' n. 
 Qed.
 
 Lemma head_exits_path `{redCFG} h p q :
-  head_exits_edge h p q = true -> exists π, Path a_edge p q π.
+  head_exits_edge h p q -> exists π, Path a_edge__P p q π.
 Proof.
   intros. cbn.
   eapply head_exits_edge_spec in H0.
@@ -38,8 +37,8 @@ Proof.
 Qed.
 
 Lemma head_exits_in_path_head_incl `{redCFG} qh ql π
-      (Hπ : Path (edge ∪ (head_exits_edge qh)) root ql π)
-  : exists ϕ, Path edge root ql ϕ /\ forall (h : Lab), loop_contains h ql -> h ∈ ϕ -> h ∈ π.
+      (Hπ : Path (edge__P ∪ (head_exits_edge qh)) root ql π)
+  : exists ϕ, Path edge__P root ql ϕ /\ forall (h : Lab), loop_contains h ql -> h ∈ ϕ -> h ∈ π.
 Proof.
   remember ql as ql'.
   setoid_rewrite Heqql' at 2.
@@ -76,23 +75,23 @@ Proof.
 Qed.
 
 Lemma head_exits_back_edge `{redCFG} ql qh h :
-  ((edge ∪ (head_exits_edge h)) ∖ (a_edge ∪ (head_exits_edge h))) ql qh = true <-> ql ↪ qh.
+  ((edge__P ∪ (head_exits_edge h)) ∖ (a_edge__P ∪ (head_exits_edge h))) ql qh <-> ql ↪ qh.
 Proof.
-  unfold back_edge,back_edge_b.
+  unfold back_edge.
   unfold_edge_op. split;intros. 
   - destructH. destruct H1;[eauto|].
-    destruct (head_exits_edge h ql qh);cbn in *;congruence.
-  - split_conj;[firstorder|firstorder|].
-    unfold head_exits_edge.
+    simpl_dec' H2. destructH. contradiction.
+  - destructH. split_conj;[left;auto|].
     decide (exited ql qh /\ ~ loop_contains ql h);[|cbn;auto].
     exfalso.
     unfold exited in a.
     destructH' a.
     eapply no_exit_head;eauto.
-    exists ql. unfold back_edge,back_edge_b;conv_bool. unfold_edge_op. eauto.
+    exists ql. unfold back_edge;conv_bool. unfold_edge_op. eauto.
+    contradict n. destruct n;[contradiction|]. firstorder.
 Qed.
 
-Lemma head_exits_no_self_loop `{redCFG} h p q : head_exits_edge h p q = true -> p <> q.
+Lemma head_exits_no_self_loop `{redCFG} h p q : head_exits_edge h p q -> p <> q.
 Proof.
   intros. eapply head_exits_edge_spec in H0.
   destructH.
@@ -104,8 +103,8 @@ Proof.
 Qed.
 
 Lemma head_exits_same_connected `{redCFG} h p q π
-      (Hpath : Path (a_edge ∪ (head_exits_edge h)) p q π)
-  : exists ϕ, Path a_edge p q ϕ.
+      (Hpath : Path (a_edge__P ∪ (head_exits_edge h)) p q π)
+  : exists ϕ, Path a_edge__P p q ϕ.
 Proof.
   induction Hpath;cbn;eauto.
   - eexists. econstructor.
@@ -116,8 +115,8 @@ Proof.
 Qed.
 
 Lemma head_exits_same_connected' `{redCFG} h p q π
-      (Hpath : Path (edge ∪ (head_exits_edge h)) p q π)
-  : exists ϕ, Path edge p q ϕ.
+      (Hpath : Path (edge__P ∪ (head_exits_edge h)) p q π)
+  : exists ϕ, Path edge__P p q ϕ.
 Proof.
   induction Hpath;cbn;eauto.
   - eexists. econstructor.
@@ -128,9 +127,8 @@ Proof.
       eexists; eauto using path_app'.
 Qed.
 
-
 Lemma head_exits_loop_equivalence `{redCFG} qh h p
-  : loop_contains h p <-> loop_contains' (edge ∪ (head_exits_edge qh)) (a_edge ∪ (head_exits_edge qh)) h p.
+  : loop_contains h p <-> loop_contains' ((edge__P ∪ (head_exits_edge qh))) (a_edge__P ∪ (head_exits_edge qh)) h p.
 Proof.
   split;intros.
   - unfold loop_contains'. unfold loop_contains in H0.
@@ -144,9 +142,9 @@ Proof.
   - copy H0 H0'.
     unfold loop_contains. unfold loop_contains' in H0.
     destructH.
-    assert (Path (edge ∪ (head_exits_edge qh)) p p0 π -> h ∉ tl (rev π)
+    assert (Path (edge__P ∪ (head_exits_edge qh)) p p0 π -> h ∉ tl (rev π)
             -> loop_contains h p0
-            -> exists π0, Path edge p p0 π0 /\ h ∉ tl (rev π0)).
+            -> exists π0, Path edge__P p p0 π0 /\ h ∉ tl (rev π0)).
     {
       clear. intros.
       induction H0.
@@ -229,7 +227,7 @@ Qed.
 
 
 Lemma head_exits_exit_edge `{redCFG} qh h p q
-      (Hexit : exit_edge' (edge ∪ (head_exits_edge qh)) (a_edge ∪ (head_exits_edge qh)) h p q)
+      (Hexit : exit_edge' (edge__P ∪ (head_exits_edge qh)) (a_edge__P ∪ (head_exits_edge qh)) h p q)
   : exists p', exit_edge h p' q.
 Proof.
   unfold exit_edge' in *. destructH.
@@ -246,12 +244,27 @@ Proof.
     + rewrite head_exits_loop_equivalence;eauto.
 Qed.
 
-Instance head_exits_CFG `(redCFG) qh
-  : redCFG (edge ∪ (head_exits_edge qh)) root (a_edge ∪ (head_exits_edge qh)).
+Require Import Coq.Logic.FunctionalExtensionality.
+Require Import Coq.Logic.PropExtensionality.
+
+Lemma is_true2_decision (A B : Type) (f : A -> B -> Prop) 
+      (Hdec : forall (a : A) (b : B), dec (f a b)) 
+  : is_true2 (fun a b => decision (f a b)) = f.
 Proof.
-econstructor;intros.
+  do 2 (apply functional_extensionality; intro).
+  eapply propositional_extensionality.
+  unfold is_true2, is_true, toBool.
+  split;intro H;decide (f x x0);auto. congruence.
+Qed.
+
+Instance head_exits_CFG `(redCFG) qh
+  : redCFG (fun x y => decision ((edge__P ∪ (head_exits_edge qh)) x y)) root
+           (fun x y => decision ((a_edge__P ∪ (head_exits_edge qh)) x y)).
+Proof.
+econstructor;intros;
+  repeat rewrite is_true2_decision in *.
 { (* loop_head_dom *)
-  unfold Dom. intros π Hpath.
+  unfold Dom. intros π Hpath. 
   rewrite head_exits_back_edge in H0.
   eapply loop_contains_ledge in H0.
   eapply head_exits_in_path_head_incl in Hpath;eauto.
@@ -275,6 +288,7 @@ econstructor;intros.
   unfold sub_graph,union_edge. firstorder. 
 }
 { (* single_exit *)
+  repeat rewrite is_true2_decision in *.
   fold_lp_cont'.
   assert (loop_contains h p /\ loop_contains h' p) as [Hloop Hloop'].
   {
@@ -301,6 +315,7 @@ econstructor;intros.
     eapply loop_contains_trans;eauto.
 }
 { (* no_head_exit *)
+  repeat rewrite is_true2_decision in *.
   fold_lp_cont'.
   intro N. destructH.
   eapply head_exits_exit_edge in H0. destructH.
@@ -310,6 +325,7 @@ econstructor;intros.
   eapply head_exits_back_edge;eauto.
 }
 { (* exit_pred_loop *)
+  repeat rewrite is_true2_decision in *.
   fold_lp_cont'.
   eapply head_exits_exit_edge in H0. destructH.
   unfold_edge_op' H1.
@@ -329,13 +345,18 @@ econstructor;intros.
 }
 {
   intro Heq.
-  eapply no_self_loops;eauto. subst. unfold_edge_op' H0. destruct H0;[auto|].
-  eapply head_exits_edge_spec in H0. destructH.
-  unfold exit_edge in H0. destructH.
-  exfalso. contradict H0. eauto using loop_contains_loop_head,loop_contains_self.
+  eapply no_self_loops;eauto. subst. unfold_edge_op' H0.
+  unfold toBool in *. 
+  decide (edge__P p p \/ head_exits_edge qh p p). 2:congruence.
+  destruct o;[auto|].
+  eapply head_exits_edge_spec in H1. destructH.
+  unfold exit_edge in H1. destructH.
+  exfalso. contradict H1. eauto using loop_contains_loop_head,loop_contains_self.
 }
 {
   intro N. eapply root_no_pred.
+  unfold toBool in N.
+  decide ((edge__P ∪ head_exits_edge qh) p root);[clear N;rename u into N|congruence].
   unfold_edge_op' N. destruct N.
   - eauto.
   - eapply head_exits_edge_spec in H0. destructH. unfold exit_edge in H0.
@@ -348,31 +369,49 @@ Qed.
 (* We need LOCAL head exits and also a local headexits property, bc
  * otherwise every loop head becomes a loop_split of itself and any exit in the imploded graph *)
 Definition head_exits_property `(C : redCFG) qh := forall h p q, exit_edge h p q -> ~ loop_contains h qh
-                                                            -> edge h q = true.
+                                                            -> edge__P h q.
 
 Local Arguments exit_edge {_ _ _ _} (_).
+Local Arguments edge__P {_ _ _ _} (_).
+Local Arguments a_edge__P {_ _ _ _} (_).
+Local Arguments loop_contains {_ _ _ _} _.
+
+Lemma decision_prop_iff (P : Prop) (Hdec : dec P)
+  : @toBool P (decision P) = true  <-> P.
+Proof.
+  split;unfold toBool;intro H;decide P;auto;congruence.
+Qed.
+  
 
 Lemma head_exits_property_satisfied `(C : redCFG) qh : head_exits_property (head_exits_CFG C qh) qh.
 Proof.
   unfold head_exits_property. 
-  intros h p q Hexit Hloop. unfold union_edge. conv_bool.
+  intros h p q Hexit Hloop.
+  eapply decision_prop_iff.
+  unfold exit_edge in Hexit.
+  fold (edge__P (head_exits_CFG C qh)) in Hexit.
+  do 2 rewrite <-loop_contains'_basic in Hexit. fold_lp_cont'.
+  unfold edge__P,a_edge__P in Hexit. repeat rewrite is_true2_decision in Hexit.
+  fold (edge__P C) in Hexit. fold (a_edge__P C) in Hexit.
   eapply head_exits_exit_edge in Hexit.
-  unfold loop_contains in Hloop. unfold back_edge,back_edge_b in Hloop. fold_lp_cont'.
-  rewrite <-head_exits_loop_equivalence in Hloop.
-  right.
-  rewrite head_exits_edge_spec_iff.
-  split;eauto. 
+  destructH.
+  right. unfold head_exits_edge.
+  split.
+  - eexists;eauto.
+  - contradict Hloop. rewrite <-loop_contains'_basic.
+    unfold edge__P,a_edge__P. repeat rewrite is_true2_decision.
+    fold (edge__P C);fold (a_edge__P C).
+    eapply head_exits_loop_equivalence. auto.
 Qed.
 
 Lemma head_exits_property_a_edge `{C : redCFG} qh 
-  : head_exits_property C qh -> forall h p q : Lab, exit_edge _ h p q -> ~ loop_contains h qh -> a_edge h q = true.
+  : head_exits_property C qh -> forall h p q : Lab, exit_edge _ h p q -> ~ loop_contains C h qh -> a_edge h q = true.
 Proof.
   intros.
   eapply H in H0 as H2.
   - decide (a_edge h q = true);[auto|exfalso].
     eapply no_exit_head;eauto. unfold loop_head.
-    exists h. unfold back_edge,back_edge_b. unfold_edge_op. split;auto.
-    eapply negb_true_iff,not_true_is_false. auto.
+    exists h. unfold back_edge. unfold_edge_op. split;auto.
 Qed.
 
 Local Arguments loop_contains {_ _ _ _} _.
@@ -381,6 +420,9 @@ Lemma head_exits_loop_contains_iff `(C : redCFG) (h p q : Lab)
   : loop_contains C h q <-> loop_contains (head_exits_CFG C p) h q.
 Proof.
   setoid_rewrite <-loop_contains'_basic at 2.
+  unfold edge__P,a_edge__P.
+  repeat rewrite is_true2_decision.
+  fold (edge__P C);fold (a_edge__P C).
   eapply head_exits_loop_equivalence.
 Qed.          
 
@@ -408,6 +450,7 @@ Proof.
   setoid_rewrite <-head_exits_loop_contains_iff.
   intros. destructH.
   exists p0. split_conj;eauto.
+  eapply decision_prop_iff.
   eapply union_subgraph1;auto.
 Qed.
 
@@ -417,7 +460,7 @@ Proof.
   unfold exited, exit_edge.
   setoid_rewrite <-head_exits_loop_contains_iff.
   intros. destructH.
-  unfold_edge_op' H3. destruct H3.
+  unfold_edge_op' H3. rewrite is_true2_decision in H3.  destruct H3.
   - exists p0. split_conj;eauto.
   - eapply head_exits_edge_spec in H. destructH. exists p1.
     replace p0 with h in *.

@@ -296,7 +296,7 @@ Section cfg.
 
   (** * LPath **)
   
-  Definition LPath := Path (fun h p => decision (innermost_loop_strict h p)).
+  Definition LPath := Path (fun h p => (innermost_loop_strict h p)).
   
   Lemma find_some_strong (A : Type) `{Q:EqDec A eq} (f : A -> bool) (l : list A) (x : A) (Hnd : NoDup l)
     : find f l = Some x -> x ∈ l /\ f x = true /\ forall y, y ≻* x | l -> f y = true -> x = y.
@@ -314,7 +314,7 @@ Section cfg.
   Qed.
   
   Lemma loop_LPath_helper p h π
-        (Hpath : Path a_edge root p (p :: π))
+        (Hpath : Path a_edge__P root p (p :: π))
         (Hloop : loop_contains h p)
         (Hin : h ∈ π)
         (Hnolo : forall q : Lab, q ≻* h | π -> toBool _ (D:=decision (loop_contains q p)) = true -> h = q)
@@ -339,7 +339,7 @@ Section cfg.
     destructH. revert dependent p. revert dependent π.
     specialize (well_founded_ind (R:=(@StrictPrefix' Lab)) (@StrictPrefix_well_founded Lab)
                                  (fun π : list Lab => forall p, loop_contains h p
-                                                           -> Path a_edge root p π
+                                                           -> Path a_edge__P root p π
                                                            -> exists (π0 : list Lab), LPath h p π0))
       as WFind.
     eapply WFind.
@@ -354,7 +354,7 @@ Section cfg.
         inversion H1; [subst x ;contradiction|]. subst π a c e.
         decide (h = p).
         { subst;eexists;econstructor. }
-        specialize (@path_to_elem _ a_edge _ _ e0 x H6 HeqS0) as [ϕ [Hϕ0 Hϕ1]].
+        specialize (@path_to_elem _ a_edge__P _ _ e0 x H6 HeqS0) as [ϕ [Hϕ0 Hϕ1]].
         specialize (H ϕ). exploit' H.
         { cbn. clear - Hϕ1.
           eapply prefix_strictPrefix;auto.
@@ -413,8 +413,7 @@ Section cfg.
     : exists h', innermost_loop_strict h' p.
   Proof.
     eapply loop_LPath in Hloop as Hloop'. destructH.
-    inversion Hloop';subst;eauto;[contradiction|].
-    exists b. decide (innermost_loop_strict b p);cbn in *;[auto|congruence].
+    inversion Hloop';subst;eauto;[contradiction].
   Qed.
   
   Lemma get_innermost_loop_spec
