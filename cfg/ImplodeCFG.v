@@ -30,33 +30,33 @@ Definition purify_implode `{redCFG} h :=
 
 
 Lemma implode_nodes_back_edge `{redCFG} h p q
-      (Hhead : back_edge' (restrict_edge' edge (implode_nodes h)) (restrict_edge' a_edge (implode_nodes h)) p q)
+      (Hhead : back_edge' (restrict_edge' edge__P (implode_nodes h)) (restrict_edge' a_edge__P (implode_nodes h)) p q)
   : p ↪ q.
 Proof.
   unfold back_edge' in *.
   unfold_edge_op' Hhead. destructH.
   decide (implode_nodes h p);[|contradiction].
-  decide (implode_nodes h q);[|contradiction].
+  decide (implode_nodes h q);[|contradiction]. do 2 simpl_dec' Hhead1.
   destruct Hhead1 as [Hhead1|[Hhead1|Hhead1]];cbn in *.
   2,3:congruence.
-  unfold back_edge,back_edge_b. unfold_edge_op. split;auto.
+  unfold back_edge. unfold_edge_op. split;auto.
 Qed.
 
 Parameter loop_contains'_dec
-  : forall (L : finType) (e f : L -> L -> bool) (h p : L), dec (loop_contains' e f h p).
+  : forall (L : finType) (e f : L -> L -> Prop) (h p : L), dec (loop_contains' e f h p).
 Existing Instance loop_contains'_dec.
 
 Definition deq_loop' :=
-  fun (Lab : finType) (edge : Lab -> Lab -> bool) (a_edge : Lab -> Lab -> bool) (q p : Lab) =>
+  fun (Lab : finType) (edge : Lab -> Lab -> Prop) (a_edge : Lab -> Lab -> Prop) (q p : Lab) =>
     forall h : Lab, loop_contains' edge a_edge h p -> loop_contains' edge a_edge h q.
 
-Instance deq_loop'_dec (Lab : finType) (edge : Lab -> Lab -> bool) (a_edge : Lab -> Lab -> bool) (q p : Lab)
+Instance deq_loop'_dec (Lab : finType) (edge : Lab -> Lab -> Prop) (a_edge : Lab -> Lab -> Prop) (q p : Lab)
   : dec (deq_loop' edge a_edge q p).
 unfold deq_loop'. eauto.
 Qed.
 
 Definition exited' :=
-  fun (Lab : finType) (edge : Lab -> Lab -> bool) (a_edge : Lab -> Lab -> bool)
+  fun (Lab : finType) (edge : Lab -> Lab -> Prop) (a_edge : Lab -> Lab -> Prop)
     (h q : Lab) => exists p : Lab, exit_edge' edge a_edge h p q.
                                                                    
 (*Definition implode_nodes' :=
@@ -101,9 +101,9 @@ Qed.
 
 Lemma all_latches_stay_latches `{C : redCFG} (p q h : Lab)
       (Hbe : p ↪ q)
-      (Hhead : loop_head' (restrict_edge' edge (implode_nodes h))
-                          (restrict_edge' a_edge (implode_nodes h)) q)
-  : back_edge' (restrict_edge' edge (implode_nodes h)) (restrict_edge' a_edge (implode_nodes h)) p q.
+      (Hhead : loop_head' (restrict_edge' edge__P (implode_nodes h))
+                          (restrict_edge' a_edge__P (implode_nodes h)) q)
+  : back_edge' (restrict_edge' edge__P (implode_nodes h)) (restrict_edge' a_edge__P (implode_nodes h)) p q.
 Proof.
   unfold back_edge'. unfold loop_head' in Hhead. destructH.
   eapply implode_nodes_back_edge in Hhead as Hbe0.
@@ -114,7 +114,7 @@ Proof.
   - destruct Hhead0;[left;rewrite <-Heq;auto 1|].
     destructH. unfold exited,exit_edge in H0. destructH. eapply back_edge_no_head in Hbe0.
     eapply loop_contains_loop_head in H2. contradiction.
-  - left. unfold back_edge,back_edge_b in Hbe. unfold_edge_op' Hbe. destructH;eauto.
+  - firstorder. 
 Qed.
 
 Global Instance deq_loop_Transitive `(C : redCFG) : Transitive deq_loop.
@@ -150,6 +150,7 @@ Proof.
         -- exact N.
         -- contradict Hnimpl3. eapply H2;eauto.
         -- contradiction.
+  - unfold is_true2,is_true. eapply a_edge_incl. eauto.
   - decide (x=a).
     { subst x. eapply path_contains_back;eauto. }
     eapply dom_loop_contains;[eauto| |eauto using subgraph_path'].
@@ -199,7 +200,7 @@ Lemma implode_nodes_path_inv `(C : redCFG) (h : Lab) (Hhe : head_exits_property 
       (Hpath : CPath p q π)
       (HPp : (implode_nodes h) p)
       (HPq : (implode_nodes h) q)
-  : exists ϕ, Path (restrict_edge' edge (implode_nodes h)) p q ϕ /\ splinter_strict ϕ π.
+  : exists ϕ, Path (restrict_edge' edge__P (implode_nodes h)) p q ϕ /\ splinter_strict ϕ π.
 Proof.
   revert dependent q. revert dependent π.
   specialize (well_founded_ind (R:=(@StrictPrefix' Lab)) (@StrictPrefix_well_founded Lab)
@@ -207,7 +208,7 @@ Proof.
                                     CPath p q π ->
                                     implode_nodes h q
                                     -> exists π0,
-                                        Path (restrict_edge' edge (implode_nodes h)) p q π0
+                                        Path (restrict_edge' edge__P (implode_nodes h)) p q π0
                                         /\ splinter_strict π0 π))
     as WFind.
   eapply WFind.
@@ -274,18 +275,18 @@ Lemma implode_CFG_loop_contains:
   forall (Lab : finType) (edge : Lab -> Lab -> bool) (root : Lab) (a_edge : Lab -> Lab -> bool)
     (H : redCFG edge root a_edge) (h7 h p : Lab) (Hhe : head_exits_property H h7),
     (exists x : Lab,
-        (restrict_edge' edge (implode_nodes h7) ∖ restrict_edge' a_edge (implode_nodes h7)) x h = true) ->
-    loop_contains' edge a_edge h p ->
+        (restrict_edge' edge__P (implode_nodes h7) ∖ restrict_edge' a_edge__P (implode_nodes h7)) x h) ->
+    loop_contains' edge__P a_edge__P h p ->
     (implode_nodes h7) p ->
-    loop_contains' (restrict_edge' edge (implode_nodes h7)) (restrict_edge' a_edge (implode_nodes h7))
+    loop_contains' (restrict_edge' edge__P (implode_nodes h7)) (restrict_edge' a_edge__P (implode_nodes h7))
                    h p.
 Proof.
   intros Lab edge root a_edge H h7 h p Hhe H0 H1 H2.
   
   
   rewrite loop_contains'_basic in H1.
-  fold (loop_head' (restrict_edge' edge (implode_nodes h7))
-                   (restrict_edge' a_edge (implode_nodes h7)) h) in H0.
+  fold (loop_head' (restrict_edge' edge__P (implode_nodes h7))
+                   (restrict_edge' a_edge__P (implode_nodes h7)) h) in H0.
   unfold loop_contains in H1.
   destructH.
   eapply all_latches_stay_latches in H0;eauto.
@@ -303,9 +304,9 @@ Qed.
 
 Instance implode_CFG `(H : redCFG) h7 (Hhe : head_exits_property H h7)
   : @redCFG (finType_sub_decPred (implode_nodes h7))
-            (restrict_edge edge (implode_nodes h7))
+            (fun x y => decision (restrict_edge edge__P (implode_nodes h7) x y))
             (↓ purify_implode h7)
-            (restrict_edge a_edge (implode_nodes h7)).
+            (fun x y => decision (restrict_edge a_edge__P (implode_nodes h7) x y)).
 Proof.
   eapply sub_CFG;intros.
   - specialize (a_reachability p) as [π Hπ].
@@ -313,12 +314,13 @@ Proof.
     specialize (well_founded_ind (R:=(@StrictPrefix' Lab)) (@StrictPrefix_well_founded Lab)
                                  (fun π : list Lab => forall (p : Lab),
                                       implode_nodes h7 p ->
-                                      Path a_edge root p π
-                                      -> exists π0, Path (restrict_edge' a_edge (implode_nodes h7)) root p π0))
+                                      Path a_edge__P root p π
+                                      -> exists π0, Path (restrict_edge' a_edge__P (implode_nodes h7)) root p π0))
       as WFind.
     eapply WFind.
     intros ? IHwf ? ? ?. clear WFind.
-    destruct H1. 
+(*    set (a := root) in H1.*)
+    dependent destruction H1. 
     + eexists; econstructor.
     + decide (implode_nodes h7 b).
       * specialize (IHwf π). exploit IHwf;[econstructor;econstructor|].
@@ -326,8 +328,8 @@ Proof.
         eexists; econstructor;eauto.
         unfold_edge_op. split_conj;auto.
       * eapply impl_nimpl_ex_headexit in H0 as Hnexit.
-        4: eapply subgraph_path';eauto.
         2 :{ eapply implode_nodes_root_inv. }
+        3: eapply subgraph_path';eauto. 
         2,3: eauto.
         destruct Hnexit as [h [H3 H4]].
         eapply path_to_elem in H4;eauto. destructH.
@@ -335,7 +337,7 @@ Proof.
         assert (implode_nodes h7 h) as Himpl.
         {
           destruct H0.
-          * right. exists c. split;[exists b|];eauto.
+          * right. exists p. split;[exists b|];eauto.
           * exfalso.
             destructH. eapply no_exit_head;eauto.
             unfold exited,exit_edge in H4; destructH. eauto using loop_contains_loop_head.
@@ -343,7 +345,7 @@ Proof.
         exploit IHwf.
         -- eapply prefix_ex_cons in H6. destructH. econstructor. cbn. eauto.
         -- destructH. 
-           exists (c :: π0). econstructor;eauto. unfold_edge_op. split_conj;eauto.
+           exists (p :: π0). econstructor;eauto. unfold_edge_op. split_conj;eauto.
            eapply head_exits_property_a_edge;eauto.
            contradict n.
            eapply loop_contains_deq_loop in n.
@@ -397,13 +399,16 @@ Qed.
 
 Definition edge' `(C : redCFG) := edge.
 
+Local Arguments edge__P {_ _ _ _} _.
+Local Arguments a_edge__P {_ _ _ _} _.
+
 Lemma head_exits_CFG_path `(C : redCFG) (h p q : Lab) π
       (Hpath : CPath p q π)
-  : Path (edge' (head_exits_CFG C h)) p q π.
+  : Path (edge__P (head_exits_CFG C h)) p q π.
 Proof.
   unfold edge'.
   eapply subgraph_path'.
-  - eapply union_subgraph1.
+  - unfold edge__P, is_true. rewrite is_true2_decision. eapply union_subgraph1.
   - auto.
 Qed.
 
@@ -452,9 +457,10 @@ Lemma implode_nodes_edge `(C : redCFG) (h p q : Lab)
       (HPp : implode_nodes C h p)
       (HPq : implode_nodes C h q)
       (Hedge : edge p q = true)
-  : edge' (local_impl_CFG C h) (impl_of_original' HPp) (impl_of_original' HPq) = true.
+  : edge__P (local_impl_CFG C h) (impl_of_original' HPp) (impl_of_original' HPq).
 Proof.
-  unfold edge'.
+  unfold edge__P.
+  repeat rewrite is_true2_decision.
   rewrite restrict_edge_intersection. unfold_edge_op. cbn.
   eapply head_exits_CFG_implode_nodes_inv in HPp.
   eapply head_exits_CFG_implode_nodes_inv in HPq.
@@ -568,7 +574,7 @@ Lemma implode_nodes_path_inv' `(C : redCFG) (h : Lab) (Hhe : head_exits_property
       (HPp : (implode_nodes C h) p)
       (HPq : (implode_nodes C h) q)
       (q' := impl_of_original' HPq)
-  : exists ϕ, Path (edge' (local_impl_CFG C h)) (impl_of_original' HPp) q' ϕ /\ impl_list' h π = ϕ.
+  : exists ϕ, Path (edge__P (local_impl_CFG C h)) (impl_of_original' HPp) q' ϕ /\ impl_list' h π = ϕ.
 Proof.
   revert dependent q. revert dependent π.
   specialize (well_founded_ind (R:=(@StrictPrefix' Lab)) (@StrictPrefix_well_founded Lab)
@@ -576,7 +582,7 @@ Proof.
                                     CPath p q π ->
                                     forall HPq : implode_nodes C h q,
                                       let q' := impl_of_original' HPq in
-                                      exists ϕ, Path (edge' (local_impl_CFG C h))
+                                      exists ϕ, Path (edge__P (local_impl_CFG C h))
                                                 (impl_of_original' HPp) q' ϕ
                                            /\ impl_list' h π = ϕ
                                ))
@@ -637,10 +643,13 @@ Proof.
         { eapply path_prefix_path in H0;eauto. }
         exploit' IHwf. unfold q' in IHwf. destructH. 
         exists (q' :: ϕ). split.
-        ++ econstructor;eauto 1. unfold edge'.
+        ++ unfold edge__P,a_edge__P.
+           econstructor;eauto 1. 
+           repeat rewrite is_true2_decision.
            rewrite restrict_edge_intersection. cbn.
-           unfold_edge_op. split_conj;eauto 1.
-           2,3: eapply head_exits_implode_nodes_inv1;eauto. 
+           unfold_edge_op.
+           split_conj;eauto 1.
+           2,3: eapply head_exits_implode_nodes_inv1 with (C0:=C);eauto. 
            left. eapply a_edge_incl.
            eapply head_exits_property_a_edge;eauto.
            contradict n.
@@ -726,7 +735,7 @@ Lemma local_impl_CFG_path `(C : redCFG) (h p q : Lab) π
       (Hpath : CPath p q π)
       (Hp : implode_nodes C h p)
       (Hq : implode_nodes C h q)
-  : exists ϕ, Path (edge' (local_impl_CFG C h)) (impl_of_original' Hp) (impl_of_original' Hq) ϕ.
+  : exists ϕ, Path (edge__P (local_impl_CFG C h)) (impl_of_original' Hp) (impl_of_original' Hq) ϕ.
 Proof.
   unfold local_impl_CFG.
   set (D := head_exits_CFG C h).
@@ -735,7 +744,7 @@ Proof.
   eapply head_exits_CFG_implode_nodes_inv in Hq as Hq'.
   eapply implode_nodes_path_inv in Hpath;eauto.
   2: eapply head_exits_property_satisfied.
-  unfold edge'. destructH.
+  unfold edge__P in *. destructH. repeat rewrite is_true2_decision in *.
   eapply restrict_edge_path_equiv in Hpath0.
   destruct (toSubList ϕ _);[contradiction|].
   exists (s :: l). eauto.

@@ -173,7 +173,7 @@ Section cfg.
   Qed.
   
   Lemma ancestor_dom1 a p q
-    : ancestor a p q -> Dom edge root a p.
+    : ancestor a p q -> Dom edge__P root a p.
   Proof.
     intros.
     destruct H.
@@ -189,7 +189,7 @@ Section cfg.
   Qed.
   
   Lemma ancestor_dom2 a p q
-    : ancestor a p q -> Dom edge root a q.
+    : ancestor a p q -> Dom edge__P root a q.
   Proof.
     eauto using ancestor_dom1, ancestor_sym.
   Qed.
