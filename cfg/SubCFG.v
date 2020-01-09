@@ -1,4 +1,5 @@
-Require Export CFGloop CFGTac.
+Require Export CFGloop CFGgeneral.
+Require Import Coq.Logic.PropExtensionality.
 
 Section Restr.
   Context `{C : redCFG}.
@@ -12,13 +13,14 @@ Section Restr.
     := (exist (fun x : Lab => pure p x) h (purify H)).
 
   
-  Lemma restrict_edge_intersection (A : finType) (f : A -> A -> bool) (p : decPred A) x y
-    : restrict_edge f (p:=p) x y = restrict_edge' f p (`x) (`y).
+  Lemma restrict_edge_intersection (A : finType) (f : A -> A -> Prop) (p : decPred A) x y
+    : restrict_edge f (p:=p) x y <-> restrict_edge' f p (`x) (`y).
   Proof.
     clear Lab edge root a_edge C.
     destruct x,y. 
     unfold restrict_edge',restrict_edge,intersection_edge. cbn.
-    symmetry. destruct (f x x0);cbn;conv_bool;[split;eapply (pure_equiv (D:=decide_pred p));auto|reflexivity].
+    symmetry.
+    split;firstorder. 1,2: eapply pure_equiv in p0;eapply pure_equiv in p1; auto.
   Qed.
 End Restr.
 
@@ -65,7 +67,7 @@ Lemma toSubList_eq (A : Type) (l : list A) (P : decPred A)
   - exfalso; eapply n; eauto.
 Qed.
 
-Lemma restrict_path_sat_P (L : finType) p q π (f : L -> L -> bool) (P : decPred L)
+Lemma restrict_path_sat_P (L : finType) p q π (f : L -> L -> Prop) (P : decPred L)
       (Hp : P p)
       (Hπ : Path (restrict_edge' f P) p q π)
       (x : L)
@@ -99,7 +101,7 @@ Ltac push_purify H :=
   subst H.
 
 Lemma original_path_reverse:
-  forall (L : finType) (r : L) (π : list L) (f : L -> L -> bool) (P : decPred L) (Hr : P r) (x : L) (Hx : P x) l,
+  forall (L : finType) (r : L) (π : list L) (f : L -> L -> Prop) (P : decPred L) (Hr : P r) (x : L) (Hx : P x) l,
     Path (restrict_edge' f P) r (` (↓ purify Hx (D:=decide_pred P)))
          (map (proj1_sig (P:=fun x0 : L => pure P x0)) l) ->
     forall p : P x, Path (restrict_edge f P) (↓ purify Hr) (↓ purify Hx) l.
@@ -133,7 +135,7 @@ Proof.
       Unshelve. cbn. auto.
 Qed.
 
-Lemma restrict_edge_path_equiv (L : finType) r x π (f : L -> L -> bool) (P : decPred L)
+Lemma restrict_edge_path_equiv (L : finType) r x π (f : L -> L -> Prop) (P : decPred L)
       (Hr : P r)
       (Hx : P x)
       (Hπ : Path (restrict_edge' f P) r x π)
@@ -175,7 +177,7 @@ Proof.
     auto.
 Qed.
 
-Lemma restrict_edge_subgraph (A : finType) (f g : A -> A -> bool) P
+Lemma restrict_edge_subgraph (A : finType) (f g : A -> A -> Prop) P
       (Hsub : sub_graph f g)
   : sub_graph (restrict_edge f P) (restrict_edge g P).
 Proof.
@@ -183,11 +185,11 @@ Proof.
 Qed.
 
 Lemma dom_restrict_subtype `{redCFG} r qh ql P 
-      (Hdom : Dom (restrict_edge' edge P) r qh ql)
+      (Hdom : Dom (restrict_edge' edge__P P) r qh ql)
       (Hr : P r)
       (Hh : P qh)
       (Hl : P ql)
-  : Dom (restrict_edge edge P) (↓ (purify Hr)) (↓ (purify Hh)) (↓ (purify Hl)).
+  : Dom (restrict_edge edge__P P) (↓ (purify Hr)) (↓ (purify Hh)) (↓ (purify Hl)).
 Proof.
   unfold Dom. intros.
   eapply original_path' in H0. cbn in *.
@@ -200,32 +202,33 @@ Qed.
 
 Lemma restrict_back_edge_intersection (L : finType) (edge a_edge : L -> L -> bool) (P : decPred L)
       (x y : finType_sub P (decide_pred P))
-  : (restrict_edge edge P ∖ restrict_edge a_edge P) x y
-    = (restrict_edge' edge P ∖ restrict_edge' a_edge P) (` x) (` y).
+  : (restrict_edge (is_true2 edge) P ∖ restrict_edge (is_true2 a_edge) P) x y
+    <-> (restrict_edge' (is_true2 edge) P ∖ restrict_edge' (is_true2 a_edge) P) (` x) (` y).
 Proof.
-  destruct x,y.
-  unfold_edge_op. unfold restrict_edge. cbn. 
-  symmetry. destruct (edge x x0),(a_edge x x0);cbn;conv_bool.
-  3,4: reflexivity.
-  2: split;[split;eapply (pure_equiv (D:=decide_pred P));eauto|reflexivity].
-  right.
-  decide (P x); decide (P x0); cbn; auto; eapply pure_equiv in p; eapply pure_equiv in p0;
-    try contradiction; split; auto.
+  destruct x,y. unfold is_true2,is_true.
+  unfold_edge_op. unfold restrict_edge. cbn.
+  eapply pure_equiv in p;eapply pure_equiv in p0.
+  split;intro H;destructH.
+  - split_conj;auto. intro N. destructH. contradiction.
+  - simpl_dec' H1. destruct H1;firstorder.
 Qed.           
 
 Lemma restrict_back_edge (L : finType) (edge a_edge : L -> L -> bool) (p h : L) (P : decPred L)
       (Hp : P p)
       (Hh : P h)
-      (Hback : (restrict_edge edge P ∖ restrict_edge a_edge P) (↓ (purify Hp)) (↓ (purify Hh)) = true)
-  : (edge ∖ a_edge) p h = true.
+      (Hback : (restrict_edge (is_true2 edge) P ∖ restrict_edge (is_true2 a_edge) P)
+                 (↓ (purify Hp))
+                 (↓ (purify Hh)))
+  : ((is_true2 edge) ∖ (is_true2 a_edge)) p h.
 Proof.
   unfold minus_edge,intersection_edge in *; conv_bool.
   destructH.
   split.
-  - rewrite restrict_edge_intersection in Hback0. cbn in *. unfold restrict_edge',intersection_edge in Hback0.
+  - rewrite restrict_edge_intersection in Hback0. cbn in *.
+    unfold restrict_edge',intersection_edge in Hback0.
     conv_bool. firstorder.
-  - rewrite negb_true_iff in Hback1. eapply negb_true_iff.
-    rewrite restrict_edge_intersection in Hback1. cbn in *. unfold restrict_edge',intersection_edge in Hback1.
+  - rewrite restrict_edge_intersection in Hback1.  unfold is_true2,is_true. contradict Hback1. 
+    cbn in *. unfold restrict_edge',intersection_edge, is_true2,is_true.
     conv_bool. firstorder.
 Qed.
 
@@ -239,7 +242,7 @@ Lemma restrict_loop_contains:
   forall (Lab : finType) (edge : Lab -> Lab -> bool) (a_edge : Lab -> Lab -> bool)
     (P : decPred Lab) (h : Lab) (Hh : pure P h) (p : Lab) 
     (Hp : pure P p),
-    loop_contains' (restrict_edge edge P) (restrict_edge a_edge P) (↓ Hh) (↓ Hp) -> loop_contains' edge a_edge h p.
+    loop_contains' (restrict_edge (is_true2 edge) P) (restrict_edge (is_true2 a_edge) P) (↓ Hh) (↓ Hp) -> loop_contains' (is_true2 edge) (is_true2 a_edge) h p.
 Proof.
   intros Lab edge a_edge P h Hh p Hp HloopA.
   unfold loop_contains' in *.
@@ -295,8 +298,8 @@ Qed.
 Lemma loop_contains_restrict' `{redCFG} h q (P : decPred Lab)
       (Hh : P h)
       (Hq : P q)
-      (Hloop : loop_contains' (restrict_edge' edge P) (restrict_edge' a_edge P) h q)
-  : loop_contains' (restrict_edge edge P) (restrict_edge a_edge P) (↓ (purify Hh)) (↓ (purify Hq)).
+      (Hloop : loop_contains' (restrict_edge' edge__P P) (restrict_edge' a_edge__P P) h q)
+  : loop_contains' (restrict_edge edge__P P) (restrict_edge a_edge__P P) (↓ (purify Hh)) (↓ (purify Hq)).
 Proof.
   unfold loop_contains' in *.
   destructH.
@@ -325,13 +328,13 @@ Lemma restrict_exit_edge `{C : redCFG} (P : decPred Lab)
       (Hq : P q)
       (h : Lab)
       (Hh : P h)
-      (Hloop : forall h p : Lab, (exists x, (restrict_edge' edge P ∖ restrict_edge' a_edge P) x h = true)
-                            -> loop_contains' edge a_edge h p
+      (Hloop : forall h p : Lab, (exists x, (restrict_edge' edge__P P ∖ restrict_edge' a_edge__P P) x h)
+                            -> loop_contains' edge__P a_edge__P h p
                             -> P p
-                            -> loop_contains' (restrict_edge' edge P) (restrict_edge' a_edge P) h p)
-      (HloopB : loop_contains' (restrict_edge edge P) (restrict_edge a_edge P) (↓ (purify Hh)) (↓ (purify Hp)))
-      (HnloopB : ~ loop_contains' (restrict_edge edge P) (restrict_edge a_edge P) (↓ (purify Hh)) (↓ (purify Hq)))
-      (HedgeB : restrict_edge' edge P (` (↓ (purify Hp))) (` (↓ (purify Hq))) = true)
+                            -> loop_contains' (restrict_edge' edge__P P) (restrict_edge' a_edge__P P) h p)
+      (HloopB : loop_contains' (restrict_edge edge__P P) (restrict_edge a_edge__P P) (↓ (purify Hh)) (↓ (purify Hp)))
+      (HnloopB : ~ loop_contains' (restrict_edge edge__P P) (restrict_edge a_edge__P P) (↓ (purify Hh)) (↓ (purify Hq)))
+      (HedgeB : restrict_edge' edge__P P (` (↓ (purify Hp))) (` (↓ (purify Hq))))
   : exit_edge h p q.
 Proof.
   unfold exit_edge; split_conj.
@@ -350,17 +353,17 @@ Instance sub_CFG
         `{C : redCFG}
         (P : decPred Lab)
         (HP : P root)
-        (Hreach : forall p, P p -> exists π, Path (restrict_edge' a_edge P) root p π)
-        (Hloop : forall h p, (exists x, (restrict_edge' edge P ∖ restrict_edge' a_edge P) x h = true)
-                        -> loop_contains' edge a_edge h p
+        (Hreach : forall p, P p -> exists π, Path (restrict_edge' a_edge__P P) root p π)
+        (Hloop : forall h p, (exists x, (restrict_edge' edge__P P ∖ restrict_edge' a_edge__P P) x h)
+                        -> loop_contains' edge__P a_edge__P h p
                         -> P p
-                        -> loop_contains' (restrict_edge' edge P) (restrict_edge' a_edge P) h p)
+                        -> loop_contains' (restrict_edge' edge__P P) (restrict_edge' a_edge__P P) h p)
   : @redCFG (finType_sub_decPred P)
-            (restrict_edge edge P)
+            (fun x y => decision (restrict_edge edge__P P x y))
             (↓ (purify HP))
-            (restrict_edge a_edge P).
+            (fun x y => decision (restrict_edge a_edge__P P x y)).
 Proof.
-econstructor.
+econstructor;repeat rewrite is_true2_decision in *.
 { (* loop_head_dom *)
   intros.
   destruct qh as [qh Qh].
@@ -371,7 +374,7 @@ econstructor.
   unfold Dom.
   intros π Hπ.
   eapply loop_head_dom.
-  - eapply restrict_back_edge in H. unfold back_edge, back_edge_b;eauto.
+  - eapply restrict_back_edge in H. unfold back_edge;eauto.
   - eapply subgraph_path' in Hπ;eauto. eapply intersection_subgraph1.
 }
 { (* a_edge_incl *)
@@ -424,7 +427,8 @@ econstructor.
   eapply Hloop.
   - clear - HloopA. destruct HloopA as [x3 [_ [Hthis _]]].
     destruct x3. push_purify p.
-    exists x0. cstr_subtype H. cstr_subtype H2. rewrite <-restrict_back_edge_intersection. eauto.
+    exists x0. cstr_subtype H. cstr_subtype H2. unfold edge__P,a_edge__P.
+    rewrite <-restrict_back_edge_intersection. eauto.
   - eapply exit_pred_loop with (h:=x).
     eapply (restrict_exit_edge (p:=x1) (Hp:=H0) (q:=x2)(Hq:=H1)(Hh:=H2));eauto.
     + rewrite restrict_edge_intersection in HedgeA;eauto.
@@ -435,14 +439,16 @@ econstructor.
 { (* no_self_loops *)
   intros.
   destruct q. destruct p.
+  unfold toBool in H.
+  decide (restrict_edge edge__P P (↓ p0) (↓ p));[clear H|congruence].
   intro Heq. eapply subtype_extensionality in Heq.
-  eapply no_self_loops;eauto.
+  eapply no_self_loops;[|eauto].
+  unfold restrict_edge in r. auto.  
 }
 { (* root_no_pred *)
   intros.
   destruct p. push_purify p. intro N.
   eapply root_no_pred.
-  rewrite restrict_edge_intersection in N.
-  eapply intersection_subgraph1 in N. cbn in N. eauto.
+  rewrite decision_prop_iff in N. unfold restrict_edge in N. cbn in N. eauto.
 }
 Qed.

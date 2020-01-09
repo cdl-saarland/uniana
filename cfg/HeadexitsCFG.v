@@ -244,18 +244,6 @@ Proof.
     + rewrite head_exits_loop_equivalence;eauto.
 Qed.
 
-Require Import Coq.Logic.FunctionalExtensionality.
-Require Import Coq.Logic.PropExtensionality.
-
-Lemma is_true2_decision (A B : Type) (f : A -> B -> Prop) 
-      (Hdec : forall (a : A) (b : B), dec (f a b)) 
-  : is_true2 (fun a b => decision (f a b)) = f.
-Proof.
-  do 2 (apply functional_extensionality; intro).
-  eapply propositional_extensionality.
-  unfold is_true2, is_true, toBool.
-  split;intro H;decide (f x x0);auto. congruence.
-Qed.
 
 Instance head_exits_CFG `(redCFG) qh
   : redCFG (fun x y => decision ((edge__P ∪ (head_exits_edge qh)) x y)) root
@@ -375,12 +363,6 @@ Local Arguments exit_edge {_ _ _ _} (_).
 Local Arguments edge__P {_ _ _ _} (_).
 Local Arguments a_edge__P {_ _ _ _} (_).
 Local Arguments loop_contains {_ _ _ _} _.
-
-Lemma decision_prop_iff (P : Prop) (Hdec : dec P)
-  : @toBool P (decision P) = true  <-> P.
-Proof.
-  split;unfold toBool;intro H;decide P;auto;congruence.
-Qed.
   
 
 Lemma head_exits_property_satisfied `(C : redCFG) qh : head_exits_property (head_exits_CFG C qh) qh.
