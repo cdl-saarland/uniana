@@ -206,6 +206,7 @@ Section disj.
       rewrite rcons_cons' in Hhd. cbn in Hhd. inversion Hhd.
       eapply path_prefix_path in Hpre.
       - rewrite <-rcons_cons' in Hpre. eauto.
+      - eauto.
       - eauto. 
     Qed.
 

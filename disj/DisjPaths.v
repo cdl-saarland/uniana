@@ -64,7 +64,7 @@ Section disj.
                 ** inversion Hpath;cbn;auto.
                 ** eapply postfix_incl;eauto. 
              ++ eapply preds_in_same_loop;cycle 1;eauto 1.
-                ** eapply tcfg_edge_spec in Hpost. destructH. auto.
+                ** unfold tcfg_edge,tcfg_edge' in Hpost. destructH. auto.
                 ** eapply H;eauto.
                    --- eapply postfix_step_left;eauto. 
       + eapply H;eauto.
@@ -123,7 +123,7 @@ Section disj.
         * eapply postfix_step_left;eauto.
   Qed.
 
-  Lemma while'_front_In (A : Type) (e : A -> A -> bool) (P : decPred A) (l : list A) (a b : A)
+  Lemma while'_front_In (A : Type) (e : A -> A -> Prop) (P : decPred A) (l : list A) (a b : A)
         (Hpath : Path e a b l)
         (HP : P b)
     : b ∈ while' P l.
@@ -182,7 +182,7 @@ Section disj.
           eapply postfix_path in H;eauto 1.
           instantiate (1:=e). 
           eapply path_nlrcons_edge in H. 
-          eapply tcfg_edge_spec in H. destructH. eauto.
+          unfold tcfg_edge,tcfg_edge' in H. destructH. eauto.
         - eapply while'_max in H as H1';eauto. cbn in H1'. contradict H1'.
           eapply loop_contains_deq_loop in H1'.
           eapply innermost_eq_loop in Hin.
@@ -261,7 +261,8 @@ Section disj.
 
   (* misc *)
 
-  Global Instance Path_dec (L : eqType) (e : L -> L -> bool) (x y : L) (π : list L)
+  Global Instance Path_dec (L : eqType) (e : L -> L -> Prop) (Hdec : forall x y, dec (e x y))
+         (x y : L) (π : list L)
     : dec (Path e x y π).
   Proof.
     revert y.
@@ -272,11 +273,11 @@ Section disj.
         all: right;contradict n;inversion n;try reflexivity. all: subst π. inversion H0. inversion H3.
       + destruct (IHπ e0).
         1: decide (a = y).
-        1: subst; destruct (e e0 y) eqn:E.
+        1: subst; decide (e e0 y).
         1: left;econstructor;eauto 1.
         all: right;intro N;inversion N;clear N.
         all: match goal with [ Q : Path _ _ _ _ |- _] => eapply path_front in Q as Hfront end.
-        all: cbn in Hfront;subst;try contradiction. congruence.
+        all: cbn in Hfront;subst;try contradiction. 
   Qed.
 
   Lemma ex_back_edge (p h q : Lab) (i j k : Tag) t

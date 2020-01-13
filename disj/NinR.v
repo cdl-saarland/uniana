@@ -130,7 +130,7 @@ Section disj.
 
   (* TODO : move *)
   Lemma path_rcons_rinv
-    : forall (L : Type) (edge : L -> L -> bool) (p q r : L) (π : list L),
+    : forall (L : Type) (edge : L -> L -> Prop) (p q r : L) (π : list L),
       Path edge r p ((π :r: q) :r: r) -> Path edge q p (π :r: q).
   Proof.
     clear.

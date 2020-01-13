@@ -32,7 +32,7 @@ Parameter rel_splits : forall `{redCFG}, Lab -> Lab -> list (Lab * Lab * Lab).
 
 Lemma path_nlrcons_edge {A : Type} (a b c : A) l f
       (Hpath : Path f b c (l :r: a :r: b))
-  : f b a = true.
+  : f b a.
 Proof.
   revert dependent c.
   induction l; intros; inversion Hpath; subst; cbn in *.
