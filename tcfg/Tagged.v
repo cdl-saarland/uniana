@@ -24,7 +24,7 @@ Section tagged.
   Definition tcfg_edge' (tag : Lab -> Lab -> Tag -> Tag) :=
     (fun c c' : Coord => let (p,i) := c  in
                       let (q,j) := c' in
-                      edge p q && ( (tag p q i) ==b j)).
+                      edge__P p q /\ ( (tag p q i) = j)).
 
   Definition eff_tag p q i : Tag
     := if decision (p ↪ q)
@@ -45,9 +45,15 @@ Section tagged.
 
   Hint Unfold Coord tcfg_edge tcfg_edge'.
 
-  Notation "pi -t> qj" := (tcfg_edge pi qj = true) (at level 50).
+  Notation "pi -t> qj" := (tcfg_edge pi qj) (at level 50).
   (*Notation "pi -t> qj" := ((fun `(redCFG) => tcfg_edge pi qj = true) _ _ _ _ _)
                           (at level 50).*)
+
+  Global Instance tcfg_edge_dec : forall pi qj, dec (pi -t> qj).
+  Proof.
+    intros. destruct pi as [p i]. destruct qj as [q j].
+    cbn. eauto.
+  Qed.
 
   Lemma tcfg_edge_spec (p q : Lab) i j
     : (p,i) -t> (q,j) <-> edge p q = true /\ eff_tag p q i = j.
@@ -222,6 +228,7 @@ Proof.
   - eapply path_prefix_path with (ϕ:= [(p,i)]) (r:=(q,j))in Hpath.
     + inversion Hpath;subst;eauto. unfold tcfg_edge,tcfg_edge' in H3. cbn in H3. destruct b. conv_bool.
       inversion H0;subst. destruct H3. eauto. inversion H5.
+    + eauto.
     + cbn; clear. induction l2; cbn in *; econstructor; eauto.
   - cbn; clear. induction l2; cbn; destruct l1; cbn; eauto using postfix_cons.
     1,2: repeat (eapply postfix_cons; try econstructor). eapply postfix_nil.
@@ -240,7 +247,7 @@ Qed.
 
 Lemma exit_edge_tcfg_edge (h p q : Lab) (j : Tag)
       (Hexit : exit_edge h q p)
-  : tcfg_edge (q,j) (p,tl j) = true.
+  : (q,j) -t> (p,tl j).
 Proof.
   cbn. conv_bool.
   unfold eff_tag. 
@@ -334,7 +341,7 @@ Proof.
   Qed.
 
   Lemma dom_tpath_prec p q i l
-        (Hdom : Dom edge root q p)
+        (Hdom : Dom edge__P root q p)
         (Hpath : TPath (root,start_tag) (p,i) l)
     : exists j, Precedes fst l (q,j).
   Proof.
@@ -453,7 +460,7 @@ Proof.
     Admitted.
 
   Lemma ancestor_in_before_dominating a p q (i j k : Tag) l
-        (Hdom : Dom edge root q p)
+        (Hdom : Dom edge__P root q p)
         (Hanc : ancestor a q p) 
         (Hprec__a: Precedes fst ((p,i) :: l) (a,k))
         (Hprec__q: Precedes fst ((p,i) :: l) (q,j))
@@ -491,8 +498,8 @@ Proof.
   Hint Resolve precedes_in.
   
   Lemma dom_dom_in_between  (p q r : Lab) (i j k : Tag) l
-        (Hdom1 : Dom edge root r q)
-        (Hdom2 : Dom edge root q p)
+        (Hdom1 : Dom edge__P root r q)
+        (Hdom2 : Dom edge__P root q p)
         (Hprec : Precedes fst ((p,i) :: l) (q,j))
         (Hin : (r,k) ∈ ((p,i) :: l))
         (Hpath : TPath (root,start_tag) (p,i) ((p,i) :: l))
@@ -504,7 +511,7 @@ Proof.
   Lemma loop_cutting q p t
         (Hpath : CPath q p t)
         (Hnoh : forall h, loop_contains h q -> h ∉ t)
-    : exists t', Path a_edge q p t'.
+    : exists t', Path a_edge__P q p t'.
   Proof.
     Admitted.
 
@@ -524,12 +531,12 @@ Proof.
         (Hpath : TPath (x,l) (p,i) ((p,i) :: t))
         (Hib : (p,i) ≻* (q,j) | (p,i) :: t)
         (Hnoh : forall h k, loop_contains h q -> ~ (p,i) ≻* (h,k) ≻* (q,j) | (p,i) :: t)
-    : exists t', Path a_edge q p t'.
+    : exists t', Path a_edge__P q p t'.
   Proof.
     Admitted.
 
   Lemma exit_cascade u p t i j k x l
-        (Hdom : Dom edge root u p)
+        (Hdom : Dom edge__P root u p)
         (Hprec : Precedes fst ((p,i) :: t) (u,j))
         (Hpath : TPath (x,l) (p,i) ((p,i) :: t))
     : forall h, loop_contains h u -> ~ (p,i) ≻* (h,k) ≻* (u,j) | (p,i) :: t.
