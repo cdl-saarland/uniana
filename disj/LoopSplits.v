@@ -132,7 +132,8 @@ Section disj.
         eapply path_app' in Hπx2 as HQ;eauto.
         eapply path_app in Hedge1';eauto.
         eapply path_app' in Hedge1';eauto.
-        eapply path_rcons in Hedge1';eauto.
+        eapply path_rcons in Hedge2';eauto.
+        clear Hedge1'. rename Hedge2' into Hedge1'.
         eapply dom_self_loop in Hedge1'.
         * clear - Hedge1' Hπx2.
           destruct πx2;[inversion Hπx2|].
@@ -292,14 +293,15 @@ Proof.
   subst tt.
   fold (tl ((s,k) :: prefix_nincl (s,k) t)). 
   eapply path_app'.
-  ++ eapply path_prefix_path;[eapply Hpath|]. eapply prefix_nincl_prefix.
+  ++ eapply path_prefix_path; [eauto|eapply Hpath|]. eapply prefix_nincl_prefix.
      eauto.
   ++ eapply path_prefix_path in Hr;cycle 1.
      ** specialize (prefix_nincl_prefix' r (`qs',i)) as Hrr.
         eapply prefix_rcons in Hrr. rewrite rcons_cons' in Hrr. eauto.
      ** subst rr.
+        
         enough ((qe,n :: i) = hd (s,k) (prefix_nincl (` qs',i) r :r: (s,k))).
-        { setoid_rewrite H. admit. }
+        { admit. }
         admit. (* critical *) 
 Admitted.
 
@@ -403,7 +405,7 @@ Section lift.
   Proof.
     eapply Nat.le_antisymm.
     - eapply impl_depth_max.
-    - setoid_rewrite <-impl_depth_self_eq at 1. 2:eauto.
+    - setoid_rewrite impl_depth_self_eq at 1. 2:eauto.
       clear - Hndeq Hsdeq.
   Admitted.
   
@@ -523,56 +525,156 @@ End Lift.
 
 Import Lift.
 
-Theorem lc_disj_exits_lsplits' `(C : redCFG)
-        (s e1 e2 q1 q2 qs1 qs2 h : Lab) (j1 j2 k js1 js2 : Tag)
-        (t1 t2 : list Coord) (r1 r2 : list Coord)
-        (Hlc : last_common' t1 t2 r1 r2 (s,k))
-        (Hpath1 : TPath (root,start_tag) (q1,j1) t1)
-        (Hpath2 : TPath (root,start_tag) (q2,j2) t2)
-        (Hexit1 : exit_edge h q1 e1)
-        (Hexit2 : exit_edge h q2 e2)
-        (Htag : tl j1 = tl j2)
-        (Htagle : hd 0 j1 <= hd 0 j2)
-        (Hextra : j1 = j2 -> exists π, CPath q2 h (π :r: q2) /\ Disjoint (map fst r1) π)
-        (Hsucc1 : (qs1,js1) ≻ (s,k) | (e1,tl j1) :: t1)
-        (Hsucc2 : (qs2,js2) ≻ (s,k) | (e2,tl j2) :: t2)
+Section lsplits.
+  Context `(C : redCFG).
+  Variables (s e1 e2 q1 q2 qs1 qs2 h : Lab) (j1 j2 k js1 js2 : Tag)
+            (t1 t2 : list (@Coord Lab)) (r1 r2 : list (@Coord Lab)).
+  Hypotheses (Hlc : last_common' t1 t2 r1 r2 (s,k))
+             (Hpath1 : TPath (root,start_tag) (q1,j1) t1)
+             (Hpath2 : TPath (root,start_tag) (q2,j2) t2)
+             (Hexit1 : exit_edge h q1 e1)
+             (Hexit2 : exit_edge h q2 e2)
+             (Htag : tl j1 = tl j2)
+             (Htagle : hd 0 j1 <= hd 0 j2)
+             (Hextra : j1 = j2 -> exists π, CPath q2 h (π :r: q2) /\ Disjoint (map fst r1) π)
+             (Hsucc1 : (qs1,js1) ≻ (s,k) | (e1,tl j1) :: t1)
+             (Hsucc2 : (qs2,js2) ≻ (s,k) | (e2,tl j2) :: t2).
+
+
+  Local Lemma Heq : eq_loop q1 q2.
+  Proof.
+    eapply q1_eq_q2;eauto.
+  Qed.
+
+  Hint Immediate Heq.
+
+  Local Lemma Hq1 : implode_nodes (head_exits_CFG C q1) q1 q1.
+  Proof.
+    left. reflexivity.
+  Qed.
+
+  Local Lemma Hq2 : implode_nodes (head_exits_CFG C q1) q1 q2.
+  Proof.
+    eapply head_exits_implode_nodes_inv1;left. apply Heq.
+  Qed.
+  
+  Local Lemma He1 : implode_nodes (head_exits_CFG C q1) q1 e1.
+  Proof.
+    eapply head_exits_implode_nodes_inv1;left; eauto using deq_loop_exited.
+  Qed.
+
+  Hint Resolve Heq deq_loop_exited eq_loop1 eq_loop2 deq_loop_exiting eq_loop_exiting : deq.
+  
+  Local Lemma He2 : implode_nodes (head_exits_CFG C q1) q1 e2.
+  Proof.
+    eapply head_exits_implode_nodes_inv1;left; eauto using deq_loop_exited.
+    eauto with deq.
+  Qed.
+  
+  Local Lemma Hh : implode_nodes (head_exits_CFG C q1) q1 h.
+  Proof.
+    eapply head_exits_implode_nodes_inv1;left.
+    eapply eq_loop_exiting;eauto.
+  Qed.
+
+  Local Lemma Hlc'
+        (Hsdeq : deq_loop s q1)
+        (Hndeq : ~ deq_loop q1 s)
+    : last_common' (Lift.t1' C q1 t1) (Lift.t2' C q1 t2) (Lift.r1' C q1 r1) 
+                   (Lift.r2' C q1 r2) (Lift.s' C q1, j1).
+  Proof.
+    cstr_subtype Hq1. cstr_subtype Hq2. cstr_subtype Hh. cstr_subtype He1. cstr_subtype He2.
+    cbn in Hsdeq,Hndeq. 
+    eapply impl_lift_lc. all:eauto;cbn in *; auto.
+  Qed.
+
+  Local Lemma Hsucc1'
+        (Hsdeq : deq_loop s q1)
+        (Hndeq : ~ deq_loop q1 s)
+    : (Lift.qs1' (↓ purify He1) t1 j1, j1) ≻ (Lift.s' C q1, j1)
+  | (↓ purify He1, tl j1) :: Lift.t1' C q1 t1.
+  Proof.
+    cstr_subtype Hq1. cstr_subtype Hq2. cstr_subtype Hh. cstr_subtype He1. cstr_subtype He2.
+    eapply impl_lift_succ1;eauto;cbn in *;auto.
+  Qed.
+  
+  Local Lemma Hsucc2'
+        (Hsdeq : deq_loop s q1)
+        (Hndeq : ~ deq_loop q1 s)
+    : (Lift.qs2' (↓ purify He2) t2 j1 j2, j1) ≻ (Lift.s' C q1, j1)
+  | (↓ purify He2, tl j2) :: Lift.t2' C q1 t2.
+  Proof.
+    cstr_subtype Hq1. cstr_subtype Hq2. cstr_subtype Hh. cstr_subtype He1. cstr_subtype He2.
+    eapply impl_lift_succ2;eauto;cbn in *;auto.
+  Qed.
+
+(*  Local Arguments depth {_ _ _ _} _.
+  Local Lemma Hdep'
+        (Hsdeq : deq_loop s q1)
+        (Hndeq : ~ deq_loop q1 s)
+    : depth (Lift.C' C q1) (Lift.s' C q1) = depth (Lift.C' C q1) (↓ purify Hq1).
+  Proof.
+    unfold Lift.C', C''. unfold Lift.s'. 
+    setoid_rewrite impl_depth_self_eq at 2. [|eauto]. eapply dep_eq;eauto.*)
+  
+Theorem lc_disj_exits_lsplits'
   : (s,qs1,qs2) ∈ splits' h e1.
 Proof.
   remember (depth s - depth q1).
   revert Htag Htagle.
   revert dependent Lab. clear.
-  revert j1 j2 k js1 js2.
+  revert j1 j2 k js1 js2. 
   induction n;intros.
   - eapply lc_disj_exits_lsplits_base';eauto.
     enough (depth q1 <= depth s) by omega.
     eapply deq_loop_depth.
     eapply s_deq_q;eauto.
   - (* Show that some interesting nodes are in the imploded CFG *)
-    assert (implode_nodes (head_exits_CFG C q1) q1 q1) as Hq1.
+(*    assert (implode_nodes (head_exits_CFG C q1) q1 q1) as Hq1.
     { left. reflexivity. }
-    assert (eq_loop q1 q2) as Heq by (eapply q1_eq_q2;eauto).
     enough (implode_nodes (head_exits_CFG C q1) q1 q2) as Hq2.
     enough (implode_nodes (head_exits_CFG C q1) q1 e1) as He1.
     enough (implode_nodes (head_exits_CFG C q1) q1 e2) as He2.
     enough (implode_nodes (head_exits_CFG C q1) q1 h) as Hh.
     2-5: eapply head_exits_implode_nodes_inv1;left; eauto using deq_loop_exited.
     2: eapply eq_loop_exiting;eauto. 3: destruct Heq;eauto.
-    2: transitivity q2;destruct Heq;eauto;eapply deq_loop_exited;eauto. 
+    2: transitivity q2;destruct Heq;eauto;eapply deq_loop_exited;eauto.*)
+
+    (* It is necessary to copy these hypotheses because they are used implicitly in Heq, 
+     * and cstr_subtype wouldn't be able to modify Hexit1 & Hexit2. *)
+    copy Hexit1 Hexit1''. copy Hexit2 Hexit2''.
     (* Construct the imploded type for them *)
-    cstr_subtype Hq1. cstr_subtype Hq2. cstr_subtype He1. cstr_subtype He2. cstr_subtype Hh. 
+    cstr_subtype Hq1. cstr_subtype Hq2.  cstr_subtype He1. cstr_subtype He2. cstr_subtype Hh.
     (* Lift all some properties to the imploded graph *)
-    cbn in Heq. 
-    eapply eqn_ndeq in Heqn as Hndeq;eauto.
-    eapply eqn_sdeq in Heqn as Hsdeq;eauto.
-    eapply impl_lift_lc in Hlc as Hlc';eauto.
-    eapply impl_lift_exit1 in Hexit1 as Hexit1'.
-    eapply impl_lift_exit2 in Hexit2 as Hexit2'.
+    cbn in Heqn.
+    eapply eqn_ndeq in Heqn as Hndeq.
+    eapply eqn_sdeq in Heqn as Hsdeq . 2-11:eauto. 
+    eapply impl_lift_exit1 in Hexit1'' as Hexit1'.
+    eapply impl_lift_exit2 in Hexit2'' as Hexit2'.
     eapply impl_lift_tpath1 in Hpath1 as Hpath1'.
     eapply impl_lift_tpath2 in Hpath2 as Hpath2'.
+    specialize Hlc' as Hlc'. exploit Hlc'.
     eapply lc_disj_exits_lsplits_base in Hlc'. 2-8: solve [eauto].
-    5: { intros jeq; exploit' Hextra; eapply impl_lift_extra;eauto. }
     2,3: eauto using impl_lift_succ2, impl_lift_succ1.
+    3: { intros jeq; exploit' Hextra; eapply impl_lift_extra;eauto. }
+          Local Arguments depth {_ _ _ _} _.
     2: { setoid_rewrite impl_depth_self_eq at 2;[|eauto]. eapply dep_eq;eauto. }
+
+      idtac.
+      unfold Lift.C', C''.
+      
+      specialize (@impl_depth_self_eq _ _ _ _ C q1 (↓ purify Hq1)) as Q.
+      unfold "`" in Q. symmetry.
+      clear - Q.
+      setoid_rewrite Q.
+      - admit.
+      - eapply dep_eq.
+      admit. } (*
+      unfold Lift.s'.
+      setoid_rewrite impl_depth_self_eq.
+      3:cbn;reflexivity.
+      1:reflexivity.
+      eapply dep_eq;eauto. } *)
     setoid_rewrite splits'_spec.
     right.
     pose (s' := s'' C q1). 
