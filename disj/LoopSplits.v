@@ -215,37 +215,51 @@ End maxcont.
 
 Definition imploding_head `(C : redCFG) h p := exists e, exited p e /\ eq_loop h e.
 
+Section ocnc.
+  Context `{C : redCFG}.
+  Variables (s q : Lab).
+  Definition get_ocnc_loop : Lab
+    := if (decision (s = q)) then s else q.
+  Hypotheses (Hndeq : ~ deq_loop q s)
+             (Hdeq : deq_loop s q).
+  (* Let get_ocnc_loop be the outermost loop such that
+   * - loop_contains (`s'') s (i.e. in the non-imploded CFG it contains s)
+   * - ~ deq_loop q (`s'') (i.e. in the non-imploded CFG it does not contain q *)
+
+  Lemma ocnc_in_s
+    : loop_contains get_ocnc_loop s.
+  Proof.
+  Admitted.
+  
+  Lemma q_ndeq_ocnc
+    : ~ deq_loop q get_ocnc_loop.
+  Proof.
+  Admitted.
+    
+  Lemma outermost_ocnc
+    : forall x : Lab, loop_contains x s -> ~ deq_loop q x
+                 -> deq_loop x get_ocnc_loop.
+  Proof.
+  Admitted.
+  
+  Lemma implode_nodes_ocnc
+    : implode_nodes C q get_ocnc_loop.
+  Admitted.
+End ocnc.
+
 Section lift_one.
 
   Context `(C : redCFG).
   Variables (s q : Lab).
-  Hypotheses (Hndeq : ~ deq_loop q s)
-             (Hdeq : deq_loop s q).
-
-  (* Let s'' be the outermost loop such that
-   * - loop_contains (`s'') s (i.e. in the non-imploded CFG it contains s)
-   * - ~ deq_loop q (`s'') (i.e. in the non-imploded CFG it does not contain q *)
-  Parameter s'' : local_impl_CFG_type C q.
-  Axiom s_in_s
-    : loop_contains (`s'') s.
-  Axiom q_ndeq_s'
-    : ~ deq_loop q (`s'').
-  Axiom outermost_s'
-    : forall x : Lab, loop_contains x s -> ~ deq_loop q x
-           -> deq_loop x (`s'').
-
   Variables (h' q' e' : local_impl_CFG_type C q)
             (t : list (Lab * Tag)) (j : Tag).
   Local Definition C'' := local_impl_CFG C q.
-(*
-  Lemma s_imploding_head
-    : imploding_head C q (`s'').
-    clear - Hdeq Hndeq.
-*)
+  Local Definition s'' := get_ocnc_loop s q.
+
+  Definition s' := impl_of_original' implode_nodes_ocnc. 
   
   Lemma S_depth_s
-    : S (depth (C:=local_impl_CFG C q) s'') = depth (`s'').
-    clear - Hdeq Hndeq.
+    : S (depth (C:=C'') s') = depth s''.
     (* as s'' is the an outermost loop head not containing q, 
      * implosion reduces its depth by one *)
   Admitted.
@@ -270,10 +284,10 @@ Section lift_one.
   Admitted.
     
   Lemma ex_s_exit (x' : local_impl_CFG_type C q) i i'
-        (Hsucc : (x',i') ≻ (s'',i) | (e',tl j) :: t')
-    : exited (` s'') (` x').
+        (Hsucc : (x',i') ≻ (s',i) | (e',tl j) :: t')
+    : exited (s'') (` x').
   Proof.
-    clear - Hndeq Hdeq Hsucc.
+    clear - Hsucc.
   Admitted.
 
 End lift_one.
@@ -378,7 +392,7 @@ Section lift.
   Hypotheses (Hndeq : ~ deq_loop q1 s)
              (Hsdeq : deq_loop s q1).
     
-  Local Definition s' := s'' C q1.
+  Local Definition s' := s' q1.
 
   Lemma impl_lift_lc
     : last_common' t1' t2' r1' r2' (s',j1).
