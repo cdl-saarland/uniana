@@ -1,24 +1,86 @@
 Require Export EqNeqDisj SplitsDef GetSucc.
 
-Section disj.
+Reserved Infix "-t>" (at level 50).
+
+Class disjPaths `(C : redCFG)
+      (q1 q2 s : Lab) (t1 t2 : list (Lab * Tag)) (r1 r2 : list (Lab * Tag)) (j1 j2 k : Tag)
+      (e1 e2 h qs1 qs2 : Lab) (js1 js2 : Tag) :=
+  {
+    Hlc : last_common' t1 t2 r1 r2 (s,k);
+    Hpath1 : TPath (root,start_tag) (q1,j1) t1;
+    Hpath2 : TPath (root,start_tag) (q2,j2) t2;
+    Htag : tl j1 = tl j2;
+    Htagleq : hd 0 j1 <= hd 0 j2
+    where "pi -t> qj" := (tcfg_edge pi qj = true);
+    Hexit1 : exit_edge h q1 e1;
+    Hexit2 : exit_edge h q2 e2;
+    Hsucc1 : (qs1, js1) ≻ (s, k) | (e1, tl j1) :: t1;
+    Hsucc2 : (qs2, js2) ≻ (s, k) | (e2, tl j2) :: t2
+  }.
+
+  
+Hint Resolve Hlc Hpath1 Hpath2 Htag Htagleq Hexit1 Hexit2 Hsucc1 Hsucc2 : disjPaths.
+
+Section lift.
+
   Context `(C : redCFG).
+  Variables (q s : Lab).
 
-  Variable (t1 t2 : list (Lab * Tag)) (r1 r2 : list (Lab * Tag)) (q1 q2 s : Lab) (j1 j2 k : Tag).
-  Hypotheses (Hlc : last_common' t1 t2 r1 r2 (s,k))
-             (Hpath1 : TPath (root,start_tag) (q1,j1) t1)
-             (Hpath2 : TPath (root,start_tag) (q2,j2) t2)
-             (*           (Hneq : r1 <> r2) (* <-> r1 <> nil \/ r2 <> nil *)*)
-             (Hloop : eq_loop q1 q2)
-             (Htag : tl j1 = tl j2)
-             (Htagleq : hd 0 j1 <= hd 0 j2).
+  Variable (s' : local_impl_CFG_type C q).
+  
+  Local Definition C' := local_impl_CFG C q.
+  Variables (q1' q2' : local_impl_CFG_type C q)
+            (t1 t2 : list (Lab * Tag)) (r1 r2 : list (Lab * Tag)) (j1 j2 k : Tag)
+            (e1' e2' h' : local_impl_CFG_type C q)
+            (qs1 qs2 : Lab) (js1 js2 : Tag).
+  Hypothesis (Heq : eq_loop q (`q1')).
 
+  Local Definition t1' := impl_tlist q t1.
+  Local Definition t2' := impl_tlist q t2.
+  
+  Local Definition r1' := impl_tlist q r1.
+  Local Definition r2' := impl_tlist q r2.
+  
+  Local Definition qs1' := fst (get_succ (s', j1) (e1', tl j1) t1').
+  Local Definition qs2' := fst (get_succ (s', j1) (e2', tl j2) t2').
+  
+
+  Instance lift_disjPaths 
+  : disjPaths C (`q1') (`q2') s t1 t2 r1 r2 j1 j2 k (`e1') (`e2') (`h') qs1 qs2 js1 js2
+    -> disjPaths (local_impl_CFG C q) q1' q2' s' t1' t2' r1' r2' j1 j2 j1 e1' e2' h' qs1' qs2' j1 j1.
+  intro H.
+  Admitted.
+End lift.
+
+
+
+
+           (*********************)
+
+
+             Context `(C : redCFG).
+  Variables (s q1 qs1 qs2 : Lab) (h' q1' q2' e1' e2' : local_impl_CFG_type C q1)
+            (t1 t2 : list (Lab * Tag)) (r1 r2 : list (Lab * Tag)) (k j1 j2 js1 js2 : Tag).
+  Hypotheses (Hlc : last_common' t1 t2 r1 r2 (s, k))
+             (Hpath1 : TPath (root, start_tag) (`q1', j1) t1)
+             (Hpath2 : TPath (root, start_tag) (`q2', j2) t2)
+             (Hexit1 : exit_edge (`h') (`q1') (`e1'))
+             (Hexit2 : exit_edge (`h') (`q2') (`e2'))
+             (Hsucc1 : (qs1,js1) ≻ (s,k) | (`e1',tl j1) :: t1)
+             (Hsucc2 : (qs2,js2) ≻ (s,k) | (`e2',tl j2) :: t2)
+             (Hextra : j1 = j2 -> exists π, CPath (` q2') (` h') (π :r: `q2') /\ Disjoint (map fst r1) π)
+             (Heq : eq_loop q1 (`q1')).
+
+  (*********************************************)
+
+Section disj.
+
+  Context `(D : disjPaths).
   Notation "pi -t> qj" := (tcfg_edge pi qj = true) (at level 50).
 
-  Variables  (e1 e2 h qs1 qs2 : Lab) (js1 js2 : Tag).
-  Hypotheses (Hexit1 : exit_edge h q1 e1)
-             (Hexit2 : exit_edge h q2 e2)
-             (Hsucc1 : (qs1, js1) ≻ (s, k) | (e1, tl j1) :: t1)
-             (Hsucc2 : (qs2, js2) ≻ (s, k) | (e2, tl j2) :: t2).
+
+  
+  
 
   Lemma lc_disj_exits_lsplits_base_lt
         (Hdep : depth s = depth q1)
@@ -36,18 +98,21 @@ Section disj.
   Proof.
   Admitted. (* FIXME *)
 
+  Ltac seapply H Q Q'
+    := specialize Q as Q';
+       eapply H in Q'.
+
   Lemma hd_eq_eq
         (Hheq : hd 0 j1 = hd 0 j2)
     : j1 = j2.
   Proof.
-    clear - Hexit1 Hexit2 Hpath1 Hpath2 Hheq Htag.
-    eapply eq_loop_exiting in Hexit1.
-    eapply eq_loop_exiting in Hexit2.
-    eapply hd_tl_len_eq;eauto.
+    seapply eq_loop_exiting Hexit1 Hexit1'.
+    seapply eq_loop_exiting Hexit2 Hexit2'.
+    eapply hd_tl_len_eq; eauto with disjPaths.
     erewrite tag_depth. 2:eapply Hpath1.
     erewrite tag_depth. 2:eapply Hpath2.
-    2,3: eapply path_contains_front;eauto.
-    rewrite <-Hexit1. rewrite <-Hexit2. reflexivity.
+    2,3: eapply path_contains_front. 2: eapply Hpath2. 2: eapply Hpath1.
+    rewrite <-Hexit1'. rewrite <-Hexit2'. reflexivity.
   Qed.
   
   Corollary lc_disj_exits_lsplits_base
@@ -55,7 +120,7 @@ Section disj.
           (Hextra : j1 = j2 -> exists π, CPath q2 h (π :r: q2) /\ Disjoint (map fst r1) π)
     : (s,qs1,qs2) ∈ loop_splits C h e1.
   Proof.
-    eapply le_lt_or_eq in Htagleq as Q. 
+    seapply le_lt_or_eq Htagleq Q. 
     destruct Q.
     - eapply lc_disj_exits_lsplits_base_lt;eauto.
     - eapply hd_eq_eq in H. exploit Hextra. destructH.
@@ -70,7 +135,9 @@ Section disj.
     rewrite splits'_spec. left.
     eapply lc_disj_exits_lsplits_base;eauto.
   Qed.
-  
+    
+
+                            (* FIXME *)
   Lemma disj_latch_path_or
         (Heq : j1 = j2)
     : exists π, (CPath q2 h (π :r: q2) /\ Disjoint (map fst r1) π)
