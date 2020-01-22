@@ -82,6 +82,17 @@ Section lift.
   intro H.
   Admitted.
 
+  
+
+  Lemma disjPaths_shift
+        (Htaglt : hd 0 j1 < hd 0 j2)
+      : let qs1' := fst (get_succ (s',j1) (e1', tl j1) t1') in
+        let qs2' := fst (get_succ (s',j1) (↓ purify e2', tl j2) t2') in
+        exists qe1 qe2 rr1 rr2 tt1 tt2,
+          disjPaths C qe1 qe2 s tt1 tt2 rr1 rr2 j1 j2 k (`qs1') (`qs2') (`s') qs1 qs2 js1 js2.
+             \/ disjPaths C qe2 qe1 s tt2 tt1 rr2 rr1 j2 j1 k (`qs2') (`qs1') s' qs1 qs2 js1 js2).
+    : disjPaths C q1 q2 s t1 t2 r1 r2 j1 j2 k e1 e2 h qs1 qs2 js1 js2 *)
+
 End lift.
 
 Section disj.
@@ -274,6 +285,8 @@ Parameter get_ocnc_loop : forall `(C : redCFG), Lab -> Lab -> Lab.
 Parameter get_ocnc_spec : forall `(C : redCFG) s q,
     ~ deq_loop q s -> deq_loop s q -> ocnc_loop C s q (get_ocnc_loop C s q).
 
+
+Module disj.
 Section disj.
 
   Context `(D : disjPaths).
@@ -316,6 +329,7 @@ Section disj.
     eapply eq_loop_exiting;eauto with disjPaths.
   Qed.
 
+
   Lemma eqn_sdeq n
         (Heqn : S n = depth s - depth q1)
     : deq_loop s q1.
@@ -357,7 +371,11 @@ Proof.
      * and cstr_subtype wouldn't be able to modify Hexit1 & Hexit2. *)
     copy D D'.
     (* Construct the imploded type for them *)
-    cstr_subtype Hq1. cstr_subtype Hq2.  cstr_subtype He1. cstr_subtype He2. cstr_subtype Hh.
+    cstr_subtype (Hq1).
+    cstr_subtype (He1).
+    cstr_subtype (He2).
+    cstr_subtype (Hq2).
+    cstr_subtype Hh.
     (* Lift all some properties to the imploded graph *)
     cbn in Heqn.
 
@@ -389,7 +407,22 @@ Proof.
     (* consequence of Hlc' *)
     + (* we will apply the IH in four similar cases in two different ways, 
          therefore all the assumption of IHn are shown before the cases destinction *)
-      assert (exists qe1 n1, exit_edge s') qe1 (` qs1') /\ (`qs1',j1) ≻ (qe1,n1 :: j1) | (r1 :r: (s,k)))
+      right. eapply IHn.
+      assert (exists qe1 qe2 rr1 rr2 tt1 tt2,
+                 disjPaths C qe1 qe2 s tt1 tt2 rr1 rr2 j1 j2 k (`qs1') (`qs2') s' qs1 qs2 js1 js2
+             \/ disjPaths C qe2 qe1 s tt2 tt1 rr2 rr1 j2 j1 k (`qs2') (`qs1') s' qs1 qs2 js1 js2).
+      admit.
+      destructH.
+      destruct H;[left|right];eapply IHn;eauto.
+      left. eapply IHn. eauto.
+      pose (rr1 := prefix_nincl (` qs1',j1) r1).
+      pose (rr2 := prefix_nincl (` qs2',j1) r2).
+      pose (tt1 := rr1 :r: (s,k) ++ prefix_nincl (s,k) t1).
+      pose (tt2 := rr2 :r: (s,k) ++ prefix_nincl (s,k) t2).
+      
+
+      
+      assert (exists qe1 n1, exit_edge s' qe1 (` qs1') /\ (`qs1',j1) ≻ (qe1,n1 :: j1) | (r1 :r: (s,k)))
         as [qe1 [n1 [Hqee1 Hqes1]]].
       { eapply ex_s_exiting1;eauto. } 
       (*assert (depth (C:=C') (q1') = depth q1) as Hdep''.
@@ -398,10 +431,6 @@ Proof.
       assert (exists qe2 n2, exit_edge (` s') qe2 (` qs2') /\ (`qs2',j1) ≻ (qe2,n2 :: j1) | (r2 :r: (s,k)))
         as [qe2 [n2 [Hqee2 Hqes2]]].
       { eapply ex_s_exiting2;eauto. }
-      pose (rr1 := prefix_nincl (` qs1',j1) r1).
-      pose (rr2 := prefix_nincl (` qs2',j1) r2).
-      pose (tt1 := rr1 :r: (s,k) ++ prefix_nincl (s,k) t1).
-      pose (tt2 := rr2 :r: (s,k) ++ prefix_nincl (s,k) t2).
       assert (last_common' tt1 tt2 rr1 rr2 (s, k)) as Hlc_ih.
       { eapply impl_shift_lc;eauto. }
       specialize (r1_tpath Hlc Hpath1) as Hr1.
