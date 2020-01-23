@@ -8,16 +8,26 @@ Class disjPaths `(C : redCFG)
   {
     Hlc : last_common' t1 t2 r1 r2 (s,k);
     Hpath1 : TPath (root,start_tag) (q1,j1) t1;
-    Hpath2 : TPath (root,start_tag) (q2,j2) t2;
-    Htag : tl j1 = tl j2;
-    Htagleq : hd 0 j1 <= hd 0 j2
+    Hpath2 : TPath (root,start_tag) (q2,j2) t2
     where "pi -t> qj" := (tcfg_edge pi qj = true);
     Hexit1 : exit_edge h q1 e1;
     Hexit2 : exit_edge h q2 e2;
     Hsucc1 : (qs1, js1) ≻ (s, k) | (e1, tl j1) :: t1;
     Hsucc2 : (qs2, js2) ≻ (s, k) | (e2, tl j2) :: t2;
-    Hextra : j1 = j2 -> exists π, CPath q2 h (π :r: q2) /\ Disjoint (map fst r1) π
   }.
+
+Infix "-t>" := tcfg_edge.
+
+(*    Htag : tl j1 = tl j2;
+    Htagleq : hd 0 j1 <= hd 0 j2
+    Hextra : j1 = j2 -> exists π, CPath q2 h (π :r: q2) /\ Disjoint (map fst r1) π *)
+
+Lemma disjPaths_sym `(D : disjPaths)
+  : disjPaths C q2 q1 s t2 t1 r2 r1 j2 j1 k e2 e1 h qs2 qs1 js2 js1.
+Proof.
+  destruct D.
+  econstructor;eauto using last_common'_sym.
+Qed.
 
 Ltac seapply H Q Q'
   := specialize Q as Q';
@@ -38,10 +48,7 @@ Proof.
   symmetry. eapply q1_eq_q2;eauto.
 Qed.
   
-Hint Resolve Hlc Hpath1 Hpath2 Htag Htagleq Hexit1 Hexit2 Hsucc1 Hsucc2 Hextra q1_eq_q2 q2_eq_q1
-  : disjPaths.
-
-
+Hint Resolve Hlc Hpath1 Hpath2 Hexit1 Hexit2 Hsucc1 Hsucc2 q1_eq_q2 q2_eq_q1 : disjPaths.
 
 Section lift.
 
@@ -73,31 +80,63 @@ Section lift.
   Local Definition qs1' := fst (get_succ (s', j1) (e1', tl j1) t1').
   Local Definition qs2' := fst (get_succ (s', j1) (e2', tl j2) t2').
   
-  Instance lift_disjPaths
+  Lemma lift_disjPaths
            (Hndeq : ~ deq_loop q s)
            (Hsdeq : deq_loop s q)
            (Hocnc : ocnc_loop s q (`s'))
     : disjPaths C (`q1') (`q2') s t1 t2 r1 r2 j1 j2 k (`e1') (`e2') (`h') qs1 qs2 js1 js2
       -> disjPaths (local_impl_CFG C q) q1' q2' s' t1' t2' r1' r2' j1 j2 j1 e1' e2' h' qs1' qs2' j1 j1.
-  intro H.
+  Proof.
+    intro H.
   Admitted.
 
-  
+  Local Definition rr1 := prefix_nincl (` qs1',j1) r1.
+  Local Definition rr2 := prefix_nincl (` qs2',j1) r2.
+  Local Definition tt1 := rr1 :r: (s,k) ++ prefix_nincl (s,k) t1.
+  Local Definition tt2 := rr2 :r: (s,k) ++ prefix_nincl (s,k) t2.
 
-  Lemma disjPaths_shift
-        (Htaglt : hd 0 j1 < hd 0 j2)
-      : let qs1' := fst (get_succ (s',j1) (e1', tl j1) t1') in
-        let qs2' := fst (get_succ (s',j1) (↓ purify e2', tl j2) t2') in
-        exists qe1 qe2 rr1 rr2 tt1 tt2,
-          disjPaths C qe1 qe2 s tt1 tt2 rr1 rr2 j1 j2 k (`qs1') (`qs2') (`s') qs1 qs2 js1 js2.
-             \/ disjPaths C qe2 qe1 s tt2 tt1 rr2 rr1 j2 j1 k (`qs2') (`qs1') s' qs1 qs2 js1 js2).
-    : disjPaths C q1 q2 s t1 t2 r1 r2 j1 j2 k e1 e2 h qs1 qs2 js1 js2 *)
+  Fixpoint get_pred (A : eqType) (a e : A) (l : list A) : A :=
+    match l with
+    | [] => e
+    | b :: l0 => if decision (a = b) then hd e l0 else get_pred a e l0
+    end.
+
+  Local Definition qej1 := get_pred (s,k) (`qs1',j1) t1.
+  Local Definition qej2 := get_pred (s,k) (`qs2',j1) t2.
+
+  Local Definition qe1 := fst qej1.
+  Local Definition qe2 := fst qej2.
+  Local Definition n1 := hd 0 (snd qej1).
+  Local Definition n2 := hd 0 (snd qej2).
+
+  Lemma disjPaths_shift_lt
+        (Htaglt : n1 < n2)
+    : disjPaths C (`q1') (`q2') s t1 t2 r1 r2 j1 j2 k (`e1') (`e2') (`h') qs1 qs2 js1 js2
+      -> disjPaths C qe1 qe2 s tt1 tt2 rr1 rr2 (n1 :: j1) (n2 :: j1)
+                  k (`qs1') (`qs2') (`s') qs1 qs2 js1 js2.
+  Proof.
+  Admitted.
+
+  Lemma disjPaths_shift_eq π
+        (Htageq : n1 = n2)
+        (Hlatchp : CPath (`q2') (`h') (π ++ [`q2']))
+        (Hlatchd : Disjoint (map fst r1) π)
+    : disjPaths C (`q1') (`q2') s t1 t2 r1 r2 j1 j2 k (`e1') (`e2') (`h') qs1 qs2 js1 js2
+      -> (* qs1/2 & js1/2 are turned around because it makes reasoning in the appl. easier*)
+        disjPaths C qe1 qe2 s tt1 tt2 rr1 rr2 (n1 :: j1) (n2 :: j2)
+                  k (`qs1') (`qs2') (`s') qs2 qs1 js2 js1.
+  Proof.
+  Admitted.
 
 End lift.
 
 Section disj.
 
   Context `(D : disjPaths).
+  
+  Hypotheses (Htag : tl j1 = tl j2)
+             (Htagleq : hd 0 j1 <= hd 0 j2)
+             (Hextra : j1 = j2 -> exists π, CPath q2 h (π :r: q2) /\ Disjoint (map fst r1) π).
 
   Lemma lc_disj_exits_lsplits_base_lt
         (Hdep : depth s = depth q1)
@@ -136,7 +175,7 @@ Section disj.
     seapply le_lt_or_eq Htagleq Q. 
     destruct Q.
     - eapply lc_disj_exits_lsplits_base_lt;eauto.
-    - eapply hd_eq_eq in H. specialize Hextra as Hextra. exploit Hextra. destructH.
+    - eapply hd_eq_eq in H. copy Hextra Hextra'. exploit Hextra'. destructH.
       eapply lc_disj_exits_lsplits_base_eq;eauto.
   Qed.
     
@@ -286,10 +325,13 @@ Parameter get_ocnc_spec : forall `(C : redCFG) s q,
     ~ deq_loop q s -> deq_loop s q -> ocnc_loop C s q (get_ocnc_loop C s q).
 
 
-Module disj.
 Section disj.
 
   Context `(D : disjPaths).
+  Hypotheses (Htag : tl j1 = tl j2)
+             (Htagleq : hd 0 j1 <= hd 0 j2)
+             (Hextra : j1 = j2 -> exists π, CPath q2 h (π :r: q2) /\ Disjoint (map fst r1) π).
+
   
   Local Definition s' := get_ocnc_loop C s q1.
 
@@ -349,8 +391,9 @@ Theorem lc_disj_exits_lsplits'
   : (s,qs1,qs2) ∈ splits' h e1.
 Proof.
   remember (depth s - depth q1).
-  revert dependent Lab. clear.
-  revert j1 j2 k js1 js2. 
+  revert Hextra.
+  revert dependent Lab. clear - Htag Htagleq.
+  revert j1 j2 k js1 js2 Htag Htagleq.
   induction n;intros.
   - eapply lc_disj_exits_lsplits_base';eauto.
     enough (depth q1 <= depth s) by omega.
@@ -369,7 +412,7 @@ Proof.
 
     (* It is necessary to copy these hypotheses because they are used implicitly in Heq, 
      * and cstr_subtype wouldn't be able to modify Hexit1 & Hexit2. *)
-    copy D D'.
+    copy D D'. copy D D''.
     (* Construct the imploded type for them *)
     cstr_subtype (Hq1).
     cstr_subtype (He1).
@@ -388,11 +431,12 @@ Proof.
     2: { instantiate (1:= s''). cbn. eapply Hocnc. } 
     
     eapply lc_disj_exits_lsplits_base in D'.
-    2: { match goal with |- _ = ?a => assert (a = depth q1) end.
+    2,3:eauto.
+    3: { match goal with |- _ = ?a => assert (a = depth q1) end.
          - eapply impl_depth_self_eq. cbn. reflexivity.
-         - setoid_rewrite H.
-           admit.
+         - admit. (*setoid_rewrite H.*)
     }
+    2: admit. (* lift hextra *)
     setoid_rewrite splits'_spec.
     right.
     pose (t1' := impl_tlist q1 t1).
@@ -405,9 +449,83 @@ Proof.
       * eapply eq_loop_exiting;eauto with disjPaths.
       * eauto. 
     (* consequence of Hlc' *)
-    + (* we will apply the IH in four similar cases in two different ways, 
-         therefore all the assumption of IHn are shown before the cases destinction *)
-      right. eapply IHn.
+    + pose (qej1 := get_pred (s,k) (`qs1',j1) t1).
+      pose (qej2 := get_pred (s,k) (`qs2',j1) t2).
+      pose (n1 := hd 0 (snd qej1)).
+      pose (n2 := hd 0 (snd qej2)). 
+      
+      (* case distinction on trichotomy: we have to distinguish different cases,
+         because the IHn can be applied in two different, symmetrical ways *)
+      specialize (Nat.lt_trichotomy n1 n2) as Nrel.
+      destruct Nrel as [Nlt|[Neq|Nlt]]; [left| |right].
+      * eapply IHn with (j1:=n1::j1) (j2:=n2::j1);cycle 2.
+        -- eapply disjPaths_shift_lt;cycle 2.
+           ++ eapply D''.
+           ++ cbn. reflexivity.
+           ++ eapply Nlt.
+        -- admit.
+        -- intro N. clear - N Nlt. exfalso. admit.
+        -- cbn. reflexivity.
+        -- unfold hd. eapply Nat.lt_le_incl. eapply Nlt.
+      * admit.
+      * eapply splits'_sym.
+
+        eapply IHn with (j1:=n2 :: j1) (j2:=n1 :: j1).
+        -- cbn. reflexivity.
+        -- unfold hd. clear - Nlt. omega.
+        -- assert (n1 = LoopSplits.
+          eapply disjPaths_shift_lt;cycle 2. admit.
+        -- eapply Nat.lt_le_incl. cbn. eauto.
+        -- eapply disjPaths_sym in D''.
+           eapply disjPaths_shift_lt in D''.
+        
+        eapply disjPaths_sym in D''. 
+        eapply disjPaths_shift_lt in D''. admit. admit.
+        subst n1 n2 qej1 qej2 qs1' qs2' t1' t2'. unfold n1, n2, qej1, qej2, qs1', qs2', t1', t2'.
+
+        
+        -- destructH. eapply IHn  with (j1:=n2 :: j2) (j2:=n1 :: j2);cycle 2.
+           admit. 
+           ++ eapply disjPaths_sym. eapply D''.
+           ++ admit.
+           ++ intro N. clear - N Nlt. exfalso. admit.
+           ++ reflexivity.
+           ++ eapply Nat.lt_le_incl. eauto.
+        -- cbn. reflexivity.
+        -- apply Nlt.
+        
+        1-5,9: solve [eauto]. 2-4: solve [cbn;eauto].
+        -- intro N. exfalso. inversion N. clear - Nlt H0. omega. 
+        -- cbn. clear - Nlt. omega.
+      * eapply f_equal with (f:=fun x => hd 0 (x :: j1)) in Neq as Neq'.
+        eapply hd_eq_eq in Neq';eauto. 
+        eapply disj_latch_path_or in Neq';eauto. 2:subst n1;cbn;eauto.
+        destruct Neq' as [π [[Hpathπ Hdisjπ]|[Hpathπ Hdisjπ]]];[left|right].
+        -- eapply IHn.
+           1-5,7,9: solve [eauto]. 1-3: solve [cbn;eauto].
+           cbn. clear - Neq. omega.
+        -- eapply splits'_sym.
+           eapply IHn.
+           1: eapply last_common'_sym.
+           1-5,7,9: solve [eauto]. 1-3: solve [cbn;eauto].
+           cbn. clear - Neq. omega.
+      * eapply splits'_sym.
+        eapply IHn.
+        1: eapply last_common'_sym.
+        1-5,9: solve [eauto]. 2-4: solve [cbn;eauto].
+        -- intro N. exfalso. inversion N. clear - Nlt H0. omega.
+        -- cbn. clear - Nlt. omega.
+
+(****************)
+
+      
+      (**********************)
+
+      
+      - 
+      
+      
+      right. eapply IHn. 
       assert (exists qe1 qe2 rr1 rr2 tt1 tt2,
                  disjPaths C qe1 qe2 s tt1 tt2 rr1 rr2 j1 j2 k (`qs1') (`qs2') s' qs1 qs2 js1 js2
              \/ disjPaths C qe2 qe1 s tt2 tt1 rr2 rr1 j2 j1 k (`qs2') (`qs1') s' qs1 qs2 js1 js2).
