@@ -4,7 +4,7 @@ Require Import LiftShift.
 
 Section disj.
 
-  Context `(D : disjPaths).
+  Context `(D : disjPathsE).
   
   Hypotheses (Htag : tl j1 = tl j2)
              (Htagleq : hd 0 j1 <= hd 0 j2)
@@ -167,7 +167,7 @@ End disj.
 
 Section disj.
 
-  Context `(D : disjPaths).
+  Context `(D : disjPathsE).
   Hypotheses (Htag : tl j1 = tl j2)
              (Htagleq : hd 0 j1 <= hd 0 j2)
              (Hextra : j1 = j2 -> exists π, CPath q2 h (π :r: q2) /\ Disjoint (map fst r1) π).
@@ -193,7 +193,7 @@ Proof.
   remember (depth s - depth q1).
   revert Hextra.
   revert dependent Lab. clear - Htag Htagleq.
-  revert j1 j2 k js1 js2 Htag Htagleq.
+  revert i1 i2 j1 j2 k js1 js2 Htag Htagleq.
   induction n;intros.
   - eapply lc_disj_exits_lsplits_base';eauto.
     enough (depth q1 <= depth s) by omega.
@@ -201,8 +201,8 @@ Proof.
     eapply s_deq_q;eauto with disjPaths.
   - eapply eqn_ndeq in Heqn as Hndeq.
     eapply eqn_sdeq in Heqn as Hsdeq.
-    specialize (ex_impl_dP1 D) as I. exploit I. destructH.
-    specialize (lift_disjPaths (I:=I)) as Q.
+    specialize (ex_impl_dP1 D0) as I. exploit I. destructH.
+    specialize (lift_disjPathsE (I:=I)) as Q.
     eapply lc_disj_exits_lsplits_base in Q.
     2,3:eauto.
     3: { (*match goal with |- _ = ?a => assert (a = depth q1) end.
@@ -216,36 +216,39 @@ Proof.
     exists (`s'), (`qs1'), (`qs2').
     split.
     + specialize (@splits'_loop_splits__imp _ _ _ _ C q1 h' e1' s' qs1' qs2') as QQ.
+      assert (h = `h') as Hheq by admit. 
       exploit QQ.
-      * eapply eq_loop_exiting;eauto with disjPaths. rewrite <-Hh. destruct D. eapply Hexit1.
-      * destruct I. setoid_rewrite <-He1 in QQ. setoid_rewrite <-Hh in QQ. eauto.
+      * eapply eq_loop_exiting;eauto with disjPaths. destruct D. rewrite <-Hheq.
+        eapply Hexit1.
+      * destruct I. setoid_rewrite <-He1 in QQ. setoid_rewrite <-Hheq in QQ. eauto.
     + (* case distinction on trichotomy: we have to distinguish different cases,
          because the IHn can be applied in two different, symmetrical ways *)
       specialize (Nat.lt_trichotomy n1 n2) as Nrel.
       destruct Nrel as [Nlt|[Neq|Nlt]]; [left| |right].
-      * eapply IHn with (j1:=n1::j1) (j2:=n2::j1);cycle 2.
-        -- eapply disjPaths_shift_lt. auto.
+      * eapply IHn; cycle 2. (*eapply IHn with (i1:=j1) (i2:=j2) (j1:=n1::j1) (j2:=n2::j1);cycle 2.*)
+        -- eapply disjPathsE_shift_lt.
         -- admit.
         -- intro N. inversion N. rewrite H0 in Nlt. clear - Nlt. omega. 
         -- cbn. reflexivity.
         -- unfold hd. eapply Nat.lt_le_incl. eapply Nlt.
-      * eapply disjPaths_shift_eq in Neq as Dshift.
+      * specialize (disjPathsE_shift_eq Neq) as Dshift.
         eapply disj_latch_path_or in Dshift as Hπ. 2: clear - Neq;f_equal;eauto.
         destruct Hπ as [π [Hπ | Hπ]];[left|right].
         -- eapply IHn. 3:eapply Dshift. 1,2:cbn;eauto. 1:rewrite Neq;reflexivity. admit.
            intro N. eexists;eauto.
         -- eapply splits'_sym.
-           eapply IHn. 3:eapply disjPaths_sym;eapply Dshift. 1,2:cbn;eauto. 1: rewrite Neq;reflexivity.
+           eapply IHn. 3:eapply disjPathsE_sym;eapply Dshift. 1,2:cbn;eauto.
+           1: rewrite Neq;reflexivity.
            admit.
            intro N. eexists;eauto. 
       * eapply splits'_sym.
-        eapply IHn with (j1:=n2 :: j1) (j2:=n1 :: j1).
-        -- cbn. reflexivity.
-        -- unfold hd. clear - Nlt. eapply Nat.lt_le_incl;auto.
-        -- eapply disjPaths_sym. 
-           eapply disjPaths_shift_lt2. eauto.
+        eapply IHn;cycle 2.
+        -- eapply disjPathsE_sym. 
+           eapply disjPathsE_shift_lt2.
         -- admit. 
         -- intro N. inversion N. rewrite H0 in Nlt. clear - Nlt. omega. 
+        -- cbn. reflexivity.
+        -- unfold hd. clear - Nlt. eapply Nat.lt_le_incl;auto.
 Admitted.
 
 End disj.
@@ -334,6 +337,16 @@ Proof.
   all: eexists;eauto.
 Qed.
 
+Lemma exiting_eq_loop `(C : redCFG) h q1 q2 e1 e2
+      (Hexit1 : exit_edge h q1 e1)
+      (Hexit2 : exit_edge h q2 e2)
+  : eq_loop q1 q2.
+Proof.
+  transitivity h.
+  - symmetry. eapply eq_loop_exiting;eauto.
+  - eapply eq_loop_exiting;eauto.
+Qed.
+
 Theorem lc_disj_exits_lsplits `{redCFG}
           (s e1 e2 q1 q2 h : Lab) (i j1 j2 k : Tag) (t1 t2 : list Coord)
           (Hlc : last_common ((q1,j1) :: t1) ((q2,j2) :: t2) (s,k))
@@ -354,12 +367,17 @@ Proof.
   specialize (Nat.lt_trichotomy (hd 0 j1) (hd 0 j2)) as Nrel.
   assert (exists js1 js2 qs1 qs2,
              disjPaths H q1 q2 s ((q1,j1)::t1) ((q2,j2)::t2)
-                       l1' l2' j1 j2 k e1 e2 h qs1 qs2 js1 js2) as D.
-  { do 4 eexists; econstructor; eauto; rewrite <-surjective_pairing;eapply get_succ_cons.
+                       l1' l2' j1 j2 k i i e1 e2 qs1 qs2 js1 js2) as D.
+  { do 4 eexists; econstructor; eauto. 3: eapply exiting_eq_loop;eauto.
+    2: eapply last_common'_sym in Hlc. 
+    (*1,2: rewrite <-surjective_pairing;eapply get_succ_cons.
     2: eapply last_common'_sym in Hlc.
-    all: eapply last_common_in1;eapply last_common'_iff;do 2 eexists;eauto.
+    all: eapply last_common_in1;eapply last_common'_iff;do 2 eexists;eauto.*)
+    all: admit.
   }
   destructH.
+  assert (disjPathsE D h) as D'.
+  { econstructor;eauto. }
   destruct Nrel as [Nlt|[Neq|Nlt]];[| |].
   - do 2 eexists.
     left. eapply lc_disj_exits_lsplits';eauto. (*
@@ -369,22 +387,22 @@ Proof.
     + omega.
     + intro N. rewrite N in Nlt. clear - Nlt. omega. 
   - eapply hd_eq_eq in Neq;eauto.
-    specialize (disj_latch_path_or D Neq) as Hlatch.
+    specialize (disj_latch_path_or D' Neq) as Hlatch.
     destruct Hlatch as [π [Hlatch|Hlatch]].
     + do 2 eexists.
       left. eapply lc_disj_exits_lsplits';eauto. rewrite Neq. reflexivity.
     + do 2 eexists.
       right. eapply lc_disj_exits_lsplits'.
-      1: eapply disjPaths_sym;eauto.
+      1: eapply disjPathsE_sym;eauto.
       2: rewrite Neq.
       all: eauto. 
   - do 2 eexists.
     right. eapply lc_disj_exits_lsplits'.
-    + eapply disjPaths_sym; eauto.
+    + eapply disjPathsE_sym; eauto.
     + symmetry. auto. 
     + omega.
     + intro N. rewrite N in Nlt. clear - Nlt. omega.
-Qed.
+Admitted.
 
 Corollary lc_disj_exit_lsplits `{redCFG} (s e q1 q2 h : Lab) (i j1 j2 k : Tag) (t1 t2 : list Coord)
           (Hlc : last_common ((q1,j1) :: t1) ((q2,j2) :: t2) (s,k))

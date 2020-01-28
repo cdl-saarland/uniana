@@ -22,6 +22,17 @@ Section disj.
     : exists h, exit_edge h q1 p /\ exit_edge h q2 p \/ j1 = j2.
   Proof.
   Admitted.
+
+  Variables (p q1 q2 s : Lab) (i j k : Tag) (t1 t2 r1 r2 : list (@Coord Lab)). 
+  Hypotheses (Hlc : last_common' ((q1, j) :: t1) ((q2, j) :: t2) r1 r2 (s, k))
+             (Hneq : q1 <> q2)
+             (Hpath1 : TPath (root, start_tag) (p, i) ((p, i) :: (q1, j) :: t1))
+             (Hpath2 : TPath (root, start_tag) (p, i) ((p, i) :: (q2, j) :: t2)).
+
+  Lemma psplits_q1_eq_q2
+    : eq_loop q1 q2.
+  Proof.
+  Admitted.
     
 End disj.
 
@@ -41,8 +52,16 @@ Proof.
   destruct Hbet.
   - destructH. eapply lc_disj_exit_lsplits in Hlc;eauto.
     destructH. do 2 eexists. eapply splits_spec. right. left. eexists. eauto.
-  - decide (deq_loop p s).
-    + admit.
+  - subst j2. rewrite last_common'_iff in Hlc. destruct Hlc as [r1 [r2 Hlc]].
+    inversion Hpath1. inversion Hpath2. subst.
+    rename H0 into Hpath1'. rename H5 into Hpath2'.
+    rename H3 into Hedge1. rename H8 into Hedge2.
+    replace b with (q1,j1) in *. clear b.
+    2: { eapply path_front in Hpath1'. auto. }
+    replace b0 with (q2,j1) in *. clear b0.
+    2: { eapply path_front in Hpath2'. auto. } 
+    decide (deq_loop q1 s).
+    + eapply s_deq_q in Hlc;eauto. 2: eapply psplits_q1_eq_q2;eauto. admit.
     + admit.
   
 Admitted.
