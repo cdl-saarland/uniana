@@ -104,3 +104,10 @@ Lemma splits'_sym `(C : redCFG) (s h e q q' : Lab)
               (Hsp : (s,q,q') ∈ splits' h e)
   : (s,q',q) ∈ splits' h e.
 Admitted.
+
+
+Lemma splits_path_splits__imp `(C : redCFG) (p' : Lab) (p s' qq qq' : local_impl_CFG_type C p')
+      (Heq : deq_loop C (`p) p')
+      (Hsp : (s', qq, qq') ∈ @path_splits _ _ _ _ (local_impl_CFG C p') p)
+  : (`s', `qq, `qq') ∈ path_splits__imp (`p).
+Admitted.

@@ -97,9 +97,9 @@ Class impl_dP
       He1 : e1 = `e1';
       He2 : e2 = `e2';
       Hocnc : ocnc_loop s q (`s');
-      Hndeq : ~ deq_loop q s;
+(*      Hndeq : ~ deq_loop q s;
       Hsdeq : deq_loop s q;
-      Heq : eq_loop q q1;
+      Hdeq : deq_loop q q1;*)
       Hjeq : j = j1 \/ j = j2
     }. 
 
@@ -107,7 +107,7 @@ Lemma impl_dP_sym `(I : impl_dP)
   : impl_dP (disjPaths_sym D) j q2' q1' e2' e1' s'.
 Proof.
   destruct I;econstructor;eauto.
-  - transitivity (`q1');rewrite <-Hq3;eauto with disjPaths. 
+(*  - eapply eq_loop2. 2:eauto. eapply Heq12. *)
   - destruct Hjeq0; eauto.
 Qed.
 
@@ -117,9 +117,10 @@ Lemma deq_succ_implode `(C : redCFG) (p q r : Lab)
   : implode_nodes C r p.
 Admitted.
 
+(*Lemma ex_impl_dP `(D : disjPaths)*)
+
 Lemma ex_impl_dP1 `(D : disjPaths)
       (Hndeq : ~ deq_loop q1 s)
-      (Hsdeq : deq_loop s q1)
   : exists q1' q2' e1' e2' s' : local_impl_CFG_type C q1,
     impl_dP D j1 q1' q2' e1' e2' s'.
 Proof.
@@ -131,7 +132,7 @@ Proof.
   { eapply deq_succ_implode. 2: eapply Hedge1. reflexivity. }
   assert (implode_nodes C q1 e2).
   { eapply deq_succ_implode. 2: eapply Hedge2. destruct D. eapply Heq13. } 
-  specialize (ex_ocnc_loop Hndeq Hsdeq) as Hocnc. destructH.
+  specialize (ex_ocnc_loop Hndeq) as Hocnc. destructH.
   assert (implode_nodes C q1 s').
   { right. eapply ocnc_loop_exit;eauto. }
   exists (impl_of_original' H),
@@ -139,7 +140,32 @@ Proof.
   (impl_of_original' H1),
   (impl_of_original' H2),
   (impl_of_original' H3).
-  econstructor;cbn;eauto. reflexivity.
+  econstructor;cbn;eauto. (*reflexivity.*)
+Qed.
+
+Lemma ex_impl_dP `(D : disjPaths) q
+      (Hndeq : ~ deq_loop q s)
+      (Hdeq : deq_loop q q1)
+  : exists q1' q2' e1' e2' s' : local_impl_CFG_type C q,
+    impl_dP D j1 q1' q2' e1' e2' s'.
+Proof.
+  assert (implode_nodes C q q1).
+  { left. auto. }
+  assert (implode_nodes C q q2). 
+  { left. eapply eq_loop2;eauto with disjPaths. }
+  assert (implode_nodes C q e1).
+  { eapply deq_succ_implode. 2: eapply Hedge1. auto. }
+  assert (implode_nodes C q e2).
+  { eapply deq_succ_implode. 2: eapply Hedge2. destruct D. rewrite <-Heq13. auto. } 
+  specialize (ex_ocnc_loop Hndeq) as Hocnc. destructH.
+  assert (implode_nodes C q s').
+  { right. eapply ocnc_loop_exit;eauto. }
+  exists (impl_of_original' H),
+  (impl_of_original' H0),
+  (impl_of_original' H1),
+  (impl_of_original' H2),
+  (impl_of_original' H3).
+  econstructor;cbn;eauto. (*reflexivity.*)
 Qed.
 
 Definition t1' `{I : impl_dP} := impl_tlist q t1.
@@ -148,8 +174,8 @@ Definition t2' `{I : impl_dP} := impl_tlist q t2.
 Definition r1' `{I : impl_dP} := impl_tlist q r1.
 Definition r2' `{I : impl_dP} := impl_tlist q r2.
 
-Definition qs1' `{I : impl_dP} := fst (get_succ (s', j) (e1', tl j1) t1').
-Definition qs2' `{I : impl_dP} := fst (get_succ (s', j) (e2', tl j2) t2').
+Definition qs1' `{I : impl_dP} := fst (get_succ (s', j) (e1', i1) t1').
+Definition qs2' `{I : impl_dP} := fst (get_succ (s', j) (e2', i2) t2').
 
 Definition rr1 `{I : impl_dP} := prefix_nincl (` qs1',j) r1.
 Definition rr2 `{I : impl_dP} := prefix_nincl (` qs2',j) r2.

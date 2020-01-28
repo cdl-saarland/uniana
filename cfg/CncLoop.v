@@ -16,7 +16,6 @@ Admitted.
 
 Lemma ex_ocnc_loop `(C : redCFG) s q
       (Hndeq : ~ deq_loop q s)
-      (Hsdeq : deq_loop s q) (* <-- is this assumption really necessary ? *)
   : exists s', ocnc_loop s q s'.
 Admitted.
  
