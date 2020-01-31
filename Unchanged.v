@@ -133,15 +133,15 @@ Section unch.
         (Htr : Tr t)
     : NoDup t.
   Proof.
-    destruct (ne_front t) eqn:E. destruct c eqn:E'.
+    destruct t;[inversion Htr|].
+    destruct (c) eqn:E. destruct c0 eqn:E'.
     eapply Tr_EPath in Htr. destructH.
-    - eapply EPath_TPath in Htr. eapply tpath_NoDup in Htr. eapply NoDup_map_inv.
-      rewrite to_list_ne_map. eauto.
-    - rewrite E. reflexivity.
+    - eapply EPath_TPath in Htr. eapply tpath_NoDup in Htr. eapply NoDup_map_inv. eauto. 
+    - cbn. reflexivity.
   Qed.
 
 
-  Lemma precedes_prefix l' p q i j r s (t : ne_list Conf)
+  Lemma precedes_prefix l' p q i j r s (t : list Conf)
         (Hprec : Precedes' t (q,j,r) (p,i,s))
         (Hpre  : Prefix l' t)
         (Hin : (p,i,s) ∈ l')
@@ -168,8 +168,8 @@ Section unch.
   Lemma unch_dom u p i s x unch l 
         (Hunch : u ∈ unch_trans unch p x)
         (HCunch : unch_concr' (unch_trans unch) l)
-        (Htr : Tr ((p,i,s) :< l))
-    : Dom edge root u p.
+        (Htr : Tr ((p,i,s) :: l))
+    : Dom edge__P root u p.
   Proof.
     unfold unch_trans,unch_trans_ptw in Hunch. unfold unch_trans_local in Hunch.
     (* FIXME: give intuition *)
@@ -215,7 +215,8 @@ Section unch.
           split; [|eauto using no_def_untouched]. rewrite H. eapply precedes_succ; eauto. 
           rewrite <-H. destruct t; eauto.
       + clear - H. destruct t; cbn in H; inversion t; subst x.
-        * congruence.
+        * destruct t' as [t' Ht]. destruct t';[inversion Ht|]. cbn in *.
+          inversion t. subst. eauto. 
         * inversion H2. subst; eauto.
   Qed.
 End unch.
