@@ -105,8 +105,8 @@ Section uniana.
   Qed.
   
   Lemma uni_branch_uni_succ p br q1 q2 i k j1 j2 s1 s2 uni l1 l2 
-        (Hpath1 : Tr ((p,i,s1) :< l1))
-        (Hpath2 : Tr ((p,i,s2) :< l2))
+        (Hpath1 : Tr ((p,i,s1) :: l1))
+        (Hpath2 : Tr ((p,i,s2) :: l2))
         (Hsucc1 : (q1,j1) ≻ (br,k) | ((p,i) :: map fst l1))
         (Hsucc2 : (q2,j2) ≻ (br,k) | ((p,i) :: map fst l2))
         (Hunibr : uni_branch uni br = true)
@@ -119,11 +119,10 @@ Section uniana.
     destruct (branch br) eqn:E; [|congruence]. destructH.
     replace ((p,i) :: map fst l1) with (map fst ((p,i,s1) :: l1)) in Hsucc1 by (cbn;eauto).
     replace ((p,i) :: map fst l2) with (map fst ((p,i,s2) :: l2)) in Hsucc2 by (cbn;eauto).
-    rewrite nlcons_to_list in Hsucc1, Hsucc2.
     eapply2 tr_lift_succ Hsucc1 Hsucc2;eauto. do 2 destructH.
     specialize (HCuni v br k r0 r).
     exploit HCuni.
-    1,2: eapply in_succ_in2;simpl_nl' Hsucc1; simpl_nl' Hsucc2;eauto.
+    1,2: eapply in_succ_in2;eauto.
     specialize (Hbr1 r0) as Hbr1'.
     specialize (Hbr1 r). 
     destruct (val_true (r0 v)) eqn:Heq1, (val_true (r v)) eqn:Heq2.
@@ -140,8 +139,8 @@ Section uniana.
   Qed.
   
   Lemma uni_branch_uni_succ' p br q1 q2 i k j1 j2 uni l1 l2 s1 s2
-        (Hpath1 : Tr ((p,i,s1) :< l1))
-        (Hpath2 : Tr ((p,i,s2) :< l2))
+        (Hpath1 : Tr ((p,i,s1) :: l1))
+        (Hpath2 : Tr ((p,i,s2) :: l2))
         (Hsucc1 : (q1,j1) ≻ (br,k) | ((p,i) :: map fst l1))
         (Hsucc2 : (q2,j2) ≻ (br,k)| ((p,i) :: map fst l2))
         (Hunibr : uni_branch uni br = true)
@@ -152,14 +151,15 @@ Section uniana.
     assert (q1 = q2) by (eapply uni_branch_uni_succ with (q1:=q1) (l1:=l1) ;eauto).
     split;[eauto|subst].
     eapply eff_tag_det.
-    2: eapply succ_in_tpath_eff_tag;[clear Hpath1;spot_path|];eauto;cbn;simpl_nl;
+    2: eapply succ_in_tpath_eff_tag;[clear Hpath1;spot_path|];eauto;cbn;
       eauto using succ_in_cons_cons.
-    eapply succ_in_tpath_eff_tag;[spot_path|];clear Hpath2 Hsucc2;eauto;cbn;simpl_nl;eauto.
+    clear Hpath2 Hsucc2.
+    eapply succ_in_tpath_eff_tag;[spot_path|];eauto.    
   Qed.
   
   Lemma uni_branch_succ_p p q br i j k s1 s2 r r' l1 l2 l2' uni
-        (Htr1 : Tr ((p, i,s1) :<: (q, j,r) :< l1))
-        (Htr2 : Tr ((p, i,s2) :<: (br, k,r') :< l2))
+        (Htr1 : Tr ((p, i,s1) :: (q, j,r) :: l1))
+        (Htr2 : Tr ((p, i,s2) :: (br, k,r') :: l2))
         (Hsplit : uni_branch uni br = true)
         (HCuni : forall (x : Var) (p : Lab) (i : Tag) (s s' : State),
             (p, i, s) ∈ ((q, j, r) :: l1) ->
@@ -179,43 +179,47 @@ Section uniana.
     * subst'.
       eapply2 tr_tpath_cons2 Htr1 Htr2;eauto.
       eapply tpath_NoDup in Htr1.
-      inversion  Htr1. eapply H1. simpl_nl. eapply postfix_incl;eauto. 
+      inversion  Htr1. eapply H1. eapply postfix_incl;eauto. 
       eapply In_rcons. right.
       rewrite cons_rcons'. eapply In_rcons. left. eauto.
     * eapply succ_cons. eauto.
     * cbn. eapply succ_in_cons_cons.
   Qed.
   
-  Lemma uni_branch_non_disj p i br k s1 s2 l1 l2 l1' l2' uni
-        (Hpath1 : Tr ((p,i,s1) :< l1))
-        (Hpath2 : Tr ((p,i,s2) :< l2))
-        (Hpost1 : Postfix (l1' :>: (br, k)) (map fst l1))
-        (Hpost2 : Postfix (l2' :>: (br, k)) (map fst l2))
-        (Hdisj : Disjoint l1' l2')
+  Lemma uni_branch_non_disj p i br k s1 s2 l1 l2 l1' l2' uni p1 p2
+        (Hpath1 : Tr ((p,i,s1) :: l1))
+        (Hpath2 : Tr ((p,i,s2) :: l2))
+        (Hpost1 : Postfix ((p1 :: l1') :r: (br, k)) (map fst l1))
+        (Hpost2 : Postfix ((p2 :: l2') :r: (br, k)) (map fst l2))
+        (Hdisj : Disjoint (p1 :: l1') (p2 :: l2'))
         (Hsplit : uni_branch uni br = true)
         (HCuni : forall (x : Var) (p : Lab) (i : Tag) (s s' : State),
             (p, i, s) ∈ l1 ->
             (p, i, s') ∈ l2 -> uni p x = true -> s x = s' x)
     : False.
   Proof.
-    enough (ne_back l1' = ne_back l2').
+    specialize (cons_rcons' p1 l1') as Hl1'.
+    specialize (cons_rcons' p2 l2') as Hl2'.
+    set (p1' := hd p1 (rev (p1 :: l1'))) in *.
+    set (p2' := hd p2 (rev (p2 :: l2'))) in *.
+    enough (p1' = p2').
     - eapply disjoint1 in Hdisj. eapply Hdisj.
-      + eapply in_ne_back.
-      + rewrite <-H; eapply in_ne_back.
-    - destruct (ne_back l1') as [q1 j1] eqn:Heq1.
-      destruct (ne_back l2') as [q2 j2] eqn:Heq2.
+      + rewrite Hl2'. eapply In_rcons. left. reflexivity.
+      + rewrite Hl1'. eapply In_rcons. left. auto. 
+    - destruct (p1') as [q1 j1] eqn:Heq1.
+      destruct (p2') as [q2 j2] eqn:Heq2.
       eapply uni_branch_uni_succ' with (q1:=q1) (q2:=q2) (j1:=j1) (j2:=j2) (l1:=l1) in Hsplit;eauto.
       1: subst';reflexivity.
-      1,2: eapply succ_cons; eapply postfix_succ_in;eauto;
-        eapply ne_back_E_rcons in Heq1; eapply ne_back_E_rcons in Heq2;eauto; destructH; destructH;
-          simpl_nl; only 1: rewrite <- Heq1; only 2: rewrite <- Heq2; eapply succ_in_rcons2.
+      1,2: eapply succ_cons; eapply postfix_succ_in;eauto.
+      + rewrite Hl1'. eapply succ_in_rcons2.
+      + rewrite Hl2'. eapply succ_in_rcons2.
   Qed.
   Arguments uni_branch_non_disj : clear implicits.
 
   
   Lemma uni_same_tag p q i j1 j2 s1 s2 r1 r2 uni l1 l2
-        (Htr1 : Tr ((p,i,s1) :<: (q,j1,r1) :< l1))
-        (Htr2 : Tr ((p,i,s2) :<: (q,j2,r2) :< l2))
+        (Htr1 : Tr ((p,i,s1) :: (q,j1,r1) :: l1))
+        (Htr2 : Tr ((p,i,s2) :: (q,j2,r2) :: l2))
         (Hsplit : (join_andb (map ((uni_branch uni) ∘ fst ∘ fst) (splits p))) = true)
         (HCuni : forall (x : Var) (p : Lab) (i : Tag) (s s' : State),
             (p, i, s) ∈ ((q,j1,r1)::l1) ->
@@ -224,22 +228,23 @@ Section uniana.
     : j2 = j1.
   Proof.
     decide' (j1 == j2);[reflexivity|exfalso].
-    assert (forall s j r l (Htr : Tr ((p, i, s) :<: (q, j, r) :< l)),
-               tcfg_edge (q, j) (p, i) = true) as Htcfg.
+    assert (forall s j r l (Htr : Tr ((p, i, s) :: (q, j, r) :: l)),
+               tcfg_edge (q, j) (p, i)) as Htcfg.
     {
       clear. intros. 
       eapply Tr_EPath in Htr;[|cbn;eauto]. destructH. eapply EPath_TPath in Htr. cbn in Htr.
       inversion Htr. cbn in H.
-      inversion H0;subst; [simpl_nl' H7;destruct l;cbn in H7;[|congruence]|].
-      + inversion H7;subst;eauto.
-      + simpl_nl' H4; cbn in H4. destruct l; cbn in H4;[congruence|]. inversion H4;subst;eauto.
+      inversion H0;subst; [destruct l;cbn in H9;[|congruence]|].
+      + inversion H9;subst;eauto.
+      + destruct l;[congruence|]. cbn in H8. eauto. 
     }
     copy c Hneq.
     eapply (tag_eq_loop_exit (p:=p) (q:=q) (i:=i)) in c. 2,3: eapply Htcfg;eauto. clear Htcfg.
     eapply tr_lc_lt with (j3:=j1) (j4:=j2) in Htr1 as Hlc;eauto;destructH' Hlc.
     specialize (get_innermost_loop_spec q) as Hspec.
     destruct (get_innermost_loop q) ;[|contradiction].
-    eapply lc_disj_exit_lsplits in c as Hsplits;eauto; cycle 1.
+    destruct brk as [br k].
+    eapply lc_disj_exit_lsplits in c as Hsplits;eauto; cycle 1. 
     - spot_path. 
     - spot_path.
     - destructH.
@@ -269,25 +274,18 @@ Section uniana.
           exists e. eauto. 
         }
         eapply uni_branch_succ_p with (j:=j1);eauto.
-      + eapply (uni_branch_non_disj) with (br:=br);eauto;cbn;simpl_nl;eauto.
-        * rewrite nlcons_to_list in Hlc0. eapply Hlc0.
-        * rewrite nlcons_to_list in Hlc2. eapply Hlc2.
-        * simpl_nl. auto.
-        * eapply join_andb_true_iff with (x:=(br,qq,qq')) in Hsplit.
-          unfold "∘" in Hsplit. cbn in Hsplit. auto.
-          rewrite splits_spec. right. left.
-          exists e. eauto.
+      + eapply (uni_branch_non_disj) with (br:=br) (l1:=(q,j1,r1) :: l1) ;eauto;cbn;eauto.
+        eapply join_andb_true_iff with (x:=(br,qq,qq')) in Hsplit.
+        unfold "∘" in Hsplit. cbn in Hsplit. auto.
+        rewrite splits_spec. right. left.
+        exists e. eauto.
   Qed.
-
   
   Hint Resolve Conf_dec.
-  
-
-  
+    
   Hint Unfold Coord.
   Hint Unfold Tag.
   Hint Immediate tpath_NoDup.
-  Hint Resolve tpath_tpath'.
   Hint Resolve precedes_in.
 
 
@@ -340,11 +338,11 @@ Section uniana.
   Qed.
   
   Lemma find_divergent_branch u p l1 l2 i j1 j2 
-        (Hunch : Dom edge root u p)
+        (Hunch : Dom edge__P root u p)
         (Hprec1 : Precedes fst l1 (u, j1))
         (Hprec2 : Precedes fst l2 (u, j2))
-        (Htr1 : TPath (root, start_tag) (p, i) ((p, i) :< l1))
-        (Htr2 : TPath (root, start_tag) (p, i) ((p, i) :< l2))
+        (Htr1 : TPath (root, start_tag) (p, i) ((p, i) :: l1))
+        (Htr2 : TPath (root, start_tag) (p, i) ((p, i) :: l2))
         (Hneq : p <> u)
         (Hjneq : j1 <> j2)
     : exists br qq qq' : Lab,
@@ -354,14 +352,13 @@ Section uniana.
   Proof.
     specialize (ex_near_ancestor u p) as [a [Hanc Ha_near]].
     eapply ancestor_dom1 in Hanc as Hanc1. eapply ancestor_dom2 in Hanc as Hanc2.
-    eapply dom_tpath_prec with (l:=(p,i) :< l1) in Hanc2 as Hanc21;eauto. destructH' Hanc21.
-    eapply dom_tpath_prec with (l:=(p,i) :< l2) in Hanc2 as Hanc22;eauto. destructH' Hanc22.
+    eapply dom_tpath_prec with (l:=(p,i) :: l1) in Hanc2 as Hanc21;eauto. destructH' Hanc21.
+    eapply dom_tpath_prec with (l:=(p,i) :: l2) in Hanc2 as Hanc22;eauto. destructH' Hanc22.
     
     assert (j0 = j); [|subst j0].
     {
       eapply ancestor_sym in Hanc;eapply tag_prefix_ancestor in Hanc21 as Ha_pre1;eauto.
       eapply tag_prefix_ancestor in Hanc22 as Ha_pre2; eauto.
-      simpl_nl' Hanc21. simpl_nl' Hanc22.
       eapply prec_tpath_tpath in Hanc21;eauto. destructH.
       eapply prec_tpath_tpath in Hanc22;eauto. destructH.
       eapply prefix_length_eq;eauto;eapply tpath_tag_len_eq;eauto.
@@ -372,15 +369,14 @@ Section uniana.
     enough ((u,j2) ≻* (a,j) | (p,i) :: l2) as Hib2.
 
     2: eapply dom_dom_in_between;eauto.
-    4: eapply dom_dom_in_between;eauto.
-    2,4: simpl_nl; econstructor;cbn;eauto.
-    2,3: simpl_nl' Hanc21; simpl_nl' Hanc22;eapply precedes_in;eauto.
+    3: eapply dom_dom_in_between;eauto.
+    2,3: econstructor;cbn;eauto.
 
     assert (Prefix j i) as Hprei by (eapply tag_prefix_ancestor;[eapply ancestor_sym| |];eauto).
     assert (Prefix j j1) as Hprej1
-      by (simpl_nl' Hanc21;eapply tag_prefix_ancestor_elem with (l:=l1);eauto).
+      by (eapply tag_prefix_ancestor_elem with (l:=l1);eauto).
     assert (Prefix j j2) as Hprej2
-        by (simpl_nl' Hanc22;eapply tag_prefix_ancestor_elem with (l:=l2);eauto).
+        by (eapply tag_prefix_ancestor_elem with (l:=l2);eauto).
     (* uses hib12 *)
 
     assert (exists j1', j1 = j1' ++ j) as [j1' Hj1] by (eapply prefix_eq;eauto).
@@ -396,22 +392,21 @@ Section uniana.
     (* find the first difference in the tag suffices *)
     eapply first_diff in c';eauto.
     2: assert (| j1 | = | j2 |) as Hlen;
-      [(eapply (tpath_tag_len_eq_elem (l1:=(p,i):<l1)) ;eauto;eapply precedes_in;simpl_nl;eauto)|].
+      [(eapply (tpath_tag_len_eq_elem (l1:=(p,i)::l1)) ;eauto;eapply precedes_in;eauto)|].
     2: { subst j1 j2. repeat rewrite app_length in Hlen. clear - Hlen. omega. }
     2,3: intro N; eapply c'; subst;
       eapply precedes_in in Hprec1;eapply precedes_in in Hprec2;
-        rewrite nlcons_to_list in Hprec1; rewrite nlcons_to_list in Hprec2;
-          eapply tpath_tag_len_eq_elem in Hprec1;eauto;simpl_nl;
+          eapply tpath_tag_len_eq_elem in Hprec1;eauto;
             do 2 rewrite app_length in Hprec1;exfalso.
     3:destruct j1';cbn in Hprec1; [congruence|omega]. 
     2:destruct j2';cbn in Hprec1;[congruence|omega].
     rename c' into Htag. destructH.
     subst j1' j2'. rewrite <-app_assoc in Hj1,Hj2. rewrite <-app_comm_cons in Hj1,Hj2.
     (* find the head of the divergent loop *)
-    eapply first_occ_tag_elem with (t:=(p,i) :< l1) in Hj1 as Hocc1;eauto;
-      simpl_nl;eauto using precedes_in.
+    eapply first_occ_tag_elem with (t:=(p,i) :: l1) in Hj1 as Hocc1;eauto;
+      eauto using precedes_in.
     eapply first_occ_tag_elem in Hj2 as Hocc2;eauto;
-      simpl_nl;eauto using precedes_in.
+      eauto using precedes_in.
     do 2 destructH.
     (* show that it is the same head in both traces *)
     assert (h0 = h);[|subst h0].
@@ -422,67 +417,65 @@ Section uniana.
       - eapply loop_contains_deq_loop in H. split;auto.
         eapply deq_loop_depth_eq;eauto.
         erewrite <-tag_depth;eauto.
-        erewrite <-tag_depth. 3:eauto. 2:eauto.
+        erewrite <-tag_depth. 3: eapply precedes_in;eauto. 2:eauto.
         cbn. reflexivity.
       - eapply loop_contains_deq_loop in H. split;auto.
         eapply deq_loop_depth_eq;eauto.
-        erewrite <-tag_depth. 3:eauto. 2:eauto.
-        erewrite <-tag_depth. 3:eauto. 2:eauto.
+        erewrite <-tag_depth. 3:eapply precedes_in;eauto. 2:eauto.
+        erewrite <-tag_depth. 3:eapply precedes_in;eauto. 2:eauto.
         cbn. reflexivity.
     }
     (* find node on ancestor-depth that is between u & p *)
     eapply2 ancestor_level_connector Hanc21 Hanc22. (* uses hib12 *)
-    4,8: split;[eapply ancestor_sym|];eauto. all: simpl_nl;eauto.
+    4,8: split;[eapply ancestor_sym|];eauto. all:eauto.
     2,3: clear - Ha_near;intros;destructH;eauto.
     (*clear Hib1 Hib2.*)
     destruct Hanc21 as [a1' [Hanc21 Hanc11]]. destruct Hanc22 as [a2' [Hanc22 Hanc12]].
     assert (Prefix j (l' ++ j)) as Hexit1.
     { eapply prefix_eq. eexists;reflexivity. }
-    copy Hexit1 Hexit2.
-    eapply find_loop_exit with (a0:=a1') (n:=a1) (h0:=h) (l:= (p,i):<l1) in Hexit1;eauto.
-    eapply find_loop_exit with (a0:=a2') (n:=a2) in Hexit2;eauto.
+    copy Hexit1 Hexit1'.
+    eapply find_loop_exit with (a0:=a1') (n:=a1) (h0:=h) (l:= (p,i)::l1) in Hexit1;eauto.
+    eapply find_loop_exit with (a0:=a2') (n:=a2) in Hexit1';eauto.
 
     2,3: unfold Tag in *; resolve_succ_rt.
     destruct Hexit1 as [qe1 [e1 [Hexit__seq1 [Hexit__succ1 Hexit__edge1]]]].
-    destruct Hexit2 as [qe2 [e2 [Hexit__seq2 [Hexit__succ2 Hexit__edge2]]]].
-    assert ((qe1, a1 :: l' ++ j) ∈ ((p,i) :< l1)) as Hin1 by find_in_splinter.
-    assert ((qe2, a2 :: l' ++ j) ∈ ((p,i) :< l2)) as Hin2 by find_in_splinter.
+    destruct Hexit1' as [qe2 [e2 [Hexit__seq2 [Hexit__succ2 Hexit__edge2]]]].
+    assert ((qe1, a1 :: l' ++ j) ∈ ((p,i) :: l1)) as Hin1 by find_in_splinter.
+    assert ((qe2, a2 :: l' ++ j) ∈ ((p,i) :: l2)) as Hin2 by find_in_splinter.
     eapply2 path_to_elem Hin1 Hin2; eauto.
     destruct Hin1 as [η1 [Hη1 Hpreη1]]. destruct Hin2 as [η2 [Hη2 Hprenη2]].
     assert (exists brk, last_common η1 η2 brk) as Hlc.
     {
-      eapply ne_last_common. clear - Hη1 Hη2. eapply2 path_back Hη1 Hη2.
-      rewrite Hη1,Hη2. reflexivity.
+      destr_r' η1;subst;[inversion Hη1|]. destr_r' η2;subst;[inversion Hη2|].
+      path_simpl' Hη1. path_simpl' Hη2.
+      eapply ne_last_common. 
     }
     destruct Hlc as [[br k] Hlc].
-    enough (η1 = (qe1, a1 :: l' ++ j) :< tl η1) as ηeq1.
-    enough (η2 = (qe2, a2 :: l' ++ j) :< tl η2) as ηeq2.
+    enough (η1 = (qe1, a1 :: l' ++ j) :: tl η1) as ηeq1.
+    enough (η2 = (qe2, a2 :: l' ++ j) :: tl η2) as ηeq2.
     rewrite ηeq1 in Hlc; rewrite ηeq2 in Hlc.
-    2,3: let f := fun Q => clear - Q; inversion Q;subst;cbn;simpl_nl;eauto in
+    2,3: let f := fun Q => clear - Q; inversion Q;subst;cbn;eauto in
          only 2:f Hη1; f Hη2.
-    simpl_nl' Hlc.
+    
     (* I should use a fine-tuned version of the base case of this lemma here instead of the lemma itself *)
     (* Now take the paths br -->* qe1 -> e1 and br --> qe2 -> ledge. These construct a loop_split *)
     (* FIXME *)
     eapply lc_disj_exits_lsplits with (h0:=h) (e3:=e1) (e4:=e2) (i0:=l'++j) in Hlc as Hsplit;eauto.
-    4: { intro N. inversion N. contradiction. }
+(*    4: { intro N. inversion N. contradiction. }*)
     all: cycle 1.
     {
-      clear - ηeq1 Hη1 Hexit__edge1 Hexit__succ1 Htr1. unfold TPath'. econstructor. cbn.
+      clear - ηeq1 Hη1 Hexit__edge1 Hexit__succ1 Htr1. econstructor. cbn.
       + rewrite ηeq1 in Hη1. eauto. 
       + eapply succ_in_path_edge;cycle 1;eauto.
     } 
     {
-      clear - ηeq2 Hη2 Hexit__edge2 Hexit__succ2 Htr2. unfold TPath'. econstructor. cbn.
+      clear - ηeq2 Hη2 Hexit__edge2 Hexit__succ2 Htr2.  econstructor. cbn.
       + rewrite ηeq2 in Hη2. eauto.
       + eapply succ_in_path_edge;cycle 1;eauto.
     }
     1,2: eapply tpath_NoDup;eauto.
-    repeat match goal with
-           | [H : context C [ne_to_list (_ :< _)] |- _] => simpl_nl' H
-           end.
     repeat splice_splinter.
-    2-4: rewrite nlcons_to_list;eauto.
+    2-4: eauto.
     destructH.
     exists br, qq, qq';split.
     3-5: eapply tpath_NoDup;eauto.
@@ -506,19 +499,19 @@ Section uniana.
             + eapply loop_contains_deq_loop;eauto.
         }
         eapply (loop_cutting_elem (t:=l1)).
-        -- spot_path.
-        -- simpl_nl. econstructor.
+        -- eapply Htr1.
+        -- econstructor.
            instantiate (1 := l' ++ j).
            eapply splinter_single.
            unfold Tag in *. find_in_splinter.
         -- intros h0 k0 Hloop0. eapply Hdeq in Hloop0. eapply exit_cascade in Hunch;eauto.
            ++ contradict Hunch.
-              simpl_nl' Hunch. instantiate (1 := k0).
-              eapply succ_rt_combine;eauto;[rewrite nlcons_to_list; eauto| | find_succ_rel].
+              instantiate (1 := k0).
+              eapply succ_rt_combine;eauto;[eauto| | find_succ_rel].
               eapply tpath_NoDup. eauto.
-              eapply (succ_rt_trans) with  (b:=(e1, l' ++ j));eauto;[rewrite nlcons_to_list;eauto| |find_succ_rel].
+              eapply (succ_rt_trans) with  (b:=(e1, l' ++ j));eauto;[eauto| |find_succ_rel].
               eapply tpath_NoDup;eauto.
-              setoid_rewrite nlcons_to_list at 3. eapply tpath_deq_loop_prefix; eauto.
+              eapply tpath_deq_loop_prefix; eauto.
               eapply prefix_eq. rewrite app_cons_assoc in Hj1. eexists;eauto.
       + exists e2.
         repeat lazymatch goal with
@@ -538,30 +531,30 @@ Section uniana.
             + eapply loop_contains_deq_loop;eauto.
         }
         eapply (loop_cutting_elem (t:=l2)).
-        -- spot_path.
-        -- simpl_nl. econstructor.
+        -- eapply Htr2. 
+        -- econstructor.
            instantiate (1 := l' ++ j).
            eapply splinter_single.
            unfold Tag in *. find_in_splinter.
         -- intros h0 k0 Hloop0. eapply Hdeq in Hloop0. eapply exit_cascade in Hunch;eauto.
            ++ contradict Hunch.
-              simpl_nl' Hunch. instantiate (1 := k0).
-              eapply succ_rt_combine;eauto;[rewrite nlcons_to_list; eauto| | find_succ_rel].
+              instantiate (1 := k0).
+              eapply succ_rt_combine;eauto;[ eauto| | find_succ_rel].
               eauto. eapply tpath_NoDup;eauto.
-              eapply (succ_rt_trans) with (b:=(e2, l' ++ j));eauto;[rewrite nlcons_to_list;eauto| |find_succ_rel].
+              eapply (succ_rt_trans) with (b:=(e2, l' ++ j));eauto;[eauto| |find_succ_rel].
               eapply tpath_NoDup;eauto.
-              setoid_rewrite nlcons_to_list at 3. eapply tpath_deq_loop_prefix; eauto.
+              eapply tpath_deq_loop_prefix; eauto.
               eapply prefix_eq. rewrite app_cons_assoc in Hj2. eexists;eauto.
     - exists k.
       eapply last_common_ex_succ in Hlc; eauto.
-      2: rewrite nlcons_to_list; unfold Tag in *; rewrite <-ηeq1;eauto.
-      2: rewrite nlcons_to_list; unfold Tag in *; rewrite <-ηeq2;eauto.
+      2: unfold Tag in *; rewrite <-ηeq1;eauto.
+      2: unfold Tag in *; rewrite <-ηeq2;eauto.
       4: contradict Htag0; inversion Htag0; eauto.
       clear - Hlc Htr1 Htr2. destructH. destruct b1, b2. exists l, l0, e, e0. split_conj;eauto.
       contradict Hlc3. inversion Hlc3;subst;eauto. f_equal.
-      eapply eff_tag_det; eapply tpath_succ_eff_tag; simpl_nl; unfold Coord in *; cycle 1; eauto.
-      1: rewrite nlcons_to_list; unfold Tag in *; rewrite <-ηeq2.
-      2: rewrite nlcons_to_list; unfold Tag in *; rewrite <-ηeq1.
+      eapply eff_tag_det; eapply tpath_succ_eff_tag; unfold Coord in *; cycle 1; eauto.
+      1: unfold Tag in *; rewrite <-ηeq2.
+      2: unfold Tag in *; rewrite <-ηeq1.
       eapply (tpath_exit_nin (h:=h) (q:=qe2));eauto;
         clear - Hexit__edge1 Hexit__edge2; unfold exit_edge in *;unfold exited;
           [|exists qe1]; firstorder 0.
@@ -579,17 +572,17 @@ Section uniana.
         (Hprec2 : Precedes lab_of l2 (u, j2, r2))
         (HCuni : forall (x : Var) (p : Lab) (i : Tag) (s s' : State),
             (p, i, s) ∈ l1 -> (p, i, s') ∈ l2 -> uni p x = true -> s x = s' x)
-        (Htr1 : Tr ((p, i, s1) :< l1))
-        (Htr2 : Tr ((p, i, s2) :< l2))
+        (Htr1 : Tr ((p, i, s1) :: l1))
+        (Htr2 : Tr ((p, i, s2) :: l2))
         (Hneq : p <> u)
     : j1 = j2.
   Proof. 
-    assert (forall p i s l (Htr : Tr ((p, i, s) :< l)),
-               TPath (root, start_tag) (p, i) ((p, i) :< map fst l)) as Htr_path.
+    assert (forall p i s l (Htr : Tr ((p, i, s) :: l)),
+               TPath (root, start_tag) (p, i) ((p, i) :: map fst l)) as Htr_path.
     {
       clear;intros.
-      eapply Tr_EPath in Htr;[|simpl_nl;reflexivity]. destructH.
-      eapply EPath_TPath' in Htr;simpl_nl;cbn. 2-4: reflexivity. assumption.
+      eapply Tr_EPath in Htr;[|reflexivity]. destructH.
+      eapply EPath_TPath' in Htr;cbn. 2-4: reflexivity. assumption.
     }
     decide (j1 = j2);[eauto|exfalso].
     specialize (@find_divergent_branch u p (map fst l1) (map fst l2) i j1 j2) as Hwit.
@@ -610,8 +603,8 @@ Section uniana.
   Qed.
       
   Lemma uni_same_lab p q1 q2 i j1 j2 s1 s2 r1 r2 uni l1 l2
-        (Htr1 : Tr ((p,i,s1) :<: (q1,j1,r1) :< l1))
-        (Htr2 : Tr ((p,i,s2) :<: (q2,j2,r2) :< l2))
+        (Htr1 : Tr ((p,i,s1) :: (q1,j1,r1) :: l1))
+        (Htr2 : Tr ((p,i,s2) :: (q2,j2,r2) :: l2))
         (Hsplit : (join_andb (map ((uni_branch uni) ∘ fst ∘ fst) (splits p))) = true)
         (HCuni : forall (x : Var) (p : Lab) (i : Tag) (s s' : State),
             (p, i, s) ∈ ((q1,j1,r1)::l1) -> (p, i, s') ∈ ((q2,j2,r2)::l2)
@@ -622,6 +615,7 @@ Section uniana.
     decide (q2 = q1)  as [ Heq | Hneq ]; [ eauto | exfalso ].
     eapply (neq_sym) in Hneq.
     eapply last_common_sym in LC_lt.
+    destruct brk as [br k].
     eapply lc_join_split in LC_lt as LC_join;eauto.
     Unshelve. all:cycle 3. exact p. exact i.
     - destructH.
@@ -649,8 +643,8 @@ Section uniana.
       + (* successor of br is the same because of uniformity and in l1' & l2', 
            thus l1' & l2' are not disjoint --> contradiction *)
         eapply (uni_branch_non_disj p i br k _ _ ((q1,j1,r1)::l1)
-                                    ((q2,j2,r2)::l2) (p0:<l1') (p1:<l2'));
-          cbn;simpl_nl;eauto.
+                                    ((q2,j2,r2)::l2) (l1') (l2'));
+          cbn;eauto.
     - spot_path.
     - spot_path. 
   Qed.
@@ -719,12 +713,9 @@ Section uniana.
         eapply prefix_in_list in HIn as Hpre1. destruct Hpre1 as [l1 Hpre1].
         eapply prefix_in_list in HIn' as Hpre2. destruct Hpre2 as  [l2 Hpre2].
         
-        rewrite nlcons_to_list in Hpre1.
         eapply prefix_trace in Hpre1 as Htr1 ; [|destruct t1; eauto].
 
-        rewrite nlcons_to_list in Hpre2.
         eapply prefix_trace in Hpre2 as Htr2; [|destruct t2;eauto].
-        simpl_nl' Hpre1. simpl_nl' Hpre2.
         specialize (HCuni t1 t2 Hts1 Hts2).          
         cut (q' = q); intros; subst.
         * cut (j' = j); intros; subst.
@@ -734,11 +725,11 @@ Section uniana.
                 eapply (HCuni x0 q j); eassumption.
              ** eapply join_andb_true_iff in Hpred; try eassumption.
           -- eapply uni_same_tag;eauto.
-             1,2: econstructor;eauto;simpl_nl;eauto.
+             1,2: econstructor;eauto;eauto.
              reduce_uni_concr HCuni Hpre1 Hpre2.  
         * clear HCunch HCunch'.
           eapply uni_same_lab ; eauto.
-          1,2: econstructor;eauto;simpl_nl;eauto. cbn in HCuni.
+          1,2: econstructor;eauto;eauto. cbn in HCuni.
           reduce_uni_concr HCuni Hpre1 Hpre2.
       (* The unch case *)
       + rename Hunch into H.
@@ -757,20 +748,18 @@ Section uniana.
         cut (j = j'); intros.
         * subst j'. eapply HCuni. eapply Hts1. eapply Hts2. 3: eauto.
           all: eapply precedes_step_inv.
-          -- rewrite <-nlcons_to_list. setoid_rewrite Hteq1 in Hprec. apply Hprec.
-          -- rewrite <-nlcons_necons, <-Hteq1. destruct t; eauto.
+          -- setoid_rewrite Hteq1 in Hprec. apply Hprec.
+          -- rewrite <-Hteq1. destruct t; eauto.
           -- cbn. eauto. 
-          -- rewrite <-nlcons_to_list. setoid_rewrite Hteq2 in Hprec'. apply Hprec'.
-          -- rewrite <-nlcons_necons, <-Hteq2. destruct t'; eauto.
+          -- setoid_rewrite Hteq2 in Hprec'. apply Hprec'.
+          -- rewrite <-Hteq2. destruct t'; eauto.
           -- cbn;eauto. 
         * unfold Precedes' in Hprec,Hprec'. destructH' Hprec. destructH' Hprec'.
-          rewrite nlcons_to_list in Hprec0.
           eapply prefix_trace in Hprec0 as Htr1 ; [|destruct t; eauto].
-          rewrite nlcons_to_list in Hprec'0.
           eapply prefix_trace in Hprec'0 as Htr2; [|destruct t';eauto].
-          rewrite Hteq1 in Hprec0. simpl_nl' Hprec0. cbn in Hprec0.
+          rewrite Hteq1 in Hprec0. cbn in Hprec0.
           eapply prefix_cons_cons in Hprec0. 
-          rewrite Hteq2 in Hprec'0. simpl_nl' Hprec'0. cbn in Hprec'0.
+          rewrite Hteq2 in Hprec'0. cbn in Hprec'0.
           eapply prefix_cons_cons in Hprec'0.
           eapply unch_same_tag with (l1:=l').
           3: eapply (@unch_concr'_pre _ _ _ _ _ _ t l'); eauto; rewrite Hteq1;cbn;econstructor;eauto.
@@ -784,27 +773,4 @@ Section uniana.
   
 End uniana.
 
-(* 18 lemmas that should be addressed 
 
-tr_succ_eff' PROVEN
-tr_lift_succ PROVEN
-tpath_tag_len_eq_elem PROVEN
-tag_prefix_same_head_elem REFUTED & REMOVED
-root_tag_nil PROVEN
-tag_prefix_ancestor_elem PROVEN
-succ_in_tpath_eff_tag PROVEN
-
-tag_eq_loop_exit
-tag_prefix_head
-tpath_tag_len_eq
-tpath_exit_nin
-tpath_deq_loop_prefix
-loop_cutting_elem
-first_occ_tag_elem
-find_loop_exit
-exit_cascade 
-dom_tpath_prec
-dom_dom_in_between
-ancestor_level_connector
-
-*)

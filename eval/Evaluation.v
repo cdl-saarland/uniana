@@ -620,7 +620,7 @@ Section eval.
   Definition Tr' (l : list Conf) :=
     exists l', Tr l' /\ Postfix l l'.
 
-  Lemma tr_lc_lt' p i s1 s2 l1 l2 q1 q2 j1 j2 r1 r2
+  Lemma tr_lc_lt p i s1 s2 l1 l2 q1 q2 j1 j2 r1 r2
         (Htr1 : Tr ((p, i, s1) :: (q1,j1,r1) :: l1))
         (Htr2 : Tr ((p, i, s2) :: (q2,j2,r2) :: l2))
     : exists brk,
