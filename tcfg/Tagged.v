@@ -27,7 +27,30 @@ Section tagged.
   | Eentry : entry_edge p q -> Edge p q
   | Eexit : (exists h, exit_edge h p q) -> Edge p q.
 
-  Parameter edge_Edge : forall (p q : Lab), edge__P p q -> Edge p q.
+  Lemma edge_Edge : forall (p q : Lab), edge__P p q -> Edge p q.
+  Proof.
+    intros ? ? Hedge.
+    decide (deq_loop p q).
+    - decide (deq_loop q p).
+      + decide (a_edge__P p q).
+        * econstructor;eauto;split;eauto.
+        * eapply Eback. refine (conj Hedge n).
+      + eapply Eexit.
+        simpl_dec' n. simpl_dec' n. destructH.
+        exists x. split;eauto.
+    - eapply Eentry.
+      unfold entry_edge. split_conj;eauto.
+      + simpl_dec' n. simpl_dec' n. destructH.
+        enough (x = q).
+        * subst. eapply loop_contains_loop_head;eauto.
+        * eapply dom_loop_contains in n1 as Hdom;eauto.
+          specialize (PathSingle edge__P p) as Hpath.
+          eapply PathCons in Hedge;eauto.
+          eapply Hdom in Hedge. destruct Hedge;subst;auto.
+          exfalso. cbn in H; destruct H;[|auto]. subst.
+          eapply n1. eapply loop_contains_self;eapply loop_contains_loop_head;eauto.
+      + contradict n. eapply loop_contains_deq_loop;auto.
+  Defined.
 
   Definition STag (i : Tag)
     := match i with
