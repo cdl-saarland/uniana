@@ -63,7 +63,10 @@ Section eval.
     := match k with
        | (p, i, s) => match eff' (p,s) with
                      | None => None
-                     | Some (q, r) => Some (q, eff_tag p q i, r)
+                     | Some (q, r) => match eff_tag p q i with
+                                     | Some j => Some (q, j, r)
+                                     | None => None
+                                     end
                      end
        end.
 
@@ -93,13 +96,14 @@ Section eval.
 
   Lemma eff_eff_tag q j r p i s :
     eff (q,j,r) = Some (p,i,s)
-    -> eff_tag q p j = i.
+    -> eff_tag q p j = Some i.
   Proof.
     intros Heff. unfold eff in Heff.
     destruct (eff' (q,r)) eqn:E;cbn in Heff. 1:revert Heff;destr_let;intros Heff.
+    all: admit. (*
     - inversion Heff;reflexivity.
     - congruence.
-  Qed.
+  Qed. *) Admitted.
 
   Definition eval_edge := (fun k k' : Conf
                            => match eff k with
@@ -175,10 +179,11 @@ Section eval.
       eapply step_conf_implies_edge. subst c;eauto.
     - unfold eff in Heval.
       destruct (eff' (q,r)).
+      all: admit. (*
       destruct p0.
       + inversion Heval;subst;auto.
       + contradiction.
-  Qed.
+  Qed.*) Admitted.
 
   Lemma EPath_TPath k k' π :
     EPath k k' π -> TPath (fst k) (fst k') (map fst π).
@@ -282,22 +287,23 @@ Section eval.
         inversion Heqc. subst c.
         unfold sem_step in H. cbn in H.
         destruct (eff' (e,s0)).
-        * destruct p0. inversion H. subst. eauto.
+        * destruct p0. inversion H. subst. eauto. admit. 
         * congruence.
       + eapply in_map with (f:=fst) in H0. eauto.
     - destruct x.
       + inversion t.
       + cbn in Heqc. congruence.
-  Qed.
+  Admitted. (*
+  Qed.*)
   
   Lemma ivec_det : forall q j r r' p i i' s s',
       eff (q, j, r) = Some (p, i, s) ->
       eff (q, j, r') = Some (p, i', s') ->
       i = i'.
   Proof.
-    intros.
+    intros. (*
     eapply eff_tag_det;eapply eff_eff_tag; eauto.
-  Qed.
+  Qed. *) Admitted.
   
   Definition Precedes' (l : list Conf) (k k' : Conf) : Prop :=
     exists l', Prefix (k' :: l') l /\ Precedes lab_of (k' :: l') k.
@@ -747,15 +753,16 @@ Section eval.
       inversion Hsucc. subst.
       eapply Tr_eff_Some in Htr.
       unfold eff in Htr.
-      rewrite Heff in Htr.
-      inversion Htr. reflexivity.
+      rewrite Heff in Htr. admit. (*
+      inversion Htr. reflexivity.*)
     - cbn in Hsucc.
       destruct l. 1: cbn in *; destruct l2; cbn in Hsucc;congruence.
       destruct p0. destruct p0.
       eapply IHl2.
       + cbn in Htr. inversion Htr. eapply H1.
       + cbn in Hsucc. inversion Hsucc;subst. eauto.
-  Qed.
+  Admitted. (*
+  Qed. *)
   
   Lemma succ_in_rcons2 {A : Type} (a b : A) l
     : a ≻ b | l :r: a :r: b.
@@ -793,7 +800,7 @@ Section eval.
   Lemma succ_in_tpath_eff_tag p q i j t a b
         (Hpath : TPath a b t)
         (Hsucc : (p,i) ≻ (q,j) | t)
-    : eff_tag q p j = i.
+    : eff_tag q p j = Some i.
   Proof.
     induction Hpath.
     - exfalso. unfold succ_in in Hsucc. destructH. cbn in Hsucc.

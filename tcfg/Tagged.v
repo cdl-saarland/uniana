@@ -21,7 +21,35 @@ Section tagged.
 
   Hint Resolve Coord_dec.
 
+  Inductive Edge (p q : Lab) : Type :=
+  | Enormal : eq_loop p q -> a_edge__P p q -> Edge p q
+  | Eback : back_edge p q -> Edge p q
+  | Eentry : entry_edge p q -> Edge p q
+  | Eexit : (exists h, exit_edge h p q) -> Edge p q.
 
+  Parameter edge_Edge : forall (p q : Lab), edge__P p q -> Edge p q.
+
+  Definition STag (i : Tag)
+    := match i with
+       | nil => nil
+       | n :: i => (S n) :: i
+       end.
+  
+  Definition eff_tag' (p q : Lab) (i : Tag) (E : edge__P p q)
+    := match edge_Edge E with
+       | Enormal _ _ => i
+       | Eback _ => STag i
+       | Eentry _ => 0 :: i
+       | Eexit _ => tl i
+       end.
+
+  Definition eff_tag (p q : Lab) (i : Tag)
+    := match decision (edge__P p q) with
+       | left E => Some (eff_tag' i E)
+       | _ => None
+       end.
+  
+  (*
   Definition eff_tag p q i : Tag
     := if decision (p ↪ q)
        then match i with
@@ -36,11 +64,12 @@ Section tagged.
              O :: i
            else
              i.
-
-  Definition tcfg_edge :=
-    (fun c c' : Coord => let (p,i) := c  in
-                      let (q,j) := c' in
-                      edge__P p q /\ ( (eff_tag p q i) = j)).
+   *)
+  
+  Definition tcfg_edge (c c' : Coord) :=
+    let (p,i) := c  in
+    let (q,j) := c' in
+    edge__P p q /\ eff_tag p q i = Some j.
   
   Hint Unfold Coord tcfg_edge.
 
@@ -51,11 +80,11 @@ Section tagged.
   Global Instance tcfg_edge_dec : forall pi qj, dec (pi -t> qj).
   Proof.
     intros. destruct pi as [p i]. destruct qj as [q j].
-    cbn. eauto.
+    cbn. decide (edge__P p q);eauto.
   Qed.
 
   Lemma tcfg_edge_spec (p q : Lab) i j
-    : (p,i) -t> (q,j) <-> edge p q = true /\ eff_tag p q i = j.
+    : (p,i) -t> (q,j) <-> edge p q = true /\ eff_tag p q i = Some j.
   Proof.
     unfold tcfg_edge.
     conv_bool. split;split;destructH;auto.
@@ -202,25 +231,9 @@ Proof.
 Qed.            
 
 
-(*Inductive Edge (p q : Lab) : Type :=
-| Enormal : eq_loop p q -> a_edge__P p q -> Edge p q
-| Eback : back_edge p q -> Edge p q
-| Eentry : entry_edge p q -> Edge p q
-| Eexit : (exists h, exit_edge h p q) -> Edge p q.
-
-Parameter bar :  forall (p q : Lab) (Hedge : edge__P p q), Edge p q.
-
-
-
-Definition foo (p q : Lab) (H : edge__P p q)
-  := match bar H with
-     | Enormal p q => 0
-     | _ => 1
-     end. 
-*)
 
 Parameter eff_tag_fresh : forall p q q0 i j j0 l,
-    TPath (q0,j0) (q,j) l -> eff_tag q p j = i -> forall i', In (p, i') l -> i' <> i.
+    TPath (q0,j0) (q,j) l -> eff_tag q p j = Some i -> forall i', In (p, i') l -> i' <> i.
 
 Parameter eff_tag_det : forall  q j p i i',
     eff_tag q p j = i ->
@@ -230,7 +243,7 @@ Parameter eff_tag_det : forall  q j p i i',
 Lemma tpath_succ_eff_tag  p q r i j s t a l
       (Hpath : TPath (a,l) (r,s) ((r,s) :: t))
       (Hsucc : (q,j) ≻ (p,i) | (r,s) :: t)
-  : eff_tag p q i = j.
+  : eff_tag p q i = Some j.
 Proof.
   unfold succ_in in Hsucc. destructH.
   assert ((r,s) :: t = l2 :r: (q,j) :r: (p,i) ++ l1) as Hsucc'.
@@ -269,10 +282,12 @@ Proof.
   decide (q ↪ p).
   - exfalso. eapply no_exit_head;eauto. exists q. auto.
   - unfold exit_edge in Hexit. destructH. split;[auto|].
+    decide (edge__P q p). 2: contradiction.
+    admit. (*
     decide (exists h0, exit_edge h0 q p).
     + reflexivity.
     + exfalso. eapply n0. exists h. unfold exit_edge. eauto.
-Qed.
+Qed.*) Admitted.
 
 Lemma exit_succ_exiting (p q h e : Lab) (k i j : Tag) r
       (Hpath : TPath (p,k) (q,j) (r :r: (p,k)))

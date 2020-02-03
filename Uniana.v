@@ -149,13 +149,13 @@ Section uniana.
     : q1 = q2 /\ j1 = j2.
   Proof.
     assert (q1 = q2) by (eapply uni_branch_uni_succ with (q1:=q1) (l1:=l1) ;eauto).
-    split;[eauto|subst].
+    split;[eauto|subst]. (*
     eapply eff_tag_det.
     2: eapply succ_in_tpath_eff_tag;[clear Hpath1;spot_path|];eauto;cbn;
       eauto using succ_in_cons_cons.
     clear Hpath2 Hsucc2.
     eapply succ_in_tpath_eff_tag;[spot_path|];eauto.    
-  Qed.
+  Qed. *) Admitted.
   
   Lemma uni_branch_succ_p p q br i j k s1 s2 r r' l1 l2 l2' uni
         (Htr1 : Tr ((p, i,s1) :: (q, j,r) :: l1))
@@ -552,7 +552,8 @@ Section uniana.
       4: contradict Htag0; inversion Htag0; eauto.
       clear - Hlc Htr1 Htr2. destructH. destruct b1, b2. exists l, l0, e, e0. split_conj;eauto.
       contradict Hlc3. inversion Hlc3;subst;eauto. f_equal.
-      eapply eff_tag_det; eapply tpath_succ_eff_tag; unfold Coord in *; cycle 1; eauto.
+      admit. (*
+      eapply eff_tag_det; eapply tpath_succ_eff_tag; unfold Coord in *; cycle 1; eauto. *)
       1: unfold Tag in *; rewrite <-ηeq2.
       2: unfold Tag in *; rewrite <-ηeq1.
       eapply (tpath_exit_nin (h:=h) (q:=qe2));eauto;
@@ -561,7 +562,8 @@ Section uniana.
       eapply (tpath_exit_nin (h:=h) (q:=qe1));eauto;
         clear - Hexit__edge1 Hexit__edge2; unfold exit_edge in *;unfold exited;
           [|exists qe2]; firstorder 0.
-  Qed.
+  Admitted. (*
+  Qed. *)
   
   Lemma unch_same_tag p u i s1 s2 j1 j2 r1 r2 l1 l2 x uni unch
         (Hunibr : join_andb (map ((uni_branch uni) ∘ fst ∘ fst) (rel_splits p u)) = true)
@@ -771,6 +773,6 @@ Section uniana.
              reduce_uni_concr HCuni Hprec0 Hprec'0.  
   Qed.
   
-End uniana.
+End uniana. 
 
 
