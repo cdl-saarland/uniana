@@ -211,12 +211,20 @@ Section tagged.
   
   Definition TPath := Path tcfg_edge.
 
+  Lemma tag_depth'  p i t
+        (Hpath : TPath (root,start_tag) (p,i) t)
+    : length i = depth p.
+  Proof.
+  Admitted.
+    
   Lemma tag_depth  p i q j t
         (Hpath : TPath (root,start_tag) (p,i) t)
         (Hin : (q,j) ∈ t)
     : length j = depth q.
   Proof.
-  Admitted.  
+    eapply path_to_elem in Hpath;eauto. destructH.
+    eapply tag_depth';eauto.
+  Qed.
 
 Lemma tag_eq_loop_exit p q i j j'
       (Htag : (q,j ) -t> (p,i))
@@ -367,18 +375,10 @@ Proof.
         (Hpath2 : TPath (root, start_tag) (p, j2) l2)
     : length j1 = length j2.
   Proof.
-    revert dependent l2. revert dependent p. revert j1 j2.
-    induction l1;intros;inversion Hpath1.
-    - inversion Hpath2.
-      + reflexivity.
-      + exfalso. subst a1 a0 p j1 a c l1. destruct b. eapply tcfg_edge_spec in H5.
-        eapply root_no_pred. eapply H5.
-    - destruct b. subst c a0 a π.
-      eapply tcfg_edge_destruct in H4.
-      destruct H4 as [Hedge|[Hedge|[Hedge|Hedge]]].
-      + subst t.
-          
-  Admitted. (* FIXME *)
+    eapply tag_depth' in Hpath1.
+    eapply tag_depth' in Hpath2.
+    rewrite Hpath1,Hpath2. reflexivity.
+  Qed.
   
   Lemma tpath_tag_len_eq_elem p q i1 i2 j1 j2 l1 l2
         (Hpath1 : TPath (root, start_tag) (p, i1) l1)
@@ -397,8 +397,8 @@ Proof.
         (Hdom : Dom edge__P root q p)
         (Hpath : TPath (root,start_tag) (p,i) l)
     : exists j, Precedes fst l (q,j).
-  Proof.
-    Admitted.
+  Proof.  
+  Admitted.
   
   Lemma tag_prefix_head h p i j l 
         (Hloop : loop_contains h p)
