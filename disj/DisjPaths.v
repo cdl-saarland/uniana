@@ -64,7 +64,7 @@ Section disj.
                 ** inversion Hpath;cbn;auto.
                 ** eapply postfix_incl;eauto. 
              ++ eapply preds_in_same_loop;cycle 1;eauto 1.
-                ** unfold tcfg_edge,tcfg_edge' in Hpost. destructH. auto.
+                ** unfold tcfg_edge in Hpost. destructH. auto.
                 ** eapply H;eauto.
                    --- eapply postfix_step_left;eauto. 
       + eapply H;eauto.
@@ -182,7 +182,7 @@ Section disj.
           eapply postfix_path in H;eauto 1.
           instantiate (1:=e). 
           eapply path_nlrcons_edge in H. 
-          unfold tcfg_edge,tcfg_edge' in H. destructH. eauto.
+          unfold tcfg_edge in H. destructH. eauto.
         - eapply while'_max in H as H1';eauto. cbn in H1'. contradict H1'.
           eapply loop_contains_deq_loop in H1'.
           eapply innermost_eq_loop in Hin.

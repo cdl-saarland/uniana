@@ -159,5 +159,5 @@ Proof.
     econstructor;eauto.
     + rewrite <-surjective_pairing. eapply succ_cons. admit.
     + admit.
-    + eapply edge_edge_loop; unfold tcfg_edge,tcfg_edge' in *; do 2 destructH; eauto.
+    + eapply edge_edge_loop; unfold tcfg_edge in *; do 2 destructH; eauto.
 Admitted.

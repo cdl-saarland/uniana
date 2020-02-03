@@ -802,7 +802,7 @@ Section eval.
       destruct π;[inversion Hpath|].
       decide (c = (p,i)).
       + subst c. eapply succ_in_cons_eq in Hsucc;eauto.
-        * path_simpl' Hpath. subst b. unfold tcfg_edge,tcfg_edge' in H. destruct H. auto.
+        * path_simpl' Hpath. subst b. unfold tcfg_edge in H. destruct H. auto.
         * eapply tpath_NoDup. econstructor;eauto.
       + eapply succ_in_cons_neq in Hsucc;eauto.
         path_simpl' Hpath.
@@ -813,7 +813,7 @@ Section eval.
         (Heff : eff (p,i,s) = Some (q,j,r))
     : tcfg_edge (p,i) (q,j).
   Proof.
-    eapply eff_eff_tag in Heff as Heff'. unfold tcfg_edge, tcfg_edge'.
+    eapply eff_eff_tag in Heff as Heff'. unfold tcfg_edge.
     eapply step_conf_implies_edge in Heff. conv_bool; firstorder.
   Qed.
 

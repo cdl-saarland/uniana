@@ -556,7 +556,10 @@ Section cfg.
     : innermost_loop h q.
   Proof.
     clear - Hexit.
-  Admitted. (* FIXME *)
+    unfold innermost_loop. split.
+    - destruct Hexit. eauto.
+    - eapply deq_loop_exiting;eauto.
+  Qed.
   
   Lemma dom_self_loop h p π
         (Hpath : CPath p p π)
@@ -565,6 +568,9 @@ Section cfg.
     : π = [p].
   Proof.
     clear - Hpath Hinl Hnin.
+    inversion Hpath;subst.
+    - reflexivity.
+    - exfalso. eapply Hnin.
   Admitted. (* FIXME *)
 
 End cfg.

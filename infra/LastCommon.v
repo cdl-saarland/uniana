@@ -274,11 +274,17 @@ Section Lc.
     unfold last_common in Hlc. destructH. eapply postfix_rcons_nil_eq in Hlc2. firstorder.
   Qed.
 
+  (* currently not used ! *)
   Lemma last_common_app_eq1 `{EqDec A eq} (l1 l2 l1' l2' : list A) x
         (Hlc : last_common' l1 l2 l1' l2' x)
     : l1 = l1' ++ [x] ++ prefix_nincl x l1.
+  Proof.
+    unfold last_common' in Hlc. destructH.
+    eapply postfix_eq in Hlc0.
+    
   Admitted.
 
+  (* currently not used ! *)
   Lemma last_common_app_eq2 `{EqDec A eq} (l1 l2 l1' l2' : list A) x
         (Hlc : last_common' l1 l2 l1' l2' x)
     : l2 = l2' ++ [x] ++ prefix_nincl x l2.
@@ -286,11 +292,13 @@ Section Lc.
     eapply last_common'_sym in Hlc. eapply last_common_app_eq1;eauto.
   Qed.
 
+  (* currently not used ! *)
   Lemma last_common_in1 `{EqDec A eq} (l1 l2 : list A) x
         (Hlc : last_common l1 l2 x)
     : x ∈ l1.
   Admitted.
 
+  (* currently not used ! *)
   Lemma last_common_prefix `{EqDec A eq} (ll1 ll2 l1 l2 : list A)
         (l1' l2' : list A) (x : A)
         (Hlc : last_common' (l1 ++ [x] ++ ll1) (l2 ++ [x] ++ ll2) l1 l2 x)

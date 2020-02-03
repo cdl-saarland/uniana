@@ -21,10 +21,6 @@ Section tagged.
 
   Hint Resolve Coord_dec.
 
-  Definition tcfg_edge' (tag : Lab -> Lab -> Tag -> Tag) :=
-    (fun c c' : Coord => let (p,i) := c  in
-                      let (q,j) := c' in
-                      edge__P p q /\ ( (tag p q i) = j)).
 
   Definition eff_tag p q i : Tag
     := if decision (p ↪ q)
@@ -41,9 +37,12 @@ Section tagged.
            else
              i.
 
-  Definition tcfg_edge := tcfg_edge' eff_tag.
-
-  Hint Unfold Coord tcfg_edge tcfg_edge'.
+  Definition tcfg_edge :=
+    (fun c c' : Coord => let (p,i) := c  in
+                      let (q,j) := c' in
+                      edge__P p q /\ ( (eff_tag p q i) = j)).
+  
+  Hint Unfold Coord tcfg_edge.
 
   Notation "pi -t> qj" := (tcfg_edge pi qj) (at level 50).
   (*Notation "pi -t> qj" := ((fun `(redCFG) => tcfg_edge pi qj = true) _ _ _ _ _)
@@ -58,7 +57,7 @@ Section tagged.
   Lemma tcfg_edge_spec (p q : Lab) i j
     : (p,i) -t> (q,j) <-> edge p q = true /\ eff_tag p q i = j.
   Proof.
-    unfold tcfg_edge,tcfg_edge'.
+    unfold tcfg_edge.
     conv_bool. split;split;destructH;auto.
   Qed.
 
@@ -75,7 +74,7 @@ Section tagged.
                    | None => False
                    end.
     Proof.
-      unfold tcfg_edge,tcfg_edge' in Hpq. conv_bool. destructH.
+      unfold tcfg_edge in Hpq. conv_bool. destructH.
       unfold eff_tag in Hpq.
     Admitted.
   
@@ -165,7 +164,7 @@ Section tagged.
         (Hin : (q,j) ∈ t)
     : length j = depth q.
   Proof.
-    Admitted.  
+  Admitted.  
 
 Lemma tag_eq_loop_exit p q i j j'
       (Htag : (q,j ) -t> (p,i))
@@ -175,8 +174,7 @@ Lemma tag_eq_loop_exit p q i j j'
     | Some h => exit_edge h q p
     | None => False
     end.
-Proof.
-  
+Proof.  
   eapply tcfg_edge_destruct in Htag.
   eapply tcfg_edge_destruct in Htag'.
   
@@ -204,6 +202,23 @@ Proof.
 Qed.            
 
 
+(*Inductive Edge (p q : Lab) : Type :=
+| Enormal : eq_loop p q -> a_edge__P p q -> Edge p q
+| Eback : back_edge p q -> Edge p q
+| Eentry : entry_edge p q -> Edge p q
+| Eexit : (exists h, exit_edge h p q) -> Edge p q.
+
+Parameter bar :  forall (p q : Lab) (Hedge : edge__P p q), Edge p q.
+
+
+
+Definition foo (p q : Lab) (H : edge__P p q)
+  := match bar H with
+     | Enormal p q => 0
+     | _ => 1
+     end. 
+*)
+
 Parameter eff_tag_fresh : forall p q q0 i j j0 l,
     TPath (q0,j0) (q,j) l -> eff_tag q p j = i -> forall i', In (p, i') l -> i' <> i.
 
@@ -226,7 +241,7 @@ Proof.
   rewrite Hsucc' in Hpath.
   eapply postfix_path with (l:=l2 :r: (q,j)) (p:=(p,i)) in Hpath.
   - eapply path_prefix_path with (ϕ:= [(p,i)]) (r:=(q,j))in Hpath.
-    + inversion Hpath;subst;eauto. unfold tcfg_edge,tcfg_edge' in H3. cbn in H3. destruct b. conv_bool.
+    + inversion Hpath;subst;eauto. unfold tcfg_edge in H3. cbn in H3. destruct b. conv_bool.
       inversion H0;subst. destruct H3. eauto. inversion H5.
     + eauto.
     + cbn; clear. induction l2; cbn in *; econstructor; eauto.
@@ -241,7 +256,7 @@ Proof.
   induction Hpath.
   - econstructor; eauto. econstructor.
   - cbn. econstructor;eauto.
-   destruct c. intro HIn. unfold tcfg_edge,tcfg_edge' in H. destruct a, b. conv_bool. destruct H.
+   destruct c. intro HIn. unfold tcfg_edge in H. destruct a, b. conv_bool. destruct H.
    eapply eff_tag_fresh in HIn;eauto.
 Qed.
 
