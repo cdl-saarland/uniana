@@ -137,6 +137,14 @@ Section uniana.
       eapply tr_succ_eff' with (s:=s1) (q'0:=q');eauto.
       eapply tr_succ_eff' with (s:=s2) (q'0:=q');eauto.
   Qed.
+
+  Lemma eff_tag_det'
+     : forall (q : Lab) (j : Tag) (p : Lab) (i i' : Tag),
+      eff_tag q p j = Some i -> eff_tag q p j = Some i' -> i = i'.
+  Proof.
+    intros.
+    eapply eff_tag_det in H;eauto. inversion H;eauto.
+  Qed.
   
   Lemma uni_branch_uni_succ' p br q1 q2 i k j1 j2 uni l1 l2 s1 s2
         (Hpath1 : Tr ((p,i,s1) :: l1))
@@ -149,13 +157,13 @@ Section uniana.
     : q1 = q2 /\ j1 = j2.
   Proof.
     assert (q1 = q2) by (eapply uni_branch_uni_succ with (q1:=q1) (l1:=l1) ;eauto).
-    split;[eauto|subst]. (*
-    eapply eff_tag_det.
+    split;[eauto|subst].
+    eapply eff_tag_det'.
     2: eapply succ_in_tpath_eff_tag;[clear Hpath1;spot_path|];eauto;cbn;
       eauto using succ_in_cons_cons.
     clear Hpath2 Hsucc2.
     eapply succ_in_tpath_eff_tag;[spot_path|];eauto.    
-  Qed. *) Admitted.
+  Qed.
   
   Lemma uni_branch_succ_p p q br i j k s1 s2 r r' l1 l2 l2' uni
         (Htr1 : Tr ((p, i,s1) :: (q, j,r) :: l1))
@@ -552,8 +560,7 @@ Section uniana.
       4: contradict Htag0; inversion Htag0; eauto.
       clear - Hlc Htr1 Htr2. destructH. destruct b1, b2. exists l, l0, e, e0. split_conj;eauto.
       contradict Hlc3. inversion Hlc3;subst;eauto. f_equal.
-      admit. (*
-      eapply eff_tag_det; eapply tpath_succ_eff_tag; unfold Coord in *; cycle 1; eauto. *)
+      eapply eff_tag_det'; eapply tpath_succ_eff_tag; unfold Coord in *; cycle 1; eauto.
       1: unfold Tag in *; rewrite <-ηeq2.
       2: unfold Tag in *; rewrite <-ηeq1.
       eapply (tpath_exit_nin (h:=h) (q:=qe2));eauto;
@@ -562,8 +569,7 @@ Section uniana.
       eapply (tpath_exit_nin (h:=h) (q:=qe1));eauto;
         clear - Hexit__edge1 Hexit__edge2; unfold exit_edge in *;unfold exited;
           [|exists qe2]; firstorder 0.
-  Admitted. (*
-  Qed. *)
+  Qed.
   
   Lemma unch_same_tag p u i s1 s2 j1 j2 r1 r2 l1 l2 x uni unch
         (Hunibr : join_andb (map ((uni_branch uni) ∘ fst ∘ fst) (rel_splits p u)) = true)

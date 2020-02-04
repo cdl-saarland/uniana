@@ -1,5 +1,8 @@
 Require Export ImplodeCFG Precedes CFGancestor Tagle.
 
+Require Import PropExtensionality.
+  
+
 Section tagged.
   
   Context `{C : redCFG}.
@@ -52,6 +55,15 @@ Section tagged.
       + contradict n. eapply loop_contains_deq_loop;auto.
   Defined.
 
+  Lemma Edge_eq (p q : Lab)
+        (H : edge__P p q)
+        (Q : edge__P p q)
+    : edge_Edge H = edge_Edge Q.
+  Proof.
+    f_equal.
+    eapply proof_irrelevance.
+  Qed.
+
   Definition STag (i : Tag)
     := match i with
        | nil => nil
@@ -71,6 +83,14 @@ Section tagged.
        | left E => Some (eff_tag' i E)
        | _ => None
        end.
+
+  Lemma eff_tag'_eq (i : Tag) (p q : Lab) (H Q : edge__P p q)
+    : eff_tag' i H = eff_tag' i Q.
+  Proof.
+    unfold eff_tag'.
+    erewrite Edge_eq.
+    reflexivity.
+  Qed.
   
   (*
   Definition eff_tag p q i : Tag
@@ -304,21 +324,35 @@ Proof.
    eapply eff_tag_fresh in HIn;eauto.
 Qed.
 
+Lemma deq_loop_entry (p q : Lab)
+      (Hentry : entry_edge p q)
+  : deq_loop q p.
+Proof.
+  unfold entry_edge in Hentry.
+  destructH.
+  intros h Heq.
+  assert (~ exit_edge h p q).
+  - contradict Hentry0. eapply no_exit_head;eauto.
+  - do 2 simpl_dec' H. destruct H as [H|[H|H]];[contradiction| |contradiction].
+    eapply dec_DN;eauto.
+Qed.
+
 Lemma exit_edge_tcfg_edge (h p q : Lab) (j : Tag)
       (Hexit : exit_edge h q p)
   : (q,j) -t> (p,tl j).
 Proof.
-  cbn. conv_bool.
-  unfold eff_tag. 
-  decide (q ↪ p).
-  - exfalso. eapply no_exit_head;eauto. exists q. auto.
-  - unfold exit_edge in Hexit. destructH. split;[auto|].
-    decide (edge__P q p). 2: contradiction.
-    admit. (*
-    decide (exists h0, exit_edge h0 q p).
-    + reflexivity.
-    + exfalso. eapply n0. exists h. unfold exit_edge. eauto.
-Qed.*) Admitted.
+  cbn. copy Hexit Hexit'.
+  unfold exit_edge in Hexit. destructH.
+  split;auto.
+  unfold eff_tag. decide (edge__P q p);[|contradiction].
+  f_equal.
+  unfold eff_tag'.
+  destruct (edge_Edge e);auto.
+  all: exfalso.
+  - eapply Hexit2. eapply e0;eauto.
+  - eapply back_edge_eq_loop in b. destruct b. eapply Hexit2. eauto.
+  - eapply deq_loop_entry in e0. eapply Hexit2. eauto.
+Qed.
 
 Lemma exit_succ_exiting (p q h e : Lab) (k i j : Tag) r
       (Hpath : TPath (p,k) (q,j) (r :r: (p,k)))
@@ -647,4 +681,3 @@ Proof.
     Admitted.
   
 End tagged.
-

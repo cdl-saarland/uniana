@@ -74,3 +74,10 @@ Ltac destr_let :=
   | [ |- context[let (_,_) := snd ?a in _]] => destruct a;unfold snd
   | [ |- context[let (_,_) := ?a in _]] => destruct a
   end.
+
+Ltac destr_let' H :=
+  lazymatch goal with
+  | [H : context[let (_,_) := fst ?a in _] |- _ ] => destruct a;unfold fst 
+  | [H : context[let (_,_) := snd ?a in _] |- _] => destruct a;unfold snd
+  | [H : context[let (_,_) := ?a in _] |- _ ] => destruct a
+  end.

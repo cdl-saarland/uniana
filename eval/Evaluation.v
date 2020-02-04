@@ -69,6 +69,30 @@ Section eval.
                                      end
                      end
        end.
+  
+  Ltac eff_unf :=
+    lazymatch goal with
+    | H : context [eff (?q,?j,?r)] |- _
+      => unfold eff, eff_tag in H;
+        destruct (eff' (q,r));
+        [match type of H with
+         | context[let (_,_) := ?x in _ ]
+           => let x1 := fresh "x" in
+             let x2 := fresh "x" in 
+             destruct x as [x1 x2];
+             decide (edge__P q x1);[|try congruence; try contradiction](*
+              unfold eff_tag' in H;
+              match goal with
+              | Q : edge__P q x1 |- _
+                => destruct (edge_Edge Q);
+                  inversion H;subst
+              end*)
+         end
+        |try congruence; try contradiction]
+    | H : context [eff ?x] |- _
+      => destruct x as [[? ?] ?]; eff_unf
+    end.
+
 
   Program Instance conf_eq_eqdec : EqDec Conf eq.
   Next Obligation.
@@ -98,12 +122,10 @@ Section eval.
     eff (q,j,r) = Some (p,i,s)
     -> eff_tag q p j = Some i.
   Proof.
-    intros Heff. unfold eff in Heff.
-    destruct (eff' (q,r)) eqn:E;cbn in Heff. 1:revert Heff;destr_let;intros Heff.
-    all: admit. (*
-    - inversion Heff;reflexivity.
-    - congruence.
-  Qed. *) Admitted.
+    intros Heff.
+    eff_unf. unfold eff_tag. inversion Heff. subst.
+    decide (edge__P q p);[|congruence]. f_equal. eapply eff_tag'_eq. 
+  Qed.
 
   Definition eval_edge := (fun k k' : Conf
                            => match eff k with
@@ -177,13 +199,10 @@ Section eval.
     split.
     - destruct (eff (q,j,r)) eqn:E;[|contradiction].
       eapply step_conf_implies_edge. subst c;eauto.
-    - unfold eff in Heval.
-      destruct (eff' (q,r)).
-      all: admit. (*
-      destruct p0.
-      + inversion Heval;subst;auto.
-      + contradiction.
-  Qed.*) Admitted.
+    - eff_unf. unfold eff_tag' in Heval. unfold eff_tag. inversion Heval; subst. decide (edge__P q p).
+      2: congruence.
+      erewrite eff_tag'_eq. reflexivity.
+  Qed.
 
   Lemma EPath_TPath k k' π :
     EPath k k' π -> TPath (fst k) (fst k') (map fst π).
@@ -280,30 +299,29 @@ Section eval.
     intros.
     destruct t; cbn in *.
     remember (hd_error x) as c. destruct c.
-    - destruct c,c. eapply eff_tag_fresh.
+    - destruct c,c. eapply eff_tag_fresh;cycle 2.
+      + eapply in_map with (f:=fst) in H0. eauto.
       + eapply Tr_EPath in t;eauto. destruct t as [s1 t].
         eapply EPath_TPath in t; eauto.
       + destruct x;cbn in Heqc;[congruence|].
         inversion Heqc. subst c.
         unfold sem_step in H. cbn in H.
         destruct (eff' (e,s0)).
-        * destruct p0. inversion H. subst. eauto. admit. 
+        * destruct p0. unfold eff_tag in *. decide (edge__P e e0). 2:congruence.
+          inversion H. subst. decide (edge__P e p);[|congruence]. erewrite eff_tag'_eq. reflexivity.
         * congruence.
-      + eapply in_map with (f:=fst) in H0. eauto.
     - destruct x.
       + inversion t.
       + cbn in Heqc. congruence.
-  Admitted. (*
-  Qed.*)
+  Qed.
   
   Lemma ivec_det : forall q j r r' p i i' s s',
       eff (q, j, r) = Some (p, i, s) ->
       eff (q, j, r') = Some (p, i', s') ->
       i = i'.
   Proof.
-    intros. (*
-    eapply eff_tag_det;eapply eff_eff_tag; eauto.
-  Qed. *) Admitted.
+    intros. eff_unf. eff_unf. inversion H;subst. inversion H0;subst. eapply eff_tag'_eq.
+  Qed.
   
   Definition Precedes' (l : list Conf) (k k' : Conf) : Prop :=
     exists l', Prefix (k' :: l') l /\ Precedes lab_of (k' :: l') k.
@@ -752,17 +770,14 @@ Section eval.
       destruct l. 1: cbn in *; congruence.
       inversion Hsucc. subst.
       eapply Tr_eff_Some in Htr.
-      unfold eff in Htr.
-      rewrite Heff in Htr. admit. (*
-      inversion Htr. reflexivity.*)
+      eff_unf. inversion Heff;inversion Htr;subst. reflexivity.
     - cbn in Hsucc.
       destruct l. 1: cbn in *; destruct l2; cbn in Hsucc;congruence.
       destruct p0. destruct p0.
       eapply IHl2.
       + cbn in Htr. inversion Htr. eapply H1.
       + cbn in Hsucc. inversion Hsucc;subst. eauto.
-  Admitted. (*
-  Qed. *)
+  Qed.
   
   Lemma succ_in_rcons2 {A : Type} (a b : A) l
     : a ≻ b | l :r: a :r: b.
