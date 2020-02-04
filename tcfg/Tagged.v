@@ -246,6 +246,13 @@ Section tagged.
     eapply tag_depth';eauto.
   Qed.
 
+  Lemma STag_inj (i j : Tag)
+        (Heq : STag i = STag j)
+    : i = j.
+  Proof.
+    destruct i,j; cbn in *;eauto;congruence.
+  Qed.
+
 Lemma tag_eq_loop_exit p q i j j'
       (Htag : (q,j ) -t> (p,i))
       (Htag': (q,j') -t> (p,i))
@@ -254,24 +261,25 @@ Lemma tag_eq_loop_exit p q i j j'
     | Some h => exit_edge h q p
     | None => False
     end.
-Proof.  
-  eapply tcfg_edge_destruct in Htag.
-  eapply tcfg_edge_destruct in Htag'.
-  
-  destruct Htag as [Q|[Q|[Q|Q]]].
-    destruct Htag' as [R|[R|[R|R]]].
-Admitted. (* FIXME *)
-(*
-  unfold exit_edge. set (h := get_innermost_loop q).
-  assert (get_innermost_loop q = h) as Heq by (subst;reflexivity).
-  rewrite get_innermost_loop_spec in Heq. destructH.
-  repeat split; eauto.
-  - contradict Hneq. unfold deq_loop in Heq1.
-    unfold tcfg_edge in *.
-    unfold tcfg_edge' in *.
-    conv_bool. destructH. destructH. unfold eff_tag in *.
-    induction all_lab. destruct (back_edge_b p q). *)
-
+Proof.
+  unfold tcfg_edge,eff_tag in Htag,Htag'.
+  do 2 destructH.
+  decide (edge__P q p);[|congruence].
+  unfold eff_tag' in *.
+  inversion Htag1. inversion Htag'1. clear Htag1 Htag'1.
+  destruct (edge_Edge e);subst.
+  - contradiction.
+  - eapply STag_inj in H1. subst j. contradiction.
+  - inversion H1. subst. contradiction.
+  - destructH.
+    specialize (get_innermost_loop_spec q) as Himl.
+    destruct (get_innermost_loop q).
+    + replace e1 with h;eauto. eapply single_exit;eauto. unfold innermost_loop in Himl. destructH.
+      unfold exit_edge. split_conj;eauto.
+      specialize (exit_not_deq e0) as Q. contradict Q. eapply loop_contains_deq_loop in Q.
+      rewrite Q. rewrite Himl1. eapply eq_loop_exiting;eauto.
+    + eapply Himl. unfold exit_edge in e0. destructH. eauto.
+Qed.
 
 Lemma TPath_CPath  c c' π :
   TPath c c' π -> CPath (fst c) (fst c') (map fst π).
@@ -279,9 +287,7 @@ Proof.
   intros Q. dependent induction Q; [|destruct b,c]; econstructor; cbn in *.
   - apply IHQ. 
   - conv_bool. firstorder. 
-Qed.            
-
-
+Qed.
 
 Parameter eff_tag_fresh : forall p q q0 i j j0 l,
     TPath (q0,j0) (q,j) l -> eff_tag q p j = Some i -> forall i', In (p, i') l -> i' <> i.
@@ -354,16 +360,14 @@ Proof.
   - eapply deq_loop_entry in e0. eapply Hexit2. eauto.
 Qed.
 
+(* possibly unused *)
 Lemma exit_succ_exiting (p q h e : Lab) (k i j : Tag) r
       (Hpath : TPath (p,k) (q,j) (r :r: (p,k)))
       (Hexit : exited h e)
       (Hel : (e,i) ∈ r)
   : exists qe n, exit_edge h qe e /\ (e,i) ≻ (qe,n :: i) | r :r: (p,k).
 Proof.
-    Admitted. (* FIXME *)
-(*Section tagged.
-  
-  Context `{C : redCFG}.*)
+Admitted.
 
   Lemma prec_tpath_pre_tpath p i q j l
         (Hneq : p <> q)
@@ -431,7 +435,8 @@ Proof.
         (Hdom : Dom edge__P root q p)
         (Hpath : TPath (root,start_tag) (p,i) l)
     : exists j, Precedes fst l (q,j).
-  Proof.  
+  Proof.
+    (* FIXME *)
   Admitted.
   
   Lemma tag_prefix_head h p i j l 
@@ -519,7 +524,8 @@ Proof.
         (Hpath : TPath (root,start_tag) (p,j) t)
     : exists h, loop_contains h p /\ Precedes fst t (h,j2).
   Proof.
-    Admitted.
+    (* FIXME *)
+  Admitted.
   
   Lemma first_occ_tag_elem i j j1 j2 p q t
         (Htag : j = j1 ++ j2)
@@ -527,15 +533,20 @@ Proof.
         (Hin : (q,j) ∈ t)
     : exists h, loop_contains h q /\ Precedes fst t (h,j2) /\ (q,j) ≻* (h, j2) | t.
   Proof.
-    Admitted.
+    eapply path_to_elem in Hpath;eauto. destructH.
+    eapply first_occ_tag in Hpath0;eauto. destructH.
+    (* FIXME *)
+  Admitted.
 
+  (* possibly not used *)
   Lemma prec_prec_eq l (q : Lab) (j j' : Tag)
         (Hprec1 : Precedes fst l (q,j))
         (Hprec2 : Precedes fst l (q,j'))
     : j = j'.
-  Proof.
-    Admitted.
+  Proof.  
+  Admitted.
   
+  (* possibly not used *)
   Lemma prefix_prec_prec_eq l l' (p q : Lab) (i j j' : Tag)
         (Hpre : Prefix ((p,i) :: l') l)
         (Hprec1 : Precedes fst l (q,j))
@@ -544,8 +555,9 @@ Proof.
         (Hib : (p,i) ≻* (q,j) | l)
     : j' = j.
   Proof.
-    Admitted.
-
+  Admitted.
+  
+  (* possibly not used *)
   Lemma ancestor_in_before_dominating a p q (i j k : Tag) l
         (Hdom : Dom edge__P root q p)
         (Hanc : ancestor a q p) 
@@ -553,7 +565,7 @@ Proof.
         (Hprec__q: Precedes fst ((p,i) :: l) (q,j))
     : (q,j) ≻* (a,k) | (p,i) :: l.
   Proof.
-    Admitted. 
+  Admitted.
     
   Lemma ancestor_level_connector p q a i j k t
         (Hpath : TPath (root,start_tag) (p,i) t)
@@ -563,7 +575,8 @@ Proof.
         (Hib : (q,j) ≻* (a,k) | t)
     : exists a', Precedes fst t (a',k) /\ (p,i) ≻* (a',k) ≻* (q,j) | t.
   Proof.
-    Admitted.
+    (* FIXME *)
+  Admitted.
 
   Lemma find_loop_exit h a p i j k n l
         (Hpath : TPath (root,start_tag) (p,i) l)
@@ -572,7 +585,8 @@ Proof.
         (Hprec : Precedes fst l (h, n :: j))
     : exists qe e, (a,k) ≻* (e,j) ≻* (qe,n :: j) ≻* (h, n :: j) | l /\ (e,j) ≻ (qe,n :: j) | l /\ exit_edge h qe e.
   Proof.
-    Admitted.
+    (* FIXME *)
+  Admitted.
   
   Lemma tpath_deq_loop_prefix p q i j t x l y m
         (Hdeq : deq_loop p q)
@@ -580,7 +594,8 @@ Proof.
         (Hpre : Prefix j i)
     : (q,j) ≻* (p,i) | t.
   Proof.
-  Admitted. (* FIXME *)
+     (* FIXME *)
+  Admitted.
   
   Hint Resolve precedes_in.
   
@@ -591,16 +606,17 @@ Proof.
         (Hin : (r,k) ∈ ((p,i) :: l))
         (Hpath : TPath (root,start_tag) (p,i) ((p,i) :: l))
     : (q,j) ≻* (r,k) | (p,i) :: l.
-    
   Proof.
-    Admitted.
+    (* FIXME *)
+  Admitted.
   
   Lemma loop_cutting q p t
         (Hpath : CPath q p t)
         (Hnoh : forall h, loop_contains h q -> h ∉ t)
     : exists t', Path a_edge__P q p t'.
   Proof.
-    Admitted.
+    (* FIXME *)
+  Admitted.
 
   Lemma tpath_exit_nin h q e n j t
         (Hpath : TPath (root, start_tag) (q,n :: j) t)
@@ -609,9 +625,9 @@ Proof.
     : (e,j) ∉ t.
   Proof.
     intro N.
-    eapply PathCons in Hpath;cycle 1.
-    - unfold exited in Hexit. destructH.
-      eapply exit_pred_loop in Hexit.
+    unfold exited in Hexit. destructH.
+    unfold exit_edge in Hexit. destructH.
+    eapply PathCons in Hexit3;eauto. cycle 1.
   Admitted. (* FIXME *)
   
   Lemma loop_cutting_elem q p t i j x l
@@ -620,8 +636,9 @@ Proof.
         (Hnoh : forall h k, loop_contains h q -> ~ (p,i) ≻* (h,k) ≻* (q,j) | (p,i) :: t)
     : exists t', Path a_edge__P q p t'.
   Proof.
-    Admitted.
-
+    (* FIXME *)
+  Admitted.
+  
   Lemma exit_cascade u p t i j k x l
         (Hdom : Dom edge__P root u p)
         (Hprec : Precedes fst ((p,i) :: t) (u,j))
@@ -630,9 +647,8 @@ Proof.
     (* otw. there would be a path through this q to p without visiting u *)
     (* this could even be generalized to CPaths *)
     (* TODO: lift on tpaths, on cpaths we might have duplicates, thus it doesn't work there *)
-  Proof.
-    Admitted.
-  
+  Proof. (* FIXME *)
+  Admitted.  
   
   Lemma tpath_depth_eq (p q : Lab) (i j : Tag) pi qj t
         (Hpath : TPath pi qj t)
@@ -641,7 +657,9 @@ Proof.
         (Heq : |i| = |j|)
     : depth p = depth q.
   Proof.
-    Admitted.
+    (* FIXME *)
+  Admitted.
+  
   Lemma tpath_depth_lt (p q : Lab) (i j : Tag) pi qj t
         (Hpath : TPath pi qj t)
         (Hel1 : (p,i) ∈ t)
@@ -649,7 +667,8 @@ Proof.
         (Hlt : |i| < |j|)
     : depth p < depth q.
   Proof.
-    Admitted.
+    (* FIXME *)
+  Admitted.
   
   Lemma loop_tag_dom (h p : Lab) (i j : Tag) t
     (Hloop : loop_contains h p)
@@ -658,7 +677,8 @@ Proof.
     (Hdep : |j| = depth h)
     : (h,j) ∈ t.
   Proof.
-    Admitted.
+    (* FIXME *)
+  Admitted.
   
   Lemma deq_loop_le p i j q t t'
         (Hdeq : deq_loop p q)
@@ -678,6 +698,7 @@ Proof.
     (Hlen : |j| <= |i|)
     : j ⊴ i.
   Proof.
-    Admitted.
+    (* FIXME *)
+  Admitted.
   
 End tagged.
