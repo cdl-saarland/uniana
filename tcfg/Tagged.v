@@ -24,11 +24,41 @@ Section tagged.
 
   Hint Resolve Coord_dec.
 
+  Definition basic_edge p q := eq_loop p q /\ a_edge__P p q.
+  Definition eexit_edge p q := exists h, exit_edge h p q.
+
   Inductive Edge (p q : Lab) : Type :=
-  | Enormal : eq_loop p q -> a_edge__P p q -> Edge p q
+  | Enormal : basic_edge p q -> Edge p q
   | Eback : back_edge p q -> Edge p q
   | Eentry : entry_edge p q -> Edge p q
-  | Eexit : (exists h, exit_edge h p q) -> Edge p q.
+  | Eexit : eexit_edge p q -> Edge p q.
+
+  Lemma Edge_disj (p q : Lab) (H Q : Edge p q)
+    : H = Q.
+  Proof.
+    destruct H,Q.
+    all: match goal with
+         | |- ?x _ = ?x _ => f_equal;eapply proof_irrelevance
+         | |- _ => exfalso
+         end.
+    all: unfold back_edge,entry_edge, eexit_edge, exit_edge, basic_edge in *.
+    all: unfold_edge_op' b; unfold_edge_op' b0; repeat destructH;
+      try contradiction.
+    7,10:eapply no_exit_head;unfold exit_edge;eauto.
+    4,8:exfalso;eapply no_exit_head;eexists;eauto; unfold back_edge; unfold_edge_op; eauto.
+    all: lazymatch goal with
+         | H : ~ loop_contains ?q ?p,
+               Q : eq_loop ?p ?q |- _ => eapply H; rewrite Q; eapply loop_contains_self;eauto
+         | H : eq_loop ?p ?q,
+               Q : ~ loop_contains _ ?q |- _ => rewrite <-H in Q; contradiction
+         | _ : loop_head ?q,
+               H : ~ loop_contains ?q ?p,
+                   _ : ~ a_edge__P ?p ?q |- _
+           => eapply H; specialize (back_edge_eq_loop (p:=p) (h:=q)) as Q;
+               exploit Q;[firstorder|rewrite Q;eapply loop_contains_self;eauto]
+         | _ => idtac
+         end.
+  Qed.   
 
   Lemma edge_Edge : forall (p q : Lab), edge__P p q -> Edge p q.
   Proof.
@@ -36,7 +66,7 @@ Section tagged.
     decide (deq_loop p q).
     - decide (deq_loop q p).
       + decide (a_edge__P p q).
-        * econstructor;eauto;split;eauto.
+        * econstructor;eauto;split;eauto;split;eauto.
         * eapply Eback. refine (conj Hedge n).
       + eapply Eexit.
         simpl_dec' n. simpl_dec' n. destructH.
@@ -72,7 +102,7 @@ Section tagged.
   
   Definition eff_tag' (p q : Lab) (i : Tag) (E : edge__P p q)
     := match edge_Edge E with
-       | Enormal _ _ => i
+       | Enormal _ => i
        | Eback _ => STag i
        | Eentry _ => 0 :: i
        | Eexit _ => tl i
@@ -146,13 +176,31 @@ Section tagged.
                    | None => False
                    end.
     Proof.
+      
       unfold tcfg_edge in Hpq. conv_bool. destructH.
       unfold eff_tag in Hpq.
+      destruct Hpq.
+      decide (edge__P p q);[|congruence].
+      split;intro Q.
+      - subst j.
     Admitted.
   
     Lemma tag_exit_iff'
       : j = tl i <-> exists h, exit_edge h p q.
     Proof.
+      (*destruct Hpq. unfold eff_tag,eff_tag' in H0. decide (edge__P p q);[|congruence].
+      inversion H0. clear H0.
+      
+      split;intro Q.
+      - destruct (edge_Edge e).
+        + subst.  destruct j. admit. cbn in Q. destruct t;cbn in Q; try congruence. admit.
+        + subst. destruct i. cbn in Q. admit. cbn in Q. admit.
+        + subst. destruct i. cbn in Q. congruence. cbn in Q. admit.
+        + eauto.
+      - destruct (edge_Edge e).
+*)
+      (***)
+      
       split;intro H.
       - eapply tag_exit_iff in H.
         destruct (get_innermost_loop p);[|contradiction]. eexists; eauto.
@@ -187,10 +235,7 @@ Section tagged.
     Admitted.
 
     Lemma tag_back_edge_iff
-      : match hd_error i with
-        | Some n => S n :: tl i = j
-        | None => False
-        end <-> p ↪ q.
+      : j = STag i <-> p ↪ q.
     Proof.
     Admitted.
 
@@ -215,16 +260,33 @@ Section tagged.
 
     Lemma tag_deq_or_entry
       : deq_loop p q \/ entry_edge p q.
-    Proof.
-    Admitted.
+     Proof.
+     Admitted.
+
+     Lemma tcfg_edge_destruct'
+       : match edge_Edge (proj1 Hpq) with
+         | Enormal _ => j = i
+         | Eback _ => j = tl i
+         | Eentry _ => j = O :: i
+         | Eexit _ => j = STag i
+         end.
+     Proof.
+       destruct Hpq as [Hpq1 Hpq2].
+       unfold eff_tag in Hpq2.
+       destruct (edge_Edge (proj1 (conj Hpq1 Hpq2))).
+       - 
+     Admitted.
 
     Lemma tcfg_edge_destruct
       : i = j (* normal *)
         \/ j = O :: i (* entry *)
-        \/ match hd_error i with Some n => S n :: tl i = j | None => False end (* back *)
+        \/ j = STag i (* back *)
         \/ j = tl i. (* exit *)
     Proof.
-    Admitted.
+      unfold tcfg_edge in Hpq. destructH. unfold eff_tag in Hpq1.
+      decide (edge__P p q);[|congruence]. inversion Hpq1. unfold eff_tag'.
+      destruct (edge_Edge e);firstorder 0.
+    Qed.
     
   End eff_tag_facts.
 
@@ -271,7 +333,7 @@ Proof.
   - contradiction.
   - eapply STag_inj in H1. subst j. contradiction.
   - inversion H1. subst. contradiction.
-  - destructH.
+  - unfold eexit_edge in e0. destructH.
     specialize (get_innermost_loop_spec q) as Himl.
     destruct (get_innermost_loop q).
     + replace e1 with h;eauto. eapply single_exit;eauto. unfold innermost_loop in Himl. destructH.
@@ -355,7 +417,7 @@ Proof.
   unfold eff_tag'.
   destruct (edge_Edge e);auto.
   all: exfalso.
-  - eapply Hexit2. eapply e0;eauto.
+  - eapply Hexit2. unfold basic_edge in b. destructH. rewrite <-b0. auto.
   - eapply back_edge_eq_loop in b. destruct b. eapply Hexit2. eauto.
   - eapply deq_loop_entry in e0. eapply Hexit2. eauto.
 Qed.

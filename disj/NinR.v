@@ -179,7 +179,7 @@ Section disj.
           eapply tcfg_edge_destruct in Hpath as Q.
           assert ((e,t) ∈ l) as Helet.
           { eapply postfix_incl;eauto. }
-          destruct Q as [Q|[Q|[Q|Q]]];subst.
+          destruct Q as [Q|[Q|[Q|Q]]]. all: subst. 
           -- eauto. (* normal *)
           -- inversion H;subst. (* entry *) 
              ++ exfalso.          
@@ -197,17 +197,16 @@ Section disj.
                    rewrite rev_rcons in Hpost.
                    eapply prefix_tl in Hpost.
                    eapply prefix_incl;eauto. rewrite rev_rcons. left. reflexivity.
-                ** eapply tag_back_edge_iff in Q;eauto.
-                   assert ((e,t) ∈ l) as Hel.
-                   { eapply postfix_incl;eauto. }
+                ** specialize (tag_back_edge_iff Hpath) as [Q _];exploit Q;eauto.
                    eapply deq_loop_head_loop_contains.
                    --- eapply deq_loop_depth_eq.
                        +++ eapply Hdeqq;eauto.
                        +++ eapply tpath_depth_eq;eauto.
                            eapply path_contains_front;eauto.
                    --- exists p;eauto.
-             ++ subst. destruct i;cbn in Q;[contradiction|].
-                inversion Q. subst. econstructor. eauto.
+             ++ subst. destruct i.
+                ** cbn in H0. congruence.
+                ** inversion H0. subst. econstructor. eauto.
           -- clear - H;destruct i;cbn in *;[auto|]. inversion H;subst;econstructor;auto. 
       + destruct l0;[cbn in *;contradiction|].
         unfold TPath in Hpath. path_simpl' Hpath. cbn in Hpath. path_simpl' Hpath.

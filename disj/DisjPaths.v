@@ -110,7 +110,11 @@ Section disj.
              ++ exfalso. subst l0. rewrite <-H3 in H0. clear - H0.
                 destruct j;cbn in *;omega. 
              ++ subst. auto.
-          -- destruct i;cbn in Hb;[contradiction|]. subst t0.
+          -- destruct i.
+             { destruct j.
+               - cbn. econstructor.
+               - cbn in Hji. omega.
+             }
              destruct j. 1: { cbn. eapply prefix_nil. }
              cbn in *.
              assert (|j| < |n :: i|) by (cbn;omega).
