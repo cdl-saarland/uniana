@@ -332,8 +332,7 @@ Proof.
   path_simpl' H0. path_simpl' H5. cbn.
   eapply tag_exit_iff' in H3.
   eapply tag_exit_iff' in H8.
-  destruct H3,H8.
-  rewrite <-H1, <-H3;auto.
+  destruct H3,H8. auto.
   all: eexists;eauto.
 Qed.
 

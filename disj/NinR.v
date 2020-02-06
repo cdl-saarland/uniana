@@ -191,13 +191,14 @@ Section disj.
              ++ auto.                 
           -- inversion H.  (* back_edge *)
              ++ subst.
+                destruct i. 1:cbn;econstructor.
                 exfalso.
                 eapply Hnhead.
                 ** eapply postfix_rev_prefix in Hpost.
                    rewrite rev_rcons in Hpost.
                    eapply prefix_tl in Hpost.
                    eapply prefix_incl;eauto. rewrite rev_rcons. left. reflexivity.
-                ** specialize (tag_back_edge_iff Hpath) as [Q _];exploit Q;eauto.
+                ** specialize (tag_back_edge_iff Hpath) as [Q _]. exploit Q;eauto.
                    eapply deq_loop_head_loop_contains.
                    --- eapply deq_loop_depth_eq.
                        +++ eapply Hdeqq;eauto.
