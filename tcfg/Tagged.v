@@ -305,12 +305,10 @@ Section tagged.
     Lemma tag_deq_le
       : |i| <= |j| <-> deq_loop q p.
     Proof.
-    Admitted.
 
     Lemma tag_deq_ge
       : |i| >= |j| <-> deq_loop p q.
     Proof.
-    Admitted.
     
     Lemma tag_deq_total
       : deq_loop p q \/ deq_loop q p.
@@ -333,6 +331,26 @@ Section tagged.
       - unfold eexit_edge in e. destructH. left. eapply deq_loop_exited;eauto.
     Qed.
 
+    Lemma tcfg_edge_destruct'
+      : (j = i /\ basic_edge p q)
+        \/ (j = O :: i /\ entry_edge p q)
+        \/ (j = STag i /\ back_edge p q)
+        \/ (j = tl i /\ eexit_edge p q).
+    Proof.
+      tag_fact_prep.
+      unfold eff_tag'.
+      destruct (edge_Edge Hedge). 
+      Local Ltac tcfg_dstr_tac
+        := match goal with
+           | |- ?P \/ ?Q => match P with
+                         | context [?x = ?x] => left; tcfg_dstr_tac
+                         | _ => right; tcfg_dstr_tac
+                         end
+           | |- ?P /\ ?Q => split;eauto
+           end.
+      all: tcfg_dstr_tac.
+    Qed.
+
     Lemma tcfg_edge_destruct
       : i = j (* normal *)
         \/ j = O :: i (* entry *)
@@ -346,14 +364,52 @@ Section tagged.
     
   End eff_tag_facts.
 
+  Lemma STag_len i
+    : | STag i | = | i |.
+  Proof.
+    destruct i;cbn;eauto.
+  Qed.
   
   Definition TPath := Path tcfg_edge.
+
+  Lemma depth_root
+    : depth root = 0.
+  Admitted.
+
+  Lemma depth_entry p q
+        (Hentry : entry_edge p q)
+    : S (depth p) = depth q.
+  Admitted.
+
+  Lemma depth_exit p q
+        (Heexit : eexit_edge p q)
+    : depth p = S (depth q).
+  Admitted.
 
   Lemma tag_depth'  p i t
         (Hpath : TPath (root,start_tag) (p,i) t)
     : length i = depth p.
   Proof.
+    revert p i Hpath.
+    induction t;intros;[inversion Hpath|].
+    destruct a as [q j].
+    unfold TPath in Hpath. path_simpl' Hpath.
+    inversion Hpath;subst t a;[subst i p|subst c]. clear H3.
+    - rewrite depth_root. cbn. reflexivity.
+    - destruct b. eapply tcfg_edge_destruct' in H3.
+      destruct H3 as [[H Q]|[[H Q]|[[H Q]|[H Q]]]].
+      all: rewrite H;cbn.
+      3: rewrite STag_len; eapply back_edge_eq_loop in Q.
+      1: destruct Q as [Q _].
+      1,3: setoid_rewrite <-Q;eauto.
+      + erewrite <-depth_entry;eauto.
+      + eapply eq_add_S.
+        erewrite <-depth_exit;eauto.
+        destruct t.
+        * exfalso. clear - H0 Q. unfold eexit_edge in Q. destructH. admit.
+        * cbn. erewrite <-IHt;eauto. cbn. reflexivity.
   Admitted.
+        
     
   Lemma tag_depth  p i q j t
         (Hpath : TPath (root,start_tag) (p,i) t)
