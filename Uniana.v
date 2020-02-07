@@ -137,14 +137,6 @@ Section uniana.
       eapply tr_succ_eff' with (s:=s1) (q'0:=q');eauto.
       eapply tr_succ_eff' with (s:=s2) (q'0:=q');eauto.
   Qed.
-
-  Lemma eff_tag_det'
-     : forall (q : Lab) (j : Tag) (p : Lab) (i i' : Tag),
-      eff_tag q p j = Some i -> eff_tag q p j = Some i' -> i = i'.
-  Proof.
-    intros.
-    eapply eff_tag_det in H;eauto. inversion H;eauto.
-  Qed.
   
   Lemma uni_branch_uni_succ' p br q1 q2 i k j1 j2 uni l1 l2 s1 s2
         (Hpath1 : Tr ((p,i,s1) :: l1))

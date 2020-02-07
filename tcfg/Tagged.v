@@ -372,19 +372,149 @@ Section tagged.
   
   Definition TPath := Path tcfg_edge.
 
+  Lemma root_no_loop h
+    : ~ loop_contains h root.
+  Proof.
+    intro H. copy H Q.
+    eapply dom_loop in H. unfold Dom in H.
+    specialize (H [root]). exploit H. 1: econstructor.
+    destruct H;[|contradiction]. subst h.
+    eapply loop_contains_loop_head in Q.
+    unfold loop_head in Q. destructH. eapply back_edge_incl in Q.
+    eapply root_no_pred;eauto.
+  Qed.
+
   Lemma depth_root
     : depth root = 0.
-  Admitted.
+  Proof.
+    unfold depth. eapply length_zero_iff_nil.
+    remember (elem Lab) as l. clear Heql.
+    induction l;cbn;auto.
+    decide (loop_contains a root).
+    - exfalso;eapply root_no_loop;eauto.
+    - eauto.
+  Qed.
+
+  Lemma set_eq_NoDup_len (A : Type) (l l' : list A)
+        (Heq : l =' l')
+        (Hnd : NoDup l)
+        (Hnd' : NoDup l')
+    : | l | = | l' |.
+  Proof.
+    destruct Heq.
+    eapply Nat.le_antisymm;eapply NoDup_incl_length;eauto.
+  Qed.        
+
+  Lemma deq_loop_entry (p q : Lab)
+        (Hentry : entry_edge p q)
+    : deq_loop q p.
+  Proof.
+    unfold entry_edge in Hentry.
+    destructH.
+    intros h Heq.
+    assert (~ exit_edge h p q).
+    - contradict Hentry0. eapply no_exit_head;eauto.
+    - do 2 simpl_dec' H. destruct H as [H|[H|H]];[contradiction| |contradiction].
+      eapply dec_DN;eauto.
+  Qed.
+
+  Lemma deq_loop_entry_or (p q : Lab)
+        (Hentry : entry_edge p q)
+    : forall h, loop_contains h q -> loop_contains h p \/ h = q.
+  Proof.
+    intros.
+    decide (h = q);[right;auto|left].
+    unfold loop_contains,entry_edge in *. destructH. destructH.
+    exists p0, (π :r: p). split_conj;eauto.
+    - eapply path_rcons;eauto.
+    - rewrite rev_rcons. cbn. rewrite <-in_rev. eapply nin_tl_iff in H3;eauto.
+      destruct H3;[eauto|]. destr_r' π;subst π;cbn in H. 1: inversion H2.
+      path_simpl' H2.
+      rewrite rev_rcons in H. cbn in H. inversion H. contradiction.
+  Qed.
 
   Lemma depth_entry p q
         (Hentry : entry_edge p q)
     : S (depth p) = depth q.
-  Admitted.
+  Proof.
+    unfold depth.
+    match goal with |- S (| ?l |) = | ?l' | => set (lp := l); set (lq := l') end.
+    assert (lq =' (q :: lp)).
+    {
+      split.
+      - intros h H. eapply deq_loop_entry_or in Hentry. destruct Hentry;[right|left].
+        + eapply in_filter_iff in H. eapply in_filter_iff. destructH. cbn in *. split;eauto.
+        + symmetry;eauto.
+        + eapply in_filter_iff in H. destructH. cbn in *. eauto.
+      - intros h H. destruct H.
+        + subst. eapply in_filter_iff. split;eauto. cbn.
+          unfold entry_edge in Hentry. destructH.
+          eauto using loop_contains_self.
+        + eapply in_filter_iff. split; eauto; cbn. eapply deq_loop_entry;eauto.
+          eapply in_filter_iff in H. destructH. cbn in H1. auto.
+    }
+    setoid_rewrite set_eq_NoDup_len at 2;eauto.
+    - cbn. reflexivity.
+    - eapply NoDup_iff_dupfree. eapply dupfree_filter.
+      eapply dupfree_elements.
+    - econstructor.
+      + intro N. eapply in_filter_iff in N. destructH. cbn in N1. unfold entry_edge in Hentry.
+        destructH. contradiction.
+      + eapply NoDup_iff_dupfree. eapply dupfree_filter.
+        eapply dupfree_elements.
+  Qed.
+
+  Lemma deq_loop_exit_or (h p q : Lab)
+        (Hexit : exit_edge h p q)
+    : forall h', loop_contains h' p -> loop_contains h' q \/ h' = h.
+  Proof.
+    intros.
+    decide (h' = h);[right;auto|left].
+    decide (loop_contains h' q);[eauto|].
+    exfalso. eapply n.
+    eapply single_exit;eauto.
+    unfold exit_edge in *. destructH. split;eauto.
+  Qed.
 
   Lemma depth_exit p q
         (Heexit : eexit_edge p q)
     : depth p = S (depth q).
-  Admitted.
+  Proof.
+    unfold depth.
+    match goal with |- | ?l | = S (| ?l' |) => set (lp := l); set (lq := l') end.
+    unfold eexit_edge in Heexit. destructH.
+    assert (lp =' (h :: lq)).
+    {
+      split;intros h' H;[|destruct H]. 1,3: eapply in_filter_iff in H; cbn in H; destructH.
+      1: decide (h = h');[left;auto|right]. 
+      all: eapply in_filter_iff; cbn;split;eauto.
+      - eapply deq_loop_exit_or in Heexit;eauto. destruct Heexit;[auto|subst;contradiction].
+      - eapply deq_loop_exited;eauto.
+      - subst. unfold exit_edge in Heexit;destructH;eauto.
+    }
+    setoid_rewrite set_eq_NoDup_len at 1;eauto.
+    3: econstructor.
+    2,4: eapply NoDup_iff_dupfree; eapply dupfree_filter;
+      eapply dupfree_elements.
+    - cbn. reflexivity.
+    - intro N. eapply in_filter_iff in N. destructH. cbn in N1. unfold exit_edge in Heexit.
+      destructH. contradiction.
+  Qed.
+
+  Lemma depth_loop_head h
+        (Hhead : loop_head h)
+    : depth h > 0.
+  Proof.
+    unfold depth.
+    match goal with |- | ?x | > 0 => set (l := x) end.
+    enough (h ∈ l).
+    - eapply not_le. intro N. setoid_rewrite <-NoDup_incl_length with (l:=[h]) in N.
+      + cbn in N. omega.
+      + econstructor;eauto. econstructor.
+      + eauto.
+    - eapply loop_contains_self in Hhead.
+      eapply in_filter_iff. split;eauto.
+  Qed.
 
   Lemma tag_depth'  p i t
         (Hpath : TPath (root,start_tag) (p,i) t)
@@ -406,10 +536,13 @@ Section tagged.
       + eapply eq_add_S.
         erewrite <-depth_exit;eauto.
         destruct t.
-        * exfalso. clear - H0 Q. unfold eexit_edge in Q. destructH. admit.
-        * cbn. erewrite <-IHt;eauto. cbn. reflexivity.
-  Admitted.
-        
+        * exfalso. clear - H0 Q IHt. unfold eexit_edge in Q. destructH.
+          eapply IHt in H0. cbn in H0. eapply eq_loop_exiting in Q as Q'.
+          rewrite <-Q' in H0.
+          unfold exit_edge in Q. destructH.
+          eapply loop_contains_loop_head in Q0. eapply depth_loop_head in Q0. omega.
+        * erewrite <-IHt;eauto. cbn. reflexivity.
+  Qed.        
     
   Lemma tag_depth  p i q j t
         (Hpath : TPath (root,start_tag) (p,i) t)
@@ -463,13 +596,39 @@ Proof.
   - conv_bool. firstorder. 
 Qed.
 
-Parameter eff_tag_fresh : forall p q q0 i j j0 l,
-    TPath (q0,j0) (q,j) l -> eff_tag q p j = Some i -> forall i', In (p, i') l -> i' <> i.
+Lemma eff_tag_unfresh q j t p
+      (Hpath : TPath (root,start_tag) (q,j) t)
+      (Hedge : edge__P q p)
+      (Hel : (p,eff_tag' j Hedge) ∈ t)
+  : False.
+Proof.
+  
+Admitted.
 
-Parameter eff_tag_det : forall  q j p i i',
+Lemma eff_tag_fresh : forall p q i j l,
+    TPath (root,start_tag) (q,j) l -> eff_tag q p j = Some i -> forall i', In (p, i') l -> i' <> i.
+Proof.
+  intros ? ? ? ? ? Hpath Heff ? Hel Heq.
+  unfold eff_tag in Heff. decide (edge__P q p);[|congruence].
+  subst i'. inversion Heff. subst i.
+  eapply eff_tag_unfresh;eauto.
+Qed.
+
+Lemma eff_tag_det : forall  q j p i i',
     eff_tag q p j = i ->
     eff_tag q p j = i' ->
     i = i'.
+Proof.
+  intros. rewrite <-H, <-H0. reflexivity.
+Qed.
+
+Lemma eff_tag_det'
+  : forall (q : Lab) (j : Tag) (p : Lab) (i i' : Tag),
+    eff_tag q p j = Some i -> eff_tag q p j = Some i' -> i = i'.
+Proof.
+  intros.
+  eapply eff_tag_det in H;eauto. inversion H;eauto.
+Qed.
 
 Lemma tpath_succ_eff_tag  p q r i j s t a l
       (Hpath : TPath (a,l) (r,s) ((r,s) :: t))
@@ -493,28 +652,18 @@ Proof.
     1,2: repeat (eapply postfix_cons; try econstructor). eapply postfix_nil.
 Qed.
 
-Lemma tpath_NoDup  p q t
-      (Hpath : TPath p q t)
+Lemma tpath_NoDup q t
+      (Hpath : TPath (root,start_tag) q t)
   : NoDup t.
 Proof.
-  induction Hpath.
-  - econstructor; eauto. econstructor.
-  - cbn. econstructor;eauto.
-   destruct c. intro HIn. unfold tcfg_edge in H. destruct a, b. conv_bool. destruct H.
-   eapply eff_tag_fresh in HIn;eauto.
-Qed.
-
-Lemma deq_loop_entry (p q : Lab)
-      (Hentry : entry_edge p q)
-  : deq_loop q p.
-Proof.
-  unfold entry_edge in Hentry.
-  destructH.
-  intros h Heq.
-  assert (~ exit_edge h p q).
-  - contradict Hentry0. eapply no_exit_head;eauto.
-  - do 2 simpl_dec' H. destruct H as [H|[H|H]];[contradiction| |contradiction].
-    eapply dec_DN;eauto.
+  revert q Hpath. induction t.
+  - econstructor; eauto. 
+  - intros. unfold TPath in Hpath. path_simpl' Hpath.
+    econstructor.
+    + intro. inversion Hpath; subst; cbn in H; [contradiction|].
+      destruct q. destruct b. eapply eff_tag_fresh;eauto. destruct H4. eauto.
+    + inversion Hpath; subst;[econstructor|]. destruct b, q.
+      eapply IHt;eauto.
 Qed.
 
 Lemma exit_edge_tcfg_edge (h p q : Lab) (j : Tag)
@@ -534,14 +683,14 @@ Proof.
   - eapply deq_loop_entry in e0. eapply Hexit2. eauto.
 Qed.
 
-(* possibly unused *)
+(* possibly unused 
 Lemma exit_succ_exiting (p q h e : Lab) (k i j : Tag) r
       (Hpath : TPath (p,k) (q,j) (r :r: (p,k)))
       (Hexit : exited h e)
       (Hel : (e,i) ∈ r)
   : exists qe n, exit_edge h qe e /\ (e,i) ≻ (qe,n :: i) | r :r: (p,k).
 Proof.
-Admitted.
+*)
 
   Lemma prec_tpath_pre_tpath p i q j l
         (Hneq : p <> q)

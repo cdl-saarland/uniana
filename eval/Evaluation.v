@@ -817,18 +817,13 @@ Section eval.
         (Hsucc : (p,i) ≻ (q,j) | t)
     : eff_tag q p j = Some i.
   Proof.
-    induction Hpath.
-    - exfalso. unfold succ_in in Hsucc. destructH. cbn in Hsucc.
-      destruct l2;cbn in Hsucc;try congruence. destruct l2; cbn in Hsucc; try congruence.
-    -
-      destruct π;[inversion Hpath|].
-      decide (c = (p,i)).
-      + subst c. eapply succ_in_cons_eq in Hsucc;eauto.
-        * path_simpl' Hpath. subst b. unfold tcfg_edge in H. destruct H. auto.
-        * eapply tpath_NoDup. econstructor;eauto.
-      + eapply succ_in_cons_neq in Hsucc;eauto.
-        path_simpl' Hpath.
-        eapply tpath_NoDup. eauto.
+    unfold succ_in in Hsucc. destructH. 
+    revert dependent t. revert b. induction l2; cbn in *; intros.
+    - rewrite Hsucc in Hpath. unfold TPath in Hpath. destruct b.
+      inversion Hpath. subst. destruct b. inversion H3;subst;destruct H5;eauto.
+    - destruct t. 1: inversion Hpath.
+      inversion Hsucc. subst. inversion Hpath;subst. 1: congruence'.
+      eauto.
   Qed.
   
   Lemma eff_tcfg p q i j s r
