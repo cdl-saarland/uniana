@@ -624,6 +624,75 @@ Proof.
   - econstructor.
 Admitted.
 
+Lemma take_len_id (A : Type) (l : list A)
+  : take (|l|) l = l.
+Proof.
+  induction l;cbn;eauto.
+  rewrite IHl;eauto.
+Qed.
+
+Lemma take_r_len_id (A : Type) (l : list A)
+  : take_r (|l|) l = l.
+Proof.
+  unfold take_r. eapply rev_rev_eq. rewrite rev_involutive.
+  rewrite <-rev_length. eapply take_len_id.
+Qed.
+
+
+(* these only hold if deq_loop q p *)
+Lemma tagle_monotone1 p i t q j
+      (Hpath : TPath (root,start_tag) (p,i) t)
+      (Hel : (q,j) ∈ t)
+      (Hdeq : deq_loop p q)
+  : take_r (|i|) j ⊴ i.
+Proof.
+  revert q j p i Hel Hpath Hdeq.
+  induction t;intros.
+  - contradiction.
+  - unfold TPath in *. path_simpl' Hpath.
+    destruct Hel.
+    + inversion H. subst. rewrite <-take_r_len_id. reflexivity.
+    + destruct t. 1: contradiction.
+      inversion Hpath. subst.
+      path_simpl' H1.
+      destruct b as [r k].
+      eapply tcfg_edge_destruct' in H4.
+      destruct H4 as [Q|[Q|[Q|Q]]]; destruct Q as [Htag Hedge].
+      * subst. eapply IHt;eauto. destruct Hedge as [[Hedge _] _]. transitivity p;eauto.
+      * subst.
+        specialize (IHt q j r k). exploit IHt.
+        { intros h Q. eapply deq_loop_entry_or in Hedge.
+          (*transitivity p;eauto. eapply deq_loop_entry;auto. }*)
+        
+
+        Lemma take_r_prefix (A : Type) (l : list A) n
+          : Prefix (take_r n l) (take_r (S n) l).
+        Admitted.
+
+(*        eapply Tagle_cons2.*)
+          
+
+        induction j.
+
+        Lemma take_r_cons (A : Type) (l : list A) a n
+          : exists b, take_r (S n) (a :: l) = b :: take_r n l.
+        Proof.
+        Admitted.
+        
+              
+        -- cbn. econstructor.
+(*        -- specialize (take_r_cons j n (|k|)) as Q.
+           replace (| 0 :: k|) with (S (|k|)) by (cbn;eauto).
+           destructH. rewrite Q.econstructor.
+           cbn. rewrite rcons_cons'. cbn. fold (take_r (|k|) l). rewrite rcons_cons'. cbn. *)
+Admitted.
+(*
+Lemma tagle_monotone2 p i t q j
+      (Hpath : TPath (root,start_tag) (p,i) t)
+      (Hel : (q,j) ∈ t)
+  : j ⊴ take_r (|j|) i.
+Admitted.
+*)
 Lemma eff_tag_unfresh q j t p
       (Hpath : TPath (root,start_tag) (q,j) t)
       (Hedge : edge__P q p)
@@ -639,6 +708,8 @@ Proof.
   eapply TPath_CPath in Hedge' as HCpath. cbn in HCpath.
   eapply p_p_ex_head in HCpath. 2:{ destruct ϕ;[inversion Hel0|]. cbn. clear. omega. }
   destructH.
+  remember (find (fun x => decision (fst x = h)) ((p,j') :: ϕ)) as s.
+  destruct s.
 Admitted.
 
 Lemma eff_tag_fresh : forall p q i j l,
