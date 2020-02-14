@@ -638,61 +638,122 @@ Proof.
   rewrite <-rev_length. eapply take_len_id.
 Qed.
 
+Definition ancestor' a p q := deq_loop p a /\ deq_loop q a.
 
-(* these only hold if deq_loop q p *)
-Lemma tagle_monotone1 p i t q j
-      (Hpath : TPath (root,start_tag) (p,i) t)
-      (Hel : (q,j) ∈ t)
-      (Hdeq : deq_loop p q)
-  : take_r (|i|) j ⊴ i.
+Lemma ancestor_ancestor' a p q
+  : ancestor a p q -> ancestor' a p q.
+  intros. unfold ancestor',ancestor in *. destruct H.
+  - destruct H. split;eauto using loop_contains_deq_loop.
+  - subst. split;eapply deq_loop_root.
+Qed.
+
+Lemma tagle_prefix i j
+      (Hpre : Prefix i j)
+  : i ⊴ j.
+Admitted.
+
+Lemma take_r_prefix (A : Type) (l : list A) n
+  : Prefix (take_r n l) l.
+Admitted.
+
+Global Instance ancestor'_sym : forall a, Symmetric (ancestor' a).
 Proof.
-  revert q j p i Hel Hpath Hdeq.
-  induction t;intros.
-  - contradiction.
-  - unfold TPath in *. path_simpl' Hpath.
-    destruct Hel.
-    + inversion H. subst. rewrite <-take_r_len_id. reflexivity.
-    + destruct t. 1: contradiction.
-      inversion Hpath. subst.
-      path_simpl' H1.
-      destruct b as [r k].
-      eapply tcfg_edge_destruct' in H4.
-      destruct H4 as [Q|[Q|[Q|Q]]]; destruct Q as [Htag Hedge].
-      * subst. eapply IHt;eauto. destruct Hedge as [[Hedge _] _]. transitivity p;eauto.
-      * subst.
-        specialize (IHt q j r k). exploit IHt.
-        { intros h Q. eapply deq_loop_entry_or in Hedge.
-          (*transitivity p;eauto. eapply deq_loop_entry;auto. }*)
-        
+  intros.
+  econstructor;unfold ancestor' in *;destructH;eauto.
+Qed.
 
-        Lemma take_r_prefix (A : Type) (l : list A) n
-          : Prefix (take_r n l) (take_r (S n) l).
-        Admitted.
+Global Instance ancestor'_eq_loop a p
+  : Proper (eq_loop ==> Basics.impl) (ancestor' a p).
+Proof.
+  econstructor;unfold ancestor' in *;destructH;eauto.
+  destruct H. transitivity x;auto.
+Qed.
 
-(*        eapply Tagle_cons2.*)
-          
+Lemma take_r_nil (A : Type) n
+  : @take_r A n [] = [].
+Proof.
+  unfold take_r. cbn. rewrite take_nil. cbn. auto.
+Qed.
+Notation "x ◁ y" := (x ⊴ y /\ x <> y) (at level 70).
 
-        induction j.
-
-        Lemma take_r_cons (A : Type) (l : list A) a n
-          : exists b, take_r (S n) (a :: l) = b :: take_r n l.
-        Proof.
-        Admitted.
-        
-              
-        -- cbn. econstructor.
-(*        -- specialize (take_r_cons j n (|k|)) as Q.
-           replace (| 0 :: k|) with (S (|k|)) by (cbn;eauto).
-           destructH. rewrite Q.econstructor.
-           cbn. rewrite rcons_cons'. cbn. fold (take_r (|k|) l). rewrite rcons_cons'. cbn. *)
+Lemma tagle_or i j
+      (Htag : i ⊴ j)
+  : |i| <= |j| \/ i ◁ j.
 Admitted.
-(*
-Lemma tagle_monotone2 p i t q j
+
+Lemma take_r_cons (A : Type) n a (l : list A)
+  : exists b, take_r (S n) (a :: l) = b :: take_r n (a :: l).
+Admitted.
+
+Lemma taglt_cons i j n m
+      (Htlt : i ◁ j)
+  : n :: i ◁ m :: j.
+Admitted.
+
+Lemma taglt_tagle i j
+      (Htlt : i ◁ j)
+  : i ⊴ j.
+Proof.
+  firstorder.
+Qed.
+
+Lemma tagle_taglt_iff i j
+  : i ⊴ j <-> i ◁ j \/ i = j.
+Proof.
+Admitted.
+        
+Lemma tagle_monotone p i t q j a
       (Hpath : TPath (root,start_tag) (p,i) t)
       (Hel : (q,j) ∈ t)
-  : j ⊴ take_r (|j|) i.
+      (Hanc : ancestor' a p q)
+  : take_r (depth a) j ⊴ i.
+Proof.
+  revert p i q j a Hpath Hel Hanc. induction t;intros;inversion Hpath.
+  - symmetry in H1,H2. subst. destruct Hel as [Hel|Hel];inversion Hel. subst q j.
+    rewrite take_r_nil. econstructor.
+  - subst. destruct b as [p' i'].
+    destruct Hel as [Hel|Hel].
+    { inversion Hel. subst. eapply tagle_prefix. eapply take_r_prefix. }
+    eapply tcfg_edge_destruct' in H4. destruct H4 as [Q|[Q|[Q|Q]]].
+    1-4:destruct Q as [Htag Hedge].
+    + subst i. eapply IHt;eauto. destruct Hedge. symmetry. setoid_rewrite H. symmetry. auto.
+    + decide (eq_loop a0 p).
+      * specialize (IHt _ _ _ _ p' H3 Hel). exploit IHt.
+        { split;[reflexivity|]. transitivity p.
+          - rewrite <-e. destruct Hanc;auto.
+          - eapply deq_loop_entry;eauto.
+        }
+        subst i. rewrite e.
+        setoid_rewrite <-depth_entry;eauto.
+        destruct j.
+        -- rewrite take_r_nil. econstructor.    
+        -- copy IHt IHt'.
+           eapply tagle_taglt_iff in IHt.
+           destruct IHt.
+           ++ specialize (take_r_cons (depth p') n j) as Q. destructH' Q. rewrite Q.
+              eapply taglt_tagle. eapply taglt_cons. eauto.
+           ++ exfalso.
+              (* there should be a contradiction somewhere along these lines:
+               * deq_loop q p, thus there is an acyclic path from p' to q.
+               * thus there is header containing p' on q --> q, well, 
+               * and then we need stuff from the freshness proof sketch,
+               * looks like this induction scheme is broken *)
+              assert (depth p' = |i'|) by (symmetry;eapply tag_depth';eauto).
+              assert (|j| < |i'|) by admit. 
+              assert (| take_r (depth p') (n :: j)| <= |i'|) by admit.
+              admit.
+      * rewrite IHt. 2,3:eauto.
+        -- subst. eapply Tagle_cons. reflexivity.
+        -- simpl_dec' n. destruct Hanc,n;try contradiction.
+           split;auto.
+           intros h' Hh'.
+           eapply deq_loop_entry_or in Hedge;cycle 1.
+           ++ eapply H in Hh'. eauto.
+           ++ destruct Hedge;eauto. subst. exfalso. clear - H1 Hh'. eauto using loop_contains_deq_loop.
+    + admit. (* this should work *)
+    + admit. (* this also *)
 Admitted.
-*)
+
 Lemma eff_tag_unfresh q j t p
       (Hpath : TPath (root,start_tag) (q,j) t)
       (Hedge : edge__P q p)
@@ -1122,6 +1183,7 @@ Proof.
     eapply deq_loop_depth;auto.
   Qed.
 
+  (* not true ! 
   Lemma tagle_monotone p q i j t
     (Hpath : TPath (root,start_tag) (p,i) t)
     (Hel : (q,j) ∈ t)
@@ -1130,5 +1192,6 @@ Proof.
   Proof.
     (* FIXME *)
   Admitted.
+   *)
   
 End tagged.
