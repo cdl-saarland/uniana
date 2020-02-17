@@ -72,12 +72,14 @@ Section disj.
         unfold last_common' in Hlc. destructH. eapply postfix_step_left;eauto.
       } 
       eapply loop_tag_dom;eauto.
-      + rewrite <-tagle_jj. eapply tagle_monotone;eauto.
+      + rewrite <-tagle_jj. (* eapply tagle_monotone.
         eapply path_to_elem in Hel';eauto. destructH.
         eapply deq_loop_le;eauto.
-        eapply loop_contains_deq_loop. rewrite Hloop. eauto.
+        eapply loop_contains_deq_loop. rewrite Hloop. eauto. *)
+      (*FIXME, broken bc of wrong assumption*)
+        admit.
       + clear Hpath2. eapply tag_depth; eauto.
-  Qed.
+  Admitted.
   
   Lemma r1_in_head_q : forall x, x ∈ r1 -> deq_loop (fst x) q1.
   Proof.

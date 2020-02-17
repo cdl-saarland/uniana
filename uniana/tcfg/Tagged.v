@@ -701,8 +701,38 @@ Lemma tagle_taglt_iff i j
   : i ⊴ j <-> i ◁ j \/ i = j.
 Proof.
 Admitted.
-        
-Lemma tagle_monotone p i t q j a
+
+Lemma tcfg_monotone' p i t q j t' h
+      (Hpath : TPath (root,start_tag) (p,i) t)
+      (Hsuff : Postfix t' t)
+      (Hel : (q,j) ∈ t')
+      (Hincl : forall x, x ∈ t -> loop_contains h (fst x))
+  : take_r (depth h) j ⊴ i.
+Proof.
+Admitted.
+
+Lemma tcfg_fresh p i t
+      (Hpath : TPath (root,start_tag) (p,i) t)
+      (Hsp : splinter_strict [(p,i);(p,i)] t)
+  : False.
+Proof.
+Admitted.
+
+(* TODO: move ex_entry proof to this point. it does not require any assumptions, 
+thus it should be possible *)
+Lemma tcfg_fresh_head' h p i k t
+      (Hpath : TPath (root,start_tag) (h,0::k) t)
+      (Hloop : loop_contains h p)
+      (Hsp : splinter_strict [(h,0::k);(p,i)] t)
+      (Hpre : Prefix k i)
+  : False.
+  (*
+   * find entry of h corresponding to (p,i) in t with tag 0::k', where Prefix k' i.
+   * bc freshness we have 0::k <> 0::k', thus bc |k|=|k'| also k <> k' cntrdiction.
+   *)
+Admitted.
+
+Lemma tcfg_monotone p i t q j a
       (Hpath : TPath (root,start_tag) (p,i) t)
       (Hel : (q,j) ∈ t)
       (Hanc : ancestor' a p q)
@@ -733,15 +763,23 @@ Proof.
            ++ specialize (take_r_cons (depth p') n j) as Q. destructH' Q. rewrite Q.
               eapply taglt_tagle. eapply taglt_cons. eauto.
            ++ exfalso.
+              eapply tcfg_fresh_head'.
+              ** cbn in Hpath. eapply Hpath.
+              ** instantiate (1:=q). admit.
+              ** econstructor. eapply splinter_strict_single;eauto.
+              ** rewrite <- H. eapply take_r_prefix.
+              (* contradiction to freshness: 
+               * find an acyclic path from p' to q, then argue it has the same tag prefix as q
+               * contradiction to strict freshness *)
               (* there should be a contradiction somewhere along these lines:
                * deq_loop q p, thus there is an acyclic path from p' to q.
                * thus there is header containing p' on q --> q, well, 
                * and then we need stuff from the freshness proof sketch,
                * looks like this induction scheme is broken *)
-              assert (depth p' = |i'|) by (symmetry;eapply tag_depth';eauto).
+              (*assert (depth p' = |i'|) by (symmetry;eapply tag_depth';eauto).
               assert (|j| < |i'|) by admit. 
               assert (| take_r (depth p') (n :: j)| <= |i'|) by admit.
-              admit.
+              admit.*)
       * rewrite IHt. 2,3:eauto.
         -- subst. eapply Tagle_cons. reflexivity.
         -- simpl_dec' n. destruct Hanc,n;try contradiction.
@@ -750,8 +788,13 @@ Proof.
            eapply deq_loop_entry_or in Hedge;cycle 1.
            ++ eapply H in Hh'. eauto.
            ++ destruct Hedge;eauto. subst. exfalso. clear - H1 Hh'. eauto using loop_contains_deq_loop.
-    + admit. (* this should work *)
-    + admit. (* this also *)
+    + subst i. rewrite IHt. 2,3:eauto. 1,2: admit. (*easy*)
+    + subst i.
+      assert (~ deq_loop a0 p') by admit.
+      assert (depth a0 < |i'|) by admit.
+      specialize (IHt _ _ _ _ a0 H3 Hel). exploit IHt.
+      -- split;destruct Hanc;eauto. transitivity p;eauto. destruct Hedge. eapply deq_loop_exited;eauto.
+      -- admit. (*solvable*)
 Admitted.
 
 Lemma eff_tag_unfresh q j t p
