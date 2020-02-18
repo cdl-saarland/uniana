@@ -797,6 +797,18 @@ Proof.
       -- admit. (*solvable*)
 Admitted.
 
+Lemma tcfg_monotone_deq p q i j t
+      (Hdeq : deq_loop p q)
+      (Hpath : TPath (root, start_tag) (p, i) t)
+      (Hel : (q,j) ∈ t)
+  : j ⊴ i.
+Proof.
+  eapply tcfg_monotone in Hpath as Hmon;eauto.
+  2: split;[|reflexivity];eauto.
+  erewrite <-tag_depth in Hmon;eauto.
+  rewrite take_r_len_id in Hmon. eauto.
+Qed.
+
 Lemma eff_tag_unfresh q j t p
       (Hpath : TPath (root,start_tag) (q,j) t)
       (Hedge : edge__P q p)
