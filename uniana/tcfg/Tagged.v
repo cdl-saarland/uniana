@@ -702,6 +702,72 @@ Lemma tagle_taglt_iff i j
 Proof.
 Admitted.
 
+Notation "p '>=' q" := (deq_loop p q).
+
+
+Section monotone.
+
+  Variable (t : list Coord) (a p p' q : Lab) (i i' j : Tag).
+  Hypothesis (IHt : forall (p : Lab) (i : Tag) (q : Lab) (j : Tag) (a : Lab),
+                 TPath (root, start_tag) (p, i) t
+                 -> (q, j) ∈ t
+                 -> p >= a
+                 -> q >= a
+                 -> take_r (depth a) j ⊴ i)
+             (Hel : (q, j) ∈ t)
+             (Heqp : p >= a)
+             (Heqq : q >= a)
+             (Hpath : Path tcfg_edge (root, start_tag) (p', i') t).
+  
+
+  Lemma tcfg_mon_basic
+        (Htag : i = i')
+        (Hedge : basic_edge p' p)
+    : take_r (depth a) j ⊴ i.
+  Proof.
+    rewrite <-Htag in *.
+    rewrite IHt;eauto.
+    - reflexivity.
+    - destruct Hedge as [[Hedge _] _]. transitivity p;eauto.
+  Qed.
+
+  Lemma tcfg_mon_entry
+        (Htag : i = 0 :: i')
+        (Hedge : entry_edge p' p)
+        (Hdeq : p' >= a)
+    : take_r (depth a) j ⊴ i.
+  Proof.
+    rewrite Htag in *.
+    rewrite IHt;eauto.
+    eapply Tagle_cons. reflexivity.
+  Qed.
+
+  Lemma tcfg_mon_back
+        (Htag : i = STag i')
+        (Hedge : p' ↪ p)
+    : take_r (depth a) j ⊴ i.
+  Proof.
+    rewrite Htag in *.
+    rewrite IHt. 2,3,5:eauto.
+    - admit. (*easy*)
+    - eapply back_edge_eq_loop in Hedge. destruct Hedge. transitivity p;eauto.
+  Admitted.
+
+  Lemma tcfg_mon_exit
+        (Htag : i = tl i')
+        (Hedge : eexit_edge p' p)
+    : take_r (depth a) j ⊴ i.
+  Proof.
+    rewrite Htag in *.
+    assert (~ deq_loop a p') by admit.
+    assert (depth a < |i'|) by admit.
+    specialize (IHt (a:=a) Hpath Hel). exploit IHt.
+      -- transitivity p;eauto. destruct Hedge. eapply deq_loop_exited;eauto.
+      -- admit. (*solvable*)
+  Admitted.
+  
+End monotone.
+
 Lemma tcfg_monotone' p i t q j t' h
       (Hpath : TPath (root,start_tag) (p,i) t)
       (Hsuff : Postfix t' t)
@@ -709,6 +775,7 @@ Lemma tcfg_monotone' p i t q j t' h
       (Hincl : forall x, x ∈ t -> loop_contains h (fst x))
   : take_r (depth h) j ⊴ i.
 Proof.
+  
 Admitted.
 
 Lemma tcfg_fresh p i t
@@ -735,10 +802,11 @@ Admitted.
 Lemma tcfg_monotone p i t q j a
       (Hpath : TPath (root,start_tag) (p,i) t)
       (Hel : (q,j) ∈ t)
-      (Hanc : ancestor' a p q)
+      (Hdeqp : p >= a)
+      (Hdeqq : q >= a)
   : take_r (depth a) j ⊴ i.
-Proof.
-  revert p i q j a Hpath Hel Hanc. induction t;intros;inversion Hpath.
+Proof. 
+  revert p i q j a Hpath Hel Hdeqp Hdeqq. induction t;intros;inversion Hpath.
   - symmetry in H1,H2. subst. destruct Hel as [Hel|Hel];inversion Hel. subst q j.
     rewrite take_r_nil. econstructor.
   - subst. destruct b as [p' i'].
@@ -746,11 +814,11 @@ Proof.
     { inversion Hel. subst. eapply tagle_prefix. eapply take_r_prefix. }
     eapply tcfg_edge_destruct' in H4. destruct H4 as [Q|[Q|[Q|Q]]].
     1-4:destruct Q as [Htag Hedge].
-    + subst i. eapply IHt;eauto. destruct Hedge. symmetry. setoid_rewrite H. symmetry. auto.
+    + subst i'. eapply tcfg_mon_basic. 7:eauto. all:eauto.
     + decide (eq_loop a0 p).
-      * specialize (IHt _ _ _ _ p' H3 Hel). exploit IHt.
-        { split;[reflexivity|]. transitivity p.
-          - rewrite <-e. destruct Hanc;auto.
+      * specialize (IHt _ _ _ _ p' H3 Hel). exploit IHt. 1: reflexivity.
+        { transitivity p.
+          - rewrite <-e. eauto.
           - eapply deq_loop_entry;eauto.
         }
         subst i. rewrite e.
@@ -780,21 +848,14 @@ Proof.
               assert (|j| < |i'|) by admit. 
               assert (| take_r (depth p') (n :: j)| <= |i'|) by admit.
               admit.*)
-      * rewrite IHt. 2,3:eauto.
-        -- subst. eapply Tagle_cons. reflexivity.
-        -- simpl_dec' n. destruct Hanc,n;try contradiction.
-           split;auto.
+      * eapply tcfg_mon_entry. 6:eauto. all:eauto. 
+        -- simpl_dec' n. destruct n;try contradiction.
            intros h' Hh'.
-           eapply deq_loop_entry_or in Hedge;cycle 1.
-           ++ eapply H in Hh'. eauto.
-           ++ destruct Hedge;eauto. subst. exfalso. clear - H1 Hh'. eauto using loop_contains_deq_loop.
-    + subst i. rewrite IHt. 2,3:eauto. 1,2: admit. (*easy*)
-    + subst i.
-      assert (~ deq_loop a0 p') by admit.
-      assert (depth a0 < |i'|) by admit.
-      specialize (IHt _ _ _ _ a0 H3 Hel). exploit IHt.
-      -- split;destruct Hanc;eauto. transitivity p;eauto. destruct Hedge. eapply deq_loop_exited;eauto.
-      -- admit. (*solvable*)
+           eapply deq_loop_entry_or in Hedge.
+           ++ destruct Hedge;eauto. subst. exfalso. clear - H Hh'. eauto using loop_contains_deq_loop.
+           ++ eapply Hdeqp in Hh'. eauto.
+    + eapply tcfg_mon_back. 7:eauto. all:eauto.
+    + eapply tcfg_mon_exit. 7:eauto. all:eauto. 
 Admitted.
 
 Lemma tcfg_monotone_deq p q i j t
