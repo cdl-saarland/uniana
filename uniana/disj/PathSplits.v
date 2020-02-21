@@ -157,7 +157,8 @@ Proof.
     eexists;eexists.
     eapply lc_join_split'. 2:eauto.
     econstructor;eauto.
-    + rewrite <-surjective_pairing. eapply succ_cons. admit.
-    + admit.
-    + eapply edge_edge_loop; unfold tcfg_edge in *; do 2 destructH; eauto.
-Admitted.
+    2: eapply last_common'_sym in Hlc.
+    1,2: rewrite <-surjective_pairing;eapply get_succ_cons.
+    1,2: eapply last_common_in1;eapply last_common'_iff;do 2 eexists;eauto.
+    eapply edge_edge_loop; unfold tcfg_edge in *; do 2 destructH; eauto.
+Qed.

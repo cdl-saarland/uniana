@@ -368,11 +368,9 @@ Proof.
              disjPaths H q1 q2 s ((q1,j1)::t1) ((q2,j2)::t2)
                        l1' l2' j1 j2 k i i e1 e2 qs1 qs2 js1 js2) as D.
   { do 4 eexists; econstructor; eauto. 3: eapply exiting_eq_loop;eauto.
-    2: eapply last_common'_sym in Hlc. 
-    (*1,2: rewrite <-surjective_pairing;eapply get_succ_cons.
     2: eapply last_common'_sym in Hlc.
-    all: eapply last_common_in1;eapply last_common'_iff;do 2 eexists;eauto.*)
-    all: admit.
+    1,2: rewrite <-surjective_pairing;eapply get_succ_cons.
+    all: eapply last_common_in1;eapply last_common'_iff;do 2 eexists;eauto.
   }
   destructH.
   assert (disjPathsE D h) as D'.
@@ -401,7 +399,7 @@ Proof.
     + symmetry. auto. 
     + omega.
     + intro N. rewrite N in Nlt. clear - Nlt. omega.
-Admitted.
+Qed.
 
 Corollary lc_disj_exit_lsplits `{redCFG} (s e q1 q2 h : Lab) (i j1 j2 k : Tag) (t1 t2 : list Coord)
           (Hlc : last_common ((q1,j1) :: t1) ((q2,j2) :: t2) (s,k))

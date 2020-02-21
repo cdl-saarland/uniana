@@ -1,11 +1,6 @@
 Require Import EqNeqDisj CncLoop GetSucc.
 
 (* move *)  
-Fixpoint get_pred (A : eqType) (a e : A) (l : list A) : A :=
-  match l with
-  | [] => e
-  | b :: l0 => if decision (a = b) then hd e l0 else get_pred a e l0
-  end.
 
 Ltac seapply H Q Q'
   := specialize Q as Q';
