@@ -743,18 +743,62 @@ Proof.
   rewrite take_r_len_id. reflexivity.
 Qed.
 
-Lemma tagle_take_r_leq_iff (i j : Tag) (n : nat)
+Lemma tagle_take_r (i j : Tag) (n : nat)
+      (Htgl : i ⊴ take_r n j)
+  : i ⊴ j.
+Proof.
+  rewrite Htgl. eapply prefix_tagle. eapply take_r_prefix.
+Qed.
+
+Lemma take_r_rcons (A : Type) (l : list A) n a
+  : take_r (S n) (l :r: a) = take_r n l :r: a.
+Proof.
+  unfold take_r.
+  rewrite <-rev_cons.
+  rewrite <-rev_rev_eq.
+  rewrite rev_rcons.
+  rewrite take_one;[|omega].
+  cbn.
+  replace (n - 0) with n by omega.
+  reflexivity.
+Qed.
+
+Lemma tagle_take_r_leq (i j : Tag) (n : nat)
       (Hleq : |i| <= n)
-  : i ⊴ j <-> i ⊴ take_r n j.
-Admitted.
+      (Htgl : i ⊴ j)
+  : i ⊴ take_r n j.
+Proof.
+  revert n Hleq.
+  induction Htgl;intros;cbn.
+  - econstructor.
+  - rewrite app_length in Hleq. cbn in Hleq. 
+    destruct n0.
+    { exfalso. omega. }
+    rewrite take_r_rcons.
+    econstructor.
+    eapply IHHtgl. omega. 
+  - destruct n0.
+    { exfalso. rewrite app_length in Hleq. cbn in Hleq. omega. }
+    rewrite take_r_rcons.
+    econstructor;eauto.
+Qed.
 
 Lemma tagle_STag (i : Tag)
   : i ⊴ STag i.
-Admitted.
+Proof.
+  induction i;cbn;eauto.
+  - reflexivity.
+  - eapply Tagle_cons2. omega.
+Qed.
 
 Lemma take_len_leq (A : Type) (l : list A) n
   : |take_r n l| <= n.
-Admitted.
+Proof.
+  unfold take_r.
+  rewrite rev_length.
+  rewrite take_length.
+  eapply Nat.le_min_r.
+Qed.
 
 Lemma tcfg_monotone' p i t q j t' h
       (Hpath : TPath (root,start_tag) (p,i) t)
@@ -779,7 +823,7 @@ Proof.
     + subst i. rewrite IHt'. 2:eauto. all:eauto.
       eapply tagle_STag. 
     + subst i.
-      rewrite take_r_tl_eq. rewrite <-tagle_take_r_leq_iff.
+      rewrite take_r_tl_eq. eapply tagle_take_r_leq;cycle 1.
       * eapply IHt'. eauto. all:eauto.
       * rewrite <-tl_len.
         setoid_rewrite tag_depth at 2.
@@ -791,11 +835,43 @@ Proof.
         -- left;eauto.
 Qed.
 
+Lemma splinter_strict_suffix (L : Type) (e: L -> L -> Prop) x y z π
+      (Hpath : Path e x y π)
+      (Hsp : splinter_strict [y;z] π)
+  : exists ϕ, Path e z y ϕ /\ Postfix ϕ π /\ 2 <= |ϕ|.
+Admitted.
+  
 Lemma tcfg_fresh p i t
       (Hpath : TPath (root,start_tag) (p,i) t)
       (Hsp : splinter_strict [(p,i);(p,i)] t)
   : False.
 Proof.
+  eapply splinter_strict_suffix in Hsp;eauto.
+  destructH.
+  copy Hsp0 Hpath'.
+  eapply TPath_CPath in Hsp0. cbn in Hsp0.
+  eapply p_p_ex_head in Hsp0;eauto.
+  2: { rewrite map_length. omega. }
+  destructH.
+  (* destruct ϕ *)
+  destr_r' ϕ. all: subst ϕ. 1:cbn in Hsp3;omega.
+  destruct l. 1: cbn in Hsp3; omega.
+  path_simpl' Hpath'. cbn in Hpath'. path_simpl' Hpath'. rename x into y.
+  let tac Q :=
+      rewrite map_rcons in Q;rewrite map_cons in Q;unfold fst in Q at 1 3
+                             in tac Hsp1; tac Hsp4.
+  (* some ridiculous simplifications *)
+  assert (forall z, z ∈ ((p :: map fst l :r: p)) <-> z ∈ (p :: map fst l)).
+  { clear. intros. cbn. setoid_rewrite In_rcons. firstorder. }
+  rewrite H in Hsp1. setoid_rewrite H in Hsp4. clear H.
+  remember (find (fun y => decision (fst y = h)) ((p,i) :: l)) as x. symmetry in Heqx.
+  destruct x;cycle 1. (* show the existence of such x *)
+  { fold (fst (p,i)) in Hsp1. rewrite <-map_cons in Hsp1. 
+    eapply in_fst in Hsp1. destructH. eapply find_none in Heqx. 2:eapply Hsp1. cbn in Heqx.
+    decide (h = h);inversion Heqx. contradiction. }
+  eapply find_some in Heqx. destructH.
+  destruct p1. cbn in Heqx1. decide (e = h);[|inversion Heqx1].
+  subst e. clear Heqx1.
   
 Admitted.
 
@@ -882,7 +958,7 @@ Proof.
       * eapply tagle_STag. 
       * eapply back_edge_eq_loop in Hedge. destruct Hedge. transitivity p;eauto.
     + subst i.
-      rewrite take_r_tl_eq. rewrite <-tagle_take_r_leq_iff.
+      rewrite take_r_tl_eq. eapply tagle_take_r_leq;cycle 1.
       * eapply IHt. eauto. all:eauto. transitivity p;eauto. destruct Hedge.
         eapply deq_loop_exited;eauto.
       * rewrite <-tl_len.
