@@ -18,3 +18,9 @@ Lemma get_succ_cons (A : Type) `{EqDec A eq} (l : list A) (a b : A)
   : get_succ a b l ≻ a | b :: l.
 Proof.
 Admitted.
+
+Lemma get_pred_cons (A : Type) `{EqDec A eq} (l : list A) (a b : A)
+      (Hel : a ∈ l)
+  : a ≻ get_pred a b l | l :r: b.
+Proof.
+Admitted.

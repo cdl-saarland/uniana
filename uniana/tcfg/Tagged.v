@@ -840,7 +840,18 @@ Lemma splinter_strict_suffix (L : Type) (e: L -> L -> Prop) x y z π
       (Hsp : splinter_strict [y;z] π)
   : exists ϕ, Path e z y ϕ /\ Postfix ϕ π /\ 2 <= |ϕ|.
 Admitted.
+
+Require Import GetSucc.
   
+
+Lemma taglt_tagle_trans (i j k : Tag)
+  : i ◁ j -> j ⊴ k -> i ◁ k.
+Admitted.
+
+Lemma tagle_taglt_trans (i j k : Tag)
+  : i ⊴ j -> j ◁ k -> i ◁ k.
+Admitted.
+
 Lemma tcfg_fresh p i t
       (Hpath : TPath (root,start_tag) (p,i) t)
       (Hsp : splinter_strict [(p,i);(p,i)] t)
@@ -870,9 +881,31 @@ Proof.
     eapply in_fst in Hsp1. destructH. eapply find_none in Heqx. 2:eapply Hsp1. cbn in Heqx.
     decide (h = h);inversion Heqx. contradiction. }
   eapply find_some in Heqx. destructH.
-  destruct p1. cbn in Heqx1. decide (e = h);[|inversion Heqx1].
+  destruct p1 as [e k]. cbn in Heqx1. decide (e = h);[|inversion Heqx1].
   subst e. clear Heqx1.
-  
+  remember (get_pred (h,k) (p,i) ((p,i) :: l)) as rj.
+  destruct rj as [r j].
+  specialize (get_pred_cons (p,i) Heqx0) as Hsucc.
+  rewrite <-Heqrj in Hsucc.
+  eapply path_to_elem in Hpath' as Hpath_r.
+  2: { cbn. right. eapply in_succ_in2. cbn in Hsucc;eauto. }
+  destructH.
+  assert (take_r (depth r) i ⊴ j) as Hij.
+  {
+    eapply tcfg_monotone'. all:admit.
+  }
+  assert (j ◁ k) as Hjk by admit.
+  assert (k = take_r (depth h) k) as Hkeq by admit.
+  assert (take_r (depth h) k ⊴ take_r (depth h) i) as Hki by admit.
+  assert (depth h = depth r) as Hhr.
+  {
+    admit.
+  }
+  rewrite <-Hkeq in Hki.
+  rewrite <-Hhr in Hij.
+  eapply tagle_taglt_trans in Hjk;eauto.
+  eapply taglt_tagle_trans in Hjk;eauto.
+  destruct Hjk. eapply H0. reflexivity.
 Admitted.
 
 (* TODO: move ex_entry proof to this point. it does not require any assumptions, 
