@@ -864,19 +864,111 @@ Require Import GetSucc.
 
 Lemma taglt_tagle_trans (i j k : Tag)
   : i ◁ j -> j ⊴ k -> i ◁ k.
-Admitted.
+Proof.
+  intros. split;[destruct H;transitivity j;eauto|].
+  destruct H.
+  contradict H1. subst i.
+  eapply antisymmetry;eauto.
+Qed.
+
+Lemma tagle_nil_eq (i : Tag)
+  : i ⊴ [] -> i = [].
+Proof.
+  intros. inversion H;subst;eauto;try congruence'.
+Qed.
 
 Lemma tagle_taglt_trans (i j k : Tag)
   : i ⊴ j -> j ◁ k -> i ◁ k.
-Admitted.
+Proof.
+  intros. split;[destruct H0;transitivity j;eauto|].
+  destruct H0.
+  contradict H1. subst i.
+  eapply antisymmetry;eauto.
+Qed.
 
-Lemma tcfg_head_taglt h q j k 
+Lemma basic_edge_no_loop2 p q
+      (Hedge : basic_edge p q)
+  : ~ loop_head q.
+Proof.
+  intro N.
+  destruct Hedge.
+  assert (loop_contains q p) as Hloop.
+  { destruct H. eapply H. eapply loop_contains_self. eauto. }
+  eapply dom_loop in Hloop.
+  specialize (a_reachability p) as Hreach. destructH.
+  eapply PathCons in H0;eauto.
+  eapply dom_dom_acyclic in Hloop.
+  unfold Dom in Hloop. eapply Hloop in Hreach.
+  eapply acyclic_path_NoDup in H0. inversion H0;subst. contradiction.
+Qed.
+
+Lemma filter_nil (A : Type) (f : decPred A) l
+      (Hnil : filter f l = [])
+  : forall x, x ∈ l -> ~ f x.
+Proof.
+  induction l;intros;cbn.
+  - contradiction.
+  - destruct H;subst.
+    + cbn in Hnil. decide (f x);[congruence|auto].
+    + eapply IHl;eauto. cbn in Hnil. decide (f a);[congruence|auto].
+Qed.
+
+Lemma loop_contains_depth_lt h p
+      (Hloop : loop_contains h p)
+  : depth p > 0.
+Proof.
+  unfold depth.
+  match goal with |- length ?x > 0 => enough (x <> []) end.
+  - enough (depth p <> 0). 1:unfold depth in *;omega.
+    contradict H.
+    eapply length_zero_iff_nil. eauto.
+  - intro N. eapply filter_nil;eauto.
+Qed.
+
+Lemma tcfg_head_taglt h q j k t
       (Hloop : loop_head h)
+      (Hpath : TPath (root,start_tag) (q,j) t)
       (Hedge : (q,j) -t> (h,k))
   : j ◁ k.
-Admitted.
+Proof.
+  eapply tcfg_edge_destruct' in Hedge. destruct Hedge as [Q|[Q|[Q|Q]]].
+  all: destruct Q as [Heq Hedge];subst.
+  1,4:exfalso.
+  - eapply basic_edge_no_loop2;eauto.
+  - unfold eexit_edge in Hedge. destructH. eapply no_exit_head;eauto.
+  - split.
+    + eapply Tagle_cons. reflexivity.
+    + intro N. eapply cons_neq;eauto.
+  - destruct j.
+    + exfalso. eapply loop_contains_ledge in Hedge.
+      eapply tag_depth' in Hpath. cbn in Hpath.
+      eapply loop_contains_depth_lt in Hedge. omega.
+    + cbn. split;[eapply tagle_STag|intro N;inversion N]. omega.
+Qed.
 
-Ltac spot_path_rel := give_up.
+(* 
+Tactic specification:
+solves goals of forms 
+?x ∈ ?π  when ?x is src or target of some path (or explicitly mentioned or in a splinter or pre/suffix of some path? -> except for the first part it has nothing to do with paths, so it should be a subtactic!)
+Path _ _ _ ?π when it is constructible from given paths using subpaths (or compositions ?)
+Postfix ?π ?ϕ when it is a subpath of the other
+Prefix ?π ?ϕ when see above
+
+ *)
+
+Ltac construct_subpath :=
+  let tac :=
+      match goal with
+      | H : Path _ ?a 
+      end
+  in
+  match goal with
+  | |- Path _ _ _ _ => tac
+  | |- Postfix _ _ => tac
+  end.
+                       
+
+Ltac spot_path_rel := give_up. 
 
 Lemma tcfg_fresh p i t
       (Hpath : TPath (root,start_tag) (p,i) t)
@@ -931,12 +1023,13 @@ Proof.
   assert (j ◁ k) as Hjk. {
     eapply tcfg_head_taglt.
     - eapply loop_contains_loop_head. eapply Hsp4. left. auto.
-    - eapply succ_in_path_edge;cycle 1;eauto.
+    - spot_path_rel.
+    - eapply succ_in_path_edge; cycle 1;eauto.
   }
   assert (k = take_r (depth h) k) as Hkeq.
   {
     replace (depth h) with (|k|). 1:symmetry;eapply take_r_len_id.
-    eapply tag_depth. all: spot_path_rel.
+    eapply tag_depth. 1: eauto. eapply postfix_incl;eauto.
   } 
   assert (take_r (depth h) k ⊴ take_r (depth h) i) as Hki.
   {
