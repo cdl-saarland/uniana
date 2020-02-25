@@ -650,6 +650,8 @@ Qed.
 Lemma tagle_prefix i j
       (Hpre : Prefix i j)
   : i ⊴ j.
+Proof.
+  
 Admitted.
 
 Lemma take_r_prefix (A : Type) (l : list A) n
@@ -679,7 +681,18 @@ Notation "x ◁ y" := (x ⊴ y /\ x <> y) (at level 70).
 Lemma tagle_or i j
       (Htag : i ⊴ j)
   : |i| <= |j| \/ i ◁ j.
-Admitted.
+Proof.
+  induction Htag;cbn.
+  - left. omega.
+  - destruct IHHtag.
+    + left. do 2 rewrite app_length. cbn. omega.
+    + right. econstructor.
+      * econstructor;eauto.
+      * destruct H. contradict H0. eapply rcons_eq1. eauto.
+  - right. econstructor.
+    + econstructor;eauto.
+    + intro N. eapply rcons_eq2 in N. omega.
+Qed.
 
 Lemma take_r_cons (A : Type) n a (l : list A)
   : exists b, take_r (S n) (a :: l) = b :: take_r n (a :: l).
@@ -700,7 +713,12 @@ Qed.
 Lemma tagle_taglt_iff i j
   : i ⊴ j <-> i ◁ j \/ i = j.
 Proof.
-Admitted.
+  split;intros.
+  - decide (i = j);[right|left];eauto.
+  - destruct H.
+    + destruct H;eauto.
+    + subst. reflexivity.
+Qed.
 
 Notation "p '>=' q" := (deq_loop p q).
 
@@ -791,7 +809,7 @@ Proof.
   - eapply Tagle_cons2. omega.
 Qed.
 
-Lemma take_len_leq (A : Type) (l : list A) n
+Lemma take_r_len_leq (A : Type) (l : list A) n
   : |take_r n l| <= n.
 Proof.
   unfold take_r.
@@ -827,7 +845,7 @@ Proof.
       * eapply IHt'. eauto. all:eauto.
       * rewrite <-tl_len.
         setoid_rewrite tag_depth at 2.
-        -- rewrite take_len_leq.
+        -- rewrite take_r_len_leq.
            eapply deq_loop_depth.
            eapply loop_contains_deq_loop.
            eapply Hincl. left;eauto.
@@ -852,6 +870,14 @@ Lemma tagle_taglt_trans (i j k : Tag)
   : i ⊴ j -> j ◁ k -> i ◁ k.
 Admitted.
 
+Lemma tcfg_head_taglt h q j k 
+      (Hloop : loop_head h)
+      (Hedge : (q,j) -t> (h,k))
+  : j ◁ k.
+Admitted.
+
+Ltac spot_path_rel := give_up.
+
 Lemma tcfg_fresh p i t
       (Hpath : TPath (root,start_tag) (p,i) t)
       (Hsp : splinter_strict [(p,i);(p,i)] t)
@@ -872,9 +898,9 @@ Proof.
       rewrite map_rcons in Q;rewrite map_cons in Q;unfold fst in Q at 1 3
                              in tac Hsp1; tac Hsp4.
   (* some ridiculous simplifications *)
-  assert (forall z, z ∈ ((p :: map fst l :r: p)) <-> z ∈ (p :: map fst l)).
+  assert (forall z, z ∈ ((p :: map fst l :r: p)) <-> z ∈ (p :: map fst l)) as H2cons.
   { clear. intros. cbn. setoid_rewrite In_rcons. firstorder. }
-  rewrite H in Hsp1. setoid_rewrite H in Hsp4. clear H.
+  rewrite H2cons in Hsp1. setoid_rewrite H2cons in Hsp4. 
   remember (find (fun y => decision (fst y = h)) ((p,i) :: l)) as x. symmetry in Heqx.
   destruct x;cycle 1. (* show the existence of such x *)
   { fold (fst (p,i)) in Hsp1. rewrite <-map_cons in Hsp1. 
@@ -890,19 +916,39 @@ Proof.
   eapply path_to_elem in Hpath' as Hpath_r.
   2: { cbn. right. eapply in_succ_in2. cbn in Hsucc;eauto. }
   destructH.
-  assert (take_r (depth r) i ⊴ j) as Hij.
+  assert (take_r (depth h) i ⊴ j) as Hij.
   {
-    eapply tcfg_monotone'. all:admit.
+    eapply tcfg_monotone'.
+    instantiate (2 := r).
+    - spot_path_rel.
+    - instantiate (2:= ϕ). spot_path_rel.
+    - spot_path_rel.
+    - intros. eapply Hsp4. eapply H2cons.
+      eapply prefix_incl in H;eauto.
+      eapply in_map with (f:=fst) in H. cbn in H. rewrite map_rcons in H. cbn in H.
+      cbn;eauto.
   }
-  assert (j ◁ k) as Hjk by admit.
-  assert (k = take_r (depth h) k) as Hkeq by admit.
-  assert (take_r (depth h) k ⊴ take_r (depth h) i) as Hki by admit.
-  assert (depth h = depth r) as Hhr.
+  assert (j ◁ k) as Hjk. {
+    eapply tcfg_head_taglt.
+    - eapply loop_contains_loop_head. eapply Hsp4. left. auto.
+    - eapply succ_in_path_edge;cycle 1;eauto.
+  }
+  assert (k = take_r (depth h) k) as Hkeq.
   {
-    admit.
-  }
+    replace (depth h) with (|k|). 1:symmetry;eapply take_r_len_id.
+    eapply tag_depth. all: spot_path_rel.
+  } 
+  assert (take_r (depth h) k ⊴ take_r (depth h) i) as Hki.
+  {
+    eapply tagle_take_r_leq. 1: eapply take_r_len_leq.
+    eapply tcfg_monotone'. 1,2:eauto.
+    - eapply in_succ_in1;eauto.
+    - intros. eapply Hsp4.
+      eapply H2cons.
+      eapply in_map with (f:=fst) in H. cbn in H. rewrite map_rcons in H. cbn in H.
+      cbn;eauto.
+  }  
   rewrite <-Hkeq in Hki.
-  rewrite <-Hhr in Hij.
   eapply tagle_taglt_trans in Hjk;eauto.
   eapply taglt_tagle_trans in Hjk;eauto.
   destruct Hjk. eapply H0. reflexivity.
@@ -996,7 +1042,7 @@ Proof.
         eapply deq_loop_exited;eauto.
       * rewrite <-tl_len.
         setoid_rewrite tag_depth at 2.
-        -- rewrite take_len_leq.
+        -- rewrite take_r_len_leq.
            eapply deq_loop_depth.
            exact Hdeqp.
         -- eapply Hpath.
@@ -1021,17 +1067,13 @@ Lemma eff_tag_unfresh q j t p
   : False.
 Proof.
   set (j':=eff_tag' j Hedge) in *.
-  eapply path_from_elem in Hel;eauto. destructH.
-  assert ((q,j) -t> (p,j')) as Hedge'.
-  { split;eauto. subst j'. unfold eff_tag. decide (edge__P q p);[|congruence]. f_equal.
-    eapply eff_tag'_eq. }
-  eapply PathCons in Hedge';eauto.
-  eapply TPath_CPath in Hedge' as HCpath. cbn in HCpath.
-  eapply p_p_ex_head in HCpath. 2:{ destruct ϕ;[inversion Hel0|]. cbn. clear. omega. }
-  destructH.
-  remember (find (fun x => decision (fst x = h)) ((p,j') :: ϕ)) as s.
-  destruct s.
-Admitted.
+  eapply PathCons with (edge:=tcfg_edge) in Hpath;cycle 1.
+  - instantiate (1:=(p,j')). split;eauto. subst j'. unfold eff_tag.
+    decide (edge__P q p);[|contradiction].
+    erewrite eff_tag'_eq. reflexivity.
+  - eapply tcfg_fresh;eauto.
+    econstructor. eapply splinter_strict_single;eauto.
+Qed.
 
 Lemma eff_tag_fresh : forall p q i j l,
     TPath (root,start_tag) (q,j) l -> eff_tag q p j = Some i -> forall i', In (p, i') l -> i' <> i.
