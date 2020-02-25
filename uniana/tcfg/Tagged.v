@@ -957,10 +957,7 @@ Prefix ?π ?ϕ when see above
  *)
 
 Ltac construct_subpath :=
-  let tac :=
-      match goal with
-      | H : Path _ ?a 
-      end
+  let tac := idtac
   in
   match goal with
   | |- Path _ _ _ _ => tac
