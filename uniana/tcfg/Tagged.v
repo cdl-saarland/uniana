@@ -651,12 +651,31 @@ Lemma tagle_prefix i j
       (Hpre : Prefix i j)
   : i ⊴ j.
 Proof.
-  
-Admitted.
+  eapply prefix_eq in Hpre. destructH. subst j.
+  induction l2'.
+  - cbn. reflexivity.
+  - cbn. eapply Tagle_cons. eauto.
+Qed.
+
+Lemma take_postfix (A : Type) (l : list A) n
+  : Postfix (take n l) l.
+Proof.
+  eapply postfix_eq.
+  revert l.
+  induction n;intros;cbn.
+  - eexists;eauto.
+  - destruct l;cbn. 
+    + econstructor;eauto.
+    + specialize (IHn l). destructH. eexists. f_equal. eauto.
+Qed.
 
 Lemma take_r_prefix (A : Type) (l : list A) n
   : Prefix (take_r n l) l.
-Admitted.
+Proof.
+  eapply postfix_rev_prefix'.
+  unfold take_r. rewrite rev_involutive.
+  eapply take_postfix.
+Qed.
 
 Global Instance ancestor'_sym : forall a, Symmetric (ancestor' a).
 Proof.
@@ -694,14 +713,76 @@ Proof.
     + intro N. eapply rcons_eq2 in N. omega.
 Qed.
 
-Lemma take_r_cons (A : Type) n a (l : list A)
-  : exists b, take_r (S n) (a :: l) = b :: take_r n (a :: l).
-Admitted.
+Lemma take_rcons_ex (A : Type) n (l : list A)
+      (Hlen : S n <= |l|)
+  : exists a, take (S n) l = take n l ++[a].
+Proof.
+  revert l Hlen.
+  induction n;intros.
+  - cbn. destruct l;[cbn in Hlen;omega|].
+    eexists;eauto.
+  - destruct l;[cbn in Hlen;omega|].
+    rewrite take_one. 2: omega.
+    replace (S (S n) - 1) with (S n) by omega.
+    rewrite take_one. 2: omega.
+    replace (S n - 1) with n by omega.
+    specialize (IHn l). exploit IHn.
+    + cbn in Hlen. omega.
+    + destructH. rewrite IHn. eexists;cbn;eauto.
+Qed.
+
+Lemma take_r_cons_ex (A : Type) n (l : list A)
+      (Hlen : S n <= |l|)
+  : exists a, take_r (S n) l = a :: take_r n l.
+Proof.
+  rewrite <-rev_length in Hlen.
+  specialize (take_rcons_ex Hlen) as H. destructH.
+  eexists. unfold take_r. rewrite <-rev_rcons.
+  rewrite <-rev_rev_eq. eauto.
+Qed.
+
+Lemma taglt_eq i j
+      (Htlt : i ◁ j)
+      (Hlen : |i| = |j|)
+  : exists k0 k1 k2 n1 n2, i = k1 ++ n1 :: k0 /\ j = k2 ++ n2 :: k0 /\ n1 < n2.
+Proof.
+  destruct Htlt. induction H.
+  - cbn in *. symmetry in Hlen. eapply length_zero_iff_nil in Hlen. subst. contradiction.
+  - exploit IHTagle.
+    + contradict H0. subst. reflexivity.
+    + do 2 rewrite app_length in Hlen. clear - Hlen. omega.
+    + destructH. do 5 eexists. split_conj;[| |eauto].
+      1,2: rewrite <-cons_rcons_assoc; rewrite app_assoc; f_equal; eauto.
+  - do 5 eexists. split_conj;[| |eauto].
+    1,2: reflexivity.
+Qed.
+
+Lemma tagle_app_app i j k
+  : i ⊴ j -> i ++ k ⊴ j ++ k.
+Proof.
+  revert i j. induction k;intros;cbn;eauto.
+  - do 2 rewrite <-app_nil_end. eauto.
+  - rewrite app_cons_assoc. setoid_rewrite app_cons_assoc at 2.
+    eapply IHk. eapply Tagle_rcons;eauto.
+Qed.
 
 Lemma taglt_cons i j n m
+      (Hlen : |i| = |j|)
       (Htlt : i ◁ j)
   : n :: i ◁ m :: j.
-Admitted.
+Proof.
+  eapply taglt_eq in Htlt;eauto.
+  destructH. subst i j.
+  split.
+  - rewrite app_cons_assoc. setoid_rewrite app_cons_assoc at 2.
+    do 4 rewrite app_comm_cons.
+    eapply tagle_app_app.
+    econstructor;eauto.
+  - intro N. inversion N. subst.
+    rewrite app_cons_assoc in H1. setoid_rewrite app_cons_assoc in H1 at 2. 
+    eapply app_inv_tail in H1.
+    eapply rcons_eq2 in H1. subst. omega.
+Qed.
 
 Lemma taglt_tagle i j
       (Htlt : i ◁ j)
@@ -853,11 +934,21 @@ Proof.
         -- left;eauto.
 Qed.
 
-Lemma splinter_strict_suffix (L : Type) (e: L -> L -> Prop) x y z π
+Lemma splinter_strict_suffix (L : Type) `{EqDec L eq} (e: L -> L -> Prop) x y z π
       (Hpath : Path e x y π)
       (Hsp : splinter_strict [y;z] π)
   : exists ϕ, Path e z y ϕ /\ Postfix ϕ π /\ 2 <= |ϕ|.
-Admitted.
+Proof.
+  inversion Hpath;subst.
+  - exfalso. inversion Hsp;subst. inversion H1. inversion H2.
+  - assert (z ∈ π0) as Hel.
+    + inversion Hsp;subst;eapply splinter_strict_incl;eauto.
+    + eapply path_from_elem in Hel;eauto.
+      destructH. exists (y :: ϕ). split_conj.
+      * econstructor;eauto.
+      * eapply postfix_cons;eauto.
+      * destruct ϕ;[inversion Hel0|]. cbn. omega.
+Qed.
 
 Require Import GetSucc.
   
@@ -946,26 +1037,13 @@ Proof.
     + cbn. split;[eapply tagle_STag|intro N;inversion N]. omega.
 Qed.
 
-(* 
-Tactic specification:
-solves goals of forms 
-?x ∈ ?π  when ?x is src or target of some path (or explicitly mentioned or in a splinter or pre/suffix of some path? -> except for the first part it has nothing to do with paths, so it should be a subtactic!)
-Path _ _ _ ?π when it is constructible from given paths using subpaths (or compositions ?)
-Postfix ?π ?ϕ when it is a subpath of the other
-Prefix ?π ?ϕ when see above
-
- *)
-
-Ltac construct_subpath :=
-  let tac := idtac
-  in
-  match goal with
-  | |- Path _ _ _ _ => tac
-  | |- Postfix _ _ => tac
-  end.
-                       
-
-Ltac spot_path_rel := give_up. 
+Lemma postfix_eq_app (A : Type) (l l' : list A)
+  : Postfix l (l ++ l').
+Proof.
+  induction l;cbn.
+  - eapply postfix_nil.
+  - eapply postfix_cons. auto.
+Qed.
 
 Lemma tcfg_fresh p i t
       (Hpath : TPath (root,start_tag) (p,i) t)
@@ -1001,17 +1079,23 @@ Proof.
   remember (get_pred (h,k) (p,i) ((p,i) :: l)) as rj.
   destruct rj as [r j].
   specialize (get_pred_cons (p,i) Heqx0) as Hsucc.
-  rewrite <-Heqrj in Hsucc.
+  rewrite <-Heqrj in Hsucc. copy Hsp2 Hsp2'.
+  eapply postfix_eq in Hsp2. destructH.
+  assert (TPath (root,start_tag) (p,i) ((p,i)::l2')) as Hpath0.
+  { eapply path_prefix_path. 2: eapply Hpath. 1:eauto. eapply prefix_eq.
+    eexists;eauto. rewrite <-app_assoc in Hsp2. eauto. }
   eapply path_to_elem in Hpath' as Hpath_r.
   2: { cbn. right. eapply in_succ_in2. cbn in Hsucc;eauto. }
   destructH.
+  eapply path_app' in Hpath_r0 as Hpath_r'. 2: eapply Hpath0.
   assert (take_r (depth h) i ⊴ j) as Hij.
   {
     eapply tcfg_monotone'.
     instantiate (2 := r).
-    - spot_path_rel.
-    - instantiate (2:= ϕ). spot_path_rel.
-    - spot_path_rel.
+    - eapply Hpath_r'.
+    - instantiate (1:=ϕ).
+      eapply postfix_eq_app.
+    - eapply path_contains_back;eauto.
     - intros. eapply Hsp4. eapply H2cons.
       eapply prefix_incl in H;eauto.
       eapply in_map with (f:=fst) in H. cbn in H. rewrite map_rcons in H. cbn in H.
@@ -1020,18 +1104,18 @@ Proof.
   assert (j ◁ k) as Hjk. {
     eapply tcfg_head_taglt.
     - eapply loop_contains_loop_head. eapply Hsp4. left. auto.
-    - spot_path_rel.
+    - eapply Hpath_r'.
     - eapply succ_in_path_edge; cycle 1;eauto.
   }
   assert (k = take_r (depth h) k) as Hkeq.
   {
     replace (depth h) with (|k|). 1:symmetry;eapply take_r_len_id.
-    eapply tag_depth. 1: eauto. eapply postfix_incl;eauto.
-  } 
+    eapply tag_depth. 1: eapply Hpath. eapply postfix_incl;eauto. 
+  }
   assert (take_r (depth h) k ⊴ take_r (depth h) i) as Hki.
   {
     eapply tagle_take_r_leq. 1: eapply take_r_len_leq.
-    eapply tcfg_monotone'. 1,2:eauto.
+    eapply tcfg_monotone'. 1: eapply Hpath. 1:eauto.
     - eapply in_succ_in1;eauto.
     - intros. eapply Hsp4.
       eapply H2cons.
@@ -1042,7 +1126,7 @@ Proof.
   eapply tagle_taglt_trans in Hjk;eauto.
   eapply taglt_tagle_trans in Hjk;eauto.
   destruct Hjk. eapply H0. reflexivity.
-Admitted.
+Qed.
 
 (* TODO: move ex_entry proof to this point. it does not require any assumptions, 
 thus it should be possible *)
@@ -1057,6 +1141,16 @@ Lemma tcfg_fresh_head' h p i k t
    * bc freshness we have 0::k <> 0::k', thus bc |k|=|k'| also k <> k' cntrdiction.
    *)
 Admitted.
+    
+Lemma take_r_leq_id (A : Type) (l : list A) n
+      (Hlen : |l| <= n)
+  : take_r n l = l.
+Proof.
+  unfold take_r.
+  rewrite take_eq_ge.
+  - rewrite rev_involutive. reflexivity.
+  - rewrite rev_length. omega.
+Qed.
 
 Lemma tcfg_monotone p i t q j a
       (Hpath : TPath (root,start_tag) (p,i) t)
@@ -1091,8 +1185,17 @@ Proof.
         -- copy IHt IHt'.
            eapply tagle_taglt_iff in IHt.
            destruct IHt.
-           ++ specialize (take_r_cons (depth p') n j) as Q. destructH' Q. rewrite Q.
-              eapply taglt_tagle. eapply taglt_cons. eauto.
+           ++ assert (depth p' = |i'|) as Hpieq.
+              { symmetry. eapply tag_depth';eauto. }
+              rewrite Hpieq in *.
+              decide (|n :: j| <= |i'|).
+              ** rewrite take_r_leq_id. 2: omega.
+                 eapply Tagle_cons. rewrite take_r_leq_id in IHt'. 2: omega. eauto.
+              ** assert (S (|i'|) <= |n :: j|) as n1. 1: clear - n0;omega.
+                 specialize (take_r_cons_ex n1) as Q. destructH' Q. rewrite Q.
+                 eapply taglt_tagle. eapply taglt_cons. 2:eauto.
+                 unfold take_r. rewrite rev_length,take_length,rev_length.
+                 clear - n1. rewrite Nat.min_r. auto. omega.
            ++ exfalso.
               eapply tcfg_fresh_head'.
               ** cbn in Hpath. eapply Hpath.
@@ -1110,10 +1213,7 @@ Proof.
                * thus there is header containing p' on q --> q, well, 
                * and then we need stuff from the freshness proof sketch,
                * looks like this induction scheme is broken *)
-              (*assert (depth p' = |i'|) by (symmetry;eapply tag_depth';eauto).
-              assert (|j| < |i'|) by admit. 
-              assert (| take_r (depth p') (n :: j)| <= |i'|) by admit.
-              admit.*)
+              (**)
       * rewrite Htag in *.
         rewrite IHt;eauto.
         eapply Tagle_cons. reflexivity.
