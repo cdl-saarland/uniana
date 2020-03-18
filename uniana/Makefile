@@ -36,6 +36,7 @@ uniana.tar: all
 	rm -f $@
 	bsdtar cfv $@ uniana/
 	rm -r uniana
+# TODO: automate removals
 
 clean: $(COQMAKEFILE)
 	@$(MAKE) -f $(COQMAKEFILE) $@ # $@ calls 'clean' in the makefile COQMAKEFILE
@@ -45,6 +46,7 @@ html: $(COQMAKEFILE) $(VS)
 	rm -fr html
 	@$(MAKE) -f $(COQMAKEFILE) $@
 	cp $(EXTRA_DIR)/resources/* html
+# TODO: automatically only include "interesting files in toc"
 
 cleancoqmake:
 	@rm -f $(COQMAKEFILE)
@@ -57,3 +59,5 @@ $(COQMAKEFILE): $(COQ_PROJ) $(VS)
 #	@$(MAKE) -f $(COQMAKEFILE) $@
 force: clean
 	@$(MAKE) all
+
+

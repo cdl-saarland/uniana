@@ -570,7 +570,7 @@ Proof.
   induction Hpost;[econstructor|rewrite map_rcons;econstructor;assumption].
 Qed.
 
-(** * StrictPrefix **)
+(** StrictPrefix **)
 
 Section StrictPre.
 

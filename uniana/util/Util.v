@@ -37,7 +37,7 @@ Section Join.
 
 End Join.
 
-(** * option extra *)
+(**  option extra *)
 
 Section Option.
   

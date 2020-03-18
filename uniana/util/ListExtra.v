@@ -1,4 +1,4 @@
-(** * ListExtra 
+(**  ListExtra 
     - includes some useful facts about lists
 **)
 Require Import Program.Equality.
@@ -8,7 +8,7 @@ Require Export Take.
 
 Require Export Util UtilTac.
 
-(** * Notations for lists used as sets **)
+(**  Notations for lists used as sets **)
 
 Infix "∈" := In (at level 50).
 Notation "a '∉' l" := (~ a ∈ l) (at level 50).
@@ -18,7 +18,7 @@ Definition set_eq {A : Type} (a b : list A) := a ⊆ b /\ b ⊆ a.
 
 Infix "='" := (set_eq) (at level 50).
 
-(** * Facts about lists used as sets **)
+(**  Facts about lists used as sets **)
 
 Section Facts.
 
@@ -86,7 +86,7 @@ Section Facts.
 
 End Facts.
 
-(** * iter **)
+(**  iter **)
 
 Fixpoint iter {X : Type} (f : X -> X) (l : X) (n : nat) : X
   := match n with
@@ -94,7 +94,7 @@ Fixpoint iter {X : Type} (f : X -> X) (l : X) (n : nat) : X
      | S n => iter f (f l) n
      end.
 
-(** * rcons **)
+(**  rcons **)
 
 Notation "l ':r:' a" := (l ++ [a]) (at level 50).
 
@@ -222,7 +222,7 @@ Section Rcons.
     induction l;cbn in *;unfold incl in Hincl;eauto;firstorder.
   Qed.
 
-  (** * map facts **)
+  (** map facts **)
   
   Lemma map_rcons (f : A -> B) :
     forall a l, map f (l :r: a) = map f l :r: f a.
@@ -346,7 +346,7 @@ Section Rcons.
 
 End Rcons.
   
-(** * take_r 
+(** take_r 
     - 'take_r' is the dual variant to 'take' 
 **)
 

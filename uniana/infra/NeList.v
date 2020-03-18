@@ -1,4 +1,4 @@
-(** * non-empty lists 
+(**  non-empty lists 
     - this module includes the definition and basic facts about non-empty lists
 **)
 
@@ -10,7 +10,7 @@ Require Import Coq.Classes.Morphisms Relation_Definitions.
 Require Export ListExtra.
 Require Export DecTac.
 
-(** * Definition of non-empty lists, basic functionality and notations **)
+(**  Definition of non-empty lists, basic functionality and notations **)
 
 Inductive ne_list (A : Type) : Type :=
 | ne_single : A -> ne_list A
