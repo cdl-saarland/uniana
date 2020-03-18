@@ -1,6 +1,11 @@
 Require Export CFGloop CFGgeneral.
 Require Import Coq.Logic.PropExtensionality.
 
+
+(** * Technical prerequisites **)
+
+(** ** An Equivalence about restricted edges **)
+
 Section Restr.
   Context `{C : redCFG}.
   
@@ -28,7 +33,6 @@ Notation "↓ H" := (exist (fun x => pure (@predicate (eqtype (type _)) _) x) _ 
 
 Arguments restrict_edge {_}.
 
-(** * sub_CFG **)
 
 Open Scope prg.
 
@@ -238,6 +242,8 @@ Proof.
   induction l; cbn in *; eauto.
 Qed.
 
+(** ** Restricted loop_contains implies unrestricted loop_contains **)
+
 Lemma restrict_loop_contains:
   forall (Lab : finType) (edge : Lab -> Lab -> bool) (a_edge : Lab -> Lab -> bool)
     (P : decPred Lab) (h : Lab) (Hh : pure P h) (p : Lab) 
@@ -348,6 +354,8 @@ Proof.
     cbn in *. firstorder.
   - eapply intersection_subgraph1; unfold restrict_edge' in HedgeB;eauto.
 Qed.
+
+(** * redCFG Instance for sub CFGs **)
 
 Instance sub_CFG
         `{C : redCFG}

@@ -1,7 +1,8 @@
 Require Export CFGinnermost CFGgeneral.
 
+(** * Prerequisites **)
 
-(** * head_exits **)
+(** ** Definition **)
 
 Definition head_exits_edge `{redCFG} h h' q : Prop
   := (exited h' q /\ ~ loop_contains h' h).
@@ -127,6 +128,8 @@ Proof.
       eexists; eauto using path_app'.
 Qed.
 
+(** ** head exits have no influence on loop containment or exits **)
+
 Lemma head_exits_loop_equivalence `{redCFG} qh h p
   : loop_contains h p <-> loop_contains' ((edge__P ∪ (head_exits_edge qh))) (a_edge__P ∪ (head_exits_edge qh)) h p.
 Proof.
@@ -244,6 +247,7 @@ Proof.
     + rewrite head_exits_loop_equivalence;eauto.
 Qed.
 
+(** * redCFG Instance for the head_exit CFG *)
 
 Instance head_exits_CFG `(redCFG) qh
   : redCFG (fun x y => decision ((edge__P ∪ (head_exits_edge qh)) x y)) root
@@ -354,6 +358,8 @@ econstructor;intros;
 } 
 Qed.
 
+(** * The head exit property **)
+
 (* We need LOCAL head exits and also a local headexits property, bc
  * otherwise every loop head becomes a loop_split of itself and any exit in the imploded graph *)
 Definition head_exits_property `(C : redCFG) qh := forall h p q, exit_edge h p q -> ~ loop_contains h qh
@@ -395,6 +401,8 @@ Proof.
     eapply no_exit_head;eauto. unfold loop_head.
     exists h. unfold back_edge. unfold_edge_op. split;auto.
 Qed.
+
+(** * Properties of head exit CFGs **)
 
 Local Arguments loop_contains {_ _ _ _} _.
 

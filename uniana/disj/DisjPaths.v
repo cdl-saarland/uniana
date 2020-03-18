@@ -2,7 +2,6 @@ Require Export DisjDef MaxPreSuffix.
 
 Section disj.
 
-
   Context `{C : redCFG}.
 
   Infix "⊴" := Tagle (at level 70).
@@ -136,6 +135,8 @@ Section disj.
     - decide (P a);try contradiction. left. auto.
     - decide (P c);try contradiction. left. auto.
   Qed.
+
+  (** * Existence of the entry of the loop **)
   
   Lemma ex_entry (h p q : Lab) (i j : Tag) t
         (Hin : innermost_loop h q)
@@ -310,6 +311,8 @@ Section disj.
              (Htag : tl j1 = tl j2)
              (Htagleq : hd 0 j1 <= hd 0 j2). 
 
+  (** * q's loop contains the split point s **)
+  
   Lemma s_deq_q : deq_loop s q1.
   Proof.
     intros h Hh.

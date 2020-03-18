@@ -15,7 +15,7 @@ Require Export Graph SimplDec.
 
 (*  Notation "p '-->*' q" := (exists π, Path p q π) (at level 55, right associativity).*)
 
-(** Definition of the reducible CFG **)
+(** * Definition of the reducible CFG **)
 
 Reserved Infix "-->b" (at level 55).
 Reserved Infix "-a>" (at level 55).
@@ -54,6 +54,8 @@ Class redCFG
     }.
 
 Hint Resolve loop_head_dom a_edge_incl a_edge_acyclic a_reachability.
+
+(** ** Notations for paths **)
   
   Definition CPath `{redCFG} := Path edge__P.
   Definition APath `{redCFG} := Path a_edge__P.
@@ -69,8 +71,18 @@ Section cfg.
   Notation "p '-->b' q" := (edge p q) (at level 55).
   Notation "p '-->' q" := (p -->b q = true) (at level 55, right associativity).
 
+  (** ** Definitions for loop exits and entrys **)
 
-  (** * decidable properties on redCFG **)
+  Definition entry_edge (p h : Lab) := loop_head h /\ ~ loop_contains h p /\ edge p h = true.
+
+  Definition exiting (h p : Lab) : Prop :=
+    exists q, exit_edge h p q.
+
+  Definition exited (h q : Lab) : Prop :=
+    exists p, exit_edge h p q.
+
+
+  (** * Decidable properties on redCFG **)
   
   Global Instance Lab_dec : EqDec Lab eq.
   Proof.
@@ -83,7 +95,7 @@ Section cfg.
     eauto.
   Qed.
 
-  (* I could also prove that, but it is not trivial non-classical. *)  
+  (* This could also be proven, but it is not trivial non-classical. *)
   Parameter loop_contains_dec : forall qh q, dec (loop_contains qh q).
   Global Existing Instance loop_contains_dec.
   
@@ -93,14 +105,6 @@ Section cfg.
   Proof.
     eauto.
   Qed.
-
-  Definition entry_edge (p h : Lab) := loop_head h /\ ~ loop_contains h p /\ edge p h = true.
-
-  Definition exiting (h p : Lab) : Prop :=
-    exists q, exit_edge h p q.
-
-  Definition exited (h q : Lab) : Prop :=
-    exists p, exit_edge h p q.
 
   Global Instance exited_dec (h q : Lab) : dec (exited h q).
   Proof.
@@ -114,11 +118,11 @@ Section cfg.
 
   Hint Resolve back_edge_dec.
   
-  (** * depth **)
+  (** * Definition of depth **)
 
   Definition depth (p : Lab) := length (filter (DecPred (fun h => loop_contains h p)) (elem Lab)). 
 
-  (** * Some basic facts **)
+  (** * Some basic facts **)  
   
   Lemma reachability (q : Lab) : exists π : list Lab, Path edge__P root q π.
   Proof.
@@ -139,7 +143,7 @@ Section cfg.
     - cbn. econstructor;auto.
       intro N. specialize a_edge_acyclic as Hacy. unfold acyclic in Hacy.
       eapply path_from_elem in N;eauto. destructH. apply Hacy in N0;eauto.
-  Qed.
+  Qed.  
 
   Lemma edge_destruct p q
         (Hedge : p --> q)
@@ -148,24 +152,11 @@ Section cfg.
     decide (p -a> q);[left;auto|right].
     unfold back_edge. unfold minus_edge. conv_bool. split; auto.
   Qed.
+
   
 End cfg.
 
-(** * decPred_bool **)
-
-Instance decide_decPred_bool (A : Type) (f : A -> bool) a : dec (if f a then True else False).
-Proof.
-  cbn. destruct (f a); eauto.
-Qed.
-
-Definition decPred_bool (A : Type) (f : A -> bool) := DecPred (fun a => if f a then True else False).
-
-Definition finType_sub_decPred {X : finType} (p : decPred X) : finType.
-Proof.
-  eapply (@finType_sub X p). eapply decide_pred. 
-Defined.
-
-(** * generalizations **)
+(** * Generalizations of properties on CFGs for non-redCFG graphs **)
 
 Open Scope prg.
 

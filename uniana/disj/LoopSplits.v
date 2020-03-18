@@ -10,6 +10,8 @@ Section disj.
              (Htagleq : hd 0 j1 <= hd 0 j2)
              (Hextra : j1 = j2 -> exists π, CPath q2 h (π :r: q2) /\ Disjoint (map fst r1) π).
 
+  (** * Inhomogeneous loop exits base case **)
+
   Lemma lc_disj_exits_lsplits_base_lt
         (Hdep : depth s = depth q1)
         (Htaglt : hd 0 j1 < hd 0 j2)
@@ -58,7 +60,9 @@ Section disj.
     rewrite splits'_spec. left.
     eapply lc_disj_exits_lsplits_base;eauto.
   Qed.
-                            (* FIXME *)
+
+  (** * Existence of a disjoint path from one exiting node to the latch **)
+  
   Lemma disj_latch_path_or
         (Heq : j1 = j2)
     : exists π, (CPath q2 h (π :r: q2) /\ Disjoint (map fst r1) π)
@@ -186,6 +190,8 @@ Section disj.
     eapply deq_loop_depth in N.
     omega.
   Qed.
+
+  (** * Inhomogeneous loop exits step case **)
   
 Theorem lc_disj_exits_lsplits'
   : (s,qs1,qs2) ∈ splits' h e1.
@@ -316,6 +322,8 @@ End disj.
       eapply exit_edge_tcfg_edge;eauto.
   Admitted.
  *)
+
+(** * Corollaries **)
 
 Lemma tl_eq `(C : redCFG) (h q1 q2 e1 e2 : Lab) (i j1 j2 : Tag) t1 t2
           (Hpath1 : TPath (root,start_tag) (e1,i) ((e1,i) :: (q1,j1) :: t1))

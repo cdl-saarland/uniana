@@ -57,6 +57,8 @@ Section eval.
       ((p, i), s) => p
     end.
 
+  (** * Effect function **)
+
   Parameter eff' : Lab * State -> option (Lab * State).
   
   Definition eff (k : Conf) : option Conf
@@ -127,6 +129,8 @@ Section eval.
     decide (edge__P q p);[|congruence]. f_equal. eapply eff_tag'_eq. 
   Qed.
 
+  (** * Edge on the Trace-Graph **)
+
   Definition eval_edge := (fun k k' : Conf
                            => match eff k with
                              | Some k => k = k'
@@ -145,6 +149,8 @@ Section eval.
 
   Definition sem_step l k := option_chain eff (hd_error l) = Some k.
 
+  (** * Traces **)
+  
   Inductive Tr : list Conf -> Prop :=
   | Init : forall s, Tr [(root, start_tag, s)]
   | Step : forall l (k : Conf), Tr l -> sem_step l k -> Tr (k :: l).
@@ -152,6 +158,8 @@ Section eval.
   Definition EPath := Path eval_edge.
 
   Hint Unfold Conf Coord.
+
+  (** ** Lemmas **)
   
   Lemma EPath_Tr s0 p i s π :
     EPath (root,start_tag,s0) (p,i,s) π -> Tr π.
@@ -240,12 +248,14 @@ Section eval.
   Definition Traces := trace -> Prop.
   Definition Hyper := Traces -> Prop.
 
-  (* This is the concrete transformer for sets of traces *)
+  (** * Concrete transformer **)
+
+  (** ** Concrete transformer for sets of traces *)
   Definition sem_trace (ts : Traces) : Traces :=
     fun tr' => exists tr k', ts tr /\ `tr' = (k' :: `tr).
 
-  (* This is the hypertrace transformer.
-     Essentially, it lifts the trace set transformers to set of trace sets *)
+  (** ** Hypertrace transformer **)
+  (* Essentially, it lifts the trace set transformers to set of trace sets *)
   Definition sem_hyper (T : Hyper) : Hyper :=
     fun ts' => exists ts, T ts /\ ts' = sem_trace ts.
 
@@ -261,6 +271,8 @@ Section eval.
       * right. eapply IHt;eauto.
   Qed.
    *)
+
+  (** ** Lemmas **)
 
   Lemma Tr_eff_Some c k t
         (Htr : Tr (c :: k :: t))
@@ -861,7 +873,7 @@ Section eval.
 End eval.
 
 
-(** spot_path **)
+(** * spot_path tactic **)
 
 Ltac spot_path_e :=
   let H := fresh "H" in

@@ -8,7 +8,9 @@ Section cfg.
   Notation "p '-->b' q" := (edge p q) (at level 55).
   Notation "p '-->' q" := (p -->b q = true) (at level 55, right associativity).
 
-  (** * loop ordering by relative depth **)
+  (** * Loop ordering **)
+
+  (** ** Loop ordering by relative depth **)
 
   Definition deq_loop q p : Prop :=
     forall h, loop_contains h p -> loop_contains h q.
@@ -17,7 +19,7 @@ Section cfg.
   eauto.
   Qed.
 
-  (** * Preorder properties of deq_loop **)
+  (** ** Preorder properties of deq_loop **)
 
   (** Reflexivity **)
   
@@ -32,7 +34,7 @@ Section cfg.
     unfold Reflexive. intros. eapply deq_loop_refl.
   Qed.
 
-  (** * Transitivity **)
+  (** ** Transitivity **)
   
   Lemma deq_loop_trans p q r
         (H1 : deq_loop p q)
@@ -49,7 +51,7 @@ Section cfg.
   
   Program Instance deq_loop_PreOrder : PreOrder deq_loop.
 
-  (** * deq_loop facts **)
+  (** ** deq_loop facts **)
   
   Lemma loop_contains_deq_loop h p
         (Hloop : loop_contains h p)
@@ -127,7 +129,7 @@ Section cfg.
     omega.
   Qed.
 
-  (** * Equivalence relation eq_loop **)
+  (** ** Equivalence relation eq_loop **)
 
   Definition eq_loop q p : Prop :=
     deq_loop q p /\ deq_loop p q.
@@ -195,8 +197,10 @@ Section cfg.
     eapply loop_contains_Antisymmetric.
     all: unfold eq_loop,deq_loop in *;destructH;eauto using loop_contains_self.
   Qed.
+
+  (** * Innermost loops and strit-innermost loops **)
   
-  (** * Definitions for innermost loops **)
+  (** ** Definitions **)
   
   Definition innermost_loop h p : Prop := loop_contains h p /\ deq_loop h p.
 
@@ -248,7 +252,7 @@ Section cfg.
     | inright _ => None
     end.
 
-  (** * simple facts about innermost loops **)
+  (** ** Basic facts  **)
   
   
   Lemma innermost_eq_loop h q
@@ -281,7 +285,7 @@ Section cfg.
     eapply deq_loop_trans;eauto.
   Qed.
 
-  (** * Uniqueness of innermost loops *)
+  (** ** Uniqueness *)
 
   Lemma innermost_loop_strict_unique (h h' p : Lab)
         (H : innermost_loop_strict h p)
@@ -294,7 +298,7 @@ Section cfg.
     eapply loop_contains_Antisymmetric;auto.
   Qed.
 
-  (** * LPath **)
+  (** ** Paths in the loop tree **)
   
   Definition LPath := Path (fun h p => (innermost_loop_strict h p)).
   
@@ -388,7 +392,7 @@ Section cfg.
         * exfalso. decide (loop_contains h p); cbn in *; [congruence|contradiction].
   Qed.
 
-  (** * Existence of innermost loops **)
+  (** ** Existence **)
   
   Lemma loop_contains_innermost (h p : Lab)
         (Hloop : loop_contains h p)
@@ -523,6 +527,28 @@ Section cfg.
       eapply loop_contains_deq_loop;eauto.
   Qed.      
   
+  Lemma exit_edge_innermost h q e
+        (Hexit : exit_edge h q e)
+    : innermost_loop h q.
+  Proof.
+    clear - Hexit.
+    unfold innermost_loop. split.
+    - destruct Hexit. eauto.
+    - eapply deq_loop_exiting;eauto.
+  Qed.
+  
+  Lemma dom_self_loop h p π
+        (Hpath : CPath p p π)
+        (Hinl : innermost_loop h p)
+        (Hnin : h ∉ π)
+    : π = [p].
+  Proof.
+    clear - Hpath Hinl Hnin.
+    inversion Hpath;subst.
+    - reflexivity.
+    - exfalso. eapply Hnin.
+  Admitted. (* FIXME *)
+  
   (** * Variant of get_innermost_loop that uses the root if there is no loop **)
 
   Definition get_innermost_loop' p
@@ -549,28 +575,5 @@ Section cfg.
        | None => root
        end.
 
-  (** * innermost loop facts **)
-  
-  Lemma exit_edge_innermost h q e
-        (Hexit : exit_edge h q e)
-    : innermost_loop h q.
-  Proof.
-    clear - Hexit.
-    unfold innermost_loop. split.
-    - destruct Hexit. eauto.
-    - eapply deq_loop_exiting;eauto.
-  Qed.
-  
-  Lemma dom_self_loop h p π
-        (Hpath : CPath p p π)
-        (Hinl : innermost_loop h p)
-        (Hnin : h ∉ π)
-    : π = [p].
-  Proof.
-    clear - Hpath Hinl Hnin.
-    inversion Hpath;subst.
-    - reflexivity.
-    - exfalso. eapply Hnin.
-  Admitted. (* FIXME *)
 
 End cfg.

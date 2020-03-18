@@ -400,6 +400,8 @@ Section disj.
     Qed.
   End same_tag.
 
+  (** * For j1 = j2, r1 and r2 are disjoint **)
+
   Lemma lc_eq_disj
         (Hjeq : j1 = j2)
     : Disjoint (map fst r1) (map fst r2).
@@ -411,7 +413,9 @@ Section disj.
     rewrite rcons_cons' in Hpath2.
     eapply path_front in Hpath2. rewrite Hjeq.
     destruct r2;cbn in *;inversion Hpath2; reflexivity. 
-  Qed. 
+  Qed.
+
+  (** * For j1 <> j2, there is a disjoint prefix **)
 
   Lemma lc_neq_disj
         (Hjneq : j1 <> j2)

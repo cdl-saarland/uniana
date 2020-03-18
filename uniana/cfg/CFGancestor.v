@@ -8,7 +8,7 @@ Section cfg.
   Notation "p '-->b' q" := (edge p q) (at level 55).
   Notation "p '-->' q" := (p -->b q = true) (at level 55, right associativity).
 
-  (** ancestors **)
+  (** * Definitions **)
 
   Definition ancestor a p q :=
     loop_contains a p /\ loop_contains a q \/ a = root .
@@ -31,6 +31,8 @@ Section cfg.
     := l ⊆ l' /\ exists a, a ∈ l' /\ a ∉ l.
 
   Infix "⊂" := strict_incl (at level 55).
+
+  (** * Facts about outermost_loops **)
 
   Lemma loop_contains_outermost h p
         (Hl : loop_contains h p)
@@ -92,7 +94,9 @@ Section cfg.
       + admit.
       + eapply IHπ;auto. inversion Hpath; subst; eauto.
         admit.
-        *)
+   *)
+
+  (** * Existence of ancestors, near_ancestors **)
   
   Lemma ex_LPath p
     : exists h, (forall h', loop_contains h' p -> loop_contains h h') /\ exists π, LPath h p π.
@@ -171,6 +175,8 @@ Section cfg.
         1,2 : exists a0; split;[auto|];
                   intros; destruct H1;[subst;destruct H2;contradiction|eapply IHl'1;eauto].
   Qed.
+
+  (** * Dominance **)
   
   Lemma ancestor_dom1 a p q
     : ancestor a p q -> Dom edge__P root a p.

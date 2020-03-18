@@ -18,7 +18,7 @@ Section uniana.
   Context `(C : redCFG).    
   
   Notation "p --> q" := (edge p q = true) (at level 55,right associativity).
-  (** definitions **)
+  
   Parameter branch: Lab -> option Var.
 
   Definition is_branch br x := branch br = Some x.
@@ -32,11 +32,15 @@ Section uniana.
                         then exists r, eff' (p,s) = Some (q, r)
                         else exists r', eff' (p,s) = Some (q',r')                                
          | None => forall q q' : Lab, edge p q = true -> p --> q' -> q = q'
-         end.
+               end.
+
+  (** * Uniformity-concretizer **)
 
   Definition UniState := Var -> bool.
   
   Parameter abs_uni_eff : UniState -> UniState.
+
+  (** ** Definition **)
 
   Definition uni_state_concr (uni : UniState) : State -> State -> Prop :=
     fun s => fun s' => forall x, uni x = true -> s x = s' x.
@@ -60,6 +64,8 @@ Section uniana.
 
   Infix "⊓" := uni_meet (at level 70).
 
+  (** ** Meet-preserving **)
+
   Lemma uni_concr_meet_preserve (u1 u2 : Uni) (ts : Traces)
     : uni_concr (u1 ⊓ u2) ts <-> uni_concr u1 ts /\ uni_concr u2 ts.
   Proof.
@@ -81,6 +87,9 @@ Section uniana.
        | None => false
        end
     ).
+
+  (** * Uniformity-transformer **)
+  (** ** Definition **)
   
   Definition uni_trans (uni : Uni) (unch : @Unch Lab) : Uni :=
     fun (p : Lab)
@@ -92,7 +101,9 @@ Section uniana.
                                                  && uni q x
                                                  && join_andb (map ((uni_branch uni) ∘ fst ∘ fst)
                                                                    (rel_splits p q)))
-                                     (unch_trans unch p x)).
+                                    (unch_trans unch p x)).
+
+  (** ** Lemmas **)
 
   Lemma uni_trans_root_inv :
     forall uni unch x, uni_trans uni unch root x = uni root x.
@@ -651,6 +662,8 @@ Section uniana.
   
   Ltac reduce_uni_concr HCuni Hpre1 Hpre2 :=
     clear - HCuni Hpre1 Hpre2; eapply2 prefix_incl Hpre1 Hpre2; intros; eapply HCuni;eauto.
+
+  (** * Correctness **)
   
   Lemma uni_correct :
     forall uni unch ts,

@@ -65,6 +65,8 @@ Qed.
 Hint Constructors Tagle : tagle.
 Hint Immediate Tagle_app Tagle_le Tagle_refl Tagle_cons : tagle.
 
+(** ** Preorder **)
+
 Global Instance Tagle_PreOrder : PreOrder Tagle.
 Proof.
   econstructor.
@@ -91,7 +93,9 @@ Proof.
         -- econstructor;auto. omega.
         -- subst. econstructor. auto.
 Qed.
-  
+
+(** ** Partialorder **)
+
 Global Instance Tagle_PartialOrder : PartialOrder eq Tagle.
 Proof.
   econstructor;intros.

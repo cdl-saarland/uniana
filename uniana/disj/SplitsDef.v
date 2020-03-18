@@ -69,6 +69,8 @@ Proof.
   (* FIXME *)
 Admitted.
 
+(** * Splits specifications **)
+
 Parameter splits'_spec
   : forall `{redCFG} h e sp, sp ∈ splits' h e
                         <-> sp ∈ loop_splits h e

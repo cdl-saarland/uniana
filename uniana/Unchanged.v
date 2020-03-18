@@ -15,6 +15,8 @@ Section unch.
 
   Definition Unch := Lab -> Var -> set Lab.
 
+  (** * RD-Concretizer **)
+  (** ** Definition **)
 
   Definition unch_concr (unch : Unch) : Traces :=
     fun t => forall to i s u x, In (to, i, s) (`t) ->
@@ -26,6 +28,8 @@ Section unch.
     := fun (p : Lab) (x : Var) => set_union Lab_dec' (u1 p x) (u2 p x).
 
   Infix "⊓" := unch_meet (at level 70).
+
+  (** * Meet-preserving **)
   
   Lemma unch_concr_meet_preserve (u1 u2 : Unch) (t : trace)
     : unch_concr (u1 ⊓ u2) t <-> unch_concr u1 t /\ unch_concr u2 t.
@@ -43,6 +47,10 @@ Section unch.
       + eapply H;eauto.
       + eapply H0;eauto.
   Qed.
+
+  (** * RD-transformer **)
+
+  (** ** Definition **)
   
   Definition unch_join_ptw (d d' : set Lab) := set_inter Lab_dec' d d'. 
 
@@ -164,6 +172,8 @@ Section unch.
     destructH. eexists; eexists; split; [|eauto].
     eapply precedes_prefix;eauto. destruct t; cbn; eauto.
   Qed.
+
+  (** ** Dominance **)
   
   Lemma unch_dom u p i s x unch l 
         (Hunch : u ∈ unch_trans unch p x)
@@ -180,6 +190,8 @@ Section unch.
                                -> r ∈ set_add Lab_dec' p (if is_def x q p then empty_set Lab else unch q x)). *)
       admit.
   Admitted.
+
+  (** ** Correctness **)
 
   Lemma unch_correct :
     forall unch t,

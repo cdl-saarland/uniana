@@ -14,6 +14,8 @@ Lemma edge_edge_loop `(C : redCFG) q1 q2 p
 Proof.
 Admitted.
 
+(** * Inhomogeneous joins, base case **)
+
 Section disj.
 
   Context `(C : redCFG).
@@ -74,6 +76,8 @@ Section disj.
      *)
   Admitted.
 
+  (** * Inhomogeneous joins, step case **)
+
   Theorem lc_join_split'
     : (s,qs1,qs2) ∈ splits p.
   Proof.
@@ -130,6 +134,8 @@ Section disj.
   Admitted.
     
 End disj.
+
+(** * Corollaries **)
 
 Theorem lc_join_split `{C : redCFG} t1 t2 (p q1 q2 s : Lab) (i j1 j2 k : Tag)
         (* it is important to cons qj's in front of the t's *)

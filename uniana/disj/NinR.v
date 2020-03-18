@@ -76,6 +76,8 @@ Section disj.
         eapply tcfg_monotone_deq;eauto. rewrite <-Hloop in Hcont. eauto using loop_contains_deq_loop.
       + clear Hpath2. eapply tag_depth; eauto.
   Qed.
+
+  (** * r1 is a subset of q's loop **)
   
   Lemma r1_in_head_q : forall x, x ∈ r1 -> deq_loop (fst x) q1.
   Proof.
@@ -116,6 +118,8 @@ Section disj.
     rewrite Hloop. destruct Hinner';auto.
   Qed.
 
+  (** * Non-Existence of backedges on r1 **)
+  
   Lemma no_head : forall h', h' ∈ map fst r1 -> ~ loop_contains h' q1.
   Proof.
     intros h' Hel Hnin.
@@ -275,6 +279,8 @@ Section disj.
     - eapply tl_prefix.
     - eapply j1_prefix_k.
   Qed.
+
+  (** * r2 is a subset of q's loop **)
   
   Lemma r2_in_head_q : forall x, x ∈ r2 -> deq_loop (fst x) q2.
   Proof.

@@ -2,7 +2,6 @@ Require Export ImplodeCFG Precedes CFGancestor Tagle.
 
 Require Import PropExtensionality.
   
-
 Section tagged.
   
   Context `{C : redCFG}.
@@ -23,6 +22,8 @@ Section tagged.
   Qed.
 
   Hint Resolve Coord_dec.
+
+  (** * Kinds of edges in a redCFG **)
 
   Definition basic_edge p q := eq_loop p q /\ a_edge__P p q.
   Definition eexit_edge p q := exists h, exit_edge h p q.
@@ -93,6 +94,8 @@ Section tagged.
     erewrite Edge_disj. reflexivity.
   Qed.
 
+  (** * The edge relation on the tagged CFG **)
+
   Definition STag (i : Tag)
     := match i with
        | nil => nil
@@ -148,6 +151,8 @@ Section tagged.
   Notation "pi -t> qj" := (tcfg_edge pi qj) (at level 50).
   (*Notation "pi -t> qj" := ((fun `(redCFG) => tcfg_edge pi qj = true) _ _ _ _ _)
                           (at level 50).*)
+
+  (** ** Basic facts **)
 
   Global Instance tcfg_edge_dec : forall pi qj, dec (pi -t> qj).
   Proof.
@@ -384,6 +389,10 @@ Section tagged.
     eapply root_no_pred;eauto.
   Qed.
 
+  (** * Depth of a node equals Tag length **)
+
+  (** ** Lemmas **)
+
   Lemma depth_root
     : depth root = 0.
   Proof.
@@ -543,7 +552,9 @@ Section tagged.
           eapply loop_contains_loop_head in Q0. eapply depth_loop_head in Q0. omega.
         * erewrite <-IHt;eauto. cbn. reflexivity.
   Qed.        
-    
+
+  (** ** Theorem **)
+  
   Lemma tag_depth  p i q j t
         (Hpath : TPath (root,start_tag) (p,i) t)
         (Hin : (q,j) ∈ t)
@@ -587,6 +598,10 @@ Proof.
       rewrite Q. rewrite Himl1. eapply eq_loop_exiting;eauto.
     + eapply Himl. unfold exit_edge in e0. destructH. eauto.
 Qed.
+
+(** * Monotonicity & Freshness of tags **)
+
+(** ** Lemmas **)
 
 Lemma TPath_CPath  c c' π :
   TPath c c' π -> CPath (fst c) (fst c') (map fst π).
@@ -899,6 +914,8 @@ Proof.
   eapply Nat.le_min_r.
 Qed.
 
+(** ** Weak monotonicity **)
+
 Lemma tcfg_monotone' p i t q j t' h
       (Hpath : TPath (root,start_tag) (p,i) t)
       (Hsuff : Postfix t' t)
@@ -1045,6 +1062,8 @@ Proof.
   - eapply postfix_cons. auto.
 Qed.
 
+(** ** Freshness **)
+
 Lemma tcfg_fresh p i t
       (Hpath : TPath (root,start_tag) (p,i) t)
       (Hsp : splinter_strict [(p,i);(p,i)] t)
@@ -1152,6 +1171,8 @@ Proof.
   - rewrite rev_length. omega.
 Qed.
 
+(** ** Strong monotonicity **)
+
 Lemma tcfg_monotone p i t q j a
       (Hpath : TPath (root,start_tag) (p,i) t)
       (Hel : (q,j) ∈ t)
@@ -1239,6 +1260,8 @@ Proof.
         -- left;eauto.
 Qed.
 
+(** ** Corollaries **)
+
 Lemma tcfg_monotone_deq p q i j t
       (Hdeq : deq_loop p q)
       (Hpath : TPath (root, start_tag) (p, i) t)
@@ -1312,6 +1335,8 @@ Proof.
     1,2: repeat (eapply postfix_cons; try econstructor). eapply postfix_nil.
 Qed.
 
+(** ** Tagged paths are duplicate-free **)
+
 Lemma tpath_NoDup q t
       (Hpath : TPath (root,start_tag) q t)
   : NoDup t.
@@ -1325,6 +1350,8 @@ Proof.
     + inversion Hpath; subst;[econstructor|]. destruct b, q.
       eapply IHt;eauto.
 Qed.
+
+(** * Lemmas about TCFGs **)
 
 Lemma exit_edge_tcfg_edge (h p q : Lab) (j : Tag)
       (Hexit : exit_edge h q p)

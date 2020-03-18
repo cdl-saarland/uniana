@@ -1,6 +1,10 @@
 Require Import CFGgeneral.
 Require Export HeadexitsCFG SubCFG.
 
+(** * Prerequisites **)
+
+(** ** Definition **)
+
 Definition implode_nodes `{C : redCFG} (r : Lab)
   := DecPred (fun p => (deq_loop r p
                      \/ exists e, exited p e /\ deq_loop r e)).
@@ -162,9 +166,9 @@ Proof.
       eapply H2. eapply exit_edge_in_loop;eauto.
 Qed.
 
-Definition implode_nodes' `{C : redCFG} :=
+(*Definition implode_nodes' `{C : redCFG} :=
   fun (r : Lab) =>
-    DecPred (fun p : Lab => deq_loop r p \/ (exists e : Lab, exited p e /\ eq_loop r e)).
+    DecPred (fun p : Lab => deq_loop r p \/ (exists e : Lab, exited p e /\ eq_loop r e)).*)
 
 Global Instance deq_loop_contains_Proper `(C : redCFG) (h : Lab)
   : Proper (Basics.flip deq_loop ==> Basics.impl) (loop_contains h).
@@ -195,6 +199,8 @@ Lemma implode_nodes_self `(C : redCFG) (h : Lab)
 Proof.
   left. eapply deq_loop_refl.
 Qed.
+
+(** ** Existence of imploded path **)
 
 Lemma implode_nodes_path_inv `(C : redCFG) (h : Lab) (Hhe : head_exits_property C h) p q π
       (Hpath : CPath p q π)
@@ -271,6 +277,8 @@ Proof.
         -- cbn. econstructor. eapply splinter_strict_prefix in Hdom1. transitivity ϕ;eauto.
 Qed.
 
+(** ** Imploded loop containment **)
+
 Lemma implode_CFG_loop_contains:
   forall (Lab : finType) (edge : Lab -> Lab -> bool) (root : Lab) (a_edge : Lab -> Lab -> bool)
     (H : redCFG edge root a_edge) (h7 h p : Lab) (Hhe : head_exits_property H h7),
@@ -301,6 +309,8 @@ Proof.
   + eapply splinter_strict_incl;eauto.
   + eapply splinter_strict_incl;eauto.
 Qed.
+
+(** * redCFG Instance for Imploded CFGs **)
 
 Instance implode_CFG `(H : redCFG) h7 (Hhe : head_exits_property H h7)
   : @redCFG (finType_sub_decPred (implode_nodes h7))
@@ -365,9 +375,11 @@ Defined.
 Arguments head_exits_CFG {_ _ _ _} _.
 Arguments implode_CFG {_ _ _ _} _.
 
+(** * redCFG Instance for Imploded CFGs with head exits **)
 Definition local_impl_CFG `(C : redCFG) (h : Lab)
   := implode_CFG (head_exits_CFG C h) h (head_exits_property_satisfied (C:=C) (qh:=h)).
 
+(** * Definitions and properties of Imploded CFGs **)
 Arguments redCFG : clear implicits.
 Arguments implode_nodes {_ _ _ _} _.
 Definition local_impl_CFG_type `(C : redCFG) (h : Lab)

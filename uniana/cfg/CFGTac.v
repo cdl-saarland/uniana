@@ -9,6 +9,17 @@ Ltac to_loop_contains' :=
       fold (loop_contains' edge a_edge h p)
   end.
 
+Instance decide_decPred_bool (A : Type) (f : A -> bool) a : dec (if f a then True else False).
+Proof.
+  cbn. destruct (f a); eauto.
+Qed.
+
+Definition decPred_bool (A : Type) (f : A -> bool) := DecPred (fun a => if f a then True else False).
+
+Definition finType_sub_decPred {X : finType} (p : decPred X) : finType.
+Proof.
+  eapply (@finType_sub X p). eapply decide_pred. 
+Defined.
 
 Ltac fold_lp_cont' :=
   repeat lazymatch goal with

@@ -9,7 +9,7 @@ Section cfg.
   Notation "p '-->b' q" := (edge p q) (at level 55).
   Notation "p '-->' q" := (p -->b q = true) (at level 55, right associativity).
 
-  (** about loops **)
+  (** * Basic loop facts **)
   
   Lemma loop_contains_loop_head (qh q : Lab)
     : loop_contains qh q -> loop_head qh.
@@ -40,7 +40,7 @@ Section cfg.
         inversion Hreach''3. subst. assumption.
   Qed.
 
-  (** about dominance and more about loops **)
+  (** ** Facts about dominance and loops **)
 
   Lemma dom_loop h
     : forall q: Lab, loop_contains h q -> Dom edge__P root h q.
@@ -97,6 +97,8 @@ Section cfg.
     induction Hx1; cbn in *;[auto|]. rewrite rev_rcons. cbn. eapply IHHx1 in Hnin.
     eapply tl_incl;auto.
   Qed.
+
+  (** ** Transitivity of loop_contains **)
   
   Lemma loop_contains_trans h h' p
         (Hloop : loop_contains h h')
@@ -276,6 +278,8 @@ Section cfg.
     rewrite rev_rcons. cbn.  rewrite rev_rcons. cbn. auto.
   Qed.
 
+  (** * Path and Dominance facts **)
+
   Lemma path_front'
     : forall (*(L : Type) (edge : L -> L -> bool)*) (p q r : Lab) (π : list Lab),
       Path edge__P p q π -> q = hd r π.
@@ -285,6 +289,7 @@ Section cfg.
     - inversion H.
     - cbn. eapply path_front;eauto.
   Qed.
+  
   Lemma path_back'
     : forall (*(L : Type) (edge : L -> L -> bool)*) (p q r : Lab) (π : list Lab),
       Path edge__P p q π -> p = hd r (rev π).
@@ -368,7 +373,7 @@ Section cfg.
       eapply splinter_single. cbn in *; eauto.
   Qed.
 
-  (** * preds **)
+  (** * Predecessors **)
 
   Definition preds `{redCFG Lab edge} p : list Lab
     := filter (decPred_bool (fun q => edge q p)) (elem Lab).
@@ -390,7 +395,7 @@ Section cfg.
     inversion Hl3. contradiction.
   Qed.
 
-  (** * other facts **)
+  (** * Facts about acyclic paths and exits **)
 
   Lemma exit_a_edge h p q
         (Hexit : exit_edge h p q)
@@ -558,7 +563,6 @@ Section cfg.
         (Hedge : p --> q)
     : q = h.
   Proof.
-    (* FIXME *)
     eapply dom_loop_contains in Hin as Hin';eauto.
     assert (Path edge__P p q (q :: [p])) as Hpath.
     1: econstructor;eauto;econstructor.
