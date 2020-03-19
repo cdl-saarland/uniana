@@ -15,9 +15,9 @@ The directory ```uniana``` contains the Coq formalization.
 
 DISCLAIMER:
 
-The content of the directory ```uniana/external/lvc``` is taken from Sigurd Schneiders [Phd thesis](https://github.com/sigurdschneider/lvc).
+The content of the directory ```uniana/external/lvc``` is taken from Sigurd Schneider's [Phd thesis](https://github.com/sigurdschneider/lvc).
 
-The content of the folder ```uniana/external/finiteTypes``` is taken from Jan Menz [bachelor's thesis](https://www.ps.uni-saarland.de/~menz/bachelor.php).
+The content of the folder ```uniana/external/finiteTypes``` is taken from Jan Menz' [bachelor's thesis](https://www.ps.uni-saarland.de/~menz/bachelor.php).
 
 
 
