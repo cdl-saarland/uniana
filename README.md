@@ -1,6 +1,6 @@
 # Supplementary Material to the paper "An Abstract Interpretation for Divergence Analysis on Control Flow Graphs"
 
-The documentation of the Coq code is avalailable [here](http://compilers.cs.uni-saarland.de/projects/uniana/toc.html).
+The documentation of the Coq code is available [here](http://compilers.cs.uni-saarland.de/projects/uniana/toc.html).
 
 To compile the Coq proofs you need [Coq 8.10.1](https://github.com/coq/coq/releases/tag/V8.10.1).
 There are no further dependencies.
