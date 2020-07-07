@@ -10,7 +10,7 @@ Section cfg.
   Notation "p '-->' q" := (p -->b q = true) (at level 55, right associativity).
 
   (** * Basic loop facts **)
-  
+
   Lemma loop_contains_loop_head (qh q : Lab)
     : loop_contains qh q -> loop_head qh.
   Proof.
@@ -21,17 +21,17 @@ Section cfg.
   Lemma loop_contains_self h : loop_head h -> loop_contains h h.
   Proof.
     intros Hl. unfold loop_contains.
-    - unfold loop_head in Hl. destruct Hl. 
+    - unfold loop_head in Hl. destruct Hl.
       eapply loop_head_dom in H as Hdom.
       eapply back_edge_incl in H as Hreach. specialize (a_reachability x) as Hreach'.
       destructH.
       eapply subgraph_path' in Hreach' as Hreach'';eauto using a_edge_incl.
       eapply Hdom in Hreach''. eapply path_from_elem in Hreach''; eauto.
       destructH; eauto.
-      eapply path_NoDup' in Hreach''0;eauto. 
+      eapply path_NoDup' in Hreach''0;eauto.
       destructH. exists x, π0. firstorder;eauto.
       + eapply subgraph_path';eauto using a_edge_incl.
-      + eapply NoDup_rev in Hreach''3. 
+      + eapply NoDup_rev in Hreach''3.
         remember (rev π0) as l.
         destruct l;cbn in *;eauto.
         assert (π0 = rev l ++ [e]).
@@ -46,7 +46,7 @@ Section cfg.
     : forall q: Lab, loop_contains h q -> Dom edge__P root h q.
   Proof.
     intros q Hq. unfold loop_contains,CPath in *. intros π Hπ.
-    destructH. 
+    destructH.
     eapply nin_tl_iff in Hq3;eauto.
     destruct Hq3.
     - eapply path_app' in Hq2. 2: eapply Hπ.
@@ -57,7 +57,7 @@ Section cfg.
       + inversion Hq2.
       + rewrite rev_rcons in H. cbn in H. inversion H. subst. path_simpl'  Hq2. reflexivity.
   Qed.
-  
+
   Lemma dom_dom_acyclic r p q
     : Dom edge__P r p q -> Dom a_edge__P r p q.
   Proof.
@@ -99,7 +99,7 @@ Section cfg.
   Qed.
 
   (** ** Transitivity of loop_contains **)
-  
+
   Lemma loop_contains_trans h h' p
         (Hloop : loop_contains h h')
         (Hloop' : loop_contains h' p)
@@ -110,7 +110,7 @@ Section cfg.
     decide (h = h');[subst;eauto|].
     destructH' Hloop'. destructH' Hloop.
     exists p1. specialize (path_app Hloop'2 (back_edge_incl Hloop'0) Hloop2) as Hϕ.
-    exists (π0 ++ π);split;eauto;split;eauto. intro N.    
+    exists (π0 ++ π);split;eauto;split;eauto. intro N.
     cbn in *. rewrite rev_app_distr in N.
     destr_r' π;subst;cbn in *. 1: inversion Hloop'2.
     rewrite rev_rcons in N. cbn in N.
@@ -123,7 +123,7 @@ Section cfg.
       + path_simpl' Hloop2. contradiction.
       + rewrite rev_rcons in Hloop3. cbn in Hloop3. contradiction.
   Qed.
-  
+
   Lemma loop_reachs_member (h q : Lab)
     : loop_contains h q -> h -a>* q.
   Proof.
@@ -144,7 +144,7 @@ Section cfg.
   Proof.
     eapply no_exit_head in Hhead;[contradiction|].
    *)
-  
+
   Lemma root_loop_root h
     : loop_contains h root -> h = root.
   Proof.
@@ -153,14 +153,14 @@ Section cfg.
     assert (Path edge__P root root [root]) as Hpath;[econstructor|].
     eapply H in Hpath. destruct Hpath;[subst;auto|contradiction].
   Qed.
-  
+
   Lemma loop_contains_either h1 h2 p
         (Hloo : loop_contains h1 p)
         (Hlop : loop_contains h2 p)
     : loop_contains h1 h2 \/ loop_contains h2 h1.
   Proof.
     specialize (a_reachability p) as Hr. destructH.
-    eapply dom_loop in Hloo as Hdom1. eapply dom_dom_acyclic in Hdom1. eapply Hdom1 in Hr as Hr1. 
+    eapply dom_loop in Hloo as Hdom1. eapply dom_dom_acyclic in Hdom1. eapply Hdom1 in Hr as Hr1.
     eapply dom_loop in Hlop as Hdom2. eapply dom_dom_acyclic in Hdom2. eapply Hdom2 in Hr as Hr2.
     eapply path_from_elem in Hr1;eauto.
     eapply path_from_elem in Hr2;eauto.
@@ -184,7 +184,7 @@ Section cfg.
         * inversion H3.
         * congruence'.
         * eapply IHl;eauto.
-      + destr_r' ϕ0;subst. 1: inversion Hr2. 
+      + destr_r' ϕ0;subst. 1: inversion Hr2.
         destr_r' ϕ;subst. 1: inversion Hr0.
         eapply path_back in Hr2 as Hr2'.
         eapply path_back in Hr0 as Hr0'. subst x x0.
@@ -198,7 +198,7 @@ Section cfg.
     - right. unfold loop_contains in *. do 2 destructH.
       exists p0. eapply path_app' in Hlop2 as Happ;eauto. 2: clear Hr0;eauto using subgraph_path',a_edge_incl.
       exists (π0 ++ tl ϕ0).
-      repeat (split;eauto). 
+      repeat (split;eauto).
       enough (h2 ∉ tl ϕ0).
       + contradict Hlop3. eapply tl_incl in Hlop3. eapply in_rev in Hlop3.
         eapply in_app_or in Hlop3. destruct Hlop3;[|contradiction].
@@ -208,7 +208,7 @@ Section cfg.
         exfalso. contradict n0. revert dependent p0.
         induction l;cbn in *;intros;inversion Hlop2;subst;auto.
         * inversion H3.
-        * congruence'.        
+        * congruence'.
         * eapply IHl;eauto.
       + destr_r' ϕ0;subst. 1:inversion Hr2.
         destr_r' ϕ;subst. 1: inversion Hr0.
@@ -222,7 +222,7 @@ Section cfg.
           intro N. eapply tl_incl in N. eapply postfix_incl in N;[|eauto].
           rewrite rev_rcons in Hr0. inversion Hr0;subst. eapply in_rev in N; contradiction.
   Qed.
-  
+
   Lemma dom_path p q
     : Dom edge__P root p q -> p -->* q.
   Proof.
@@ -246,7 +246,7 @@ Section cfg.
     contradiction.
   Qed.
 
-  Lemma loop_contains_not_dom h q 
+  Lemma loop_contains_not_dom h q
     : loop_contains h q -> h <> q -> exists p, p ↪ h /\ ~ Dom edge__P q h p.
   Proof.
     intros Hloop Hneq. unfold loop_contains in Hloop. destructH.
@@ -258,7 +258,7 @@ Section cfg.
       + contradict Hneq. destr_r' π;subst. 1:inversion Hloop2.
         rewrite rev_rcons in H. cbn in *. inversion H. subst. path_simpl' Hloop2. reflexivity.
   Qed.
-  
+
   Lemma not_and_iff (A B : Prop) : decidable A -> (~ (A /\ B) <-> ~ A \/ ~ B).
   Proof.
     firstorder.
@@ -289,7 +289,7 @@ Section cfg.
     - inversion H.
     - cbn. eapply path_front;eauto.
   Qed.
-  
+
   Lemma path_back'
     : forall (*(L : Type) (edge : L -> L -> bool)*) (p q r : Lab) (π : list Lab),
       Path edge__P p q π -> p = hd r (rev π).
@@ -299,7 +299,7 @@ Section cfg.
     - cbn in *. inversion H.
     - rewrite rev_rcons. cbn. eapply path_back;eauto.
   Qed.
-  
+
   Lemma app_tl_switch (A : Type) (a b : A) (π ϕ : list A)
         (Heq : hd a (rev π) = hd b ϕ)
         (Hπ : π <> nil)
@@ -312,7 +312,7 @@ Section cfg.
     rewrite rev_rcons. cbn. rewrite rev_involutive.
     rewrite <-app_assoc. reflexivity.
   Qed.
-  
+
   Lemma dom_loop_contains h p q
     : loop_contains h q -> ~ loop_contains h p -> Dom edge__P p h q.
   Proof.
@@ -324,13 +324,13 @@ Section cfg.
       intros. specialize (Hnloop x ϕ). firstorder.
       decide (h ∈ tl (rev ϕ));[auto|contradiction].
     }
-    clear Hnloop. 
+    clear Hnloop.
     unfold loop_contains in Hloop. destructH.
     eapply path_app' in Hloop2 as Happ;eauto.
     erewrite app_tl_switch in Happ.
     2: { eapply path_back' in Hloop2. eapply path_front' in Hπ. rewrite <-Hπ. rewrite <-Hloop2. auto. }
     2: intro;subst;inversion Hloop2.
-    2: intro;subst;inversion Hπ. 
+    2: intro;subst;inversion Hπ.
     specialize (Q _ _ Hloop0 Happ).
     destr_r' π;subst;[inversion Hπ|subst].
     rewrite app_assoc in Q. rewrite rev_rcons in Q. cbn in Q.
@@ -338,11 +338,11 @@ Section cfg.
     eapply In_rcons;auto.
     Unshelve. all:auto.
   Qed.
-  
+
   Lemma loop_contains_path h q π
     : CPath h q π -> loop_contains h q -> NoDup π -> forall p, p ∈ π -> loop_contains h p.
   Proof.
-    intros Hπ Hin Hnd p Hp. 
+    intros Hπ Hin Hnd p Hp.
     decide (p = h) as [Hph|Hph].
     - rewrite Hph. eapply loop_contains_self. eapply loop_contains_loop_head; eauto.
     - destruct (loop_contains_dec h p) as [N|N]; [eauto|exfalso].
@@ -350,7 +350,7 @@ Section cfg.
       eapply dom_loop_contains in N; eauto; cycle 1.
       eapply postfix_incl in Hp1 as Hp1'; eauto.
       dependent induction Hp1.
-      + eapply Hph. eapply path_back_eq;eauto. 
+      + eapply Hph. eapply path_back_eq;eauto.
       + clear IHHp1. unfold Dom in N.
         eapply postfix_incl in Hp1. eapply Hp1 in N; eauto.
         unfold CPath in Hπ. path_simpl' Hπ.
@@ -408,7 +408,7 @@ Section cfg.
     unfold a_edge__P,is_true2,is_true.
     intro N. congruence.
   Qed.
-  
+
   Lemma acyclic_path_stays_in_loop (h p q : Lab) π
         (Hpath : Path a_edge__P p q π)
         (Hp : loop_contains h p)
@@ -430,7 +430,7 @@ Section cfg.
         rename l into π0.
         destr_r' ϕ;subst. 1: inversion Hϕ0.
         rename l into ϕ.
-        rewrite rev_app_distr. 
+        rewrite rev_app_distr.
         rewrite rev_rcons in *.
         cbn in *. rewrite <-in_rev in Hq3,Hnin.
         path_simpl' Hpath. path_simpl' Hq2. path_simpl' Hϕ0.
@@ -449,7 +449,7 @@ Section cfg.
       eapply dom_dom_acyclic in Hp.
       eapply Hp in Hϕ as Hin.
       eapply path_app' in Hpath as Hpath';eauto.
-      eapply acyclic_path_NoDup in Hpath' as Hnd. 
+      eapply acyclic_path_NoDup in Hpath' as Hnd.
       enough (π ++ tl ϕ = rev (tl (rev π)) ++ ϕ).
       + rewrite H in Hnd.
         eapply NoDup_app;eauto.
@@ -459,11 +459,11 @@ Section cfg.
         rewrite rev_involutive.
         eapply path_back in Hpath. subst x.
         destruct ϕ;cbn in *.
-        * inversion Hϕ; subst. 
+        * inversion Hϕ; subst.
         * inversion Hϕ; subst;auto. rewrite <-app_assoc. cbn. reflexivity.
           rewrite <-app_cons_assoc. auto.
   Qed.
-  
+
   Lemma acyclic_parallel_exit_path h p q π
         (Hπ : Path a_edge__P h q π)
         (Hexit : exit_edge h p q)
@@ -485,7 +485,7 @@ Section cfg.
   Proof.
     intros. exists ql, ([ql]). split_conj;[auto|constructor|cbn]. exact (fun x => x).
   Qed.
-  
+
   Lemma exit_edge_pred_exiting h p q
         (Hexit : exit_edge h p q)
         (p' : Lab)
@@ -497,14 +497,14 @@ Section cfg.
     split_conj;eauto.
     eapply exit_pred_loop;eauto.
   Qed.
-  
+
   Lemma root_no_acyclic_pred p
     : a_edge p root <> true.
   Proof.
     specialize (a_reachability p) as [π Hπ].
     intro. eapply a_edge_acyclic;eauto.
   Qed.
-  
+
   Lemma exit_edge_acyclic h qe e
         (Hexit : exit_edge h qe e)
     : a_edge qe e = true.
@@ -537,7 +537,7 @@ Section cfg.
       + split;[|split];eauto.
         contradict Hnloop. eapply loop_contains_trans;eauto.
   Qed.
-  
+
   Lemma exit_edge_in_loop  (h1 h2 p2 e2 : Lab)
         (Hexit' : exit_edge h2 p2 e2)
         (Hloop : loop_contains h1 h2)
@@ -556,7 +556,7 @@ Section cfg.
     }
     eapply single_exit in Hexit'';eauto. contradiction.
   Qed.
-  
+
   Lemma entry_through_header h p q
         (Hnin : ~ loop_contains h p)
         (Hin : loop_contains h q)
@@ -571,5 +571,5 @@ Section cfg.
     exfalso.
     apply Hnin. eapply loop_contains_self. eauto using loop_contains_loop_head.
   Qed.
-  
+
 End cfg.

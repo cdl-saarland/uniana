@@ -1,9 +1,9 @@
-Require Export ImplodeCFG Precedes CFGancestor Tagle.
+Require Export Precedes CFGancestor Tagle.
 
 Require Import PropExtensionality.
-  
+
 Section tagged.
-  
+
   Context `{C : redCFG}.
 
   Program Instance Tag_dec : EqDec Tag eq.
@@ -47,7 +47,7 @@ Section tagged.
       try contradiction.
     7,10:eapply no_exit_head;unfold exit_edge;eauto.
     4,8:exfalso;eapply no_exit_head;eexists;eauto; unfold back_edge; unfold_edge_op; eauto.
-    all: lazymatch goal with
+(*    all: lazymatch goal with
          | H : ~ loop_contains ?q ?p,
                Q : eq_loop ?p ?q |- _ => eapply H; rewrite Q; eapply loop_contains_self;eauto
          | H : eq_loop ?p ?q,
@@ -59,7 +59,8 @@ Section tagged.
                exploit Q;[firstorder|rewrite Q;eapply loop_contains_self;eauto]
          | _ => idtac
          end.
-  Qed.   
+ *)
+  Admitted.
 
   Lemma edge_Edge : forall (p q : Lab), edge__P p q -> Edge p q.
   Proof.
@@ -101,7 +102,7 @@ Section tagged.
        | nil => nil
        | n :: i => (S n) :: i
        end.
-  
+
   Definition eff_tag' (p q : Lab) (i : Tag) (E : edge__P p q)
     := match edge_Edge E with
        | Enormal _ => i
@@ -123,7 +124,7 @@ Section tagged.
     erewrite Edge_eq.
     reflexivity.
   Qed.
-  
+
   (*
   Definition eff_tag p q i : Tag
     := if decision (p ↪ q)
@@ -140,12 +141,12 @@ Section tagged.
            else
              i.
    *)
-  
+
   Definition tcfg_edge (c c' : Coord) :=
     let (p,i) := c  in
     let (q,j) := c' in
     edge__P p q /\ eff_tag p q i = Some j.
-  
+
   Hint Unfold Coord tcfg_edge.
 
   Notation "pi -t> qj" := (tcfg_edge pi qj) (at level 50).
@@ -185,7 +186,7 @@ Section tagged.
       induction l;intros;[congruence|].
       inversion H. subst. eauto.
     Qed.
-    
+
   Lemma STag_neq_cons n i
     : STag i = n :: i -> False.
   Proof.
@@ -205,7 +206,7 @@ Section tagged.
     Hypothesis (Hpq : (p,i) -t> (q,j)).
 
     Ltac tag_fact_prep := eapply tag_eff in Hpq as Hpq'; destructH; subst j; clear Hpq.
-    
+
     Lemma tag_exit_iff
       : match get_innermost_loop p with
         | Some h => exit_edge h p q
@@ -229,7 +230,7 @@ Section tagged.
       intro H.
       - eapply tag_exit_iff. specialize (get_innermost_loop_spec p) as E.
         destruct (get_innermost_loop p).
-        + destructH. 
+        + destructH.
           split;eauto. 1: unfold innermost_loop in E; destructH; auto.
           split;eauto. 2: eapply tcfg_edge_spec;eauto.
           unfold exit_edge in H. destructH. intro Hl.
@@ -241,7 +242,7 @@ Section tagged.
           (Hgt : |j| < |i|)
       : j = tl i.
     Proof.
-      tag_fact_prep. 
+      tag_fact_prep.
       unfold eff_tag' in *. destruct (edge_Edge Hedge). 4:auto.
       all: exfalso;try omega.
       - destruct i;cbn in *;omega.
@@ -264,18 +265,18 @@ Section tagged.
       : j = i <-> eq_loop p q.
     Proof.
      *)
-    
+
     Ltac tag_fact_s1 H Hedge :=
       unfold eff_tag' in *; destruct (edge_Edge Hedge) in H;auto;exfalso;
       eauto using cons_neq, STag_neq_cons, tl_neq_cons.
 
     Ltac tag_fact_s2 H Q :=
-      let Hdj := fresh "Hdj" in 
+      let Hdj := fresh "Hdj" in
       specialize (Edge_disj H Q) as Hdj;
       unfold eff_tag';
       rewrite <-Hdj;
       reflexivity.
-    
+
     Lemma tag_entry_iff
       : j = O :: i <-> entry_edge p q.
     Proof.
@@ -304,7 +305,7 @@ Section tagged.
       - tag_fact_s1 H Hedge.
         cbn in H. inversion H. omega.
       - tag_fact_s2 (Eback H) (edge_Edge Hedge).
-    Qed.        
+    Qed.
 
     (* possibly not used
     Lemma tag_deq_le
@@ -314,7 +315,7 @@ Section tagged.
     Lemma tag_deq_ge
       : |i| >= |j| <-> deq_loop p q.
     Proof.
-    
+
     Lemma tag_deq_total
       : deq_loop p q \/ deq_loop q p.
     Proof.
@@ -344,7 +345,7 @@ Section tagged.
     Proof.
       tag_fact_prep.
       unfold eff_tag'.
-      destruct (edge_Edge Hedge). 
+      destruct (edge_Edge Hedge).
       Local Ltac tcfg_dstr_tac
         := match goal with
            | |- ?P \/ ?Q => match P with
@@ -366,7 +367,7 @@ Section tagged.
       decide (edge__P p q);[|congruence]. inversion Hpq1. unfold eff_tag'.
       destruct (edge_Edge e);firstorder 0.
     Qed.
-    
+
   End eff_tag_facts.
 
   Lemma STag_len i
@@ -374,7 +375,7 @@ Section tagged.
   Proof.
     destruct i;cbn;eauto.
   Qed.
-  
+
   Definition TPath := Path tcfg_edge.
 
   Lemma root_no_loop h
@@ -412,7 +413,7 @@ Section tagged.
   Proof.
     destruct Heq.
     eapply Nat.le_antisymm;eapply NoDup_incl_length;eauto.
-  Qed.        
+  Qed.
 
   Lemma deq_loop_entry (p q : Lab)
         (Hentry : entry_edge p q)
@@ -495,7 +496,7 @@ Section tagged.
     assert (lp =' (h :: lq)).
     {
       split;intros h' H;[|destruct H]. 1,3: eapply in_filter_iff in H; cbn in H; destructH.
-      1: decide (h = h');[left;auto|right]. 
+      1: decide (h = h');[left;auto|right].
       all: eapply in_filter_iff; cbn;split;eauto.
       - eapply deq_loop_exit_or in Heexit;eauto. destruct Heexit;[auto|subst;contradiction].
       - eapply deq_loop_exited;eauto.
@@ -551,10 +552,10 @@ Section tagged.
           unfold exit_edge in Q. destructH.
           eapply loop_contains_loop_head in Q0. eapply depth_loop_head in Q0. omega.
         * erewrite <-IHt;eauto. cbn. reflexivity.
-  Qed.        
+  Qed.
 
   (** ** Theorem **)
-  
+
   Lemma tag_depth  p i q j t
         (Hpath : TPath (root,start_tag) (p,i) t)
         (Hin : (q,j) ∈ t)
@@ -607,8 +608,8 @@ Lemma TPath_CPath  c c' π :
   TPath c c' π -> CPath (fst c) (fst c') (map fst π).
 Proof.
   intros Q. dependent induction Q; [|destruct b,c]; econstructor; cbn in *.
-  - apply IHQ. 
-  - conv_bool. firstorder. 
+  - apply IHQ.
+  - conv_bool. firstorder.
 Qed.
 
 Lemma p_p_ex_head' (p q : Lab) π ϕ
@@ -622,7 +623,7 @@ Proof.
    * * if nil,singleton: contradiction
    * * if doubleton: easy style: h=q, bc of APath p-->q must be a back_edge, thus loop_contains q p
    * * else:
-   * * edge distinction for ? --> q: 
+   * * edge distinction for ? --> q:
    *   * if back_edge then: we have found h
    *   * otw. IH
    *)
@@ -679,7 +680,7 @@ Proof.
   revert l.
   induction n;intros;cbn.
   - eexists;eauto.
-  - destruct l;cbn. 
+  - destruct l;cbn.
     + econstructor;eauto.
     + specialize (IHn l). destructH. eexists. f_equal. eauto.
 Qed.
@@ -794,7 +795,7 @@ Proof.
     eapply tagle_app_app.
     econstructor;eauto.
   - intro N. inversion N. subst.
-    rewrite app_cons_assoc in H1. setoid_rewrite app_cons_assoc in H1 at 2. 
+    rewrite app_cons_assoc in H1. setoid_rewrite app_cons_assoc in H1 at 2.
     eapply app_inv_tail in H1.
     eapply rcons_eq2 in H1. subst. omega.
 Qed.
@@ -885,12 +886,12 @@ Proof.
   revert n Hleq.
   induction Htgl;intros;cbn.
   - econstructor.
-  - rewrite app_length in Hleq. cbn in Hleq. 
+  - rewrite app_length in Hleq. cbn in Hleq.
     destruct n0.
     { exfalso. omega. }
     rewrite take_r_rcons.
     econstructor.
-    eapply IHHtgl. omega. 
+    eapply IHHtgl. omega.
   - destruct n0.
     { exfalso. rewrite app_length in Hleq. cbn in Hleq. omega. }
     rewrite take_r_rcons.
@@ -937,7 +938,7 @@ Proof.
       rewrite IHt'. 2:eauto. all:eauto. reflexivity.
     + rewrite Htag in *. rewrite IHt'. 2:eauto. all:eauto. eapply Tagle_cons. reflexivity.
     + subst i. rewrite IHt'. 2:eauto. all:eauto.
-      eapply tagle_STag. 
+      eapply tagle_STag.
     + subst i.
       rewrite take_r_tl_eq. eapply tagle_take_r_leq;cycle 1.
       * eapply IHt'. eauto. all:eauto.
@@ -968,7 +969,7 @@ Proof.
 Qed.
 
 Require Import GetSucc.
-  
+
 
 Lemma taglt_tagle_trans (i j k : Tag)
   : i ◁ j -> j ⊴ k -> i ◁ k.
@@ -1086,10 +1087,10 @@ Proof.
   (* some ridiculous simplifications *)
   assert (forall z, z ∈ ((p :: map fst l :r: p)) <-> z ∈ (p :: map fst l)) as H2cons.
   { clear. intros. cbn. setoid_rewrite In_rcons. firstorder. }
-  rewrite H2cons in Hsp1. setoid_rewrite H2cons in Hsp4. 
+  rewrite H2cons in Hsp1. setoid_rewrite H2cons in Hsp4.
   remember (find (fun y => decision (fst y = h)) ((p,i) :: l)) as x. symmetry in Heqx.
   destruct x;cycle 1. (* show the existence of such x *)
-  { fold (fst (p,i)) in Hsp1. rewrite <-map_cons in Hsp1. 
+  { fold (fst (p,i)) in Hsp1. rewrite <-map_cons in Hsp1.
     eapply in_fst in Hsp1. destructH. eapply find_none in Heqx. 2:eapply Hsp1. cbn in Heqx.
     decide (h = h);inversion Heqx. contradiction. }
   eapply find_some in Heqx. destructH.
@@ -1129,7 +1130,7 @@ Proof.
   assert (k = take_r (depth h) k) as Hkeq.
   {
     replace (depth h) with (|k|). 1:symmetry;eapply take_r_len_id.
-    eapply tag_depth. 1: eapply Hpath. eapply postfix_incl;eauto. 
+    eapply tag_depth. 1: eapply Hpath. eapply postfix_incl;eauto.
   }
   assert (take_r (depth h) k ⊴ take_r (depth h) i) as Hki.
   {
@@ -1140,14 +1141,14 @@ Proof.
       eapply H2cons.
       eapply in_map with (f:=fst) in H. cbn in H. rewrite map_rcons in H. cbn in H.
       cbn;eauto.
-  }  
+  }
   rewrite <-Hkeq in Hki.
   eapply tagle_taglt_trans in Hjk;eauto.
   eapply taglt_tagle_trans in Hjk;eauto.
   destruct Hjk. eapply H0. reflexivity.
 Qed.
 
-(* TODO: move ex_entry proof to this point. it does not require any assumptions, 
+(* TODO: move ex_entry proof to this point. it does not require any assumptions,
 thus it should be possible *)
 Lemma tcfg_fresh_head' h p i k t
       (Hpath : TPath (root,start_tag) (h,0::k) t)
@@ -1160,7 +1161,7 @@ Lemma tcfg_fresh_head' h p i k t
    * bc freshness we have 0::k <> 0::k', thus bc |k|=|k'| also k <> k' cntrdiction.
    *)
 Admitted.
-    
+
 Lemma take_r_leq_id (A : Type) (l : list A) n
       (Hlen : |l| <= n)
   : take_r n l = l.
@@ -1179,7 +1180,7 @@ Lemma tcfg_monotone p i t q j a
       (Hdeqp : p >= a)
       (Hdeqq : q >= a)
   : take_r (depth a) j ⊴ i.
-Proof. 
+Proof.
   revert p i q j a Hpath Hel Hdeqp Hdeqq. induction t;intros;inversion Hpath.
   - symmetry in H1,H2. subst. destruct Hel as [Hel|Hel];inversion Hel. subst q j.
     rewrite take_r_nil. econstructor.
@@ -1188,7 +1189,7 @@ Proof.
     { inversion Hel. subst. eapply tagle_prefix. eapply take_r_prefix. }
     eapply tcfg_edge_destruct' in H4. destruct H4 as [Q|[Q|[Q|Q]]].
     1-4:destruct Q as [Htag Hedge].
-    + 
+    +
       rewrite <-Htag in *.
       rewrite IHt;eauto.
       * reflexivity.
@@ -1202,7 +1203,7 @@ Proof.
         subst i. rewrite e.
         setoid_rewrite <-depth_entry;eauto.
         destruct j.
-        -- rewrite take_r_nil. econstructor.    
+        -- rewrite take_r_nil. econstructor.
         -- copy IHt IHt'.
            eapply tagle_taglt_iff in IHt.
            destruct IHt.
@@ -1226,12 +1227,12 @@ Proof.
                  --- destruct Hedge. auto.
               ** econstructor. eapply splinter_strict_single;eauto.
               ** rewrite <- H. eapply take_r_prefix.
-              (* contradiction to freshness: 
+              (* contradiction to freshness:
                * find an acyclic path from p' to q, then argue it has the same tag prefix as q
                * contradiction to strict freshness *)
               (* there should be a contradiction somewhere along these lines:
                * deq_loop q p, thus there is an acyclic path from p' to q.
-               * thus there is header containing p' on q --> q, well, 
+               * thus there is header containing p' on q --> q, well,
                * and then we need stuff from the freshness proof sketch,
                * looks like this induction scheme is broken *)
               (**)
@@ -1245,7 +1246,7 @@ Proof.
            ++ eapply Hdeqp in Hh'. eauto.
     + rewrite Htag in *.
       rewrite IHt. 2,3,5:eauto.
-      * eapply tagle_STag. 
+      * eapply tagle_STag.
       * eapply back_edge_eq_loop in Hedge. destruct Hedge. transitivity p;eauto.
     + subst i.
       rewrite take_r_tl_eq. eapply tagle_take_r_leq;cycle 1.
@@ -1342,7 +1343,7 @@ Lemma tpath_NoDup q t
   : NoDup t.
 Proof.
   revert q Hpath. induction t.
-  - econstructor; eauto. 
+  - econstructor; eauto.
   - intros. unfold TPath in Hpath. path_simpl' Hpath.
     econstructor.
     + intro. inversion Hpath; subst; cbn in H; [contradiction|].
@@ -1370,7 +1371,7 @@ Proof.
   - eapply deq_loop_entry in e0. eapply Hexit2. eauto.
 Qed.
 
-(* possibly unused 
+(* possibly unused
 Lemma exit_succ_exiting (p q h e : Lab) (k i j : Tag) r
       (Hpath : TPath (p,k) (q,j) (r :r: (p,k)))
       (Hexit : exited h e)
@@ -1390,11 +1391,11 @@ Proof.
       assert (ϕ = (q,j) :: tl ϕ) as ϕeq.
       { inversion Htr0;subst a;cbn;eauto. }
       split;eauto.
-      + rewrite ϕeq in Htr0;eauto.        
+      + rewrite ϕeq in Htr0;eauto.
       + rewrite ϕeq in Htr1;eauto.
     - eapply precedes_in. econstructor;eauto;cbn;eauto.
   Qed.
-  
+
   Lemma prec_tpath_tpath p i q j l
         (Htr : TPath (root,start_tag) (p,i) ((p, i) :: l))
         (Hprec : Precedes fst ((p,i) :: l) (q, j))
@@ -1427,7 +1428,7 @@ Proof.
     eapply tag_depth' in Hpath2.
     rewrite Hpath1,Hpath2. reflexivity.
   Qed.
-  
+
   Lemma tpath_tag_len_eq_elem p q i1 i2 j1 j2 l1 l2
         (Hpath1 : TPath (root, start_tag) (p, i1) l1)
         (Hpath2 : TPath (root, start_tag) (p, i2) l2)
@@ -1448,8 +1449,8 @@ Proof.
   Proof.
     (* FIXME *)
   Admitted.
-  
-  Lemma tag_prefix_head h p i j l 
+
+  Lemma tag_prefix_head h p i j l
         (Hloop : loop_contains h p)
         (Hpath : TPath (root, start_tag) (p,i) l)
         (Hprec : Precedes fst l (h,j))
@@ -1477,7 +1478,7 @@ Proof.
         * subst l. contradiction.
         * destruct b. eapply IHl;eauto.
   Qed.
-  
+
   Lemma tag_prefix_ancestor a p q i j l
         (Hanc : ancestor a p q)
         (Hpath : TPath (root, start_tag) (p,i) l)
@@ -1499,14 +1500,14 @@ Proof.
         (Hib : (p,i) ≻* (a,j) | (r,k) :: l)
     : Prefix j i.
   Proof.
-    eapply splinter_in in Hib as Hin. 
+    eapply splinter_in in Hib as Hin.
     eapply path_to_elem in Hin;eauto. destructH.
     decide (i = j).
     { subst. reflexivity. }
     eapply tag_prefix_ancestor;eauto.
     eapply path_contains_front in Hin0 as Hfront.
-    eapply tpath_NoDup in Hin0. 
-    eapply tpath_NoDup in Hpath. 
+    eapply tpath_NoDup in Hin0.
+    eapply tpath_NoDup in Hpath.
     clear - Hprec Hib Hin1 Hpath Hin0 n Hfront. set (l' := (r,k) :: l) in *.
     eapply prefix_eq in Hin1. destructH.
     revert dependent l'. revert dependent ϕ. induction l2';intros.
@@ -1536,7 +1537,7 @@ Proof.
   Proof.
     (* FIXME *)
   Admitted.
-  
+
   Lemma first_occ_tag_elem i j j1 j2 p q t
         (Htag : j = j1 ++ j2)
         (Hpath : TPath (root,start_tag) (p,i) t)
@@ -1553,9 +1554,9 @@ Proof.
         (Hprec1 : Precedes fst l (q,j))
         (Hprec2 : Precedes fst l (q,j'))
     : j = j'.
-  Proof.  
+  Proof.
   Admitted.
-  
+
   (* possibly not used *)
   Lemma prefix_prec_prec_eq l l' (p q : Lab) (i j j' : Tag)
         (Hpre : Prefix ((p,i) :: l') l)
@@ -1566,17 +1567,17 @@ Proof.
     : j' = j.
   Proof.
   Admitted.
-  
+
   (* possibly not used *)
   Lemma ancestor_in_before_dominating a p q (i j k : Tag) l
         (Hdom : Dom edge__P root q p)
-        (Hanc : ancestor a q p) 
+        (Hanc : ancestor a q p)
         (Hprec__a: Precedes fst ((p,i) :: l) (a,k))
         (Hprec__q: Precedes fst ((p,i) :: l) (q,j))
     : (q,j) ≻* (a,k) | (p,i) :: l.
   Proof.
   Admitted.
-    
+
   Lemma ancestor_level_connector p q a i j k t
         (Hpath : TPath (root,start_tag) (p,i) t)
         (Hin : (q,j) ∈ t)
@@ -1597,7 +1598,7 @@ Proof.
   Proof.
     (* FIXME *)
   Admitted.
-  
+
   Lemma tpath_deq_loop_prefix p q i j t x l y m
         (Hdeq : deq_loop p q)
         (Hpath : TPath (x,l) (y,m) t)
@@ -1606,9 +1607,9 @@ Proof.
   Proof.
      (* FIXME *)
   Admitted.
-  
+
   Hint Resolve precedes_in.
-  
+
   Lemma dom_dom_in_between  (p q r : Lab) (i j k : Tag) l
         (Hdom1 : Dom edge__P root r q)
         (Hdom2 : Dom edge__P root q p)
@@ -1619,7 +1620,7 @@ Proof.
   Proof.
     (* FIXME *)
   Admitted.
-  
+
   Lemma loop_cutting q p t
         (Hpath : CPath q p t)
         (Hnoh : forall h, loop_contains h q -> h ∉ t)
@@ -1639,7 +1640,7 @@ Proof.
     unfold exit_edge in Hexit. destructH.
     eapply PathCons in Hexit3;eauto. cycle 1.
   Admitted. (* FIXME *)
-  
+
   Lemma loop_cutting_elem q p t i j x l
         (Hpath : TPath (x,l) (p,i) ((p,i) :: t))
         (Hib : (p,i) ≻* (q,j) | (p,i) :: t)
@@ -1648,7 +1649,7 @@ Proof.
   Proof.
     (* FIXME *)
   Admitted.
-  
+
   Lemma exit_cascade u p t i j k x l
         (Hdom : Dom edge__P root u p)
         (Hprec : Precedes fst ((p,i) :: t) (u,j))
@@ -1658,8 +1659,8 @@ Proof.
     (* this could even be generalized to CPaths *)
     (* TODO: lift on tpaths, on cpaths we might have duplicates, thus it doesn't work there *)
   Proof. (* FIXME *)
-  Admitted.  
-  
+  Admitted.
+
   Lemma tpath_depth_eq (p q : Lab) (i j : Tag) pi qj t
         (Hpath : TPath pi qj t)
         (Hel1 : (p,i) ∈ t)
@@ -1669,7 +1670,7 @@ Proof.
   Proof.
     (* FIXME *)
   Admitted.
-  
+
   Lemma tpath_depth_lt (p q : Lab) (i j : Tag) pi qj t
         (Hpath : TPath pi qj t)
         (Hel1 : (p,i) ∈ t)
@@ -1679,7 +1680,7 @@ Proof.
   Proof.
     (* FIXME *)
   Admitted.
-  
+
   Lemma loop_tag_dom (h p : Lab) (i j : Tag) t
     (Hloop : loop_contains h p)
     (Hpath : TPath (root,start_tag) (p,i) t)
@@ -1689,7 +1690,7 @@ Proof.
   Proof.
     (* FIXME *)
   Admitted.
-  
+
   Lemma deq_loop_le p i j q t t'
         (Hdeq : deq_loop p q)
         (Hpath : TPath (root,start_tag) (p,i) t)
@@ -1702,7 +1703,7 @@ Proof.
     eapply deq_loop_depth;auto.
   Qed.
 
-  (* not true ! 
+  (* not true !
   Lemma tagle_monotone p q i j t
     (Hpath : TPath (root,start_tag) (p,i) t)
     (Hel : (q,j) ∈ t)
@@ -1712,5 +1713,5 @@ Proof.
     (* FIXME *)
   Admitted.
    *)
-  
+
 End tagged.

@@ -1,4 +1,4 @@
-Require Export ImplodeTCFG NinR.
+Require Export NinR.
 
 
   Lemma last_common'_in1 (A : Type) `(EqDec A eq) (l1 l2 l1' l2' : list A) (a : A)
@@ -8,7 +8,7 @@ Require Export ImplodeTCFG NinR.
     unfold last_common' in Hlc. destructH.
     eapply postfix_incl;eauto.
   Qed.
-  
+
   Lemma last_common'_in2 (A : Type) `(EqDec A eq) (l1 l2 l1' l2' : list A) (a : A)
         (Hlc : last_common' l1 l2 l1' l2' a)
     : a ∈ l2.
@@ -16,7 +16,7 @@ Require Export ImplodeTCFG NinR.
     eapply last_common'_sym in Hlc.
     eapply last_common'_in1;eauto.
   Qed.
-    
+
 Section disj.
 
   Context `{C : redCFG}.
@@ -35,7 +35,7 @@ Section disj.
              (*           (Hneq : r1 <> r2) (* <-> r1 <> nil \/ r2 <> nil *)*)
              (Hloop : eq_loop q1 q2)
              (Htag : tl j1 = tl j2)
-             (Htagleq : hd 0 j1 <= hd 0 j2). 
+             (Htagleq : hd 0 j1 <= hd 0 j2).
 
   Hypothesis (Hdep : depth s = depth q1).
 
@@ -43,7 +43,7 @@ Section disj.
     : eq_loop s q1.
   Proof.
     eapply dep_eq_impl_head_eq in Hdep;eauto.
-  Qed.  
+  Qed.
 
   Lemma k_eq_j1
     : k = j1.
@@ -58,7 +58,7 @@ Section disj.
         * eapply last_common'_in1;eauto.
       + eapply path_contains_front;eauto.
   Qed.
-  
+
   Lemma ex_entry_r1 h i
         (Hel : (h,i) ∈ r1)
         (Hndeq : ~ deq_loop q1 h)
@@ -97,74 +97,12 @@ Section disj.
     - cbn. omega.
   Qed.
 
-  Lemma same_tag_impl1 p i
-        (Hel : (p,i) ∈ impl_tlist s r1)
-    : i = j1.
-  Proof.
-    specialize (@prefix_tag_r1 _ _ _ _ _ t1 t2 r1 r2 q1 q2 s j1 j2 k Hlc) as Hpre.
-    do 5 exploit' Hpre.
-    specialize k_eq_j1 as Hkeqj. subst k.
-    specialize (r1_in_head_q) as Hhq.
-    specialize (Hhq _ _ _ _ _ _ _ _ _ _ Hlc Hpath1 Hpath2). exploit Hhq.
-    eapply (s_deq_q) in Hlc as Hsq;eauto.
-    assert ((s,j1) ∈ t1) as Hkin.
-    { eapply last_common'_in1;eauto. }
-    assert (r1 ⊆ t1) as Hpost.
-    { unfold last_common' in Hlc. destructH. eapply postfix_step_left in Hlc0.
-      eapply postfix_incl;eauto. }
-    clear - Hpre Hel Hpath1 Hkin Hpost Hsq Hhq.
-    induction r1;[cbn in Hel;contradiction|].
-    destruct a as [q j].
-    destruct (impl_list'_spec_destr _ s q (map fst l)).
-    - eapply impl_tlist_skip in H. rewrite H in Hel.
-      eapply IHl;eauto.
-      + intros. eapply Hpre. cbn. right. eauto.
-      + intros x Hx. eapply Hpost;eauto.
-    - specialize (@impl_tlist_cons _ _ _ _ _ s q j l H) as Hcons.
-      destructH.
-      eapply impl_tlist_length in Hel as Hlen.
-      rewrite Hcons in Hel.
-      eapply impl_tlist_tag_prefix in Hcons as Hpre'.
-      destruct Hel.
-      + inversion H0. rewrite H2 in *. subst i'.
-        exploit Hpre.
-        eapply impl_tlist_tpath in Hpath1 as Hpath11.
-        (*        destruct Hpath11 as [t' |[Hpath1' Heq]].*)
-        
-        assert (↓ purify_implode s = impl_of_original' (implode_nodes_root_inv s)) as H1.
-        { unfold purify_implode, impl_of_original'. f_equal. eapply pure_eq. }
-        eapply prefix_length_eq;eauto.
-        rewrite <-H1 in Hpath11. 
-        eapply Nat.le_antisymm.
-        * setoid_rewrite (@tag_depth (local_impl_CFG_type C s)) at 1.
-          setoid_rewrite (@tag_depth Lab). 
-          eapply Hlen.
-          1: eapply Hpath1.
-          1: eapply Hkin.
-          -- eapply Hpath11.
-          -- eapply impl_tlist_incl in Hpost. eapply Hpost. 
-             rewrite Hcons. left;eauto.
-        * setoid_rewrite (@tag_depth);cycle 1.
-          -- eapply Hpath11.
-          -- eapply path_contains_front;eauto.
-          -- eapply Hpath11.
-          -- eapply impl_tlist_incl in Hpost. eapply Hpost.
-             rewrite Hcons. left;eauto.
-          -- eapply deq_loop_depth.
-             specialize (Hhq (q,j)). cbn in Hhq. exploit Hhq.
-             eapply impl_CFG_deq_loop. rewrite <-H2. cbn. eauto.
-      + eapply IHl;eauto.
-        * intros. eapply Hpre. cbn. right. eauto.
-        * intros x Hx. eapply Hpost. right;auto.
-          Unshelve. left;auto.
-  Qed.
-  
 End disj.
 
 (** Close and reopen section to instantiate with other variables **)
 
 Section disj.
-  
+
   Context `{C : redCFG}.
 
   Infix "⊴" := Tagle (at level 70).
@@ -181,10 +119,10 @@ Section disj.
              (*           (Hneq : r1 <> r2) (* <-> r1 <> nil \/ r2 <> nil *)*)
              (Hloop : eq_loop q1 q2)
              (Htag : tl j1 = tl j2)
-             (Htagleq : hd 0 j1 <= hd 0 j2). 
+             (Htagleq : hd 0 j1 <= hd 0 j2).
 
   Hypothesis (Hdep : depth s = depth q1).
-  
+
   Lemma s_eq_q1'
     : eq_loop s q1.
   Proof.
@@ -207,7 +145,7 @@ Section disj.
       eapply path_prefix_path in Hpre.
       - rewrite <-rcons_cons' in Hpre. eauto.
       - eauto.
-      - eauto. 
+      - eauto.
     Qed.
 
     Lemma disjoint3
@@ -236,7 +174,7 @@ Section disj.
       eapply postfix_eq in Hlc2. destructH.
       enough (l2' = prefix_nincl (s,k) t2).
       { rewrite <-H. eauto. }
-      rewrite Hlc2. 
+      rewrite Hlc2.
       eapply tpath_NoDup in Hpath2.
       setoid_rewrite Hlc2 in Hpath2. clear Hlc2.
       induction r2;cbn.
@@ -264,7 +202,7 @@ Section disj.
       rewrite app_assoc.
       rewrite <-app_rcons_assoc. reflexivity.
     Qed.
-    
+
     Lemma t3_tpath
       : TPath (root,start_tag) (q3,j1) t3.
     Proof.
@@ -276,12 +214,12 @@ Section disj.
         rewrite <-app_cons_assoc. eexists. reflexivity.
       - eapply r3_tpath.
     Qed.
-    
+
     Lemma q3_eq_loop
       : eq_loop q3 q1.
     Proof.
       decide (r3 = []).
-      { 
+      {
         subst. cbn in Hhd. inversion Hhd. subst.
         eapply s_eq_q1;eauto.
       }
@@ -315,9 +253,9 @@ Section disj.
 
     Hint Resolve t3_tpath t3_prefix t3_postfix last_common_t3_r3 q3_eq_loop.
 
-    (** Now all properties of r1 or r3 also hold for r3, 
+    (** Now all properties of r1 or r3 also hold for r3,
         we can use eapply3 to apply corresponding lemmas **)
-    
+
     Ltac eapply3 H :=
       eapply H;
       try (lazymatch goal with
@@ -330,7 +268,7 @@ Section disj.
       try eapply Hpath1;try eapply Hpath2;try eapply t3_tpath;
       eauto;
       try (rewrite q3_eq_loop;eauto).
-    
+
     Ltac eapply3' H Q :=
       eapply H in Q;
       try (lazymatch goal with
@@ -345,59 +283,11 @@ Section disj.
       try (rewrite q3_eq_loop;eauto).
 
     Hint Rewrite q3_eq_loop.
-    
-    Lemma disj_inst_impl
-      : Disjoint (impl_tlist s r1) (impl_tlist s r3).
-    Proof.
-      (* this is not trivial because implosion can project loops with different tags 
-       * on the same intstance *)
-      intros x Hx Hx'.
-      destruct x. 
-      specialize (impl_tlist_in Hx) as Htl.
-      specialize (impl_tlist_in Hx') as Htl'.
-      decide (deq_loop s (` e)).
-      - eapply disjoint3;eauto.
-      - eapply impl_tlist_implode_nodes in Hx as Himpl.
-        destruct Himpl ;[contradiction|].
-        do 3 destructH.
-        eapply ex_entry_r1 in Hlc as Hlc';eauto.
-        2: { fold (Basics.flip deq_loop (` e) q1). setoid_rewrite <-s_eq_q1'. eauto. }
-        2: { exists e0. fold (Basics.flip deq_loop e0 q1). rewrite <-s_eq_q1'. eauto. }
-        cbn in Hlc'. 
-        eapply3' ex_entry_r1 Htl';eauto.
-        + cbn in Htl'.
-          eapply disjoint3;eauto.
-        + fold (Basics.flip deq_loop (`e) q3). rewrite q3_eq_loop. rewrite <-s_eq_q1'. eauto.
-        + exists e0. fold (Basics.flip deq_loop e0 q3). rewrite q3_eq_loop. rewrite <-s_eq_q1'. eauto.
-    Qed.
-
-    Lemma disj_node_impl
-      : Disjoint (impl_list' s (map fst r1)) (impl_list' s (map fst r3)).
-    Proof.
-      erewrite <-impl_list_impl_tlist.
-      erewrite <-impl_list_impl_tlist.
-      intros x Hx Hx'.
-      eapply in_map_iff in Hx.
-      eapply in_map_iff in Hx'.
-      destructH' Hx. destructH' Hx'. subst.
-      destruct x0,x1. unfold fst in *. subst.
-      eapply same_tag_impl1 in Hx1 as Ht;eauto.
-      copy Hx'1 Ht0.
-      eapply3' same_tag_impl1 Hx'1. subst.
-      eapply disj_inst_impl;eauto.
-    Qed.
 
     Lemma disj_node
       : Disjoint (map fst r1) (map fst r3).
     Proof.
-      specialize (r1_tpath Hlc Hpath1) as r1_tpath'.
-      eapply impl_list_disjoint.
-      1: specialize (TPath_CPath r1_tpath') as HQ.
-      2: specialize (TPath_CPath r3_tpath) as HQ.
-      1,2:cbn in HQ;rewrite map_rcons in HQ;eauto. (* <-- Hdep *)
-      - reflexivity. (*eapply dep_eq_impl_head_eq in Hdep;eauto; destruct Hdep as [_ Hdep'];eauto.*)
-      - eapply disj_node_impl.
-    Qed.
+    Admitted.
   End same_tag.
 
   (** * For j1 = j2, r1 and r2 are disjoint **)
@@ -412,9 +302,10 @@ Section disj.
     eapply postfix_path in Hpath2;eauto.
     rewrite rcons_cons' in Hpath2.
     eapply path_front in Hpath2. rewrite Hjeq.
-    destruct r2;cbn in *;inversion Hpath2; reflexivity. 
+    destruct r2;cbn in *;inversion Hpath2; reflexivity.
   Qed.
 
+  Print Assumptions lc_eq_disj.
   (** * For j1 <> j2, there is a disjoint prefix **)
 
   Lemma lc_neq_disj
@@ -432,4 +323,3 @@ Section disj.
   Admitted.
 
 End disj.
-

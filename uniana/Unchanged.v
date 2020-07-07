@@ -10,10 +10,17 @@ Open Scope prg.
 
 Section unch.
   Context `{C : redCFG}.
-  
+
   Notation "p --> q" := (edge p q = true) (at level 55,right associativity).
 
   Definition Unch := Lab -> Var -> set Lab.
+
+
+  Lemma Lab_dec' `{redCFG} : forall (l l' : Lab), { l = l' } + { l <> l'}.
+  Proof.
+    apply Lab_dec.
+  Qed.
+
 
   (** * RD-Concretizer **)
   (** ** Definition **)
@@ -23,18 +30,18 @@ Section unch.
                         set_In u (unch to x) ->
                         exists j r, Precedes' (`t) (u, j, r) (to, i, s) /\
                                r x = s x.
-  
+
   Definition unch_meet (u1 u2 : Unch) : Unch
     := fun (p : Lab) (x : Var) => set_union Lab_dec' (u1 p x) (u2 p x).
 
   Infix "⊓" := unch_meet (at level 70).
 
   (** * Meet-preserving **)
-  
+
   Lemma unch_concr_meet_preserve (u1 u2 : Unch) (t : trace)
     : unch_concr (u1 ⊓ u2) t <-> unch_concr u1 t /\ unch_concr u2 t.
   Proof.
-    split;intros H. 
+    split;intros H.
     - unfold unch_concr in *. split;intros.
       1,2: specialize (H to i s u x H0); exploit H;eauto.
       1,2: unfold unch_meet.
@@ -51,8 +58,8 @@ Section unch.
   (** * RD-transformer **)
 
   (** ** Definition **)
-  
-  Definition unch_join_ptw (d d' : set Lab) := set_inter Lab_dec' d d'. 
+
+  Definition unch_join_ptw (d d' : set Lab) := set_inter Lab_dec' d d'.
 
   Definition unch_join (u u' : Unch) : Unch :=
     fun l x => unch_join_ptw (u l x) (u' l x).
@@ -64,10 +71,10 @@ Section unch.
     if Lab_dec' l root then set_add Lab_dec' root (empty_set Lab) else
       let t := fun q => unch_trans_local unch q l x in
       fold_right (set_inter Lab_dec') (elem Lab) (map t (preds l)).
-  
+
   Definition unch_trans (unch : Unch) : Unch :=
     fun l x => unch_trans_ptw unch l x.
-  
+
   Lemma in_preds p q : q ∈ preds p <-> q --> p.
   Proof.
     unfold preds; rewrite in_filter_iff; firstorder; cbn in *.
@@ -79,12 +86,12 @@ Section unch.
   Proof.
     intros.
     cut (preds root = nil); intros.
-    + unfold unch_trans, unch_trans_ptw. 
+    + unfold unch_trans, unch_trans_ptw.
       destruct (Lab_dec' root root); firstorder.
     + cut (forall q, ~ List.In q (preds root)); intros; eauto using list_emp_in, root_no_pred.
       rewrite in_preds. intros H. eapply root_no_pred; eauto.
   Qed.
-  
+
   Lemma unch_trans_lem u to x unch :
     set_In u (unch_trans unch to x) ->
     u = to \/ (forall q, List.In q (preds to) -> (is_def x q to = false /\ set_In u (unch q x))).
@@ -107,14 +114,14 @@ Section unch.
         * simpl in Hin. firstorder.
         * eauto using set_add_elim2.
   Qed.
-  
+
   Definition unch_concr' (unch : Unch) (l : list Conf) :=
     forall (to : Lab) (i : Tag) (s : State) (u : Lab) (x : Var),
       (to,i,s) ∈ l ->
       u ∈ unch to x ->
       exists (j : Tag) (r : State), Precedes' l (u,j,r) (to,i,s) /\ r x = s x.
 
-  
+
   Lemma prefix_trans_NoDup (A : Type) `{EqDec A eq} (a : A) (l l1 l2 : list A)
         (Hpre1 : Prefix (a :: l1) l)
         (Hpre2 : Prefix l2 l)
@@ -128,7 +135,7 @@ Section unch.
       + inversion Hpre1;subst.
         * inversion Hpre2; subst; [econstructor|].
           eapply prefix_incl in Hin; eauto. congruence.
-        * exfalso. eapply prefix_incl in H4. firstorder.          
+        * exfalso. eapply prefix_incl in H4. firstorder.
       + eapply prefix_incl in Hin;eauto. destruct Hin;[congruence|].
         inversion Hpre1;subst;[congruence|].
         inversion Hpre2; subst.
@@ -136,7 +143,7 @@ Section unch.
         * eapply IHl;eauto.
   Qed.
 
-  
+
   Lemma Tr_NoDup t
         (Htr : Tr t)
     : NoDup t.
@@ -144,7 +151,7 @@ Section unch.
     destruct t;[inversion Htr|].
     destruct (c) eqn:E. destruct c0 eqn:E'.
     eapply Tr_EPath in Htr. destructH.
-    - eapply EPath_TPath in Htr. eapply tpath_NoDup in Htr. eapply NoDup_map_inv. eauto. 
+    - eapply EPath_TPath in Htr. eapply tpath_NoDup in Htr. eapply NoDup_map_inv. eauto.
     - cbn. reflexivity.
   Qed.
 
@@ -174,8 +181,8 @@ Section unch.
   Qed.
 
   (** ** Dominance **)
-  
-  Lemma unch_dom u p i s x unch l 
+
+  Lemma unch_dom u p i s x unch l
         (Hunch : u ∈ unch_trans unch p x)
         (HCunch : unch_concr' (unch_trans unch) l)
         (Htr : Tr ((p,i,s) :: l))
@@ -205,12 +212,12 @@ Section unch.
     intros Hin Hunch.
     destruct (Lab_dec' to root); subst.
     - unfold unch_trans, unch_trans_ptw in Hunch. destruct (Lab_dec' root root); [ | firstorder ].
-      simpl in Hunch. destruct Hunch; [ | firstorder ]. subst.      
+      simpl in Hunch. destruct Hunch; [ | firstorder ]. subst.
       exists i, s. split; eauto. exists nil. split; [|econstructor].
       apply root_start_tag in Hin as rst. subst i.
       assert (rp := root_prefix t). destruct rp as [s' rp].
-      apply prefix_cons_in in rp as rp'. eapply tag_inj with (s0:=s) in rp'. 
-      subst s'. 1,2,3:assumption. 
+      apply prefix_cons_in in rp as rp'. eapply tag_inj with (s0:=s) in rp'.
+      subst s'. 1,2,3:assumption.
     - assert (Hpred := Hin).
       rewrite H in Hpred.
       eapply in_exists_pred in Hpred; try eassumption.
@@ -224,11 +231,11 @@ Section unch.
           eapply H0 in Hedge. destruct Hedge as [Hndef Huin].
           edestruct Hred as [j' [r' [Hprec Heq]]]; eauto.
           exists j', r'. rewrite Heq.
-          split; [|eauto using no_def_untouched]. rewrite H. eapply precedes_succ; eauto. 
+          split; [|eauto using no_def_untouched]. rewrite H. eapply precedes_succ; eauto.
           rewrite <-H. destruct t; eauto.
       + clear - H. destruct t; cbn in H; inversion t; subst x.
         * destruct t' as [t' Ht]. destruct t';[inversion Ht|]. cbn in *.
-          inversion t. subst. eauto. 
+          inversion t. subst. eauto.
         * inversion H2. subst; eauto.
   Qed.
 End unch.

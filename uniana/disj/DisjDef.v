@@ -1,32 +1,11 @@
-Require Export Tagged LastCommon Disjoint.
+Require Export Tagged LastCommon Disjoint SplitsT.
 
 
-Parameter path_splits : forall `{redCFG}, Lab -> list (Lab * Lab * Lab).
+Parameter rel_splits : forall `{redCFG}, Lab -> Lab -> list Lab.
 
-Parameter loop_splits : forall `{redCFG}, Lab -> Lab -> list (Lab * Lab * Lab).
-
-(* remove branch from splits, we can use the assumed global branch function to get varsets back*)
-Definition pl_split `{redCFG} (qh qe q1 q2 br : Lab) :=
-  (exists π ϕ, CPath br qh (π ++ [br])
-          /\ CPath br qe (ϕ :r: br)
-          /\ Some q1 = hd_error (rev π)
-          /\ Some q2 = hd_error (rev ϕ)
-          /\ q1 <> q2 (* if π = single or φ = single, then this is not implied by the next condition *)
-          /\ Disjoint (tl π) (tl ϕ)).
-
-Parameter path_splits_spec : forall `{redCFG} p q1 q2 br,
-    pl_split p p q1 q2 br <->
-    (br, q1, q2) ∈ path_splits p.
-
-Parameter loop_splits_spec : forall `{redCFG} qh qe q1 q2 br,
-    loop_contains qh br /\ (* otherwise some splits would be considered as loop splits *)
-    exited qh qe /\
-    pl_split qh qe q1 q2 br <->
-    (br, q1, q2) ∈ loop_splits qh qe.
-
-Parameter splits' : forall `{redCFG}, Lab -> Lab -> list (Lab * Lab * Lab).
-Parameter splits  : forall `{redCFG}, Lab -> list (Lab * Lab * Lab).
-Parameter rel_splits : forall `{redCFG}, Lab -> Lab -> list (Lab * Lab * Lab).
+Parameter rel_splits_spec
+  : forall `{redCFG} p u s, s ∈ rel_splits p u <->
+                       exists h e, e -a>* p /\ loop_contains h u /\ exited h e /\ s ∈ splitsT e.
 
 (** * Some useful lemmas **)
 
@@ -75,7 +54,7 @@ Proof.
   eapply splinter_rev. cbn. rewrite rev_rcons. econstructor. econstructor.
   eapply splinter_single. rewrite <-In_rev. auto.
 Qed.
-  
+
 Lemma lc_succ_rt2 (A : Type) `{EqDec A eq} (l1 l2 l1' l2' : list A) (a b c : A)
       (Hlc : last_common' l1 l2 l1' l2' a)
       (Hnd : NoDup l2)
@@ -88,7 +67,7 @@ Proof.
   eapply postfix_eq in Hlc2. destructH.
   rewrite <-app_cons_assoc in Hlc2.
   setoid_rewrite Hlc2 in Hsucc.
-  eapply succ_NoDup_app in Hsucc;eauto. 
+  eapply succ_NoDup_app in Hsucc;eauto.
   setoid_rewrite <-Hlc2;eauto.
 Qed.
 
