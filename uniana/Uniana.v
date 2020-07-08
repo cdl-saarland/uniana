@@ -227,7 +227,23 @@ Section uniana.
   Qed.
   Arguments uni_branch_non_disj : clear implicits.
 
+  Definition r_tl (A : Type) (l : list A) := rev (tl (rev l)).
 
+  Lemma r_tl_rcons (A : Type) (l : list A) (a : A)
+    : r_tl (l ++[a]) = l.
+  Proof.
+  Admitted.
+
+  Lemma inner_cons_rcons (A : Type) (l : list A) (a b : A)
+    : inner (a :: l ++ [b]) = l.
+  Proof.
+    induction l;cbn;eauto.
+
+  Admitted.
+  Lemma inner_rcons (A : Type) (l : list A) (a : A)
+    : inner (l ++ [a]) = tl l.
+  Admitted
+  .
   Lemma uni_same_tag p q i j1 j2 s1 s2 r1 r2 uni l1 l2
         (Htr1 : Tr ((p,i,s1) :: (q,j1,r1) :: l1))
         (Htr2 : Tr ((p,i,s2) :: (q,j2,r2) :: l2))
@@ -255,31 +271,60 @@ Section uniana.
     specialize (get_innermost_loop_spec q) as Hspec.
     destruct (get_innermost_loop q) ;[|contradiction].
     destruct brk as [br k].
-    eapply lc_disj_exit_lsplits in c as Hsplits;eauto; cycle 1.
+(*    eapply lc_disj_exit_lsplits in c as Hsplits;eauto; cycle 1.
     - spot_path.
-    - spot_path.
-    - unfold last_common in Hlc. destructH.
-      destruct l1',l2'.
+    - spot_path.*)
+    unfold last_common in Hlc. destructH.
+    eapply join_andb_true_iff in Hsplit;eauto.
+    - destruct l1',l2'.
       + cbn in *. eapply2 postfix_hd_eq Hlc0 Hlc2.
         subst'. congruence.
-      +
-        cbn in Hlc0.
+      + cbn in Hlc0.
         destruct p0.
         eapply2' postfix_hd_eq Hlc0 Hlc2 Hlc0' Hlc2'. symmetry in Hlc0'. subst'.
         clear Hlc0 Hlc1 Hlc3 Hlc5.
-        eapply join_andb_true_iff in Hsplit;eauto;cycle 1.
         eapply uni_branch_succ_p with (j:=j2);eauto.
         intros;symmetry;eapply HCuni;eauto.
       + cbn in Hlc2.
         destruct p0.
         eapply2' postfix_hd_eq Hlc0 Hlc2 Hlc0' Hlc2'. subst'.
         clear Hlc2 Hlc1 Hlc3 Hlc5.
-        eapply join_andb_true_iff in Hsplit;eauto;cycle 1.
         eapply uni_branch_succ_p with (j:=j1);eauto.
       + eapply (uni_branch_non_disj) with (br:=br) (l1:=(q,j1,r1) :: l1) ;eauto;cbn;eauto.
-        eapply join_andb_true_iff with (x:=br) in Hsplit.
-        cbn in Hsplit. auto.
-        auto.
+    - eapply splitsT_spec.
+      assert (tcfg_edge (q,j1) (p,i)).
+      {
+        eapply Tr_EPath in Htr1;[|cbn;eauto].
+        destructH.
+        eapply EPath_TPath in Htr1. cbn in Htr1.
+        inversion Htr1. path_simpl' H0. eauto.
+      }
+      assert (tcfg_edge (q,j2) (p,i)).
+      {
+        eapply Tr_EPath in Htr2;[|cbn;eauto].
+        destructH.
+        eapply EPath_TPath in Htr2. cbn in Htr2.
+        inversion Htr2. path_simpl' H1. eauto.
+      }
+      assert (l1' <> nil \/ l2' <> nil).
+      {
+        destruct l1',l2'. 2: right. 3: left. 4: right. 2-4: congruence.
+        cbn in *. eapply2 postfix_hd_eq Hlc0 Hlc2.
+        subst'. congruence.
+      }
+      eapply postfix_path in Hlc0;cycle 1.
+      + inversion Htr1.
+        eapply Tr_EPath in H4;eauto. destructH. eapply EPath_TPath in H4. cbn in *;eauto.
+        cbn. eauto.
+      + eapply postfix_path in Hlc2.
+        * eapply PathCons with (c:=(p,i)) in Hlc0;[|eauto].
+          eapply PathCons with (c:=(p,i)) in Hlc2;[|eauto].
+          repeat eexists. 1: eapply Hlc0. 1: eapply Hlc2.
+          -- do 2 rewrite inner_cons_rcons. auto.
+          -- do 2 rewrite inner_cons_rcons. auto.
+        * inversion Htr2.
+          eapply Tr_EPath in H4;eauto. destructH. eapply EPath_TPath in H4. cbn in *. eauto.
+          cbn. eauto.
   Qed.
 
   Hint Resolve Conf_dec.
