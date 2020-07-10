@@ -305,7 +305,6 @@ Section disj.
     destruct r2;cbn in *;inversion Hpath2; reflexivity.
   Qed.
 
-  Print Assumptions lc_eq_disj.
   (** * For j1 <> j2, there is a disjoint prefix **)
 
   Lemma lc_neq_disj
