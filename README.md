@@ -1,7 +1,12 @@
 # Supplementary Material to the paper "An Abstract Interpretation for Divergence Analysis on Control Flow Graphs"
 
-The documentation of the Coq code is available [here](http://compilers.cs.uni-saarland.de/projects/uniana/toc.html).
+To make use of the links in the submitted PDF, move it to this paper submission into the root directory of the unpacked supplementary material.
 
+The directory ```html``` contains the compiled Coqdoc, all links from the paper target this directory.
+You can also navigate through the Coqdoc manually by opening the file ```html/toc.html``.
+
+
+The directory ```theories``` contains the Coq formalization.
 To compile the Coq proofs you need [Coq 8.10.1](https://github.com/coq/coq/releases/tag/V8.10.1).
 There are no further dependencies.
 
@@ -11,13 +16,4 @@ $ make
 ```
 compiles the whole development.
 
-The directory ```uniana``` contains the Coq formalization.
-
-DISCLAIMER:
-
-The content of the directory ```uniana/external/lvc``` is taken from Sigurd Schneider's [Phd thesis](https://github.com/sigurdschneider/lvc).
-
-The content of the folder ```uniana/external/finiteTypes``` is taken from Jan Menz' [bachelor's thesis](https://www.ps.uni-saarland.de/~menz/bachelor.php).
-
-
-
+(The directory ```coqdocjs`` is a library used to display the Coqdoc, it is not part of the submission.)
