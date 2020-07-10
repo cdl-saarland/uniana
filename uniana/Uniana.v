@@ -695,6 +695,28 @@ Section uniana.
     - spot_path.
   Qed.
 
+  Definition hom (T : list (list (Lab * Tag))) p
+    := forall (q1 q2 : Lab) (i j1 j2 : Tag) t1 t2,
+      t1 ∈ T
+      -> t2 ∈ T
+      -> (q1,j1) ≻ (p,i) | t1
+      -> (q2,j2) ≻ (p,i) | t2
+      -> q1 = q2 /\ j1 = j2.
+
+  Lemma uni_hom p q1 q2 i j1 j2 s1 s2 r1 r2 uni l1 l2
+        (Htr1 : Tr ((p,i,s1) :: (q1,j1,r1) :: l1))
+        (Htr2 : Tr ((p,i,s2) :: (q2,j2,r2) :: l2))
+        (Hsplit : (join_andb (map ((uni_branch uni)) (splitsT p))) = true)
+        (HCuni : forall (x : Var) (p : Lab) (i : Tag) (s s' : State),
+            (p, i, s) ∈ ((q1,j1,r1)::l1) -> (p, i, s') ∈ ((q2,j2,r2)::l2)
+            -> uni p x = true -> s x = s' x)
+    : q2 = q1 /\ j2 = j1.
+  Proof.
+    eapply uni_same_lab in HCuni as Hsame;eauto.
+    subst q2. split;[auto|].
+    eapply uni_same_tag;eauto.
+  Qed.
+
   Ltac reduce_uni_concr HCuni Hpre1 Hpre2 :=
     clear - HCuni Hpre1 Hpre2; eapply2 prefix_incl Hpre1 Hpre2; intros; eapply HCuni;eauto.
 

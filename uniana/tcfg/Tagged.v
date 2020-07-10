@@ -1688,7 +1688,19 @@ Proof.
     (Hdep : |j| = depth h)
     : (h,j) ∈ t.
   Proof.
+    eapply dom_loop in Hloop as Hdom.
+    eapply TPath_CPath in Hpath as Hpath'. cbn in Hpath'.
+    eapply Hdom in Hpath'.
     (* FIXME *)
+  Admitted.
+
+  Lemma loop_tag_prec (h p : Lab) (i j : Tag) t
+    (Hloop : loop_contains h p)
+    (Hpath : TPath (root,start_tag) (p,i) t)
+    (Htagle : j ⊴ i)
+    (Hdep : |j| = depth h)
+    : Precedes fst t (h,j).
+  Proof.
   Admitted.
 
   Lemma deq_loop_le p i j q t t'

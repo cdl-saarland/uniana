@@ -29,11 +29,11 @@ Section eval.
   Proof.
     intros.
     destruct x as [xa xb], y as [ya yb].
-    
+
     decide ((xa, xb) = (ya, yb)); firstorder.
   Qed.
   Program Instance lab_var_eq_eqdec : EqDec (Lab * Var) eq := Lab_var_dec.*)
-  
+
   Parameter Val : Type.
 
   Definition State := Var -> Val.
@@ -45,7 +45,7 @@ Section eval.
   Global Existing Instance Val_dec.
   Global Existing Instance Tag_dec.
   Global Existing Instance State_dec.
-  
+
 
   Definition States := State -> Prop.
   Definition Conf := ((@Coord Lab)* State)%type.
@@ -60,7 +60,7 @@ Section eval.
   (** * Effect function **)
 
   Parameter eff' : Lab * State -> option (Lab * State).
-  
+
   Definition eff (k : Conf) : option Conf
     := match k with
        | (p, i, s) => match eff' (p,s) with
@@ -71,7 +71,7 @@ Section eval.
                                      end
                      end
        end.
-  
+
   Ltac eff_unf :=
     lazymatch goal with
     | H : context [eff (?q,?j,?r)] |- _
@@ -80,7 +80,7 @@ Section eval.
         [match type of H with
          | context[let (_,_) := ?x in _ ]
            => let x1 := fresh "x" in
-             let x2 := fresh "x" in 
+             let x2 := fresh "x" in
              destruct x as [x1 x2];
              decide (edge__P q x1);[|try congruence; try contradiction](*
               unfold eff_tag' in H;
@@ -100,7 +100,7 @@ Section eval.
   Next Obligation.
     intros.
     destruct x as [[p i] s], y as [[q j] r].
-    
+
     destruct ((p, i, s) == (q, j, r)); firstorder.
   Qed.
   Definition Conf_dec := conf_eq_eqdec.
@@ -116,7 +116,7 @@ Section eval.
     forall p q i j s r, eff (p, i, s) = Some (q, j, r) -> (p --> q).
   Proof.
     intros.
-    eapply edge_spec. 
+    eapply edge_spec.
     unfold is_effect_on. eauto.
   Qed.
 
@@ -126,7 +126,7 @@ Section eval.
   Proof.
     intros Heff.
     eff_unf. unfold eff_tag. inversion Heff. subst.
-    decide (edge__P q p);[|congruence]. f_equal. eapply eff_tag'_eq. 
+    decide (edge__P q p);[|congruence]. f_equal. eapply eff_tag'_eq.
   Qed.
 
   (** * Edge on the Trace-Graph **)
@@ -136,7 +136,7 @@ Section eval.
                              | Some k => k = k'
                              | None => False
                              end).
-  
+
   Parameter def_spec :
     forall p q x, (exists i j s r, eff (p, i, s) = Some (q, j, r) /\ r x <> s x) ->
              is_def x p q = true.
@@ -150,7 +150,7 @@ Section eval.
   Definition sem_step l k := option_chain eff (hd_error l) = Some k.
 
   (** * Traces **)
-  
+
   Inductive Tr : list Conf -> Prop :=
   | Init : forall s, Tr [(root, start_tag, s)]
   | Step : forall l (k : Conf), Tr l -> sem_step l k -> Tr (k :: l).
@@ -160,7 +160,7 @@ Section eval.
   Hint Unfold Conf Coord.
 
   (** ** Lemmas **)
-  
+
   Lemma EPath_Tr s0 p i s π :
     EPath (root,start_tag,s0) (p,i,s) π -> Tr π.
   Proof.
@@ -177,7 +177,7 @@ Section eval.
       + subst. reflexivity.
       + contradiction.
   Qed.
-  
+
   Lemma Tr_EPath p i s π :
     Tr π ->  hd_error π = Some (p,i,s) -> exists s0, EPath (root,start_tag,s0) (p,i,s) π.
   Proof.
@@ -198,7 +198,7 @@ Section eval.
         * congruence.
       + unfold sem_step in H. destruct l;cbn in *;congruence.
   Qed.
-  
+
   Lemma eval_edge_tcfg_edge p q i j s r
         (Heval : eval_edge (q,j,r) (p,i,s))
     : tcfg_edge (q,j) (p,i).
@@ -220,20 +220,26 @@ Section eval.
     - cbn. destruct b. cbn. destruct c0, c. eapply eval_edge_tcfg_edge;eauto.
   Qed.
 
+  Definition proj_Tr_TPath (π : list Conf)
+    := map fst π.
+
+  Definition proj_Tr_TPath_list (T : list (list Conf))
+    := map (map fst) T.
+
   Lemma EPath_TPath' k k' c c' π ϕ :
     EPath k k' π -> c = fst k -> c' = fst k' -> ϕ = map fst π -> TPath c c' ϕ.
   Proof.
     intros. eapply EPath_TPath in H;subst; eauto.
   Qed.
-  
 
-  Ltac inv_dep H Dec := inversion H; subst; 
+
+  Ltac inv_dep H Dec := inversion H; subst;
                         repeat match goal with
                                | [ H0: @existT _ _ _ _ = @existT _ _ _ _  |- _ ]
                                  => apply inj_pair2_eq_dec in H0; try (apply Dec); subst
                                end.
 
-  Ltac inv_tr H := inversion H; subst; 
+  Ltac inv_tr H := inversion H; subst;
                    repeat match goal with
                           | [ H0: @existT Conf _ _ _ = @existT _ _ _ _  |- _ ]
                             => apply inj_pair2_eq_dec in H0; try (apply Conf_dec); subst
@@ -259,19 +265,6 @@ Section eval.
   Definition sem_hyper (T : Hyper) : Hyper :=
     fun ts' => exists ts, T ts /\ ts' = sem_trace ts.
 
-  (* possibly unused
-  Lemma in_succ_in k p q t :
-    Tr (k :: t) -> In p t -> eff p = Some q -> In q (k :: t).
-  Proof.
-    intros. 
-    revert dependent k. 
-    dependent induction t; intros k H; inv_tr H; [firstorder|].
-    + rewrite nlcons_front in H5. destruct H0;[subst a|].
-      * rewrite H5 in H1. inversion H1. left. reflexivity.
-      * right. eapply IHt;eauto.
-  Qed.
-   *)
-
   (** ** Lemmas **)
 
   Lemma Tr_eff_Some c k t
@@ -281,7 +274,7 @@ Section eval.
     inversion Htr.
     unfold sem_step in H2. cbn in H2. eauto.
   Qed.
-  
+
   Lemma in_pred_exists p i s k t :
     (p,i,s) ∈ (k :: t) ->
     p <> root ->
@@ -293,7 +286,7 @@ Section eval.
     - exfalso.
       destruct Hin;[|contradiction].
       subst k. inversion H0. eapply Hneq. rewrite H1. reflexivity.
-    - inversion H1. 
+    - inversion H1.
     - subst.
       destruct Hin.
       + subst k.
@@ -304,7 +297,7 @@ Section eval.
         exploit IHt.
         destructH. do 3 eexists;eauto.
   Qed.
-  
+
   Lemma ivec_fresh : forall p i s (t : trace),
       sem_step (`t) (p, i, s) -> forall j r, In (p, j, r) (`t) -> j <> i.
   Proof.
@@ -326,7 +319,7 @@ Section eval.
       + inversion t.
       + cbn in Heqc. congruence.
   Qed.
-  
+
   Lemma ivec_det : forall q j r r' p i i' s s',
       eff (q, j, r) = Some (p, i, s) ->
       eff (q, j, r') = Some (p, i', s') ->
@@ -334,7 +327,7 @@ Section eval.
   Proof.
     intros. eff_unf. eff_unf. inversion H;subst. inversion H0;subst. eapply eff_tag'_eq.
   Qed.
-  
+
   Definition Precedes' (l : list Conf) (k k' : Conf) : Prop :=
     exists l', Prefix (k' :: l') l /\ Precedes lab_of (k' :: l') k.
 
@@ -343,14 +336,14 @@ Section eval.
   Lemma start_no_tgt :
     forall i' s' k, eff k = Some (root, i', s') -> False.
   Proof.
-    intros. 
+    intros.
     destruct k as [[p i] s].
     unfold start_coord in H.
     cut (is_effect_on p root); intros.
     apply edge_spec in H0.
     eapply root_no_pred. eassumption.
     unfold is_effect_on.
-    exists i, i', s, s'. 
+    exists i, i', s, s'.
     assumption.
   Qed.
    *)
@@ -361,18 +354,18 @@ Section eval.
     unfold Precedes'.
     exists l'. split; econstructor. eauto.
   Qed.
-  
+
   Lemma precedes_self c t :
     In c t -> Precedes' t c c.
   Proof.
     intros H.
     destruct c as [[p i] s].
     induction t.
-    + inv_tr H. 
+    + inv_tr H.
     + destruct a as [[q j] r].
       inv_tr H; eauto using Precedes.
       * rewrite H0. exists t. split; econstructor.
-      * eapply precedes_cons; eauto. 
+      * eapply precedes_cons; eauto.
   Qed.
 
   Lemma precedes_step_inv :
@@ -386,7 +379,7 @@ Section eval.
     inv_tr Hprec.
     - firstorder.
     - eapply precedes_in in H5.
-      eapply prefix_cons_cons in Hpre.      
+      eapply prefix_cons_cons in Hpre.
       eapply in_prefix_in; eauto.
   Qed.
 
@@ -399,9 +392,9 @@ Section eval.
     intros H Heff Hneq.
     destruct t as [l tr]; cbn in H, Heff. unfold "`".
     destruct H; [subst k| revert dependent k];
-      dependent induction l; inversion tr; subst; intros. 
+      dependent induction l; inversion tr; subst; intros.
     - exists root, start_tag, s0. split; [ constructor | eauto ]; eauto.
-    - cbn in Heff, H2. destruct a as [[q j] r]. exists q,j,r. firstorder. 
+    - cbn in Heff, H2. destruct a as [[q j] r]. exists q,j,r. firstorder.
     - exfalso. inversion H; inversion H0. subst p; contradiction.
     - destruct H.
       + subst a. remember (hd_error l) as qjr. destruct qjr as [qjr|qjr].
@@ -414,7 +407,7 @@ Section eval.
           destruct l;[inversion H2|].
           cbn in H3. cbn in Heqqjr. inversion Heqqjr. subst c. eauto.
       + eapply IHl in H2; eauto. destruct H2 as [q [j [r [Hin Hstep]]]].
-        exists q, j, r. split; eauto. 
+        exists q, j, r. split; eauto.
   Qed.
 
   Lemma root_prefix (t : trace) : exists s, Prefix ((root, start_tag, s) :: nil) (`t).
@@ -424,7 +417,7 @@ Section eval.
     - exists s. econstructor.
     - destruct IHl as [s IHl']; eauto. exists s. econstructor; eauto.
   Qed.
-  
+
   Lemma root_start_tag s i (t : trace) : In (root, i, s) (`t) -> i = start_tag.
   Proof.
     intros Hin.
@@ -460,7 +453,7 @@ Section eval.
     | [ H : Tr t |- _ ] =>
       replace t with ( ` (exist Tr t H)) in * by (cbn; reflexivity)
     end.
-  
+
   Lemma tag_inj p i s r (t : trace) : In (p,i,s) (`t) -> In (p,i,r) (`t) -> s = r.
   Proof.
     intros His Hir. eapply trace_destr_in_in in His; eauto.
@@ -508,7 +501,7 @@ Section eval.
     simpl_nl' H1. simpl_nl' H4.
     eapply eval_det; unfold eval_edge; [rewrite H1|rewrite H4]; conv_bool; reflexivity.
   Qed.*)
-  
+
   Lemma prefix_eff_cons_cons k k' l l' :
     (*    eff (ne_front l) = Some k
     -> l' = ne_to_list l''
@@ -538,7 +531,7 @@ Section eval.
         eapply eval_det;eauto.
     - econstructor. eapply IHHpre; eauto. inversion Htr'; eauto.
   Qed.
-  
+
   Lemma precedes_succ (t : trace) q j r q' j' r' p i s k' :
     Precedes' (`t) (q', j', r') (q, j, r) ->
     eff (q, j, r) = Some (p, i, s) ->
@@ -550,7 +543,7 @@ Section eval.
     destruct Hprec as [t' [Hpre Hprec]].
     exists ((q,j,r) :: t').
     split.
-    - clear Hprec Hneq. 
+    - clear Hprec Hneq.
       unfold Conf in Hpre. unfold Coord in Hpre.
       set (t2 := (q,j,r) :: t') in *.
       destruct t as [t tr]. unfold "`" in *. cbn. subst t2.
@@ -558,17 +551,17 @@ Section eval.
       cbn. econstructor.
       + eapply prefix_trace.
         * eauto.
-        * inversion Htr; eauto. subst t. inversion Hpre. 
-      + eauto. 
-    - econstructor; cbn; eauto. 
+        * inversion Htr; eauto. subst t. inversion Hpre.
+      + eauto.
+    - econstructor; cbn; eauto.
   Qed.
-       
+
   (* possibly unused
   Lemma precedes_step l q j r p i s :
     forall k, (q, j, r) ∈ l ->
          p <> q ->
          eff (q, j, r) = Some (p, i, s) ->
-         Tr (k :: l) -> 
+         Tr (k :: l) ->
          Precedes' (k :: l) (q, j, r) (p, i, s).
   Proof.
     intros k Hin Hneq Heff Htr.
@@ -630,7 +623,7 @@ Section eval.
       rewrite H in H1.
       inversion H1.
   Qed.
-  
+
   Definition lift (tr : Traces) : Hyper :=
     fun ts => ts = tr.
 
@@ -643,13 +636,13 @@ Section eval.
     -> Postfix ((l :r: k) :r: k') l'
     -> eff k' = Some k.
    *)
-  
+
   Lemma Tr_CPath l :
     Tr l -> CPath root (fst (fst (hd (root,start_tag,zero) l))) (map fst (map fst l)).
   Proof.
     intro H. destruct l;[inversion H|].
     eapply Tr_EPath in H;[| repeat rewrite <-surjective_pairing; reflexivity].
-    destruct H as [s0 H]. cbn. 
+    destruct H as [s0 H]. cbn.
     eapply EPath_TPath in H. cbn in H. eapply TPath_CPath in H. eauto.
   Qed.
 
@@ -680,7 +673,7 @@ Section eval.
     enough ((q1,j1) :: map fst l1 = map fst l1' :r: (root,start_tag)).
     * rewrite H. rewrite H0. eauto.
     * clear - Hback1. subst l1'.
-      fold (fst (root,start_tag,s3)). 
+      fold (fst (root,start_tag,s3)).
       rewrite <-map_rcons.
       rewrite Hback1.
       rewrite <-cons_rcons'. cbn. eauto.
@@ -723,10 +716,10 @@ Section eval.
     - revert dependent l1. revert q q' j j'. induction l;intros.
       + cbn in *. congruence.
       + cbn in *. inversion Hpath;subst.
-        1:cbn in Hsucc; congruence. 
+        1:cbn in Hsucc; congruence.
         exploit' IHl. destruct l1.
         * destruct a. inversion H1;subst;cbn in Hsucc; inversion Hsucc;[subst q j|].
-          -- cbn in *. 
+          -- cbn in *.
              exists s0, s, nil, nil. cbn. reflexivity.
           -- exfalso. destruct l0; cbn in H6;[inversion H|congruence].
         * destruct a. cbn in *. destruct c.
@@ -734,7 +727,7 @@ Section eval.
           exists r', s, ((e,t,r) :: (tl (tl l))), nil. cbn.
           unfold succ_in in IHl. destructH.
           destruct l2;cycle 1.
-          { 
+          {
             exfalso.
             eapply Tr_NoDup in H1.
             enough (fst c = (q,j)).
@@ -745,18 +738,18 @@ Section eval.
             - clear - IHl Hsucc.
               inversion Hsucc. rewrite IHl in H0. cbn in H0.
               inversion H0. reflexivity.
-          } 
+          }
           assert (l1 = map fst l0).
           {
             cbn in IHl. clear - IHl H3.
             rewrite IHl in H3. cbn in H3. inversion H3. reflexivity.
-          } 
+          }
           rewrite H in H3. cbn in IHl.
           f_equal.
           inversion H1.
           -- exfalso. cbn in *. congruence.
           -- cbn in Hsucc,H2,H3. destruct k. cbn in Hsucc,H3.
-             rewrite <-H5 in IHl. 
+             rewrite <-H5 in IHl.
              inversion H0.
              ++ cbn. destruct c. inversion IHl. subst. congruence.
              ++ cbn. destruct c. inversion IHl. subst. f_equal. f_equal. inversion H13. auto.
@@ -768,7 +761,7 @@ Section eval.
         eapply IHl2 in H1;eauto.
         destructH. do 2 eexists. eapply succ_cons. eauto.
   Qed.
-  
+
   Lemma tr_succ_eff' p q q' br i j k s r r' r0 l
         (Htr : Tr ((p, i, s) :: l))
         (Hsucc : (q, j, r) ≻ (br, k, r0) | (p, i, s) :: l)
@@ -790,7 +783,7 @@ Section eval.
       + cbn in Htr. inversion Htr. eapply H1.
       + cbn in Hsucc. inversion Hsucc;subst. eauto.
   Qed.
-  
+
   Lemma succ_in_rcons2 {A : Type} (a b : A) l
     : a ≻ b | l :r: a :r: b.
   Proof.
@@ -811,7 +804,7 @@ Section eval.
       eapply H1. cbn in Hsucc. inversion Hsucc;subst.
       clear - H3. destruct l2;intros;inversion H3;subst;cbn in *;eauto.
   Qed.
-  
+
   Lemma succ_in_cons_neq (A : Type) (a b c d : A) l
         (Hsucc : a ≻ b | d :: c :: l)
         (Hnd : NoDup (c :: l))
@@ -823,13 +816,13 @@ Section eval.
     - cbn in Hsucc. inversion Hsucc. subst. contradiction.
     - cbn in Hsucc. inversion Hsucc. subst. eexists;eexists. eauto.
   Qed.
-  
+
   Lemma succ_in_tpath_eff_tag p q i j t a b
         (Hpath : TPath a b t)
         (Hsucc : (p,i) ≻ (q,j) | t)
     : eff_tag q p j = Some i.
   Proof.
-    unfold succ_in in Hsucc. destructH. 
+    unfold succ_in in Hsucc. destructH.
     revert dependent t. revert b. induction l2; cbn in *; intros.
     - rewrite Hsucc in Hpath. unfold TPath in Hpath. destruct b.
       inversion Hpath. subst. destruct b. inversion H3;subst;destruct H5;eauto.
@@ -837,7 +830,7 @@ Section eval.
       inversion Hsucc. subst. inversion Hpath;subst. 1: congruence'.
       eauto.
   Qed.
-  
+
   Lemma eff_tcfg p q i j s r
         (Heff : eff (p,i,s) = Some (q,j,r))
     : tcfg_edge (p,i) (q,j).
@@ -846,7 +839,7 @@ Section eval.
     eapply step_conf_implies_edge in Heff. conv_bool; firstorder.
   Qed.
 
-  (* possibly unused 
+  (* possibly unused
   Lemma tr_tpath_cons1 (l : list Conf) c
         (Htr : Tr (c :: l))
     : TPath (root,start_tag) (fst c) ((fst c) :: map fst l).
@@ -859,7 +852,7 @@ Section eval.
     eapply eff_tcfg;eauto.
   Qed.
    *)
-  
+
   Lemma prec_lab_prec_fst p i s l
         (Hprec : Precedes lab_of l (p,i,s))
     : Precedes fst (map fst l) (p,i).
@@ -881,7 +874,7 @@ Ltac spot_path_e :=
   let p := fresh "p" in
   let i := fresh "i" in
   let s := fresh "s" in
-  lazymatch goal with 
+  lazymatch goal with
   | [ H : Tr ((?p,?i,?s) :: ?t) |- _ ] => eapply Tr_EPath in H;[|cbn;reflexivity]; destructH' H; cbn in H
   | [ H : Tr ?t |- _ ] => destruct (hd_error t) as [[[p i] s]|N] eqn:Q;
                         [eapply Tr_EPath in H;[clear Q|apply Q]; destructH' H; cbn in H
@@ -906,4 +899,3 @@ Ltac spot_path :=
   | [ |- TPath _ _ _ ] => repeat (spot_path_t;eauto)
   | [ |- EPath _ _ _ ] => repeat (spot_path_e;eauto)
   end.
-
