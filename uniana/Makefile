@@ -9,13 +9,13 @@ export COQDOCFLAGS
 COQMAKEFILE:=Makefile.coq
 COQ_PROJ:=_CoqProject
 VS:=$(wildcard *.v */*.v */*/*.v)
-#$(shell find . -name '*.v' -a ! -name 'X_*.v' -a ! -name '*\#*.v') 
+#$(shell find . -name '*.v' -a ! -name 'X_*.v' -a ! -name '*\#*.v')
 VS_IN_PROJ:=$(shell grep .v $(COQ_PROJ))
 
 ifeq (,$(VS_IN_PROJ)) # if VS_IN_PROJ is empty, i.e. there are no *.v ressources listed in COQ_PROJ
 VS_OTHER := $(VS) # we use all *.v files found by VS
 else
-VS := $(VS_IN_PROJ) # otw use the ressources listed in COQ_PROJ 
+VS := $(VS_IN_PROJ) # otw use the ressources listed in COQ_PROJ
 endif
 
 .PHONY: clean all force cleancoqmake
@@ -26,13 +26,15 @@ all:
 
 uniana.tar: all
 	mkdir uniana
-	cp -r Uniana.v Unchanged.v cfg _CoqProject external infra tcfg Unchanged.v util coqdocjs disj eval html Makefile README.md Uniana.v uniana.pdf uniana
-	rm -f uniana/*.vo uniana/*/*.vo uniana/*/*/*.vo
-	rm -f uniana/*.glob uniana/*/*.glob uniana/*/*/*.glob 
-	rm -f uniana/*.aux uniana/*/*.aux uniana/*/*/*.aux
-	rm -f uniana/.*.aux uniana/*/.*.aux uniana/*/*/.*.aux
-	rm -f uniana/*~ uniana/*/*~ uniana/*/*/*~
-	rm -f uniana/*\#* uniana/*/*\#* uniana/*/*/*\#*
+	mkdir uniana/theories
+	cp -r Uniana.v Unchanged.v cfg _CoqProject external infra tcfg Unchanged.v util disj eval Makefile Uniana.v uniana/theories
+	cp -r ../coqdocjs ../README.md html uniana
+	rm -f uniana/theories/*.vo uniana/theories/*/*.vo uniana/theories/*/*/*.vo
+	rm -f uniana/theories/*.glob uniana/theories/*/*.glob uniana/theories/*/*/*.glob
+	rm -f uniana/theories/*.aux uniana/theories/*/*.aux uniana/theories/*/*/*.aux
+	rm -f uniana/theories/.*.aux uniana/theories/*/.*.aux uniana/theories/*/*/.*.aux
+	rm -f uniana/theories/*~ uniana/theories/*/*~ uniana/theories/*/*/*~
+	rm -f uniana/theories/*\#* uniana/theories/*/*\#* uniana/theories/*/*/*\#*
 	rm -f $@
 	bsdtar cfv $@ uniana/
 	rm -r uniana
@@ -59,5 +61,3 @@ $(COQMAKEFILE): $(COQ_PROJ) $(VS)
 #	@$(MAKE) -f $(COQMAKEFILE) $@
 force: clean
 	@$(MAKE) all
-
-
