@@ -2,6 +2,9 @@
 .\#*
 *.glob
 *.vo
+*.vok
+*.vos
+*.coq.d
 *.v.d
 *~
 .*.aux
