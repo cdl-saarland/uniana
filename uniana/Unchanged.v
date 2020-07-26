@@ -217,7 +217,7 @@ Section unch.
       apply root_start_tag in Hin as rst. subst i.
       assert (rp := root_prefix t). destruct rp as [s' rp].
       apply prefix_cons_in in rp as rp'. eapply tag_inj with (s0:=s) in rp'.
-      subst s'. 1,2,3:assumption.
+      subst s'. 1,2:assumption.
     - assert (Hpred := Hin).
       rewrite H in Hpred.
       eapply in_exists_pred in Hpred; try eassumption.
