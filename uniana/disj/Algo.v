@@ -1,32 +1,37 @@
-Require Import Ensembles.
 Require Import Coq.Program.Equality.
 
 Require Export Graph Disjoint DecTac.
 
 Section Algo.
 
+  (* Nodes and edges of the DAG *)
   Variable L : finType.
-
-  Variable S : list L.
-
-  Definition in_S x := In x S.
 
   Variable edge : L -> L -> Prop.
 
   Variable dec : EqDec L eq.
 
+  (* The graph is a DAG *)
   Variable ac : acyclic edge.
+
+  (* The set of start nodes (i.e. successors of a split) *)
+  Variable S : list L.
+
+  Definition in_S x := In x S.
 
   Definition DPath := Path edge.
 
+  (* The set P_p from the paper *)
   Definition sdom q p := forall 𝜋 s, in_S s -> DPath s p 𝜋 -> q ∈ 𝜋.
 
   Definition reachable a b := exists 𝜋, DPath a b 𝜋.
 
   Definition reachable_from_S p := exists s 𝜋, in_S s /\ DPath s p 𝜋.
 
+  (* A predicate that associates d (=p^* ) with p) *)
   Definition first_sdom d p := sdom d p /\ forall q, sdom q p -> reachable d q.
 
+  (* Menger's theorem for two-seperators *)
   Axiom menger_for_two :
     forall p q,
       (~ exists d, sdom d p /\ sdom d q) ->
@@ -417,5 +422,5 @@ Section Algo.
       + contradiction H0.
   Qed.
 
-End Section Algo.
+End Algo.
 
