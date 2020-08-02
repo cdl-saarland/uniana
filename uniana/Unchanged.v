@@ -1,5 +1,6 @@
 
 Require Import Coq.Program.Utils.
+Require Import Coq.Logic.Eqdep_dec.
 Require Import Lists.ListSet.
 Require Import List.
 Require Import Coq.Classes.EquivDec.
@@ -68,9 +69,16 @@ Section unch.
     set_add Lab_dec' p (if is_def x q p then empty_set Lab else unch q x).
 
   Definition unch_trans_ptw (unch : Unch) l x : set Lab :=
+    match preds l with
+    | nil => set_add Lab_dec' l (empty_set Lab) 
+    | p :: ps => let t := fun q => unch_trans_local unch q l x in
+               fold_right (set_inter Lab_dec') (elem Lab) (map t (p :: ps))
+    end.
+  (*
     if Lab_dec' l root then set_add Lab_dec' root (empty_set Lab) else
       let t := fun q => unch_trans_local unch q l x in
       fold_right (set_inter Lab_dec') (elem Lab) (map t (preds l)).
+*)
 
   Definition unch_trans (unch : Unch) : Unch :=
     fun l x => unch_trans_ptw unch l x.
@@ -87,10 +95,22 @@ Section unch.
     intros.
     cut (preds root = nil); intros.
     + unfold unch_trans, unch_trans_ptw.
+      rewrite H. reflexivity.
+    + cut (forall q, ~ List.In q (preds root)); intros; eauto using list_emp_in, root_no_pred.
+      rewrite in_preds. intros H. eapply root_no_pred; eauto.
+  Qed.
+
+  (*
+  Lemma unch_trans_root : forall unch x, unch_trans unch root x = set_add Lab_dec' root (empty_set Lab).
+  Proof.
+    intros.
+    cut (preds root = nil); intros.
+    + unfold unch_trans, unch_trans_ptw.
       destruct (Lab_dec' root root); firstorder.
     + cut (forall q, ~ List.In q (preds root)); intros; eauto using list_emp_in, root_no_pred.
       rewrite in_preds. intros H. eapply root_no_pred; eauto.
   Qed.
+  *)
 
   Lemma unch_trans_lem u to x unch :
     set_In u (unch_trans unch to x) ->
@@ -100,27 +120,32 @@ Section unch.
     unfold unch_trans, unch_trans_ptw, unch_join_ptw, unch_trans_local in H.
     induction (preds to); simpl in *.
     - right. intros. inject H0.
-    - destruct (Lab_dec' to root).
-      + simpl in H. destruct H; [ subst | firstorder ]. eauto.
-      + eapply set_inter_elim in H.
-        destruct H as [Hin Hother].
-        eapply IHl in Hother. clear IHl.
+    - eapply set_inter_elim in H.
+      destruct H as [Hin Hother].
+      destruct l.
+      + simpl in Hother.
+        destruct (is_def x a) eqn:Hdef; simpl in Hin.
+        inject Hin; intuition.
+        destruct (Lab_dec' u to); [ eauto | ].
+        right. intros. 
+        inject H.
+        * split; eauto using set_add_elim2.
+        * inject H0.
+      + eapply IHl in Hother. clear IHl.
         inject Hother; [ eauto |].
         destruct (Lab_dec' u to); subst; eauto.
         right.
         intros.
         inject H0; [ subst | eauto].
         destruct (is_def x q to).
-        * simpl in Hin. firstorder.
+        * simpl in Hin. firstorder auto with *.
         * eauto using set_add_elim2.
   Qed.
 
   Definition unch_concr' (unch : Unch) (l : list Conf) :=
     forall (to : Lab) (i : Tag) (s : State) (u : Lab) (x : Var),
       (to,i,s) ∈ l ->
-      u ∈ unch to x ->
       exists (j : Tag) (r : State), Precedes' l (u,j,r) (to,i,s) /\ r x = s x.
-
 
   Lemma prefix_trans_NoDup (A : Type) `{EqDec A eq} (a : A) (l l1 l2 : list A)
         (Hpre1 : Prefix (a :: l1) l)
@@ -169,34 +194,91 @@ Section unch.
     eapply Tr_NoDup;eauto.
   Qed.
 
-  Lemma unch_concr'_pre unch t l
-        (HCunch : unch_concr unch t)
-        (Hpre : Prefix l (`t))
-    : unch_concr' unch l.
-  Proof.
-    unfold unch_concr,unch_concr' in *; eauto.
-    intros. specialize (HCunch to i s u x). exploit HCunch;[eapply prefix_incl;eauto|].
-    destructH. eexists; eexists; split; [|eauto].
-    eapply precedes_prefix;eauto. destruct t; cbn; eauto.
-  Qed.
-
   (** ** Dominance **)
 
-  Lemma unch_dom u p i s x unch l
-        (Hunch : u ∈ unch_trans unch p x)
-        (HCunch : unch_concr' (unch_trans unch) l)
-        (Htr : Tr ((p,i,s) :: l))
-    : Dom edge__P root u p.
+  Definition path := { π : list Lab | exists e, Path edge__P root e π }.
+  Definition Paths := path -> Prop.
+
+  Definition unch_concr_dom (unch : Unch) (π : path) :=
+    forall (to : Lab) (u : Lab) (x : Var),
+      u ∈ unch to x ->
+      to ∈ `π ->
+      u ∈ `π.
+
+  Definition sem_path (ps : Paths) : Paths :=
+    fun π' => exists l π, ps π /\ `π' = (l :: `π).
+
+  Lemma pred_in_path (π : path) (π' : path) l to
+        (Hpath : `π = l :: `π')
+        (Hin : to ∈ `π)
+        (Hnoroot : to <> root)
+    : exists pred, pred ∈ preds to /\ pred ∈ `π'.
   Proof.
-    unfold unch_trans,unch_trans_ptw in Hunch. unfold unch_trans_local in Hunch.
-    (* FIXME: give intuition *)
-    destruct (Lab_dec' p root).
-    - cbn in *. destruct Hunch;[|contradiction]. (*subst. eapply dominant_self.
-    - assert (exists L, forall r, r ∈ L
-                        <-> forall q, q ∈ preds p
-                               -> r ∈ set_add Lab_dec' p (if is_def x q p then empty_set Lab else unch q x)). *)
-      admit.
+    unfold path in π.
+    destruct π as [ π [ e He ] ].
+    simpl in *.
+    eapply path_to_elem with (r := to) in He; try assumption.
+    destruct He as [ϕ [Hp Hprefix]].
+    clear Hin e.
+    inversion Hp; subst.
+    - firstorder eauto with *.
+    - exists b. split.
+      + unfold preds. rewrite in_filter_iff. split.
+        * eauto.
+        * simpl. rewrite H0. trivial.
+      + eapply path_contains_front in H.
+        dependent destruction Hprefix.
+        * assumption.
+        * eapply prefix_incl in Hprefix. eapply Hprefix. right. assumption.
+  Qed.
+
+  Lemma preds_root_nil
+    : preds root = [].
+  Proof.
+    unfold preds.
+    induction (elem Lab); simpl; [ reflexivity |].
+    (* I'd love to do a destruct on (edge a root) but somehow, I can't *)
   Admitted.
+      
+  Lemma unch_correct_dom :
+        forall unch π, sem_path (unch_concr_dom unch) π -> unch_concr_dom (unch_trans unch) π.
+  Proof.
+    intros.
+    unfold sem_path in H.
+    unfold unch_concr_dom.
+    intros to u x Hunch Htoin.
+    destruct H as [l [π' [Hconcr Heq]]].
+    unfold unch_trans, unch_trans_ptw in Hunch.
+    unfold unch_concr_dom in Hconcr.
+
+    destruct (Lab_dec' to root). {
+      subst to. rewrite preds_root_nil in Hunch. simpl in Hunch.
+      inject Hunch; [ assumption | inject H ].
+    }
+
+    assert (Hpred : exists pred, pred ∈ preds to /\ pred ∈ `π'). {
+      eapply pred_in_path; try eassumption.
+    }
+    
+    destruct Hpred as [pred [Hpred Hpredin]].
+    induction (preds to) as [ | p ps ]; simpl in Hunch.
+    - contradiction Hpred.
+    - eapply set_inter_elim in Hunch.
+      destruct (Lab_dec' pred p).
+      + subst. clear Hpred.
+        destruct Hunch as [Hunch _]. clear IHps.
+        unfold unch_trans_local in Hunch.
+        unfold path in π'.
+        eapply set_add_elim in Hunch.
+        inversion_clear Hunch.
+        * subst. eassumption.
+        * destruct (is_def x p to); [ firstorder |].
+          rewrite Heq. right. eauto.
+      + destruct Hunch as [_ Hunch].
+        inversion Hpred; [ subst; tauto |].
+        destruct ps; [ inject H | eapply IHps; try eassumption ].
+  Qed.
+
 
   (** ** Correctness **)
 
@@ -212,7 +294,7 @@ Section unch.
     intros Hin Hunch.
     destruct (Lab_dec' to root); subst.
     - unfold unch_trans, unch_trans_ptw in Hunch. destruct (Lab_dec' root root); [ | firstorder ].
-      simpl in Hunch. destruct Hunch; [ | firstorder ]. subst.
+      simpl in Hunch. rewrite preds_root_nil in Hunch. destruct Hunch; [ subst | firstorder ]. 
       exists i, s. split; eauto. exists nil. split; [|econstructor].
       apply root_start_tag in Hin as rst. subst i.
       assert (rp := root_prefix t). destruct rp as [s' rp].
@@ -226,7 +308,7 @@ Section unch.
         eapply unch_trans_lem in Hunch; try eassumption.
         destruct (Lab_dec to u) as [ | Hneq ]; subst.
         * exists i, s. split; [ | reflexivity ]. rewrite <-e. eapply precedes_self;eauto.
-        * destruct Hunch; [ firstorder |].
+        * destruct Hunch; [ firstorder eauto with * |].
           setoid_rewrite in_preds in H0.
           eapply H0 in Hedge. destruct Hedge as [Hndef Huin].
           edestruct Hred as [j' [r' [Hprec Heq]]]; eauto.
