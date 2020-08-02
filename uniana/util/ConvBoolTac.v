@@ -5,37 +5,37 @@ Require Export Coq.Classes.EquivDec.
 Lemma beq_true {A : Type} `{EqDec A} (a c : A) :
   (a ==b c) = true <-> (a === c).
 Proof.
-  unfold equiv_decb; destruct (a == c); firstorder.
+  unfold equiv_decb; destruct (a == c); firstorder auto with *.
 Qed.
 
 Lemma beq_false {A : Type} `{EqDec A} (a b : A) :
   (a ==b b) = false <-> (a =/= b).
 Proof.
-  unfold equiv_decb; destruct (a == b); firstorder.
+  unfold equiv_decb; destruct (a == b); firstorder auto with *.
 Qed.
 
 Lemma bne_true {A : Type} `{EqDec A} (a c : A) :
   (a <>b c) = true <-> (a =/= c).
 Proof.
-  unfold nequiv_decb, equiv_decb. rewrite negb_true_iff. destruct (a == c); firstorder.
+  unfold nequiv_decb, equiv_decb. rewrite negb_true_iff. destruct (a == c); firstorder auto with *.
 Qed.
 
 Lemma bne_false {A : Type} `{EqDec A} (a b : A) :
   (a <>b b) = false <-> (a === b).
 Proof.
-  unfold nequiv_decb, equiv_decb. rewrite negb_false_iff. destruct (a == b); firstorder.
+  unfold nequiv_decb, equiv_decb. rewrite negb_false_iff. destruct (a == b); firstorder auto with *.
 Qed.
 
 Definition to_bool {P Q : Prop} (x : {P} + {Q}) := if x then true else false.
 
 Lemma to_bool_true (P : Prop) (x : {P} + {~ P}) : to_bool x = true <-> P.
 Proof.
-  destruct x; cbn; firstorder.
+  destruct x; cbn; firstorder auto with *.
 Qed.
     
 Lemma to_bool_false (P : Prop) (x : {P} + {~P}) : to_bool x = false <-> ~ P.
 Proof. 
-  destruct x; cbn; firstorder.
+  destruct x; cbn; firstorder auto with *.
 Qed.
 
 Ltac conv_bool := repeat match goal with
