@@ -231,8 +231,10 @@ Section unch.
   Proof.
     unfold preds.
     induction (elem Lab); simpl; [ reflexivity |].
-    (* I'd love to do a destruct on (edge a root) but somehow, I can't *)
-  Admitted.
+    decide (if edge a root then True else False) as [H|H]; [|assumption].
+    - destruct (edge a root) eqn:Hedge; [|tauto].
+      exfalso. eapply root_no_pred. eassumption.
+  Qed.
       
   Lemma unch_correct_dom :
         forall unch π, sem_path (unch_concr_dom unch) π -> unch_concr_dom (unch_trans unch) π.
