@@ -101,7 +101,7 @@ Section uniana.
                                                  && uni q x
                                                  && join_andb (map ((uni_branch uni))
                                                                    (rel_splits p q)))
-                                    (unch_trans unch p x)).
+                                    (unch p x)).
 
   (** ** Lemmas **)
 
@@ -610,11 +610,10 @@ Section uniana.
           [|exists qe2]; firstorder 0.
   Qed.
 
-  Lemma unch_same_tag p u i s1 s2 j1 j2 r1 r2 l1 l2 x uni unch
+  Lemma unch_same_tag p u i s1 s2 j1 j2 r1 r2 l1 l2 x uni (unch : Unch)
         (Hunibr : join_andb (map ((uni_branch uni)) (rel_splits p u)) = true)
-        (Hunch : u ∈ unch_trans unch p x)
-        (HCunch1 : unch_concr' (unch_trans unch) l1)
-        (HCunch2 : unch_concr' (unch_trans unch) l2)
+        (Hunch : u ∈ unch p x)
+        (Hunch_postfix : forall p x, unch p x ⊆ unch_trans unch p x)
         (Hprec1 : Precedes lab_of l1 (u, j1, r1))
         (Hprec2 : Precedes lab_of l2 (u, j2, r2))
         (HCuni : forall (x : Var) (p : Lab) (i : Tag) (s s' : State),
@@ -635,7 +634,7 @@ Section uniana.
     specialize (@find_divergent_branch u p (map fst l1) (map fst l2) i j1 j2) as Hwit.
     unfold Tag in *.
     exploit Hwit.
-    - eapply unch_dom;eauto.
+    - eapply unch_postfix_implies_dom; eauto.
     - eapply prec_lab_prec_fst;eauto.
     - eapply prec_lab_prec_fst;eauto.
     - destructH.
@@ -722,12 +721,12 @@ Section uniana.
 
   (** * Correctness **)
 
-  Lemma uni_correct :
-    forall uni unch ts,
-      sem_hyper (red_prod (uni_concr uni) (lift (unch_concr unch))) ts ->
-      uni_concr (uni_trans uni unch) ts.
+  Lemma uni_correct uni unch ts
+        (Hunch_postfix : forall p x, unch p x ⊆ unch_trans unch p x)
+      : sem_hyper (red_prod (uni_concr uni) (lift (unch_concr unch))) ts ->
+        uni_concr (uni_trans uni unch) ts.
   Proof.
-    intros uni unch ts Hred.
+    intros Hred.
     unfold sem_hyper in Hred.
     destruct Hred as [ts' [Hconcr Hstep]].
     unfold uni_concr.
@@ -746,7 +745,6 @@ Section uniana.
     }
 
     destruct Hconcr as [HCuni  _].
-
     subst.
     unfold uni_trans in Htrans.
     assert (X := Hsem). destruct X as [t1 [k1 [Hts1 Hteq1]]].
@@ -797,9 +795,8 @@ Section uniana.
           -- eapply uni_same_tag;eauto.
              1,2: econstructor;eauto;eauto.
              reduce_uni_concr HCuni Hpre1 Hpre2.
-        * clear HCunch HCunch'.
-          eapply uni_same_lab ; eauto.
-          1,2: econstructor;eauto;eauto. cbn in HCuni.
+        * eapply uni_same_lab ; eauto.
+          1,2: econstructor;eauto;eauto. 
           reduce_uni_concr HCuni Hpre1 Hpre2.
       (* The unch case *)
       + rename Hunch into H.
@@ -808,10 +805,10 @@ Section uniana.
         conv_bool.
         destruct H as [Hunch [[Hneq' Huni] Hunibr]].
         decide (u = p);cbn in Hneq';[congruence|clear Hneq'].
-        copy HCunch HCunch1.
-        copy HCunch' HCunch2.
-        specialize (HCunch p i s u x HIn Hunch).
-        specialize (HCunch' p i s' u x HIn' Hunch).
+        copy Hunch Huncht.
+        eapply Hunch_postfix in Huncht.
+        specialize (HCunch p i s u x HIn Huncht).
+        specialize (HCunch' p i s' u x HIn' Huncht).
         destruct HCunch as [j [r [Hprec Heq]]]; try eassumption.
         destruct HCunch' as [j' [r' [Hprec' Heq']]]; try eassumption.
         rewrite <- Heq. rewrite <- Heq'.
@@ -824,7 +821,8 @@ Section uniana.
           -- setoid_rewrite Hteq2 in Hprec'. apply Hprec'.
           -- rewrite <-Hteq2. destruct t'; eauto.
           -- cbn;eauto.
-        * unfold Precedes' in Hprec,Hprec'. destructH' Hprec. destructH' Hprec'.
+        * clear Huncht.
+          unfold Precedes' in Hprec,Hprec'. destructH' Hprec. destructH' Hprec'.
           eapply prefix_trace in Hprec0 as Htr1 ; [|destruct t; eauto].
           eapply prefix_trace in Hprec'0 as Htr2; [|destruct t';eauto].
           rewrite Hteq1 in Hprec0. cbn in Hprec0.
@@ -832,13 +830,12 @@ Section uniana.
           rewrite Hteq2 in Hprec'0. cbn in Hprec'0.
           eapply prefix_cons_cons in Hprec'0.
           eapply unch_same_tag with (l1:=l').
-          3: eapply (@unch_concr'_pre _ _ _ _ _ _ t l'); eauto; rewrite Hteq1;cbn;econstructor;eauto.
-          3: eapply (@unch_concr'_pre _ _ _ _ _ _ t' l'0);eauto;rewrite Hteq2;cbn;econstructor;eauto.
-          1,2,6-8: eauto.
-          -- inversion Hprec1;subst;eauto;congruence.
-          -- inversion Hprec'1;subst;eauto;congruence.
+          1-3,6-8: eauto.
           -- specialize (HCuni t1 t2 Hts1 Hts2).
              reduce_uni_concr HCuni Hprec0 Hprec'0.
+          -- inversion Hprec1;subst;eauto;congruence.
+          -- inversion Hprec'1;subst;eauto;congruence.
+          -- intuition.
   Qed.
 
 End uniana.

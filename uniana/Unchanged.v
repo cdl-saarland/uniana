@@ -74,11 +74,6 @@ Section unch.
     | p :: ps => let t := fun q => unch_trans_local unch q l x in
                fold_right (set_inter Lab_dec') (elem Lab) (map t (p :: ps))
     end.
-  (*
-    if Lab_dec' l root then set_add Lab_dec' root (empty_set Lab) else
-      let t := fun q => unch_trans_local unch q l x in
-      fold_right (set_inter Lab_dec') (elem Lab) (map t (preds l)).
-*)
 
   Definition unch_trans (unch : Unch) : Unch :=
     fun l x => unch_trans_ptw unch l x.
@@ -99,18 +94,6 @@ Section unch.
     + cut (forall q, ~ List.In q (preds root)); intros; eauto using list_emp_in, root_no_pred.
       rewrite in_preds. intros H. eapply root_no_pred; eauto.
   Qed.
-
-  (*
-  Lemma unch_trans_root : forall unch x, unch_trans unch root x = set_add Lab_dec' root (empty_set Lab).
-  Proof.
-    intros.
-    cut (preds root = nil); intros.
-    + unfold unch_trans, unch_trans_ptw.
-      destruct (Lab_dec' root root); firstorder.
-    + cut (forall q, ~ List.In q (preds root)); intros; eauto using list_emp_in, root_no_pred.
-      rewrite in_preds. intros H. eapply root_no_pred; eauto.
-  Qed.
-  *)
 
   Lemma unch_trans_lem u to x unch :
     set_In u (unch_trans unch to x) ->
@@ -145,6 +128,7 @@ Section unch.
   Definition unch_concr' (unch : Unch) (l : list Conf) :=
     forall (to : Lab) (i : Tag) (s : State) (u : Lab) (x : Var),
       (to,i,s) ∈ l ->
+      u ∈ unch to x ->
       exists (j : Tag) (r : State), Precedes' l (u,j,r) (to,i,s) /\ r x = s x.
 
   Lemma prefix_trans_NoDup (A : Type) `{EqDec A eq} (a : A) (l l1 l2 : list A)
@@ -180,7 +164,6 @@ Section unch.
     - cbn. reflexivity.
   Qed.
 
-
   Lemma precedes_prefix l' p q i j r s (t : list Conf)
         (Hprec : Precedes' t (q,j,r) (p,i,s))
         (Hpre  : Prefix l' t)
@@ -194,6 +177,17 @@ Section unch.
     eapply Tr_NoDup;eauto.
   Qed.
 
+  Lemma unch_concr'_pre unch t l
+        (HCunch : unch_concr unch t)
+        (Hpre : Prefix l (`t))
+    : unch_concr' unch l.
+  Proof.
+    unfold unch_concr,unch_concr' in *.
+    intros. specialize (HCunch to i s u x). exploit HCunch; [eapply prefix_incl;eauto|].
+    destructH. eexists; eexists; split; [|eauto].
+    eapply precedes_prefix;eauto. destruct t; cbn; eauto.
+  Qed.
+  
   (** ** Dominance **)
 
   Definition path := { π : list Lab | exists e, Path edge__P root e π }.
@@ -307,7 +301,7 @@ Section unch.
       + symmetry. eapply path_front. eassumption.
   Qed.
 
-  Lemma unch_trace_dom unch p x u
+  Lemma unch_postfix_implies_dom unch p x u
         (Hfix: forall p x, unch p x ⊆ unch_trans unch p x)
     : u ∈ unch p x -> Dom edge__P root u p.
   Proof.
