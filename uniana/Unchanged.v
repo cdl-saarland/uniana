@@ -290,16 +290,6 @@ Section unch.
     eauto.
   Qed.
 
-  (* 
-  Lemma unch_trans_contains unch u p x :
-    u ∈ unch_trans unch p x -> u = p \/ u ∈ unch 
-*)
-  Lemma forall_summary `{T : Type} (P Q : T -> Prop)
-        : (forall a, P a) -> (forall a, Q a) -> (forall a, P a -> Q a).
-  Proof.
-    firstorder.
-  Qed.
-
   Lemma path_begin_no_preds π p
         (Hπ : Path edge__P root p π)
     : preds (last π root) = [].
