@@ -279,6 +279,76 @@ Section unch.
         destruct ps; [ inject H | eapply IHps; try eassumption ].
   Qed.
 
+  Lemma unch_concr_dom_monotone unch2 unch1 
+    (Hless : forall p x, unch2 p x ⊆ unch1 p x) 
+    : forall π, unch_concr_dom unch1 π -> unch_concr_dom unch2 π.
+  Proof.
+    intros.
+    unfold unch_concr_dom in *.
+    intros to u x Hunch Hinto.
+    unfold incl in Hless.
+    eauto.
+  Qed.
+
+  (* 
+  Lemma unch_trans_contains unch u p x :
+    u ∈ unch_trans unch p x -> u = p \/ u ∈ unch 
+*)
+  Lemma forall_summary `{T : Type} (P Q : T -> Prop)
+        : (forall a, P a) -> (forall a, Q a) -> (forall a, P a -> Q a).
+  Proof.
+    firstorder.
+  Qed.
+
+  Lemma path_begin_no_preds π p
+        (Hπ : Path edge__P root p π)
+    : preds (last π root) = [].
+  Proof.
+    dependent induction π.
+    - simpl. eapply preds_root_nil.
+    - enough (a = p).
+      + subst. simpl.
+        destruct π.
+        * enough (Heq : forall a b, Path edge__P a b [b] -> a = b).
+          -- apply Heq in Hπ. subst p. eapply preds_root_nil.
+          -- intros. inversion H; [ reflexivity |].
+             subst. inversion H1.
+        * inversion Hπ. eapply IHπ. eapply H0.
+      + symmetry. eapply path_front. eassumption.
+  Qed.
+
+  Lemma unch_trace_dom unch p x u
+        (Hfix: forall p x, unch p x ⊆ unch_trans unch p x)
+    : u ∈ unch p x -> Dom edge__P root u p.
+  Proof.
+    unfold Dom.
+    intros Hunch π Hπ.
+    specialize (path_begin_no_preds Hπ); intros Hpred.
+    induction Hπ.
+    - simpl in Hpred. eapply Hfix in Hunch.
+      unfold unch_trans, unch_trans_ptw in Hunch.
+      rewrite Hpred in Hunch. simpl in Hunch; inject Hunch; intuition.
+    - subst. eapply Hfix in Hunch.
+      unfold unch_trans, unch_trans_ptw in Hunch.
+      assert (Hin : b ∈ preds c). {
+        unfold preds.
+        eapply in_filter_iff. simpl. rewrite H. intuition.
+      }
+      induction (preds c) as [| p ps]; [ inject Hin | ].
+      simpl in Hunch. 
+      eapply set_inter_elim in Hunch.
+      destruct Hunch as [Hlocal Hother].
+      unfold unch_trans_local in Hlocal.
+      destruct Hin.
+      * subst p.
+        destruct (is_def x b c).
+        -- simpl in Hlocal. inject Hlocal; intuition.
+        -- eapply set_add_elim in Hlocal. inject Hlocal; [ intuition |].
+           right. eapply IHHπ. assumption. simpl in Hpred.
+           inversion Hπ; subst; assumption.
+      * eapply IHps; try eassumption.
+        destruct ps; [ contradiction | eassumption].
+  Qed.
 
   (** ** Correctness **)
 
