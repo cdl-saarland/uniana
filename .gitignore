@@ -16,3 +16,4 @@ Makefile.coq.conf
 unused.dump
 uniana.tar
 uniana.pdf
+uniana/.lia.cache

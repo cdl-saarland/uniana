@@ -35,7 +35,7 @@ Section Algo.
   Axiom menger_for_two :
     forall p q,
       (~ exists d, sdom d p /\ sdom d q) ->
-      exists s1 s2 𝜋 𝜙, 
+      exists s1 s2 𝜋 𝜙,
         in_S s1 /\
         in_S s2 /\
         DPath s1 p 𝜋 /\
@@ -128,7 +128,7 @@ Section Algo.
   Lemma acyclic_not_in_postfix 𝜋 a b c
         (H𝜋 : DPath a c 𝜋)
         (Hin : b ∈ 𝜋)
-        (Hneq : b <> a) : 
+        (Hneq : b <> a) :
     exists 𝜙, DPath b c 𝜙 /\ a ∉ 𝜙.
   Proof.
     specialize (path_to_elem H𝜋 Hin); intro.
@@ -195,12 +195,12 @@ Section Algo.
         (Hdisj4 : Disjoint 𝜎1 𝜎2) :
     @Disjoint L 𝜋 𝜙.
   Proof.
-    induction Hconcat1; 
+    induction Hconcat1;
     intro x; intros Hin1; intro Hin2;
       assert (Hnin : x ∉ 𝜙) by (eapply (not_in_concat Hconcat2); firstorder);
       contradiction.
   Qed.
-  
+
   Section disjoint_first.
     Variable p q dp dq : L.
     Hypothesis p_from_S : reachable_from_S p.
@@ -230,8 +230,8 @@ Section Algo.
         destruct (path_to_elem path2 Hsdom_q) as [𝜎 [path_𝜎 prefix_𝜎]].
         unfold sdom in Hsdom_d_dq.
         specialize (Hsdom_d_dq 𝜎 s2 in2 path_𝜎).
-        destruct (path_from_elem _ path_𝜎 Hsdom_d_dq) as [x [H _]]. 
-        eapply path_path_acyclic; eauto. 
+        destruct (path_from_elem _ path_𝜎 Hsdom_d_dq) as [x [H _]].
+        eapply path_path_acyclic; eauto.
 
       - assert (Hsdom_d_p : sdom d p) by (eauto using sdom_trans).
         eapply Hfirst_p in Hsdom_d_p.
@@ -241,8 +241,8 @@ Section Algo.
         destruct (path_to_elem path1 Hsdom_p) as [𝜎 [path_𝜎 prefix_𝜎]].
         unfold sdom in Hsdom_d_dp.
         specialize (Hsdom_d_dp 𝜎 s1 in1 path_𝜎).
-        destruct (path_from_elem _ path_𝜎 Hsdom_d_dp) as [x [H _]]. 
-        eapply path_path_acyclic; eauto. 
+        destruct (path_from_elem _ path_𝜎 Hsdom_d_dp) as [x [H _]].
+        eapply path_path_acyclic; eauto.
     Qed.
 
     Lemma first_disjoint :
@@ -316,7 +316,7 @@ Section Algo.
       assert (dqp_neq : dq <> dp). {
         intro. apply dpq_neq. subst. reflexivity.
       }
-        
+
       eapply (two_parts_disjoint Hconc_𝜋c Hconc_𝜙c).
       - assumption.
       - eapply suffix_disjoint; try eassumption.
@@ -330,12 +330,12 @@ Section Algo.
     Qed.
 
   End disjoint_first.
-  
+
   Lemma pred_sdom_diff a b p da db
         (Hreach_a : reachable_from_S a)
         (Hreach_b : reachable_from_S b)
         (Hedge_a : edge a p)
-        (Hedge_b : edge b p) 
+        (Hedge_b : edge b p)
         (Ha : first_sdom da a)
         (Hb : first_sdom db b)
         (Hneq : da <> db) :
@@ -370,12 +370,12 @@ Section Algo.
     eapply Hdisj; try eassumption.
   Qed.
 
-  Lemma pred_sdom_same p dp 
+  Lemma pred_sdom_same p dp
         (Hpred : forall q, edge q p -> first_sdom dp q)
         (Hreach : reachable_from_S p)
         (HnotinS : ~ in_S p) :
     first_sdom dp p.
-  Proof.  
+  Proof.
     unfold first_sdom in *.
     assert (Hsdom : sdom dp p). {
       unfold sdom. intros.
@@ -386,7 +386,7 @@ Section Algo.
       eauto.
     }
     split; [ assumption |].
-    intros. 
+    intros.
     unfold reachable_from_S in Hreach.
     destruct Hreach as [s [𝜋 [HinS path_𝜋]]].
     decide (q = p) as [ | Hne ]; [ subst q |]. {
@@ -404,10 +404,11 @@ Section Algo.
         unfold sdom in H.
         specialize (H (p :: 𝜋) s0 Hins0 path_𝜋').
         inversion H; firstorder.
+        congruence.
       }
       firstorder.
   Qed.
-      
+
   Lemma sdom_init s
         (HinS : in_S s) :
     first_sdom s s.
@@ -415,7 +416,7 @@ Section Algo.
     unfold first_sdom, sdom.
     split.
     - eauto using path_contains_front.
-    - intros. unfold reachable. 
+    - intros. unfold reachable.
       specialize (H [s] s HinS (PathSingle _ s)).
       inversion H.
       + subst q. exists [s]. constructor.
@@ -423,4 +424,3 @@ Section Algo.
   Qed.
 
 End Algo.
-
