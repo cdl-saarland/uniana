@@ -409,7 +409,9 @@ Definition r_tl (A : Type) (l : list A) := rev (tl (rev l)).
 Lemma r_tl_rcons (A : Type) (l : list A) (a : A)
   : r_tl (l ++[a]) = l.
 Proof.
-Admitted.
+  unfold r_tl.
+  rewrite rev_unit. simpl. rewrite rev_involutive. reflexivity.
+Qed.
 
 Definition inner (A : Type) (l : list A) := tl (rev (tl (rev l))).
 
@@ -427,4 +429,7 @@ Qed.
 
 Lemma inner_rcons (A : Type) (l : list A) (a : A)
   : inner (l ++ [a]) = tl l.
-Admitted.
+Proof.
+  unfold inner.
+  rewrite rev_unit. simpl. rewrite rev_involutive. reflexivity.
+Qed.
