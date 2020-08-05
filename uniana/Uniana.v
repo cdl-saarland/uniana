@@ -227,18 +227,6 @@ Section uniana.
   Qed.
   Arguments uni_branch_non_disj : clear implicits.
 
-  Lemma inner_cons_rcons (A : Type) (l : list A) (a b : A)
-    : inner (a :: l ++ [b]) = l.
-  Proof.
-    unfold inner.
-    destruct l.
-    - cbn. reflexivity.
-    - rewrite app_comm_cons.
-      do 3 (rewrite rev_unit; simpl).
-      rewrite rev_involutive.
-      reflexivity.
-  Qed.
-
   Lemma uni_same_tag p q i j1 j2 s1 s2 r1 r2 uni l1 l2
         (Htr1 : Tr ((p,i,s1) :: (q,j1,r1) :: l1))
         (Htr2 : Tr ((p,i,s2) :: (q,j2,r2) :: l2))
