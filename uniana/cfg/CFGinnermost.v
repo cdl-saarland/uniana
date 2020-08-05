@@ -1,3 +1,4 @@
+Require Import Lia.
 Require Export CFGloop.
 
 Section cfg.
@@ -126,7 +127,7 @@ Section cfg.
     : deq_loop q p.
   Proof.
     eapply deq_loop_depth_leq;eauto.
-    omega.
+    lia.
   Qed.
 
   (** ** Equivalence relation eq_loop **)
@@ -185,7 +186,7 @@ Section cfg.
     destruct H.
     eapply deq_loop_depth in H.
     eapply deq_loop_depth in H0.
-    omega.
+    lia.
   Qed.
 
   Lemma eq_loop_same (h h' : Lab)

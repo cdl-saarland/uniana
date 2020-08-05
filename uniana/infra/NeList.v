@@ -2,7 +2,7 @@
     - this module includes the definition and basic facts about non-empty lists
 **)
 
-Require Import Omega.
+Require Import Lia.
 Require Import Coq.Program.Equality.
 Import Decidable.
 Require Import Coq.Classes.Morphisms Relation_Definitions.
@@ -288,7 +288,7 @@ Proof.
   left. contradict H0. induction l;cbn in *;eauto.
   - destruct H0;eauto. congruence.
   - fold ((rev l) :r: a0).
-    rewrite tl_rcons;[eapply In_rcons;eauto|destruct l;cbn;eauto;erewrite app_length;cbn;omega].
+    rewrite tl_rcons;[eapply In_rcons;eauto|destruct l;cbn;eauto;erewrite app_length;cbn;lia].
     destruct H0.
     + subst. eauto.
     + right. eapply IHl;eauto.

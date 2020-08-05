@@ -1,7 +1,7 @@
-(**  ListExtra 
+(**  ListExtra
     - includes some useful facts about lists
 **)
-Require Import Program.Equality.
+Require Import Program.Equality Lia.
 Require Export List.
 
 Require Export Take.
@@ -22,7 +22,7 @@ Infix "='" := (set_eq) (at level 50).
 
 Section Facts.
 
-  Variables (A B : Type). 
+  Variables (A B : Type).
 
   Lemma list_emp_in : forall l, (forall (a: A), ~ List.In a l) -> l = nil.
   Proof.
@@ -49,7 +49,7 @@ Section Facts.
     - eapply IHl in H. destruct H. exists x; right;eauto.
   Qed.
 
-  Fixpoint list_is_set (l : list A) : Prop := 
+  Fixpoint list_is_set (l : list A) : Prop :=
     match l with
     | x :: xs => list_is_set xs /\ ~ In x xs
     | nil => True
@@ -66,7 +66,7 @@ Section Facts.
   Proof.
     intros Heql; rewrite Heql;unfold incl; tauto.
   Qed.
-  
+
   Lemma tl_incl (l : list A)
     : tl l ⊆ l.
   Proof.
@@ -115,11 +115,11 @@ Section Rcons.
   Qed.
 
   Lemma tl_rcons (a : A) l : length l > 0 -> tl (l :r: a) = tl l :r: a.
-    induction l; intros; cbn in *; eauto. omega.
+    induction l; intros; cbn in *; eauto. lia.
   Qed.
 
   Lemma hd_rcons (a x y : A) l : length l > 0 -> hd x (l :r: a) = hd y l.
-    induction l; intros; cbn in *; eauto. omega.
+    induction l; intros; cbn in *; eauto. lia.
   Qed.
 
   Lemma In_rcons (a b : A) l :
@@ -129,7 +129,7 @@ Section Rcons.
     - induction l; cbn; firstorder.
     - intros. destruct H; induction l; cbn; firstorder.
   Qed.
-  
+
   Lemma cons_rcons' (a : A) l :
     (a :: l) = (rev (tl (rev (a :: l))) :r: hd a (rev (a :: l))).
   Proof.
@@ -137,8 +137,8 @@ Section Rcons.
     rewrite rev_cons. rewrite tl_rcons.
     - rewrite rev_rcons. erewrite hd_rcons.
       + rewrite cons_rcons_assoc. f_equal. apply IHl.
-      + rewrite rev_length; cbn; omega.
-    - rewrite rev_length; cbn; omega.
+      + rewrite rev_length; cbn; lia.
+    - rewrite rev_length; cbn; lia.
   Qed.
 
   Lemma cons_rcons (a : A) l : exists a' l', (a :: l) = (l' :r: a').
@@ -185,7 +185,7 @@ Section Rcons.
     S n = length l -> l = l' :r: a -> n = length l'.
   Proof.
     revert l l'.
-    induction n; intros; cbn in *; eauto; subst l; rewrite length_rcons in H; omega. 
+    induction n; intros; cbn in *; eauto; subst l; rewrite length_rcons in H; lia.
   Qed.
 
   Lemma rcons_ind
@@ -202,7 +202,7 @@ Section Rcons.
                | _,_ => _
                end)).
     - subst l. eauto.
-    - clear F. intros. subst l. eauto. 
+    - clear F. intros. subst l. eauto.
     - clear F. intros. destruct l; eauto using rcons_not_nil. cbn in H1. congruence.
     - rewrite e1. apply H0. apply (F l0 n).
       eapply rcons_length; eauto.
@@ -223,13 +223,13 @@ Section Rcons.
   Qed.
 
   (** map facts **)
-  
+
   Lemma map_rcons (f : A -> B) :
     forall a l, map f (l :r: a) = map f l :r: f a.
   Proof.
     intros. induction l;cbn;eauto. rewrite IHl. reflexivity.
   Qed.
-  
+
   Lemma map_inj_in (f : A -> B) (Hinj : injective f) (l : list A) (a : A)
     : (f a) ∈ map f l -> a ∈ l.
   Proof.
@@ -252,7 +252,7 @@ Section Rcons.
   Qed.
 
 End Rcons.
-  
+
 Ltac congruence' :=
   lazymatch goal with
   | [ H : ?l ++ (?a :: ?l') = nil |- _ ] => destruct l; cbn in H; congruence
@@ -279,23 +279,23 @@ Section Rcons.
     revert l'; induction l; intros; destruct l'; cbn in *; inversion H; eauto; try congruence'.
     f_equal. eapply IHl. repeat fold_rcons H2. auto.
   Qed.
-  
+
   Lemma rcons_eq2 {A : Type} (l l' : list A) (a a' : A)
     : l :r: a = l' :r: a' -> a = a'.
   Proof.
     revert l'; induction l; intros; destruct l'; cbn in *; inversion H; eauto; congruence'.
   Qed.
-  
+
   Lemma rev_injective {A : Type} (l l' : list A)
     : rev l = rev l' -> l = l'.
   Proof.
     revert l. induction l'; intros; cbn in *.
     - destruct l;[reflexivity|cbn in *;congruence'].
     - destruct l;cbn in *;[congruence'|].
-      repeat fold_rcons H. 
+      repeat fold_rcons H.
       f_equal;[eapply rcons_eq2;eauto|apply IHl';eapply rcons_eq1;eauto].
   Qed.
-  
+
   Lemma rev_rev_eq (A : Type) (l l' : list A)
     : l = l' <-> rev l = rev l'.
   Proof.
@@ -305,7 +305,7 @@ Section Rcons.
     intros ? ? Hll.
     subst. reflexivity.
   Qed.
-  
+
   Lemma NoDup_rcons (A : Type) (x : A) (l : list A)
     : x ∉ l -> NoDup l -> NoDup (l :r: x).
   Proof.
@@ -327,7 +327,7 @@ Section Rcons.
       + subst a. eapply H2. apply In_rcons;firstorder.
       + eapply IHl; eauto.
   Qed.
-  
+
   Lemma NoDup_app (A : Type) (l l' : list A)
     : NoDup (l ++ l') -> forall a, a ∈ l -> a ∉ l'.
   Proof.
@@ -345,9 +345,9 @@ Section Rcons.
   Qed.
 
 End Rcons.
-  
-(** take_r 
-    - 'take_r' is the dual variant to 'take' 
+
+(** take_r
+    - 'take_r' is the dual variant to 'take'
 **)
 
 Section Take_r.
@@ -368,7 +368,7 @@ Section Take_r.
       + inversion Hn;subst. exploit IHl. rewrite IHl.
         fold (rev l :r: a). rewrite tl_rcons.
         * rewrite rev_rcons. reflexivity.
-        * rewrite rev_length. omega.
+        * rewrite rev_length. lia.
   Qed.
 
   Lemma take_r_tl (n : nat) (l : list A)

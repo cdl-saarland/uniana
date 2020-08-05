@@ -1,3 +1,4 @@
+Require Import Lia.
 Require Export ListExtra DecTac.
 
 
@@ -9,16 +10,16 @@ Lemma first_diff' (A : Type) `{EqDec A eq} (l1 l2 : list A)
   : exists a1 a2 l' l1' l2', a1 <> a2 /\ l1 = l' ++ a1 :: l1' /\ l2 = l' ++ a2 :: l2'.
 Proof.
   assert (forall (l : list A), l <> nil -> length l > 0) as Hlengt.
-  { clear. intros. destruct l;cbn;[congruence|omega]. }
+  { clear. intros. destruct l;cbn;[congruence|lia]. }
   eapply Hlengt in Hnnil1; eapply Hlengt in Hnnil2. clear Hlengt.
   revert dependent l2. induction l1; intros; destruct l2; cbn in *.
-  1: congruence. 1-2: omega.
+  1: congruence. 1-2: lia.
   destruct l1,l2; cbn in *; only 2,3: congruence.
   - exists a, a0, nil, nil, nil. split_conj; cbn; eauto. contradict Hneq. subst; eauto.
   - decide' (a == a0).
-    + exploit' IHl1;[omega|]. specialize (IHl1 (a2 :: l2)). exploit IHl1.
+    + exploit' IHl1;[lia|]. specialize (IHl1 (a2 :: l2)). exploit IHl1.
       * contradict Hneq. f_equal;eauto.
-      * cbn; omega.
+      * cbn; lia.
       * destructH. exists a0, a3, (a :: l'), l1', l2'. split_conj; eauto.
         1,2: cbn; f_equal; eauto.
     + exists a, a0, nil, (a1 :: l1), (a2 :: l2). split_conj; eauto.

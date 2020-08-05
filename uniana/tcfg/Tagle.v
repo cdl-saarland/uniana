@@ -1,10 +1,10 @@
-Require Import Program.Equality.
+Require Import Program.Equality Lia.
 Require Export ListExtra PreSuffix ListOrder.
 
 Definition Tag := list nat.
 
 (** * Tagle: relation that relates tags lexically *)
-  
+
 Inductive Tagle : Tag -> Tag -> Prop :=
 | TgApp (i : Tag) : Tagle nil i
 | TgEq  (n : nat) (i j : Tag) : Tagle i j -> Tagle (i :r: n) (j :r: n)
@@ -36,7 +36,7 @@ Proof.
   rinduction i.
   - econstructor.
   - econstructor;eauto.
-Qed.  
+Qed.
 
 Lemma app_rcons_assoc (A : Type) (l l' : list A) (a : A)
   : l ++ l' :r: a = (l ++ l') :r: a.
@@ -57,11 +57,11 @@ Lemma Tagle_le (i j : Tag) (n m : nat)
   : n <= m.
 Proof.
   dependent induction H.
-  - congruence'. 
+  - congruence'.
   - eapply rcons_eq2 in x0. eapply rcons_eq2 in x. subst. reflexivity.
-  - eapply rcons_eq2 in x0. eapply rcons_eq2 in x. subst. omega.
+  - eapply rcons_eq2 in x0. eapply rcons_eq2 in x. subst. lia.
 Qed.
-    
+
 Hint Constructors Tagle : tagle.
 Hint Immediate Tagle_app Tagle_le Tagle_refl Tagle_cons : tagle.
 
@@ -76,11 +76,11 @@ Proof.
     dependent induction Hxy;intros.
     + econstructor.
     + destr_r' z;subst.
-      * inversion Hyz;try congruence'. 
+      * inversion Hyz;try congruence'.
       * eapply Tagle_le in Hyz as Hle.
         eapply le_lt_or_eq in Hle. destruct Hle.
         -- econstructor;auto.
-        -- subst. 
+        -- subst.
            inversion Hyz;[congruence'| |].
            ++ eapply rcons_eq1 in H as Hj. subst.
               eapply rcons_eq2 in H. subst. econstructor.
@@ -90,7 +90,7 @@ Proof.
       * inversion Hyz;congruence'.
       * eapply Tagle_le in Hyz as Hle.
         eapply le_lt_or_eq in Hle. destruct Hle.
-        -- econstructor;auto. omega.
+        -- econstructor;auto. lia.
         -- subst. econstructor. auto.
 Qed.
 
@@ -107,10 +107,10 @@ Proof.
     + inversion H1;[congruence' | |].
       * f_equal. eapply rcons_eq1 in H. eapply rcons_eq1 in H2.
         subst. eauto.
-      * exfalso. eapply rcons_eq2 in H. eapply rcons_eq2 in H2. subst. omega.
+      * exfalso. eapply rcons_eq2 in H. eapply rcons_eq2 in H2. subst. lia.
     + inversion H1;[congruence' | |].
-      * exfalso. eapply rcons_eq2 in H0. eapply rcons_eq2 in H2. subst. omega.
-      * exfalso. eapply rcons_eq2 in H0. eapply rcons_eq2 in H2. subst. omega.
+      * exfalso. eapply rcons_eq2 in H0. eapply rcons_eq2 in H2. subst. lia.
+      * exfalso. eapply rcons_eq2 in H0. eapply rcons_eq2 in H2. subst. lia.
 Qed.
 
 Lemma prefix_tagle (i j : Tag)
@@ -135,7 +135,7 @@ Proof.
       subst. eauto.
     + rewrite app_rcons_assoc in H1. eapply rcons_eq2 in H1.
       rewrite app_rcons_assoc in H2. eapply rcons_eq2 in H2.
-      subst. omega.
+      subst. lia.
 Qed.
 
 Lemma Tagle_cons2 (i : Tag) (n m : nat)

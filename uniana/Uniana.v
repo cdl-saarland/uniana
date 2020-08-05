@@ -8,7 +8,7 @@ Require Import Coq.Program.Utils.
 Require Import Lists.ListSet.
 Require Import List.
 Require Import Nat.
-Require Import Omega.
+Require Import Lia.
 Require Import Program.Basics.
 
 Require Import PathSplits Unchanged ListOrderTac FirstDiff.
@@ -439,13 +439,13 @@ Section uniana.
     eapply first_diff in c';eauto.
     2: assert (| j1 | = | j2 |) as Hlen;
       [(eapply (tpath_tag_len_eq_elem (l1:=(p,i)::l1)) ;eauto;eapply precedes_in;eauto)|].
-    2: { subst j1 j2. repeat rewrite app_length in Hlen. clear - Hlen. omega. }
+    2: { subst j1 j2. repeat rewrite app_length in Hlen. clear - Hlen. lia. }
     2,3: intro N; eapply c'; subst;
       eapply precedes_in in Hprec1;eapply precedes_in in Hprec2;
           eapply tpath_tag_len_eq_elem in Hprec1;eauto;
             do 2 rewrite app_length in Hprec1;exfalso.
-    3:destruct j1';cbn in Hprec1; [congruence|omega].
-    2:destruct j2';cbn in Hprec1;[congruence|omega].
+    3:destruct j1';cbn in Hprec1; [congruence|lia].
+    2:destruct j2';cbn in Hprec1;[congruence|lia].
     rename c' into Htag. destructH.
     subst j1' j2'. rewrite <-app_assoc in Hj1,Hj2. rewrite <-app_comm_cons in Hj1,Hj2.
     (* find the head of the divergent loop *)
@@ -796,7 +796,7 @@ Section uniana.
              1,2: econstructor;eauto;eauto.
              reduce_uni_concr HCuni Hpre1 Hpre2.
         * eapply uni_same_lab ; eauto.
-          1,2: econstructor;eauto;eauto. 
+          1,2: econstructor;eauto;eauto.
           reduce_uni_concr HCuni Hpre1 Hpre2.
       (* The unch case *)
       + rename Hunch into H.

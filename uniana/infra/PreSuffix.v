@@ -1,4 +1,4 @@
-Require Import Program.Equality.
+Require Import Program.Equality Lia.
 
 Require Export ListExtra.
 
@@ -39,7 +39,7 @@ Proof.
     econstructor.
   - destruct (a == a0).
     + destruct e. econstructor.
-    + econstructor. eauto. 
+    + econstructor. eauto.
 Qed.
 
 Lemma prefix_cons {A : Type} (l l' : list A) :
@@ -66,14 +66,14 @@ Qed.
 Lemma in_prefix_in {A : Type} `{EqDec A eq} (a : A) l l' :
   In a l -> Prefix l l' -> In a l'.
 Proof.
-  intros Hin Hpre. induction l. 
+  intros Hin Hpre. induction l.
   - inversion Hin.
   - destruct (a == a0).
     + destruct e. eapply prefix_cons_in; eauto.
     + eapply IHl; eauto.
       * destruct Hin; [exfalso; subst; apply c; reflexivity|assumption].
       * eapply prefix_cons; eauto.
-Qed. 
+Qed.
 
 Fixpoint postfix_nincl {A : Type} `{EqDec A eq} (a : A) (l : list A) : list A :=
   match l with
@@ -122,7 +122,7 @@ Lemma postfix_app {A : Type} (l1 l2 l' : list A) :
   Postfix (l' ++ l1) (l' ++ l2) -> Postfix l1 l2.
 Proof.
   revert l1 l2. induction l'; intros; cbn; eauto.
-  apply IHl'. cbn in H. inversion H. 
+  apply IHl'. cbn in H. inversion H.
   - rewrite H2. econstructor.
   - eapply cons_postfix; eauto.
 Qed.
@@ -142,13 +142,13 @@ Qed.
 Lemma prefix_nil_nil {A : Type} (l : list A) :
   Prefix l nil -> l = nil.
 Proof.
-  intro H. inversion H; eauto. 
-Qed.  
+  intro H. inversion H; eauto.
+Qed.
 
 Lemma postfix_rcons_nil_eq {A : Type} l (a b : A) :
   Postfix (l :r: a) (b :: nil) -> a = b /\ l = nil.
 Proof.
-  
+
   intros post. apply postfix_eq in post as [l2' post]. destruct l; cbn in *; eauto.
   - inversion post; eauto.
   - inversion post. destruct l; cbn in H1; congruence.
@@ -194,21 +194,21 @@ Lemma postfix_order_destruct' {A : Type} (l1 l2 l3 : list A) :
   Postfix l1 l3 -> Postfix l2 l3 -> length l1 <= length l2 -> Postfix l1 l2.
 Proof.
   revert l1 l3. induction l2; intros l1 l3 post1 post2 len; cbn in *.
-  - destruct l1; cbn in len; [econstructor|omega].
+  - destruct l1; cbn in len; [econstructor|lia].
   - destruct l1; [eapply postfix_nil|].
     destruct l3; [eapply postfix_nil_nil in post1; congruence|].
     eapply postfix_hd_eq in post1 as aeq. destruct aeq.
     eapply postfix_hd_eq in post2 as aeq. destruct aeq.
-    eapply postfix_cons, IHl2. 1,2: eapply cons_postfix; eauto. cbn in len. omega.
-Qed.      
+    eapply postfix_cons, IHl2. 1,2: eapply cons_postfix; eauto. cbn in len. lia.
+Qed.
 
 Lemma postfix_order_destruct {A : Type} (l1 l2 l3 : list A) :
   Postfix l1 l3 -> Postfix l2 l3 -> Postfix l1 l2 \/ Postfix l2 l1.
 Proof.
   intros post1 post2.
   destruct (Nat.ltb (length l1) (length l2)) eqn:H.
-  - left. eapply postfix_order_destruct'; eauto. eapply Nat.ltb_lt in H. omega.
-  - right. eapply postfix_order_destruct'; eauto. eapply Nat.ltb_nlt in H. omega.
+  - left. eapply postfix_order_destruct'; eauto. eapply Nat.ltb_lt in H. lia.
+  - right. eapply postfix_order_destruct'; eauto. eapply Nat.ltb_nlt in H. lia.
 Qed.
 
 Lemma postfix_step_left {A : Type} (l l' : list A) a :
@@ -226,7 +226,7 @@ Lemma postfix_length {A : Type} (l l' : list A) :
 Proof.
   intros post. induction post.
   - reflexivity.
-  - rewrite length_rcons. rewrite IHpost. omega.
+  - rewrite length_rcons. rewrite IHpost. lia.
 Qed.
 
 Lemma postfix_order {A : Type} (l1 l2 l' : list A) (a : A) :
@@ -244,7 +244,7 @@ Lemma postfix_elem {A : Type} `{EqDec A eq} (a:A) l l':
 Proof.
   intros len post.
   destruct l.
-  { cbn in len; omega. }
+  { cbn in len; lia. }
   eapply postfix_hd_eq in post.
   subst a0. econstructor; eauto.
 Qed.
@@ -273,7 +273,7 @@ Definition prefix_incl : forall (A : Type) (l l' : list A), Prefix l l' -> l ⊆
   := fun (A : Type) (l l' : list A) (post : Prefix l l') =>
        @Prefix_ind A (fun l0 l'0 : list A => l0 ⊆ l'0) (fun l0 : list A => incl_refl l0)
                   (fun (a : A) (l0 l'0 : list A) (_ : Prefix l0 l'0) (IHpost : l0 ⊆ l'0) =>
-                     incl_appr (a :: nil) IHpost) l l' post.      
+                     incl_appr (a :: nil) IHpost) l l' post.
 
 
 Lemma prefix_in_list {A : Type} l (a:A) :
@@ -282,7 +282,7 @@ Lemma prefix_in_list {A : Type} l (a:A) :
 Proof.
   intro Hin.
   induction l.
-  - inversion Hin. 
+  - inversion Hin.
   - destruct Hin;[subst;exists l; cbn;econstructor|].
     eapply IHl in H. destruct H as [l' H]. exists l'. cbn; econstructor; assumption.
 Qed.
@@ -322,7 +322,7 @@ Section Pre.
     eapply prefix_eq in Hpre. destructH. subst l2.
     destruct l2';cbn in *; eauto.
     exfalso.
-    rewrite app_length in Hlen. omega.
+    rewrite app_length in Hlen. lia.
   Qed.
 
   Lemma prefix_rev_postfix (l l' : list A)
@@ -342,7 +342,7 @@ Section Pre.
     rewrite <-(rev_involutive l').
     eapply prefix_rev_postfix;eauto.
   Qed.
-  
+
   Lemma postfix_rev_prefix (l l' : list A)
         (Hpost : Postfix l l')
     : Prefix (rev l) (rev l').
@@ -351,7 +351,7 @@ Section Pre.
     - econstructor.
     - rewrite rev_rcons. econstructor;eauto.
   Qed.
-  
+
   Lemma postfix_rev_prefix' (l l' : list A)
         (Hpost : Postfix (rev l) (rev l'))
     : Prefix l l'.
@@ -396,7 +396,7 @@ Section Pre.
     - exists b. econstructor.
     - specialize (IHHpre a). destructH. eexists. econstructor. eauto.
   Qed.
-  
+
   Lemma postfix_ex_cons
     : forall (l l' : list A) (a : A), Postfix l l' -> exists a' : A, Postfix (l :r: a') (l' :r: a).
   Proof.
@@ -415,8 +415,8 @@ Section Pre.
     - destruct l';cbn in *.
       + inversion H. congruence'.
       + inversion H. subst. split;[f_equal|];eapply IHl;eauto.
-  Qed.              
-  
+  Qed.
+
   Lemma postfix_rcons_rcons (l l' : list A) (a a' : A)
     : Postfix (l ++ [a]) (l' ++ [a']) -> Postfix l l'.
   Proof.
@@ -427,13 +427,13 @@ Section Pre.
     - rewrite app_nil_r in Hpost. eapply rcons_inj in Hpost. destructH. subst. constructor.
     - eapply postfix_step_left. eapply IHl2'. rewrite <-app_cons_assoc. eauto.
   Qed.
-  
+
   Lemma tl_prefix (l : list A)
     : Prefix (tl l) l.
   Proof.
     induction l;cbn;econstructor;eauto. econstructor.
   Qed.
-  
+
   Lemma prefix_tl (l l' : list A) (a : A)
     : Prefix (a :: l) l' -> Prefix l (tl l').
   Proof.
@@ -441,7 +441,7 @@ Section Pre.
     - econstructor.
     - eapply prefix_cons;eauto.
   Qed.
-  
+
   Lemma prefix_rcons (l l' : list A) (a : A)
         (Hpref : Prefix l l')
     : Prefix (l :r: a) (l' :r: a).
@@ -494,12 +494,12 @@ Section Pre.
       unfold take_r.
       assumption.
   Qed.
-  
+
   Global Instance Prefix_Reflexive : Reflexive (@Prefix A).
   Proof.
     econstructor.
   Qed.
-  
+
   Global Instance Postfix_Reflexive : Reflexive (@Postfix A).
   Proof.
     econstructor.
@@ -550,7 +550,7 @@ Section Pre.
       + inversion H.
       + econstructor. eapply IHPrefix; eauto.
   Qed.
-  
+
   Lemma prefix_nincl_prefix' `{EqDec A eq} (l : list A) a
     : Prefix (prefix_nincl a l) l.
   Proof.
@@ -576,7 +576,7 @@ Section StrictPre.
 
   Variable (A : Type).
 
-  Definition StrictPrefix' := 
+  Definition StrictPrefix' :=
     fun (l l' : list A) => exists a : A, Prefix (a :: l) l'.
 
   Lemma prefix_strictPrefix:
@@ -593,7 +593,7 @@ Section StrictPre.
   Lemma StrictPrefix_well_founded : well_founded (StrictPrefix').
   Proof.
     unfold well_founded.
-    intros. 
+    intros.
     induction a.
     - econstructor. intros. unfold StrictPrefix' in *. destructH. inversion H.
     - constructor. intros.

@@ -1,4 +1,4 @@
-Require Import Program.Equality.
+Require Import Program.Equality Lia.
 Require Export ListExtra PreSuffix ListOrder.
 
 Definition Tag := list nat.
@@ -24,7 +24,7 @@ Proof.
   unfold Irreflexive, Reflexive, complement.
   intros x Hx.
   dependent induction Hx.
-  - omega.
+  - lia.
   - auto.
 Qed.
 
@@ -35,7 +35,7 @@ Proof.
   revert dependent z.
   dependent induction Hxy;intros.
   - dependent destruction Hyz.
-    + econstructor. omega.
+    + econstructor. lia.
     + econstructor. auto.
   - dependent destruction Hyz.
     + econstructor. auto.
@@ -92,7 +92,7 @@ Proof.
     do 2 destructH. subst n m.
     cbn in *.
     rinduction i0; cbn in *.
-    + omega.
+    + lia.
     + rewrite rev_rcons. cbn. reflexivity.
   - destruct i0. inversion Htaglt.
     destruct j0. inversion Htaglt.
@@ -108,7 +108,7 @@ Proof.
   induction i;cbn in *.
   - inversion Htaglt;subst;auto. inversion H0.
   - eapply IHi. inversion Htaglt;subst.
-    + omega.
+    + lia.
     + auto.
 Qed.
 
@@ -129,16 +129,16 @@ Proof.
   eapply Taglt_len in Htaglt as Hlen.
   do 2 rewrite length_rcons in Hlen. eapply Nat.succ_inj in Hlen.
   destruct i;[|revert dependent i; revert dependent n0];induction j;cbn in *;intros.
-  - exfalso. inversion Htaglt;subst. omega. eauto with tagle.
-  - omega.
-  - omega.
+  - exfalso. inversion Htaglt;subst. lia. eauto with tagle.
+  - lia.
+  - lia.
   - dependent destruction Htaglt.
     + eapply app_inj_tail in x; destruct x;subst.
       econstructor;eauto.
     + econstructor.
       destruct i,j; cbn in *.
       1: exfalso;eapply Taglt_irrefl;eauto.
-      1,2: omega.
+      1,2: lia.
       eapply IHj;eauto.
 Qed.
 
@@ -162,16 +162,16 @@ Proof.
   destruct i; intros.
   - destruct j; cbn in *.
     + econstructor; eauto.
-    + omega.
+    + lia.
   - revert n0 i Hlen.
     induction j; cbn in *; intros.
-    + omega.
+    + lia.
     + destruct i; cbn in *.
-      * destruct j; cbn in *; [|omega].
+      * destruct j; cbn in *; [|lia].
         econstructor;econstructor;eauto.
       * econstructor.
         eapply IHj.
-        omega.
+        lia.
 Qed.
 
 Lemma Taglt_ind_r

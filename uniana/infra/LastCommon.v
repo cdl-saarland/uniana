@@ -1,9 +1,9 @@
-Require Import LastCommonTac DecTac.
+Require Import LastCommonTac DecTac Lia.
 
 Section Lc.
-  
+
   Variable A : Type.
-    
+
   Lemma rcons_eq (a a' : A) l l' :
     a = a' /\ l = l' <-> l :r: a = l' :r: a'.
   Proof.
@@ -16,7 +16,7 @@ Section Lc.
       + congruence'.
       + specialize (IHl l' H1) as [aeq leq].
         split; subst; reflexivity.
-  Qed.  
+  Qed.
 
   Lemma postfix_first_occ_eq `{EqDec A eq} (l1 l2 l3 : list A) (a : A) :
     ~ In a l1 -> ~ In a l2 -> Postfix (l1 :r: a) l3 -> Postfix (l2 :r: a) l3
@@ -34,7 +34,7 @@ Section Lc.
       - eapply postfix_step_left; eauto.
     }
     revert dependent l2.
-    revert dependent l3. 
+    revert dependent l3.
     induction l1; intros l3 post1 l2 in2 post2 po1 po2.
     - cbn in post1.
       apply postfix_incl in po2. clear - in2 po2.
@@ -74,7 +74,7 @@ Section Lc.
     exists l1' l2', Postfix (l1' :r: s) l1 /\ Postfix (l2' :r: s) l2
                /\ Disjoint l1' l2'
                /\ ~ In s l1' /\ ~ In s l2'.
-  
+
 
   Definition last_common' `{EqDec A eq} (l1 l2 l1' l2' : list A) (s : A)
     := Postfix (l1' :r: s) l1 /\ Postfix (l2' :r: s) l2 /\ Disjoint l1' l2' /\ s ∉ l1' /\ s ∉ l2'.
@@ -95,7 +95,7 @@ Section Lc.
   Qed.
 
   Require Import ListOrder.
-  
+
 
   Lemma ne_last_common `{EqDec A eq} (l1 l2 : list A) (a : A) :
     exists s, last_common (l1 ++ [a]) (l2 ++ [a]) s.
@@ -112,28 +112,28 @@ Section Lc.
       + admit. (* nope *)
       + *)
 
-    
+
     revert l2.
     induction l1; intros l2; induction l2; cbn in *.
     - exists a; exists nil; exists nil; cbn.
       prove_last_common.
-    - exists a. exists nil. 
+    - exists a. exists nil.
       destruct IHl2 as [s [l1' [l2' [post [post' [disj [in1 in2]]]]]]]. cbn.
-      destruct (a == a0). 
+      destruct (a == a0).
       + destruct e. exists nil. prove_last_common.
       + exists (a0 :: l2'). prove_last_common.
     - exists a. specialize (IHl1 nil).
       destruct IHl1 as [s [l1' [l2' [post [post' [disj [in1 in2]]]]]]].
       destruct (a == a0).
       + destruct e. exists nil, nil. cbn. prove_last_common.
-      + exists ((a0 :: l1')), nil. cbn in post'. prove_last_common. 
+      + exists ((a0 :: l1')), nil. cbn in post'. prove_last_common.
     - specialize (IHl1 (a1 :: l2)).
       rename a1 into a2. rename a0 into a1.
-      
+
       destruct IHl1 as [s1 [l11 [l12 [post11 [post12 [disj1 [in11 in12]]]]]]].
       destruct IHl2 as [s2 [l21 [l22 [post21 [post22 [disj2 [in21 in22]]]]]]].
 
-      destruct (s1 == a2). 
+      destruct (s1 == a2).
       + destruct e. exists s1. destruct (a1 == s1).
         * destruct e. exists nil. exists nil. prove_last_common.
         * exists ((a1 :: l11)). exists nil. prove_last_common.
@@ -153,7 +153,7 @@ Section Lc.
              destruct (In_dec _ s1 l22).
              ++ exists s1, (a1 :: l11), l12. split_conj.
                 ** prove_last_common.
-                ** prove_last_common. 
+                ** prove_last_common.
                 ** apply disjoint_cons1. split; auto.
 
                    assert (Postfix l12 (a2 :: l22)).
@@ -173,15 +173,15 @@ Section Lc.
                    apply disj2. apply postfix_elem in post21; eauto.
                    --- eapply In_rcons in post21.
                        destruct post21; [subst a1; exfalso; apply c0; reflexivity|assumption].
-                   --- destruct l21; cbn. omega. rewrite app_length. omega.
+                   --- destruct l21; cbn. lia. rewrite app_length. lia.
                 ** assert (s1 =/= a1) as sa.
                    {
                      intro N. destruct N. apply postfix_elem in post21.
                      apply In_rcons in post21.
                      - destruct post21; [subst s1; apply c0; reflexivity|].
                        clear - disj2 H0 H1. firstorder.
-                     - destruct l21; cbn. omega. rewrite app_length. omega.
-                   }                     
+                     - destruct l21; cbn. lia. rewrite app_length. lia.
+                   }
                    prove_last_common.
                 ** assumption.
              ++ destruct (s1 == s2) as [seq|sneq].
@@ -246,7 +246,7 @@ Section Lc.
                 ** apply disjoint_cons2. split; eauto.
                 ** assumption.
                 ** assert (s2 =/= a2) as sa.
-                   {                       
+                   {
                      intro N. destruct N. apply nin_a0.
                      apply In_rcons. left. reflexivity.
                    }
@@ -281,7 +281,7 @@ Section Lc.
   Proof.
     unfold last_common' in Hlc. destructH.
     eapply postfix_eq in Hlc0.
-    
+
   Admitted.
 
   (* currently not used ! *)
@@ -306,5 +306,5 @@ Section Lc.
         (Hpre2 : Prefix l2' l2)
     : last_common' (l1' ++ [x] ++ ll1) (l2' ++ [x] ++ ll2) l1' l2' x.
   Proof.
-  Admitted. 
+  Admitted.
 End Lc.

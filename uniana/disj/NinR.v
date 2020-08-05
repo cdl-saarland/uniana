@@ -1,3 +1,4 @@
+Require Import Lia.
 Require Export DisjPaths.
 
 Section disj.
@@ -52,8 +53,8 @@ Section disj.
     clear - Htag Htagleq Hlen.
     destruct j1,j2;cbn in *;subst.
     - reflexivity.
-    - omega.
-    - omega.
+    - lia.
+    - lia.
     - eapply Tagle_cons2. auto.
   Qed.
 
@@ -199,9 +200,9 @@ Section disj.
              ++ exfalso.
                 specialize (Hdeqq p i). exploit Hdeqq.
                 eapply deq_loop_depth in Hdeqq.
-                assert (|i| < |0 :: i|) as Q by (cbn;omega). clear Helet.
+                assert (|i| < |0 :: i|) as Q by (cbn;lia). clear Helet.
                 eapply tpath_depth_lt in Q; [| | |eapply path_contains_front];eauto.
-                omega.
+                lia.
              ++ auto.
           -- inversion H.  (* back_edge *)
              ++ subst.
@@ -333,7 +334,7 @@ Section disj.
       eapply PreOrder_Transitive in Hbacke1. exploit Hbacke1.
       { eapply prefix_tagle. eapply tl_j2_prefix_k. }
       eapply tagle_prefix_hd_le in Hbacke0;eauto.
-      omega.
+      lia.
   Qed.
 
 

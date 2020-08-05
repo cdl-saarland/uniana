@@ -1,6 +1,6 @@
 Require Export Precedes CFGancestor Tagle.
 
-Require Import PropExtensionality.
+Require Import PropExtensionality Lia.
 
 Section tagged.
 
@@ -244,9 +244,9 @@ Section tagged.
     Proof.
       tag_fact_prep.
       unfold eff_tag' in *. destruct (edge_Edge Hedge). 4:auto.
-      all: exfalso;try omega.
-      - destruct i;cbn in *;omega.
-      - cbn in *;omega.
+      all: exfalso;try lia.
+      - destruct i;cbn in *;lia.
+      - cbn in *;lia.
     Qed.
 
     Lemma tag_entry_lt
@@ -255,9 +255,9 @@ Section tagged.
     Proof.
       tag_fact_prep.
       unfold eff_tag' in *. destruct (edge_Edge Hedge). 3:auto.
-      all: exfalso;try omega.
-      - destruct i;cbn in *;omega.
-      - destruct i;cbn in *;omega.
+      all: exfalso;try lia.
+      - destruct i;cbn in *;lia.
+      - destruct i;cbn in *;lia.
     Qed.
 
     (* possibly unused
@@ -303,7 +303,7 @@ Section tagged.
       tag_fact_prep.
       split;intro H.
       - tag_fact_s1 H Hedge.
-        cbn in H. inversion H. omega.
+        cbn in H. inversion H. lia.
       - tag_fact_s2 (Eback H) (edge_Edge Hedge).
     Qed.
 
@@ -519,7 +519,7 @@ Section tagged.
     match goal with |- | ?x | > 0 => set (l := x) end.
     enough (h ∈ l).
     - eapply not_le. intro N. setoid_rewrite <-NoDup_incl_length with (l:=[h]) in N.
-      + cbn in N. omega.
+      + cbn in N. lia.
       + econstructor;eauto. econstructor.
       + eauto.
     - eapply loop_contains_self in Hhead.
@@ -550,7 +550,7 @@ Section tagged.
           eapply IHt in H0. cbn in H0. eapply eq_loop_exiting in Q as Q'.
           rewrite <-Q' in H0.
           unfold exit_edge in Q. destructH.
-          eapply loop_contains_loop_head in Q0. eapply depth_loop_head in Q0. omega.
+          eapply loop_contains_loop_head in Q0. eapply depth_loop_head in Q0. lia.
         * erewrite <-IHt;eauto. cbn. reflexivity.
   Qed.
 
@@ -718,15 +718,15 @@ Lemma tagle_or i j
   : |i| <= |j| \/ i ◁ j.
 Proof.
   induction Htag;cbn.
-  - left. omega.
+  - left. lia.
   - destruct IHHtag.
-    + left. do 2 rewrite app_length. cbn. omega.
+    + left. do 2 rewrite app_length. cbn. lia.
     + right. econstructor.
       * econstructor;eauto.
       * destruct H. contradict H0. eapply rcons_eq1. eauto.
   - right. econstructor.
     + econstructor;eauto.
-    + intro N. eapply rcons_eq2 in N. omega.
+    + intro N. eapply rcons_eq2 in N. lia.
 Qed.
 
 Lemma take_rcons_ex (A : Type) n (l : list A)
@@ -735,15 +735,15 @@ Lemma take_rcons_ex (A : Type) n (l : list A)
 Proof.
   revert l Hlen.
   induction n;intros.
-  - cbn. destruct l;[cbn in Hlen;omega|].
+  - cbn. destruct l;[cbn in Hlen;lia|].
     eexists;eauto.
-  - destruct l;[cbn in Hlen;omega|].
-    rewrite take_one. 2: omega.
-    replace (S (S n) - 1) with (S n) by omega.
-    rewrite take_one. 2: omega.
-    replace (S n - 1) with n by omega.
+  - destruct l;[cbn in Hlen;lia|].
+    rewrite take_one. 2: lia.
+    replace (S (S n) - 1) with (S n) by lia.
+    rewrite take_one. 2: lia.
+    replace (S n - 1) with n by lia.
     specialize (IHn l). exploit IHn.
-    + cbn in Hlen. omega.
+    + cbn in Hlen. lia.
     + destructH. rewrite IHn. eexists;cbn;eauto.
 Qed.
 
@@ -766,7 +766,7 @@ Proof.
   - cbn in *. symmetry in Hlen. eapply length_zero_iff_nil in Hlen. subst. contradiction.
   - exploit IHTagle.
     + contradict H0. subst. reflexivity.
-    + do 2 rewrite app_length in Hlen. clear - Hlen. omega.
+    + do 2 rewrite app_length in Hlen. clear - Hlen. lia.
     + destructH. do 5 eexists. split_conj;[| |eauto].
       1,2: rewrite <-cons_rcons_assoc; rewrite app_assoc; f_equal; eauto.
   - do 5 eexists. split_conj;[| |eauto].
@@ -797,7 +797,7 @@ Proof.
   - intro N. inversion N. subst.
     rewrite app_cons_assoc in H1. setoid_rewrite app_cons_assoc in H1 at 2.
     eapply app_inv_tail in H1.
-    eapply rcons_eq2 in H1. subst. omega.
+    eapply rcons_eq2 in H1. subst. lia.
 Qed.
 
 Lemma taglt_tagle i j
@@ -822,7 +822,7 @@ Notation "p '>=' q" := (deq_loop p q).
 Lemma tl_len (A : Type) (l : list A)
   : |tl l| = |l| - 1.
 Proof.
-  induction l;cbn;eauto. omega.
+  induction l;cbn;eauto. lia.
 Qed.
 
 Lemma take_rcons_drop (A : Type) (l : list A) n a
@@ -834,9 +834,9 @@ Proof.
   rewrite rcons_cons'.
   cbn.
   destruct l;cbn.
-  - cbn in Hle. omega.
+  - cbn in Hle. lia.
   - cbn in Hle.
-    f_equal. eapply IHn. omega.
+    f_equal. eapply IHn. lia.
 Qed.
 
 Lemma take_r_drop (A : Type) (l : list A) n a
@@ -872,9 +872,9 @@ Proof.
   rewrite <-rev_cons.
   rewrite <-rev_rev_eq.
   rewrite rev_rcons.
-  rewrite take_one;[|omega].
+  rewrite take_one;[|lia].
   cbn.
-  replace (n - 0) with n by omega.
+  replace (n - 0) with n by lia.
   reflexivity.
 Qed.
 
@@ -888,12 +888,12 @@ Proof.
   - econstructor.
   - rewrite app_length in Hleq. cbn in Hleq.
     destruct n0.
-    { exfalso. omega. }
+    { exfalso. lia. }
     rewrite take_r_rcons.
     econstructor.
-    eapply IHHtgl. omega.
+    eapply IHHtgl. lia.
   - destruct n0.
-    { exfalso. rewrite app_length in Hleq. cbn in Hleq. omega. }
+    { exfalso. rewrite app_length in Hleq. cbn in Hleq. lia. }
     rewrite take_r_rcons.
     econstructor;eauto.
 Qed.
@@ -903,7 +903,7 @@ Lemma tagle_STag (i : Tag)
 Proof.
   induction i;cbn;eauto.
   - reflexivity.
-  - eapply Tagle_cons2. omega.
+  - eapply Tagle_cons2. lia.
 Qed.
 
 Lemma take_r_len_leq (A : Type) (l : list A) n
@@ -965,7 +965,7 @@ Proof.
       destructH. exists (y :: ϕ). split_conj.
       * econstructor;eauto.
       * eapply postfix_cons;eauto.
-      * destruct ϕ;[inversion Hel0|]. cbn. omega.
+      * destruct ϕ;[inversion Hel0|]. cbn. lia.
 Qed.
 
 Require Import GetSucc.
@@ -1028,7 +1028,7 @@ Lemma loop_contains_depth_lt h p
 Proof.
   unfold depth.
   match goal with |- length ?x > 0 => enough (x <> []) end.
-  - enough (depth p <> 0). 1:unfold depth in *;omega.
+  - enough (depth p <> 0). 1:unfold depth in *;lia.
     contradict H.
     eapply length_zero_iff_nil. eauto.
   - intro N. eapply filter_nil;eauto.
@@ -1051,8 +1051,8 @@ Proof.
   - destruct j.
     + exfalso. eapply loop_contains_ledge in Hedge.
       eapply tag_depth' in Hpath. cbn in Hpath.
-      eapply loop_contains_depth_lt in Hedge. omega.
-    + cbn. split;[eapply tagle_STag|intro N;inversion N]. omega.
+      eapply loop_contains_depth_lt in Hedge. lia.
+    + cbn. split;[eapply tagle_STag|intro N;inversion N]. lia.
 Qed.
 
 Lemma postfix_eq_app (A : Type) (l l' : list A)
@@ -1075,11 +1075,11 @@ Proof.
   copy Hsp0 Hpath'.
   eapply TPath_CPath in Hsp0. cbn in Hsp0.
   eapply p_p_ex_head in Hsp0;eauto.
-  2: { rewrite map_length. omega. }
+  2: { rewrite map_length. lia. }
   destructH.
   (* destruct ϕ *)
-  destr_r' ϕ. all: subst ϕ. 1:cbn in Hsp3;omega.
-  destruct l. 1: cbn in Hsp3; omega.
+  destr_r' ϕ. all: subst ϕ. 1:cbn in Hsp3;lia.
+  destruct l. 1: cbn in Hsp3; lia.
   path_simpl' Hpath'. cbn in Hpath'. path_simpl' Hpath'. rename x into y.
   let tac Q :=
       rewrite map_rcons in Q;rewrite map_cons in Q;unfold fst in Q at 1 3
@@ -1169,7 +1169,7 @@ Proof.
   unfold take_r.
   rewrite take_eq_ge.
   - rewrite rev_involutive. reflexivity.
-  - rewrite rev_length. omega.
+  - rewrite rev_length. lia.
 Qed.
 
 (** ** Strong monotonicity **)
@@ -1211,13 +1211,13 @@ Proof.
               { symmetry. eapply tag_depth';eauto. }
               rewrite Hpieq in *.
               decide (|n :: j| <= |i'|).
-              ** rewrite take_r_leq_id. 2: omega.
-                 eapply Tagle_cons. rewrite take_r_leq_id in IHt'. 2: omega. eauto.
-              ** assert (S (|i'|) <= |n :: j|) as n1. 1: clear - n0;omega.
+              ** rewrite take_r_leq_id. 2: lia.
+                 eapply Tagle_cons. rewrite take_r_leq_id in IHt'. 2: lia. eauto.
+              ** assert (S (|i'|) <= |n :: j|) as n1. 1: clear - n0;lia.
                  specialize (take_r_cons_ex n1) as Q. destructH' Q. rewrite Q.
                  eapply taglt_tagle. eapply taglt_cons. 2:eauto.
                  unfold take_r. rewrite rev_length,take_length,rev_length.
-                 clear - n1. rewrite Nat.min_r. auto. omega.
+                 clear - n1. rewrite Nat.min_r. auto. lia.
            ++ exfalso.
               eapply tcfg_fresh_head'.
               ** cbn in Hpath. eapply Hpath.

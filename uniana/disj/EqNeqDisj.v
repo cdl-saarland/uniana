@@ -1,3 +1,4 @@
+Require Import Lia.
 Require Export NinR.
 
 
@@ -94,7 +95,7 @@ Section disj.
     clear - Hpre.
     induction Hpre.
     - reflexivity.
-    - cbn. omega.
+    - cbn. lia.
   Qed.
 
 End disj.

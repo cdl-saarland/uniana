@@ -1,3 +1,4 @@
+Require Import Lia.
 Require Export DisjDef MaxPreSuffix.
 
 Section disj.
@@ -10,13 +11,13 @@ Section disj.
   Notation "p '-a>' q" := (p -a>b q = true) (at level 55).
   Notation "p '-->b' q" := (edge p q) (at level 55).
   Notation "p '-->' q" := (p -->b q = true) (at level 55, right associativity).
-  
+
   (* TODO: remove *)
   Definition prec_loop_contains (qh q : Lab) (k j : Tag)
     := exists (p : Lab) (π : list Coord),
       p ↪ qh /\ TPath (q,j) (p,k) π /\ qh ∉ tl (rev (map fst π)).
 
-  (* TODO: remove *) 
+  (* TODO: remove *)
   Definition prec_loop_contains' (qh q : Lab) (k j : Tag)
     := loop_contains qh q /\ Prefix j k /\
        exists π p i, TPath (root,start_tag) (p,i) π /\ (qh,k) ∈ π /\ (q,j) ∈ π.
@@ -54,22 +55,22 @@ Section disj.
              decide (h = e).
              ++ subst h. exfalso.
                 assert (|j| < |0 :: i|) as Hleq'.
-                { cbn. omega. }
+                { cbn. lia. }
                 eapply loop_contains_deq_loop in Hloop.
                 eapply deq_loop_depth in Hloop.
-                enough (|0 :: i| <= |j|) by omega.
+                enough (|0 :: i| <= |j|) by lia.
                 erewrite tag_depth;eauto.
                 erewrite tag_depth;eauto.
                 ** inversion Hpath;cbn;auto.
-                ** eapply postfix_incl;eauto. 
+                ** eapply postfix_incl;eauto.
              ++ eapply preds_in_same_loop;cycle 1;eauto 1.
                 ** unfold tcfg_edge in Hpost. destructH. auto.
                 ** eapply H;eauto.
-                   --- eapply postfix_step_left;eauto. 
+                   --- eapply postfix_step_left;eauto.
       + eapply H;eauto.
         * eapply postfix_step_left;eauto.
   Qed.
-  
+
   Lemma geq_tag_suffix_tag_tl_eq (p q : Lab) l t i j
         (Hpath : TPath (root,start_tag) (q,j) t)
         (Hpost : Postfix l t)
@@ -104,22 +105,22 @@ Section disj.
           { specialize (HForall (p,i)). cbn in *. eapply HForall.
             eapply In_rcons;auto. }
           destruct Hdestr as [Hn|[He|[Hb|Hx]]]. all: subst;auto.
-          -- assert (|j| < |0 :: i|) by (cbn;omega).
+          -- assert (|j| < |0 :: i|) by (cbn;lia).
              inversion H.
              ++ exfalso. subst l0. rewrite <-H3 in H0. clear - H0.
-                destruct j;cbn in *;omega. 
+                destruct j;cbn in *;lia.
              ++ subst. auto.
           -- destruct i.
              { destruct j.
                - cbn. econstructor.
-               - cbn in Hji. omega.
+               - cbn in Hji. lia.
              }
              destruct j. 1: { cbn. eapply prefix_nil. }
              cbn in *.
-             assert (|j| < |n :: i|) by (cbn;omega).
+             assert (|j| < |n :: i|) by (cbn;lia).
              inversion H.
-             ++ exfalso. subst l0. subst j. cbn in Hji. omega.
-             ++ subst. econstructor. auto. 
+             ++ exfalso. subst l0. subst j. cbn in Hji. lia.
+             ++ subst. econstructor. auto.
           -- eapply prefix_trans;eauto. clear; induction i;cbn;econstructor;eauto. econstructor.
           (* ] could be generalized, it is the same in this and the other geq_tag_suffix lemma *)
       + eapply H;eauto.
@@ -137,7 +138,7 @@ Section disj.
   Qed.
 
   (** * Existence of the entry of the loop **)
-  
+
   Lemma ex_entry (h p q : Lab) (i j : Tag) t
         (Hin : innermost_loop h q)
         (Hnin : ~ loop_contains h p)
@@ -152,7 +153,7 @@ Section disj.
     { intros. destruct xl as [x l]. eapply geq_tag_suffix_deq in H.
       4: subst t'; eapply while'_Forall.
       all: cbn;eauto;destruct Hin as [Hin _];eauto.
-    } 
+    }
     inversion Hpost.
     - subst. eapply splinter_cons in Hord. eapply splinter_in in Hord.
       specialize (Hloop (p,i)).
@@ -164,7 +165,7 @@ Section disj.
       destruct Ht'. (* t' is not empty *)
       { enough ((q,j) ∈ t') as H00 by (rewrite H0 in H00;cbn in H00;contradiction).
         subst.
-        eapply while'_front_In;eauto. cbn. omega. }
+        eapply while'_front_In;eauto. cbn. lia. }
       destructH.
       destruct a0 as [h' k].
       eapply postfix_ex_cons in H. destructH. erewrite H1 in H.
@@ -183,37 +184,37 @@ Section disj.
             * rewrite Heqt'. eapply while'_Forall.
             * rewrite H0. eapply In_rcons. left. auto.
           + eapply loop_contains_deq_loop;auto.
-        - rewrite H0 in H. 
+        - rewrite H0 in H.
           eapply postfix_path in H;eauto 1.
-          instantiate (1:=e). 
-          eapply path_nlrcons_edge in H. 
+          instantiate (1:=e).
+          eapply path_nlrcons_edge in H.
           unfold tcfg_edge in H. destructH. eauto.
         - eapply while'_max in H as H1';eauto. cbn in H1'. contradict H1'.
           eapply loop_contains_deq_loop in H1'.
           eapply innermost_eq_loop in Hin.
           rewrite Hin in H1'.
           eapply postfix_incl in H.
-          eapply path_to_elem in Hpath as Hpath'. 
+          eapply path_to_elem in Hpath as Hpath'.
           2: { eapply H. eapply In_rcons. left. reflexivity. }
           destructH.
           eapply deq_loop_le;cycle 1;eauto.
       }
       eapply while'_max in H as Hmax;[|eauto]. cbn in Hmax.
-      destruct a'. cbn in *. assert (|l| < |j|) as Hmax' by omega.
+      destruct a'. cbn in *. assert (|l| < |j|) as Hmax' by lia.
       assert (|j| <= |k|) as Hjk.
       { assert ((h,k) ∈ t') by (rewrite H0;eapply In_rcons;eauto).
         rewrite Heqt' in H2.
         eapply while'_forall in H2. cbn in H2. auto. }
-      assert (|l| < |k|) by omega.
+      assert (|l| < |k|) by lia.
       eapply tag_entry_lt in H2.
       + destruct j.
-        { exfalso. cbn in Hmax'. omega. }
+        { exfalso. cbn in Hmax'. lia. }
         assert (j = tl k).
         { replace j with (tl (n :: j)) by (cbn;auto). erewrite <-geq_tag_suffix_tag_tl_eq.
           - rewrite take_r_tl;eauto. cbn. rewrite H2. cbn. cbn in Hmax.
-            rewrite H2 in Hjk. cbn in Hjk. omega.
+            rewrite H2 in Hjk. cbn in Hjk. lia.
           - eauto.
-          - eapply Hpost. 
+          - eapply Hpost.
           - subst t'. eapply while'_Forall.
           - rewrite H0. eapply In_rcons. left. eauto.
         }
@@ -221,7 +222,7 @@ Section disj.
         clear - Hpost Heqt' H0 H H1 Hpath Hord Hin Hnin.
         eapply postfix_eq in Hpost. destructH.
         rewrite H1,Hpost.
-        rewrite consAppend. 
+        rewrite consAppend.
         eapply splinter_app; eapply splinter_single.
         * rewrite H0. eapply In_rcons. auto.
         * eapply splinter_cons in Hord. eapply splinter_in in Hord.
@@ -231,12 +232,12 @@ Section disj.
           eapply geq_tag_suffix_deq in Hpath;cycle 1.
           -- eapply while'_postfix. symmetry. eauto.
           -- rewrite Heqt'. eapply while'_Forall.
-          -- rewrite Heqt'. eauto. 
+          -- rewrite Heqt'. eauto.
           -- eapply Hnin. eapply Hpath. eapply Hin.
       + rewrite H0 in H. eapply postfix_path in H;eauto.
-        cbn in H. eapply path_nlrcons_edge in H. eauto. 
+        cbn in H. eapply path_nlrcons_edge in H. eauto.
   Qed.
-  
+
   Lemma ex_entry_elem (h p q q' : Lab) (i j j' : Tag) t
         (Hin : innermost_loop h q)
         (Hnin : ~ loop_contains h p)
@@ -262,7 +263,7 @@ Section disj.
         eapply Hpath'.
         eapply path_contains_front;eauto.
       + eapply IHl2';eauto. inversion Hpath'. subst. eauto.
-  Qed.    
+  Qed.
 
   (* misc *)
 
@@ -282,7 +283,7 @@ Section disj.
         1: left;econstructor;eauto 1.
         all: right;intro N;inversion N;clear N.
         all: match goal with [ Q : Path _ _ _ _ |- _] => eapply path_front in Q as Hfront end.
-        all: cbn in Hfront;subst;try contradiction. 
+        all: cbn in Hfront;subst;try contradiction.
   Qed.
 
   Lemma ex_back_edge (p h q : Lab) (i j k : Tag) t
@@ -297,11 +298,11 @@ Section disj.
      * that (take_r |tl j| k) ⊴ (tl j) holds forall (p,k) ∈ t'.
      * by monotonicity and antisymmetry we have tl j = k forall (p,k) ∈ t', where |k|=|tl j|
      * thus i = tl j.
-     * then find entry for q using ex_entry. this gives us another (h,0::i) ∈ t, 
+     * then find entry for q using ex_entry. this gives us another (h,0::i) ∈ t,
      * contradiction to tpath_NoDup.
-     *) 
+     *)
   Admitted.
-  
+
   Variable (t1 t2 : list (Lab * Tag)) (r1 r2 : list (Lab * Tag)) (q1 q2 s : Lab) (j1 j2 k : Tag).
   Hypotheses (Hlc : last_common' t1 t2 r1 r2 (s,k))
              (Hpath1 : TPath (root,start_tag) (q1,j1) t1)
@@ -309,10 +310,10 @@ Section disj.
              (*           (Hneq : r1 <> r2) (* <-> r1 <> nil \/ r2 <> nil *)*)
              (Hloop : eq_loop q1 q2)
              (Htag : tl j1 = tl j2)
-             (Htagleq : hd 0 j1 <= hd 0 j2). 
+             (Htagleq : hd 0 j1 <= hd 0 j2).
 
   (** * q's loop contains the split point s **)
-  
+
   Lemma s_deq_q : deq_loop s q1.
   Proof.
     intros h Hh.
@@ -324,7 +325,7 @@ Section disj.
     unfold TPath in *.
     destruct r1, r2.
     - eapply lc_nil1 in Hlc. destruct t1;inversion Hlc. path_simpl' Hpath1.
-      inversion H0. subst. destruct Hinner. eauto.  
+      inversion H0. subst. destruct Hinner. eauto.
     - eapply lc_nil1 in Hlc. destruct t1;inversion Hlc. subst p0.
       replace s with (fst (s,k)) by (cbn;auto). path_simpl' Hpath1. cbn.
       unfold innermost_loop in Hinner. destructH; auto.
@@ -347,7 +348,7 @@ Section disj.
       2,3: eapply tpath_NoDup;eauto.
       eapply n. inversion Hlc. eapply loop_contains_self. unfold innermost_loop in Hinner''. destructH.
       eapply loop_contains_loop_head;eauto.
-  Qed. 
+  Qed.
 
   Lemma dep_eq_impl_head_eq : depth s = depth q1 -> eq_loop s q1.
   Proof.
@@ -355,5 +356,5 @@ Section disj.
     split;[eapply s_deq_q|].
     eapply deq_loop_depth_eq;eauto using s_deq_q.
   Qed.
-  
+
 End disj.
