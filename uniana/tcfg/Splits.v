@@ -7,7 +7,7 @@ Section splits.
   Parameter splits : Lab -> list Lab.
   Parameter splits_spec
     : forall p sp, sp ∈ splits p <->
-              exists (π ϕ : list (Lab * Tag)) (u u' : Lab) (k i : Tag),
+              exists (π ϕ : list (Lab * Tag)) (u u' : Lab),
                 HPath u p (map fst π)
                 /\ HPath u' p (map fst ϕ)
                 /\ Disjoint (r_tl π) (r_tl ϕ)
