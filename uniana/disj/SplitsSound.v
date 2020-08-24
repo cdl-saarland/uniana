@@ -15,6 +15,56 @@ Proof.
   reflexivity.
 Qed.
 
+Lemma inner_rtl (A : Type) (l : list A) (a : A)
+  : inner (a :: l) = r_tl l.
+Proof.
+  rewrite inner_inner'.
+  unfold inner',r_tl in *.
+  cbn.
+  reflexivity.
+Qed.
+
+Lemma inner_tl (A : Type) (l : list A) (a : A)
+  : inner (l ++ [a]) = tl l.
+Proof.
+  unfold inner.
+  rewrite rev_rcons.
+  cbn.
+  rewrite rev_involutive.
+  reflexivity.
+Qed.
+
+Lemma inner_eval_lr (A : Type) (l : list A) (a b : A)
+  : inner (a :: l ++ [b]) = l.
+Proof.
+  rewrite <-cons_rcons_assoc.
+  rewrite inner_tl.
+  cbn.
+  reflexivity.
+Qed.
+
+Lemma r_tl_rcons (A : Type) (l : list A) (a : A)
+  : r_tl (l ++ [a]) = l.
+Proof.
+  unfold r_tl.
+  rewrite rev_rcons. cbn.
+  rewrite rev_involutive.
+  reflexivity.
+Qed.
+
+Lemma inner_empty_iff (A : Type) (l : list A) (a b : A)
+  : inner (a :: b :: l) = [] <-> l = nil.
+Proof.
+  destruct l;cbn.
+  - firstorder.
+  - split;intro H;[|congruence].
+    specialize (cons_rcons a0 l) as Hspec. destructH. rewrite Hspec in H.
+    rewrite inner_rtl in H.
+    rewrite <-cons_rcons_assoc in H.
+    rewrite r_tl_rcons in H.
+    congruence.
+Qed.
+
 Ltac path_simpl2' H :=
   let Q:= fresh "Q" in
   lazymatch type of H with
@@ -98,25 +148,34 @@ Section splits_sound.
     : splitsT p ⊆ splits p.
   Proof.
     intros s Hin.
-    eapply splitsT_spec in Hin.
+    eapply splits_spec.
     destructH.
+    (* contradict π and ϕ (the paths from (s,k) to (p,i)) being empty *)
     destruct π as [|pi1 r1]; destruct ϕ as [|pi2 r2]; cbn in Hin4, Hin1.
     1: tauto.
     1: inversion Hin0.
     1: inversion Hin2.
     unfold TPath in Hin0. path_simpl' Hin0.
     unfold TPath in Hin2. path_simpl' Hin2.
+    (* contradict π and ϕ being singletons *)
     destruct r1 as [|(q1,j1) r1]; destruct r2 as [|(q2,j2) r2]; cbn in Hin4.
     - tauto.
     - eapply path_single in Hin0. destruct Hin0. rewrite <-H in *.
       eapply path_acyclic_no_loop in Hin2;[contradiction|]. eapply tcfg_acyclic.
     - eapply path_single in Hin2. destruct Hin2. rewrite <-H in *.
       eapply path_acyclic_no_loop in Hin0;[contradiction|]. eapply tcfg_acyclic.
-    - inv_path Hin0. inv_path Hin2.
+    - (* we have established that π and ϕ both consist of at least two elements*)
+      inv_path Hin0. inv_path Hin2.
       specialize (@two_edge_exit_cases q1 q2 p) as Hcase.
       exploit Hcase;eauto with tcfg.
       destruct Hcase.
-      + destructH. eapply splits_spec.
+      + destructH. eapply splits_spec. admit.
+      + do 2 rewrite inner_empty_iff in Hin4.
+        inv_path H; inv_path H1.
+        * destruct Hin4; contradiction.
+        *
+
+
   Admitted.
 
 End splits_sound.
