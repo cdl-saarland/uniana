@@ -101,7 +101,6 @@ Proof.
   - inversion H3.
 Qed.
 
-
 Section splits_sound.
 
   Context `{C : redCFG}.
@@ -124,15 +123,16 @@ Section splits_sound.
   Lemma inhom_loop_exits (s u1 u2 q1 q2 e1 e2 : Lab) r1 r2 (k i l1 l2 : Tag) (n1 n2 : nat)
         (Hsk1 : (s,k) -t> (u1,l1))
         (Hsk2 : (s,k) -t> (u2,l2))
-        (Hei1 : (q1,n1 :: i) -t> (e1,i))
-        (Hei2 : (q2,n2 :: i) -t> (e2,i))
-        (Hpath1 : TPath (u1,l1) (q1,n1 :: i) r1)
-        (Hpath2 : TPath (u2,l2) (q2,n2 :: i) r2)
+        (Hpath1 : TPath (u1,l1) (e1,i) ((e1,i) :: r1))
+        (Hpath2 : TPath (u2,l2) (e2,i) ((e2,i) :: r2))
+        (Hei1 : hd (s,k) r1 = (q1,n1 :: i))
+        (Hei2 : hd (s,k) r2 = (q2,n2 :: i))
         (Hdisj : Disjoint r1 r2)
+        (Hnnil : r1 <> [] \/ r2 <> [])
         (Hloop : eq_loop q1 q2)
     : exists r1' r2', edge__P s u1 /\  edge__P s u2
                  /\ HPath u1 e1 (e1 :: r1') /\ HPath u2 e2 (e2 :: r2')
-                 /\ Disjoint r1' r2'.
+                 /\ Disjoint r1' r2' /\ (r1' <> [] \/ r2' <> []).
   Proof.
   Admitted.
 
@@ -144,37 +144,61 @@ Section splits_sound.
   Proof.
   Admitted.
 
+  Lemma expand_hpath (π : list Lab) q p
+        (Hπ : HPath q p π)
+    : exists ϕ, CPath q p ϕ /\ π ⊆ ϕ.
+  Admitted.
+
+  Lemma contract_cpath (π : list Lab) q p
+           (Hπ : CPath q p π)
+           (Hdeq : deq_loop p q)
+           (Hnin : forall x, x ∈ tl π -> ~ innermost_loop x q)
+    : exists ϕ, HPath q p ϕ /\ ϕ ⊆ π.
+  Admitted.
+
+  Ltac spot_path := admit.
+
   Theorem splits_sound p
     : splitsT p ⊆ splits p.
   Proof.
     intros s Hin.
-    eapply splits_spec.
+    eapply splitsT_spec in Hin.
     destructH.
-    (* contradict π and ϕ (the paths from (s,k) to (p,i)) being empty *)
-    destruct π as [|pi1 r1]; destruct ϕ as [|pi2 r2]; cbn in Hin4, Hin1.
+    (* contradict π and ϕ (the paths from (u,l) to (p,i)) being empty *)
+    destruct π as [|pi1 r1]; destruct ϕ as [|pi2 r2]; cbn in Hin1, Hin6.
     1: tauto.
     1: inversion Hin0.
     1: inversion Hin2.
     unfold TPath in Hin0. path_simpl' Hin0.
     unfold TPath in Hin2. path_simpl' Hin2.
-    (* contradict π and ϕ being singletons *)
-    destruct r1 as [|(q1,j1) r1]; destruct r2 as [|(q2,j2) r2]; cbn in Hin4.
-    - tauto.
-    - eapply path_single in Hin0. destruct Hin0. rewrite <-H in *.
-      eapply path_acyclic_no_loop in Hin2;[contradiction|]. eapply tcfg_acyclic.
-    - eapply path_single in Hin2. destruct Hin2. rewrite <-H in *.
-      eapply path_acyclic_no_loop in Hin0;[contradiction|]. eapply tcfg_acyclic.
-    - (* we have established that π and ϕ both consist of at least two elements*)
-      inv_path Hin0. inv_path Hin2.
-      specialize (@two_edge_exit_cases q1 q2 p) as Hcase.
-      exploit Hcase;eauto with tcfg.
-      destruct Hcase.
-      + destructH. eapply splits_spec. admit.
-      + do 2 rewrite inner_empty_iff in Hin4.
-        inv_path H; inv_path H1.
-        * destruct Hin4; contradiction.
-        *
-
+    Lemma hd_map_fst_snd (A B : Type) (a : A) (b : B) (l : list (A * B))
+      : hd (a,b) l = (hd a (map fst l), hd b (map snd l)).
+    Proof.
+      destruct l;cbn;eauto using surjective_pairing.
+    Qed.
+    Lemma edge_path_hd_edge (L : Type) (ed : L -> L -> Prop) x y z π
+          (Hedge : ed z x)
+          (Hpath : Path ed x y (y :: π))
+      : ed (hd z π) y.
+    Admitted.
+    eapply edge_path_hd_edge in Hin0 as Hqp1;eauto.
+    eapply edge_path_hd_edge in Hin2 as Hqp2;eauto.
+    rewrite hd_map_fst_snd in Hqp1, Hqp2.
+    specialize (@two_edge_exit_cases (hd s (map fst r1)) (hd s (map fst r2)) p) as Hcase.
+    exploit Hcase.
+    1,2: eapply edge_path_hd_edge;eauto with tcfg; spot_path.
+    destruct Hcase.
+    - destructH.
+      eapply inhom_loop_exits in Hin2 as Hinhom.
+      4: eapply Hin0.
+      all: eauto.
+      2,3: rewrite hd_map_fst_snd; eapply pair_equal_spec;split;eauto.
+      2,3,4: admit. (* using exit_edge we can show tail of tag is i & and same loop *)
+      destructH.
+      eapply splits_spec.
+      exists (p :: r1'), (p :: r2'), u1, u2.
+      split_conj;eauto.
+    - admit.
 
   Admitted.
 

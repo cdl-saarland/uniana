@@ -302,9 +302,13 @@ Section uniana.
       + eapply postfix_path in Hlc2.
         * eapply PathCons with (c:=(p,i)) in Hlc0;[|eauto].
           eapply PathCons with (c:=(p,i)) in Hlc2;[|eauto].
-          repeat eexists. 1: eapply Hlc0. 1: eapply Hlc2.
-          -- do 2 rewrite inner_cons_rcons. auto.
-          -- do 2 rewrite inner_cons_rcons. auto.
+          eapply path_rcons_inv' in Hlc0. destructH.
+          eapply path_rcons_inv' in Hlc2. destructH.
+          destruct p0. destruct p1.
+          do 8 eexists. split_conj.
+          1: eapply Hlc4.
+          1: eapply Hlc0.
+          all:cbn;eauto.
         * inversion Htr2.
           eapply Tr_EPath in H4;eauto. destructH. eapply EPath_TPath in H4. cbn in *. eauto.
           cbn. eauto.

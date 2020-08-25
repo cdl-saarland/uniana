@@ -238,6 +238,12 @@ Section tagged.
         + destructH. eapply E. unfold exit_edge in H; destructH. eauto.
     Qed.
 
+    Lemma tag_exit_eq h
+      : exit_edge h p q -> j = tl i.
+    Proof.
+      intros. eapply tag_exit_iff';eauto.
+    Qed.
+
     Lemma tag_exit_lt
           (Hgt : |j| < |i|)
       : j = tl i.
