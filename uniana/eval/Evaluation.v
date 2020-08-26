@@ -95,6 +95,24 @@ Section eval.
       => destruct x as [[? ?] ?]; eff_unf
     end.
 
+  Ltac some_match_subst :=
+    lazymatch goal with
+    | H: match _ with
+         | Some _ => Some (?x, _, _)
+         | None => _
+         end = Some (?y, _, _) |- _
+      => let Q := fresh "Q" in
+        assert (x = y) as Q;[
+          destruct (match edge_Edge _ with
+                    | Enormal _ => _
+                    | Eback _ => _
+                    | Eentry _ => _
+                    | Eexit _ => _
+                    end);[
+            inversion H;subst;eauto
+           |congruence]
+         |subst]
+    end.
 
   Program Instance conf_eq_eqdec : EqDec Conf eq.
   Next Obligation.
@@ -125,8 +143,12 @@ Section eval.
     -> eff_tag q p j = Some i.
   Proof.
     intros Heff.
-    eff_unf. unfold eff_tag. inversion Heff. subst.
-    decide (edge__P q p);[|congruence]. f_equal. eapply eff_tag'_eq.
+    eff_unf. some_match_subst. unfold eff_tag.
+    decide (edge__P q p);[|contradiction].
+    unfold eff_tag.
+    rewrite Edge_eq with (Q:=e).
+    destruct (edge_Edge e);inversion Heff;subst;eauto.
+    1,2: destruct j;inversion Heff;subst;eauto.
   Qed.
 
   (** * Edge on the Trace-Graph **)
@@ -207,9 +229,12 @@ Section eval.
     split.
     - destruct (eff (q,j,r)) eqn:E;[|contradiction].
       eapply step_conf_implies_edge. subst c;eauto.
-    - eff_unf. unfold eff_tag' in Heval. unfold eff_tag. inversion Heval; subst. decide (edge__P q p).
-      2: congruence.
-      erewrite eff_tag'_eq. reflexivity.
+    - destruct (eff (q,j,r)) eqn:E;[subst c|contradiction].
+      eff_unf. unfold eff_tag. some_match_subst. decide (edge__P q p);[|contradiction].
+      rewrite (Edge_eq) with (Q:=e).
+      destruct (edge_Edge e).
+      all: inversion E;eauto.
+      1,2: destruct j;[congruence|]; inversion E;eauto.
   Qed.
 
   Lemma EPath_TPath k k' π :
@@ -312,8 +337,13 @@ Section eval.
         inversion Heqc. subst c.
         unfold sem_step in H. cbn in H.
         destruct (eff' (e,s0)).
-        * destruct p0. unfold eff_tag in *. decide (edge__P e e0). 2:congruence.
-          inversion H. subst. decide (edge__P e p);[|congruence]. erewrite eff_tag'_eq. reflexivity.
+        * destruct p0. unfold eff_tag in *.
+          decide (edge__P e e0). 2:congruence.
+          some_match_subst.
+          decide (edge__P e p);[|congruence].
+          rewrite (Edge_eq _ e1).
+          destruct (edge_Edge e1);inversion H;eauto.
+          1,2: destruct t0; inversion H;eauto.
         * congruence.
     - destruct x.
       + inversion t.
@@ -325,7 +355,13 @@ Section eval.
       eff (q, j, r') = Some (p, i', s') ->
       i = i'.
   Proof.
-    intros. eff_unf. eff_unf. inversion H;subst. inversion H0;subst. eapply eff_tag'_eq.
+    intros. eff_unf. eff_unf. some_match_subst. some_match_subst. auto.
+    assert (x1 = p).
+    { clear H0. some_match_subst. auto. }
+    subst x1.
+    rewrite (Edge_eq _ e0) in H0.
+    destruct (edge_Edge e0);try congruence.
+    1,2: destruct j;congruence.
   Qed.
 
   Definition Precedes' (l : list Conf) (k k' : Conf) : Prop :=
@@ -775,7 +811,7 @@ Section eval.
       destruct l. 1: cbn in *; congruence.
       inversion Hsucc. subst.
       eapply Tr_eff_Some in Htr.
-      eff_unf. inversion Heff;inversion Htr;subst. reflexivity.
+      eff_unf. some_match_subst. destruct (edge_Edge e); congruence.
     - cbn in Hsucc.
       destruct l. 1: cbn in *; destruct l2; cbn in Hsucc;congruence.
       destruct p0. destruct p0.

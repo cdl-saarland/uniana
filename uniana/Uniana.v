@@ -825,6 +825,4 @@ Section uniana.
           -- intuition.
   Qed.
 
-  Print Assumptions uni_correct.
-
 End uniana.
