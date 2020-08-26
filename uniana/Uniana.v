@@ -161,11 +161,11 @@ Section uniana.
   Proof.
     assert (q1 = q2) by (eapply uni_branch_uni_succ with (q1:=q1) (l1:=l1) ;eauto).
     split;[eauto|subst].
-    eapply eff_tag_det'.
-    2: eapply succ_in_tpath_eff_tag;[clear Hpath1;spot_path|];eauto;cbn;
+    eapply tcfg_edge_det.
+    2: eapply succ_in_tpath_tcfg_edge;[clear Hpath1;spot_path|];eauto;cbn;
       eauto using succ_in_cons_cons.
     clear Hpath2 Hsucc2.
-    eapply succ_in_tpath_eff_tag;[spot_path|];eauto.
+    eapply succ_in_tpath_tcfg_edge;[spot_path|];eauto.
   Qed.
 
   Lemma uni_branch_succ_p p q br i j k s1 s2 r r' l1 l2 l2' uni
@@ -586,7 +586,7 @@ Section uniana.
       4: contradict Htag0; inversion Htag0; eauto.
       clear - Hlc Htr1 Htr2. destructH. destruct b1, b2. exists l, l0, e, e0. split_conj;eauto.
       contradict Hlc3. inversion Hlc3;subst;eauto. f_equal.
-      eapply eff_tag_det'; eapply tpath_succ_eff_tag; unfold Coord in *; cycle 1; eauto.
+      eapply tcfg_edge_det; eapply succ_in_tpath_tcfg_edge; unfold Coord in *; cycle 1; eauto.
       1: unfold Tag in *; rewrite <-ηeq2.
       2: unfold Tag in *; rewrite <-ηeq1.
       eapply (tpath_exit_nin (h:=h) (q:=qe2));eauto;
@@ -824,5 +824,7 @@ Section uniana.
           -- inversion Hprec'1;subst;eauto;congruence.
           -- intuition.
   Qed.
+
+  Print Assumptions uni_correct.
 
 End uniana.

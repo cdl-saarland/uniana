@@ -113,7 +113,18 @@ Section tagged.
 
   Definition eff_tag (p q : Lab) (i : Tag)
     := match decision (edge__P p q) with
-       | left E => Some (eff_tag' i E)
+       | left E => match edge_Edge E with
+                  | Enormal _ => Some i
+                  | Eback _ => match i with
+                              | nil => None
+                              | _ :: i' => Some i'
+                              end
+                  | Eentry _ => Some (0 :: i)
+                  | Eexit _ => match i with
+                              | nil => None
+                              | n :: i' => Some ((S n) :: i')
+                              end
+                  end
        | _ => None
        end.
 
@@ -124,23 +135,6 @@ Section tagged.
     erewrite Edge_eq.
     reflexivity.
   Qed.
-
-  (*
-  Definition eff_tag p q i : Tag
-    := if decision (p ↪ q)
-       then match i with
-            | nil => nil
-            | n :: l => (S n) :: l
-            end
-       else
-         if decision (exists h, exit_edge h p q) then
-           tl i
-         else
-           if decision (loop_head q) then
-             O :: i
-           else
-             i.
-   *)
 
   Definition tcfg_edge (c c' : Coord) :=
     let (p,i) := c  in
@@ -171,7 +165,7 @@ Section tagged.
 
   Lemma tag_eff p i q j
         (Hpq : (p,i) -t> (q,j))
-    : exists (Hedge : edge__P p q),  eff_tag' i Hedge = j.
+    : eff_tag' i (left Hpq) = j.
   Proof.
     unfold tcfg_edge,eff_tag in Hpq.
     destructH.
@@ -1320,26 +1314,32 @@ Proof.
   eapply eff_tag_det in H;eauto. inversion H;eauto.
 Qed.
 
-Lemma tpath_succ_eff_tag  p q r i j s t a l
-      (Hpath : TPath (a,l) (r,s) ((r,s) :: t))
-      (Hsucc : (q,j) ≻ (p,i) | (r,s) :: t)
-  : eff_tag p q i = Some j.
+Lemma tcfg_edge_det p q j i1 i2
+      (Hedge1 : tcfg_edge (q,j) (p,i1))
+      (Hedge2 : tcfg_edge (q,j) (p,i2))
+  : i1 = i2.
+  (* PROVEME *)
+Admitted.
+
+Lemma succ_in_tpath_tcfg_edge
+  : forall (p q : Lab) (i j : Tag) (t : list Coord) (a b : Coord),
+    TPath a b t -> (p, i) ≻ (q, j) | t -> tcfg_edge (q,j) (p,i).
+  (* PROVEME (analogous to below lemma) *)
+Admitted.
+
+(* TODO: remove (after proof is adjusted to above lemma) *)
+Lemma succ_in_tpath_eff_tag p q i j t a b
+      (Hpath : TPath a b t)
+      (Hsucc : (p,i) ≻ (q,j) | t)
+  : eff_tag q p j = Some i.
 Proof.
   unfold succ_in in Hsucc. destructH.
-  assert ((r,s) :: t = l2 :r: (q,j) :r: (p,i) ++ l1) as Hsucc'.
-  {
-    rewrite Hsucc.
-    do 2 rewrite app_cons_assoc. reflexivity.
-  }
-  rewrite Hsucc' in Hpath.
-  eapply postfix_path with (l:=l2 :r: (q,j)) (p:=(p,i)) in Hpath.
-  - eapply path_prefix_path with (ϕ:= [(p,i)]) (r:=(q,j))in Hpath.
-    + inversion Hpath;subst;eauto. unfold tcfg_edge in H3. cbn in H3. destruct b. conv_bool.
-      inversion H0;subst. destruct H3. eauto. inversion H5.
-    + eauto.
-    + cbn; clear. induction l2; cbn in *; econstructor; eauto.
-  - cbn; clear. induction l2; cbn; destruct l1; cbn; eauto using postfix_cons.
-    1,2: repeat (eapply postfix_cons; try econstructor). eapply postfix_nil.
+  revert dependent t. revert b. induction l2; cbn in *; intros.
+  - rewrite Hsucc in Hpath. unfold TPath in Hpath. destruct b.
+    inversion Hpath. subst. destruct b. inversion H3;subst;destruct H5;eauto.
+  - destruct t. 1: inversion Hpath.
+    inversion Hsucc. subst. inversion Hpath;subst. 1: congruence'.
+    eauto.
 Qed.
 
 (** ** Tagged paths are duplicate-free **)
