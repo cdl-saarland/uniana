@@ -433,3 +433,9 @@ Proof.
   unfold inner.
   rewrite rev_unit. simpl. rewrite rev_involutive. reflexivity.
 Qed.
+
+Lemma hd_map_fst_snd (A B : Type) (a : A) (b : B) (l : list (A * B))
+  : hd (a,b) l = (hd a (map fst l), hd b (map snd l)).
+Proof.
+  destruct l;cbn;eauto using surjective_pairing.
+Qed.

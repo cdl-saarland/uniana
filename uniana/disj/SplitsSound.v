@@ -171,16 +171,6 @@ Section splits_sound.
     1: inversion Hin2.
     unfold TPath in Hin0. path_simpl' Hin0.
     unfold TPath in Hin2. path_simpl' Hin2.
-    Lemma hd_map_fst_snd (A B : Type) (a : A) (b : B) (l : list (A * B))
-      : hd (a,b) l = (hd a (map fst l), hd b (map snd l)).
-    Proof.
-      destruct l;cbn;eauto using surjective_pairing.
-    Qed.
-    Lemma edge_path_hd_edge (L : Type) (ed : L -> L -> Prop) x y z π
-          (Hedge : ed z x)
-          (Hpath : Path ed x y (y :: π))
-      : ed (hd z π) y.
-    Admitted.
     eapply edge_path_hd_edge in Hin0 as Hqp1;eauto.
     eapply edge_path_hd_edge in Hin2 as Hqp2;eauto.
     rewrite hd_map_fst_snd in Hqp1, Hqp2.

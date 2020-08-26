@@ -457,6 +457,14 @@ Section graph.
       + eapply IHHpath. exists l1, l2. inversion Hsucc; subst; eauto.
   Qed.
 
+  Lemma edge_path_hd_edge x y z π
+        (Hedge : z --> x)
+        (Hpath : Path x y (y :: π))
+    : (hd z π) --> y.
+  Proof.
+    (* PROVEME *)
+  Admitted.
+
 End graph.
 
 Arguments Path {L}.
