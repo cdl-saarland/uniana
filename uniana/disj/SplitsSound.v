@@ -147,7 +147,38 @@ Section splits_sound.
   Lemma expand_hpath (π : list Lab) q p
         (Hπ : HPath q p π)
     : exists ϕ, CPath q p ϕ /\ π ⊆ ϕ.
-  Admitted.
+  Proof.
+    induction Hπ.
+    - exists [a]. split; [ constructor | auto ]. 
+    - unfold head_rewired_edge in H.
+      destruct H as [ [ H _ ] | H ].
+      + destruct IHHπ as [ ϕ [ Hϕ Hsub ]].
+        exists (c :: ϕ). split.
+        * econstructor; eassumption.
+        * unfold incl in *. firstorder.
+      + unfold exited in H.
+        unfold exit_edge in H.
+        destruct H as [p [Hcont [Hncont Hedge]]].
+        eapply loop_reachs_member in Hcont.
+        destruct Hcont as [σ Hσ].
+        destruct IHHπ as [ϕ [Hϕ Hincl]].
+        exists (c :: σ ++ tl ϕ).
+        split.
+        * econstructor.
+          -- eapply path_app'. eassumption.
+             eauto using subgraph_path'.
+          -- eassumption.
+        * unfold incl in *. intros.
+          destruct H.
+          -- subst. eauto.
+          -- eapply Hincl in H. simpl. right.
+             eapply in_or_app.
+             destruct ϕ; [ inversion H |].
+             eapply in_inv in H.
+             destruct H.
+             ++ left. subst. inv Hϕ; eauto using path_contains_back.
+             ++ right. eauto.
+  Qed.
 
   Lemma contract_cpath (π : list Lab) q p
            (Hπ : CPath q p π)
