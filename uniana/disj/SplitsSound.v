@@ -136,12 +136,21 @@ Section splits_sound.
   Proof.
   Admitted.
 
+  Definition nexit_edge q p := forall h, ~ exit_edge h q p.
+
   Lemma two_edge_exit_cases (q1 q2 p : Lab)
         (Hedge1 : q1 --> p)
         (Hedge2 : q2 --> p)
     : (exists h, exit_edge h q1 p /\ exit_edge h q2 p)
-      \/ (forall h, ~ exit_edge h q1 p) /\ (forall h, ~ exit_edge h q2 p).
+      \/ nexit_edge q1 p /\ nexit_edge q2 p.
   Proof.
+  Admitted.
+
+  Lemma nexit_injective q1 q2 p1 p2 j1 j2 i
+        (Hedge1 : (q1,j1) -t> (p1,i))
+        (Hedge2 : (q2,j2) -t> (p2,i))
+        (Hnexit1 : nexit_edge q1 p1)
+    : j1 = j2.
   Admitted.
 
   Lemma expand_hpath (π : list Lab) q p
@@ -149,7 +158,7 @@ Section splits_sound.
     : exists ϕ, CPath q p ϕ /\ π ⊆ ϕ.
   Proof.
     induction Hπ.
-    - exists [a]. split; [ constructor | auto ]. 
+    - exists [a]. split; [ constructor | auto ].
     - unfold head_rewired_edge in H.
       destruct H as [ [ H _ ] | H ].
       + destruct IHHπ as [ ϕ [ Hϕ Hsub ]].
@@ -181,13 +190,19 @@ Section splits_sound.
   Qed.
 
   Lemma contract_cpath (π : list Lab) q p
-           (Hπ : CPath q p π)
+           (Hπ : CPath p q π)
            (Hdeq : deq_loop p q)
            (Hnin : forall x, x ∈ tl π -> ~ innermost_loop x q)
-    : exists ϕ, HPath q p ϕ /\ ϕ ⊆ π.
+    : exists ϕ, HPath p q ϕ /\ ϕ ⊆ π.
   Admitted.
 
   Ltac spot_path := admit.
+
+  Lemma tag_exit_eq' h p q i j
+        (Hedge : (p,i) -t> (q,j))
+        (Hexit : exit_edge h p q)
+    : exists n, i = n :: j.
+  Admitted.
 
   Theorem splits_sound p
     : splitsT p ⊆ splits p.
@@ -210,16 +225,30 @@ Section splits_sound.
     1,2: eapply edge_path_hd_edge;eauto with tcfg; spot_path.
     destruct Hcase.
     - destructH.
+      eapply tag_exit_eq' in H0 as Hn1. destruct Hn1 as [n1 Hn1];eauto.
+      eapply tag_exit_eq' in H1 as Hn2. destruct Hn2 as [n2 Hn2];eauto.
       eapply inhom_loop_exits in Hin2 as Hinhom.
       4: eapply Hin0.
       all: eauto.
       2,3: rewrite hd_map_fst_snd; eapply pair_equal_spec;split;eauto.
-      2,3,4: admit. (* using exit_edge we can show tail of tag is i & and same loop *)
+      2: eapply eq_loop_exiting in H0; eapply eq_loop_exiting in H1; rewrite <-H0, <-H1; reflexivity.
       destructH.
       eapply splits_spec.
       exists (p :: r1'), (p :: r2'), u1, u2.
       split_conj;eauto.
-    - admit.
+    - destructH.
+      eapply nexit_injective in H0;eauto.
+      rewrite <-H0 in *.
+      destruct r1 as [|[q1 j1] r1]; destruct r2 as [|[q2 j2] r2]; cbn in *.
+      + tauto.
+      + admit.
+      + admit.
+      + decide (deq_loop q1 s).
+        * assert (Disjoint r1 r2) as Hdisj by admit. (* this is given by lemma 4.13 *)
+          inv_path Hin0. inv_path Hin2. admit.
+
+        * admit.
+    -  admit.
 
   Admitted.
 
