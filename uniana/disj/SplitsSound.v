@@ -128,11 +128,10 @@ Section splits_sound.
         (Hei1 : hd (s,k) r1 = (q1,n1 :: i))
         (Hei2 : hd (s,k) r2 = (q2,n2 :: i))
         (Hdisj : Disjoint r1 r2)
-        (Hnnil : r1 <> [] \/ r2 <> [])
         (Hloop : eq_loop q1 q2)
     : exists r1' r2', edge__P s u1 /\  edge__P s u2
                  /\ HPath u1 e1 (e1 :: r1') /\ HPath u2 e2 (e2 :: r2')
-                 /\ Disjoint r1' r2' /\ (r1' <> [] \/ r2' <> []).
+                 /\ Disjoint r1' r2'.
   Proof.
   Admitted.
 
@@ -192,7 +191,7 @@ Section splits_sound.
   Lemma contract_cpath (π : list Lab) q p
            (Hπ : CPath p q π)
            (Hdeq : deq_loop p q)
-           (Hnin : forall x, x ∈ tl π -> ~ innermost_loop x q)
+           (Hnin : forall x, x ∈ tl π -> ~ loop_contains x q)
     : exists ϕ, HPath p q ϕ /\ ϕ ⊆ π.
   Admitted.
 
@@ -203,6 +202,35 @@ Section splits_sound.
         (Hexit : exit_edge h p q)
     : exists n, i = n :: j.
   Admitted.
+
+  Lemma acyclic_path_NoDup (L : Type) `{EqDec L eq} (ed : L -> L -> Prop) (π : list L) p q
+        (Hpath : Path ed p q π)
+        (Hacy : acyclic ed)
+    : NoDup π.
+  Proof.
+    induction Hpath.
+    - econstructor;eauto. econstructor.
+    - econstructor;eauto.
+      intro N.
+      eapply path_from_elem in N;eauto.
+      destructH.
+      eapply Hacy;eauto.
+  Qed.
+  Lemma acy_path_incl_cons (L : Type) `{EqDec L eq} (ed : L -> L -> Prop) (π ϕ : list L) p q
+        (Hpath : Path ed p q π)
+        (Hincl : π ⊆ (q :: ϕ))
+        (Hacy : acyclic ed)
+    : tl π ⊆ ϕ.
+  Proof.
+    inv_path Hpath;cbn;eauto.
+    unfold incl in *.
+    intros a Ha.
+    specialize (Hincl a). exploit Hincl.
+    destruct Hincl;subst.
+    - eapply acyclic_path_NoDup in Hpath;eauto.
+      inv Hpath. contradiction.
+    - auto.
+  Qed.
 
   Theorem splits_sound p
     : splitsT p ⊆ splits p.
@@ -219,37 +247,84 @@ Section splits_sound.
     unfold TPath in Hin2. path_simpl' Hin2.
     eapply edge_path_hd_edge in Hin0 as Hqp1;eauto.
     eapply edge_path_hd_edge in Hin2 as Hqp2;eauto.
-    rewrite hd_map_fst_snd in Hqp1, Hqp2.
-    specialize (@two_edge_exit_cases (hd s (map fst r1)) (hd s (map fst r2)) p) as Hcase.
-    exploit Hcase.
-    1,2: eapply edge_path_hd_edge;eauto with tcfg; spot_path.
-    destruct Hcase.
-    - destructH.
-      eapply tag_exit_eq' in H0 as Hn1. destruct Hn1 as [n1 Hn1];eauto.
-      eapply tag_exit_eq' in H1 as Hn2. destruct Hn2 as [n2 Hn2];eauto.
-      eapply inhom_loop_exits in Hin2 as Hinhom.
-      4: eapply Hin0.
-      all: eauto.
-      2,3: rewrite hd_map_fst_snd; eapply pair_equal_spec;split;eauto.
-      2: eapply eq_loop_exiting in H0; eapply eq_loop_exiting in H1; rewrite <-H0, <-H1; reflexivity.
-      destructH.
-      eapply splits_spec.
-      exists (p :: r1'), (p :: r2'), u1, u2.
-      split_conj;eauto.
-    - destructH.
-      eapply nexit_injective in H0;eauto.
-      rewrite <-H0 in *.
-      destruct r1 as [|[q1 j1] r1]; destruct r2 as [|[q2 j2] r2]; cbn in *.
-      + tauto.
-      + admit.
-      + admit.
-      + decide (deq_loop q1 s).
-        * assert (Disjoint r1 r2) as Hdisj by admit. (* this is given by lemma 4.13 *)
-          inv_path Hin0. inv_path Hin2. admit.
-
-        * admit.
-    -  admit.
-
+    destruct r1 as [|[q1 j1] r1]; destruct r2 as [|[q2 j2] r2];
+        unfold hd in Hqp1,Hqp2.
+    - tauto.
+    - eapply splits_spec. admit. (* I need a lemma for these symmetric cases,
+                                      only one Hpath is non-trivial (use contraction) *)
+    - admit.
+    - specialize (@two_edge_exit_cases q1 q2 p) as Hcase.
+      exploit Hcase.
+      1,2: eapply edge_path_hd_edge;eauto with tcfg; spot_path.
+      destruct Hcase.
+      + destructH.
+        eapply tag_exit_eq' in H0 as Hn1. destruct Hn1 as [n1 Hn1];eauto.
+        eapply tag_exit_eq' in H1 as Hn2. destruct Hn2 as [n2 Hn2];eauto.
+        eapply inhom_loop_exits in Hin2 as Hinhom.
+        4: eapply Hin0.
+        all: eauto.
+        2,3: rewrite hd_map_fst_snd; eapply pair_equal_spec;split;eauto.
+        2: {
+          eapply eq_loop_exiting in H0; eapply eq_loop_exiting in H1.
+          cbn. rewrite <-H0, <-H1; reflexivity.
+        }
+        destructH.
+        eapply splits_spec.
+        exists (p :: r1'), (p :: r2'), u1, u2.
+        split_conj;eauto. cbn.
+        destruct r1';[|left;congruence].
+        destruct r2';[|right;congruence].
+        exfalso.
+        inv_path Hinhom1. inv_path Hinhom3.
+        eapply tcfg_edge_det in Hin3;eauto. subst l2.
+        inv_path Hin0. inv_path Hin2.
+        eapply Hin1.
+        1,2: eapply path_contains_back;eauto.
+      + destructH.
+        eapply nexit_injective in H0;eauto.
+        rewrite <-H0 in *.
+        decide (deq_loop q1 s).
+        * (* this is given by lemma 4.13 *)
+          assert (Disjoint (q1 :: map fst r1) (q2 :: map fst r2)) as Hdisj by admit.
+          subst j2.
+          inv_path Hin0. inv_path Hin2.
+          eapply splits_spec.
+          eapply TPath_CPath in H.  cbn in H.
+          eapply TPath_CPath in H2. cbn in H2.
+          eapply contract_cpath in H.
+          eapply contract_cpath in H2.
+          2,4: admit. (* r1 ⊆ h_q *)
+          2,3: admit. (* r1 ⊆ h_q & no back edge *)
+          repeat destructH.
+          exists (p :: ϕ0), (p :: ϕ), u1, u2.
+          split_conj;eauto.
+          1,2: econstructor;eauto;unfold head_rewired_edge;left;split;destruct Hqp1,Hqp2;eauto.
+          1,2: admit. (* contradiction to eq_loop q1 q2 and no back edges *)
+          2,3: destruct Hin3,Hin4;eauto.
+          2: cbn;inv_path H2;cbn;left;congruence.
+          cbn.
+          eapply disjoint_subset;eauto.
+        * assert (exists e1 r1', Path tcfg_edge (u1, l1) (e1, j1) ((e1,j1) :: r1')) as [e1 [r1' He1]]
+              by admit.
+          assert(Prefix ((e1,j1) :: r1') ((q1,j1) :: r1)) as Hpre1 by admit.
+          assert (exists e2 r2', Path tcfg_edge (u2, l2) (e2, j1) ((e2,j1) :: r2')) as [e2 [r2' He2]]
+              by admit.
+          assert(Prefix ((e2,j1) :: r2') ((q2,j1) :: r2)) as Hpre2 by admit.
+          eapply inhom_loop_exits in He2 as Hinhom.
+          4: eapply He1.
+          all:eauto.
+          2,3,5: admit. (* because exit edges given by cnc stuff *)
+          2: {
+            eapply disjoint_subset. 1,2: eapply prefix_incl;eapply prefix_cons;eauto.
+            eauto.
+          }
+          eapply splits_spec.
+          destructH.
+          (* contract paths from e1 & e2 to p (they're on the same level)
+           * append these to r1'0 & r2'0, et voila there the disjoint head rewired paths (using 4.13)
+           * side conditions are also easy
+           *)
+          admit.
   Admitted.
 
 End splits_sound.

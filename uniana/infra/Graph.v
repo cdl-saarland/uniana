@@ -462,6 +462,7 @@ Section graph.
         (Hpath : Path x y (y :: π))
     : (hd z π) --> y.
   Proof.
+    clear edge1 edge2.
     (* PROVEME *)
   Admitted.
 
