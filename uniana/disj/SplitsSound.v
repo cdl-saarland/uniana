@@ -1,4 +1,5 @@
 Require Export Splits SplitsT.
+Require Import Graph.
 
 Definition inner' := fun (A : Type) (l : list A) => rev (tl (rev (tl l))).
 
@@ -188,11 +189,306 @@ Section splits_sound.
              ++ right. eauto.
   Qed.
 
-  Lemma contract_cpath (π : list Lab) q p
+  Parameter is_exit_edge : Lab -> Lab -> option Lab.
+  Parameter is_exit_edge_sound :
+    forall p q h, is_exit_edge p q = Some h <-> exit_edge h p q.
+
+  Fixpoint suffix_from (h : Lab) (π : list Lab) : option (list Lab) :=
+    match π with
+    | p :: π' => if (decision (p = h)) then Some π' else suffix_from h π'
+    | [] => None
+    end.
+
+  Fixpoint dissect_at (h : Lab) (π : list Lab) : (list Lab) * (list Lab) :=
+    match π with
+    | p :: π' => if (decision (p = h)) then ([p], π') else
+                 let (segment, rest) := dissect_at h π' in (p :: segment, rest)
+    | [] => ([], [])
+    end.
+
+  Lemma dissect_preserves (h : Lab) (π : list Lab) :
+    let (a, b) := dissect_at h π in π = a ++ b.
+  Proof.
+    induction π.
+    - reflexivity.
+    - simpl. decide (a = h).
+      + reflexivity.
+      + destruct (dissect_at h π). simpl. rewrite IHπ. reflexivity.
+  Qed.
+
+  Lemma dissect_rest_not_bigger (h : Lab) (π : list Lab) :
+    let (_, rest) := dissect_at h π in length rest <= length π.
+  Proof.
+    induction π; simpl.
+    - eauto.
+    - destruct (dissect_at h π).
+      decide (a = h); simpl; auto with zarith.
+  Qed.
+
+  Lemma deq_loop_basic
+        (a b c : Lab)
+        (Hab : deq_loop a b)
+        (Hedge : basic_edge b c)
+    : deq_loop a c.
+  Proof.
+    intros. 
+    unfold basic_edge in Hedge.
+    destruct Hedge as [Heq Hedge].
+    unfold eq_loop in Heq.
+    eauto using eq_loop2.
+  Qed.
+
+  Lemma incl_app c
+        (π ϕ : list Lab)
+        (Hincl : π ⊆ ϕ)
+    : (c :: π) ⊆ (c :: ϕ).
+  Proof.
+    unfold incl in *. firstorder.
+  Qed.
+    
+  Lemma incl_app2 c
+        (π ϕ : list Lab)
+        (Hincl : π ⊆ ϕ)
+    : π ⊆ (c :: ϕ).
+  Proof.
+    unfold incl in *. firstorder.
+  Qed.
+
+  Lemma basic_edge_loop_contains a b x
+        (Hedge : basic_edge a b)
+        (Hinner : loop_contains x a)
+    : loop_contains x b.
+  Proof.
+    specialize (loop_contains_loop_head Hinner) as Hhead.
+    destruct Hedge as [Hedge _].
+    eauto using loop_contains_deq_loop, back_edge_eq_loop, deq_loop_head_loop_contains, eq_loop1.
+  Qed.
+
+  Lemma back_edge_loop_contains a b x
+        (Hedge : back_edge a b)
+        (Hinner : loop_contains x a)
+    : loop_contains x b.
+  Proof.
+    specialize (loop_contains_loop_head Hinner) as Hhead.
+    eauto using loop_contains_deq_loop, back_edge_eq_loop, deq_loop_head_loop_contains, eq_loop1.
+  Qed.
+
+  Lemma back_edge_innermost h l
+        (Hbe : back_edge l h)
+    : innermost_loop h l.
+  Proof.
+    destruct (back_edge_eq_loop Hbe) as [H1 H2].
+    unfold innermost_loop.
+    eauto using loop_contains_ledge.
+  Qed.
+
+  Lemma innermost_unique a b c
+        (Ha : innermost_loop a c)
+        (Hb : innermost_loop b c)
+    : a = b.
+  Proof.
+    destruct Ha as [Ha Ha'].
+    destruct Hb as [Hb Hb'].
+    unfold deq_loop in *.
+    eauto using loop_contains_Antisymmetric.
+  Qed.
+
+  Lemma back_edge_src_no_loop_head
+        a b
+        (Hbe : back_edge b a)
+    : ~ loop_head b.
+  Proof.
+    intro. eapply no_self_loops.
+    - eapply Hbe.
+    - eapply innermost_unique. unfold innermost_loop. unfold deq_loop.
+      eauto using loop_contains_self.
+      eauto using back_edge_innermost.
+  Qed.
+
+  Lemma deq_loop_entry_not_deq_loop
+        a b c
+        (Hdeq : deq_loop a b)
+        (Hentry : entry_edge b c)
+    : ~ deq_loop a c.
+  Proof.
+  Admitted.
+
+  Lemma in_path_ex_prefix_not_in p q π x
+        (Hπ : CPath p q π)
+        (Hin : x ∈ π)
+        : exists ϕ, Prefix (x :: ϕ) π /\ x ∉ ϕ.
+  Proof.
+    revert dependent q.
+    induction π.
+    - inv Hin.
+    - intros.
+      replace a with q in *.
+      + decide (x ∈ π).
+        * destruct π; [ inv i |].
+          destruct (IHπ i e) as [ϕ [Hpre Hnin]].
+          -- inv Hπ. enough (b = e).
+             ++ subst. eassumption.
+             ++ eauto using path_front.
+          -- exists ϕ. split; [| eassumption ].
+             econstructor. eassumption.
+        * inv Hin.
+          -- exists π. split; [ econstructor | eassumption ].
+          -- contradiction.
+      + eauto using path_front.
+  Qed.
+
+  Lemma prefix_singleton p q π h
+        (Hπ : CPath p q π)
+        (Hpre : Prefix [h] π)
+    : p = h.
+  Proof.
+    induction Hπ.
+    - inv Hpre.
+      + reflexivity.
+      + inv H1.
+    - inv Hpre.
+      + inv Hπ.
+      + eauto.
+  Qed.
+
+  Lemma head_unique h b x y
+        (Hh : loop_contains h x)
+        (Hb : loop_contains b y)
+        (Heq : eq_loop h b)
+    : h = b.
+  Proof.
+    unfold eq_loop in Heq.
+    unfold deq_loop in *.
+    destruct Heq as [H1 H2].
+    eapply loop_contains_Antisymmetric; eauto using loop_contains_loop_head, loop_contains_self.
+  Qed.
+
+  Lemma prefix_edge_exists a b p q π ϕ
+        (Hπ : Path edge__P p q π)
+        (Hpre : Prefix (a :: b :: ϕ) π)
+    : b --> a.
+  Proof.
+    induction Hπ.
+    - inv Hpre. inv H1.
+    - inversion Hpre; [| eauto ].
+      subst. inv Hπ; eauto.
+  Qed.
+
+  Lemma contract_cpath (π : list Lab) p q
            (Hπ : CPath p q π)
-           (Hdeq : deq_loop p q)
-           (Hnin : forall x, x ∈ tl π -> ~ loop_contains x q)
+           (Hdeq : forall x, x ∈ π -> deq_loop p x)
+           (Hnin : forall x, x ∈ tl π -> ~ loop_contains x q) (* Header of q is not on π *)
     : exists ϕ, HPath p q ϕ /\ ϕ ⊆ π.
+  Proof.
+    revert dependent q. revert dependent π.
+    specialize (well_founded_ind (R:=(@StrictPrefix' Lab)) (@StrictPrefix_well_founded Lab)
+                                 (fun π : list Lab => (forall x, x ∈ π -> deq_loop p x) ->
+                                                   forall q, CPath p q π ->
+                                                        (forall x, x ∈ tl π -> ~ loop_contains x q) ->
+                                                        exists ϕ, HPath p q ϕ /\ ϕ ⊆ π))
+      as WFind.
+    eapply WFind.
+    intros π IH Hdeq q Hπ Hnin. clear WFind.
+    inv Hπ.
+    - exists [q]. unfold incl. split; eauto; econstructor.
+    - specialize (edge_Edge H0) as Hedge.
+      rename H into Hπ. rename q into c. rename π0 into π.
+      assert (Hprefix : StrictPrefix' π (c :: π)) by (repeat econstructor).
+      simpl in Hnin.
+      inv Hedge.
+      + edestruct IH as [ϕ [Hϕ Hincl]]; try eauto.
+        * intros. intro. eapply Hnin. simpl. eapply in_tl_in. eassumption.
+          eauto using basic_edge_loop_contains. 
+        * exists (c :: ϕ). split; [| eauto using incl_app ].
+          econstructor; [ eassumption |].
+          left. split; [ eassumption |].
+          intro.  eapply (Hnin b). eauto using path_contains_front.
+          eauto using loop_contains_self, basic_edge_loop_contains. 
+      + edestruct IH as [ϕ [Hϕ Hincl]]; try eauto. 
+        * intros. intro. eapply Hnin. simpl. eapply in_tl_in. eassumption.
+          eauto using back_edge_loop_contains.
+        * exists (c :: ϕ). split; [| eauto using incl_app ].
+          econstructor; [ eassumption |].
+          left. split; eauto using back_edge_src_no_loop_head.
+      + edestruct IH as [ϕ [Hϕ Hincl]]; try eauto. clear IH.
+        * intros. intro. eapply Hnin; try eauto using in_tl_in.
+          eapply deq_loop_entry in H. unfold deq_loop in H. eauto.
+        * decide (loop_head b).
+          -- exfalso. apply (Hnin b).
+             ++ simpl. eapply path_contains_front; eassumption.
+             ++ eauto using deq_loop_entry, deq_loop_head_loop_contains.
+          -- exists (c :: ϕ). split; try eauto using incl_app.
+             econstructor; [ eassumption |]. left. eauto.
+      + destruct H as [h Hexit]. 
+        decide (h ∈ π) as [ Hhin | Hhnin ].
+        * specialize (in_path_ex_prefix_not_in Hπ Hhin) as Hfirst.
+          destruct Hfirst as [ϕ [Hpre Hninϕ]].
+          destruct ϕ as [ | e ϕ ].
+          -- assert (Heq : p = h) by (eauto using prefix_singleton).
+             subst p. exists [c; h]. split.
+             ++ econstructor; [ econstructor |]. right. exists b. eassumption.
+             ++ unfold incl. intros. inversion H.
+                ** subst. eauto.
+                ** inversion H1. subst. eauto. inversion H2.
+          -- assert (Hedge : e --> h) by (eauto using prefix_edge_exists).
+
+             assert (Hback : back_edge e h). {
+               eapply edge_Edge in Hedge.
+               inv Hedge.
+               - exfalso. eapply basic_edge_no_loop2. eapply H.
+                 eapply loop_contains_loop_head. eapply Hexit.
+               - assumption.
+               - enough (deq_loop p e).
+                 + exfalso. eapply deq_loop_entry_not_deq_loop.
+                   2: eapply H. eassumption.
+                   1: eauto using deq_loop_trans, deq_loop_exited'.
+                 + eauto using in_prefix_in.
+               - destruct H as [h' H]. eapply no_exit_head in H.
+                 exfalso. apply H. unfold loop_contains in Hexit. unfold loop_head. firstorder.
+             }
+
+             assert (Hnin2 : forall x, x ∈ (e :: ϕ) -> ~ loop_contains x e). {
+               intros. intro. eapply Hnin. eapply in_prefix_in.
+               2: eapply Hpre.
+               1: eapply in_cons. eassumption.
+               specialize (back_edge_innermost Hback) as Hinner1.
+               decide (deq_loop x e).
+               - exfalso. enough (Hinner2 : innermost_loop x e).
+                 + specialize (innermost_unique Hinner1 Hinner2) as Heq. subst. firstorder.
+                 + unfold innermost_loop. eauto.
+               - enough (x <> h).
+                 + eapply exit_edge_in_loop; try eassumption. eauto using back_edge_loop_contains.
+                 + intro. subst. firstorder.
+             }
+
+            edestruct (@IH (e :: ϕ)) as [ϕ' [Hϕ' Hincl']].
+             ++ econstructor. eapply PreStep. eassumption.
+             ++ intros. eapply Hdeq. eapply in_cons. eauto using in_prefix_in.
+             ++ eapply prefix_cons in Hpre. eapply path_prefix_path; try eassumption.
+                admit. (* requires decidable edges; not sure how to bring this here. *)
+             ++ eauto.
+             ++ exists (c :: h :: ϕ'). split.
+                ** econstructor. econstructor. eapply Hϕ'.
+                   --- left. split; [ eauto |].
+                       decide (loop_head e); [| eassumption ]. exfalso.
+                       eapply (Hnin2 e); eauto using loop_contains_self.
+                   --- right. exists b. eassumption.
+        * edestruct (IH π) as [ϕ [Hϕ Hincl]].
+          -- econstructor. econstructor.
+          -- eauto.
+          -- eassumption.
+          -- intros. intro. eapply Hnin. simpl. eapply in_tl_in. eassumption.
+             edestruct (deq_loop_exit_or Hexit); try eassumption. 
+             subst. exfalso. eauto using in_tl_in. 
+          -- exists (c :: ϕ). split; [| eauto using incl_app ].
+             econstructor; [ eassumption |]. left. split; [ assumption |]. intro.
+             enough (h = b).
+             ++ subst b. eauto using path_contains_front.
+             ++ assert (Heq : eq_loop h b) by (eauto using eq_loop_exiting).
+                assert (Hinner : innermost_loop h b) by (eauto using exit_edge_innermost).
+                eapply loop_contains_self in H.
+                destruct Hinner as [Hinner _].
+                eauto using head_unique.
   Admitted.
 
   Ltac spot_path := admit.
