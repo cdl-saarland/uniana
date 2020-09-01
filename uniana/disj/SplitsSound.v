@@ -1,5 +1,4 @@
 Require Export Splits SplitsT.
-Require Import Graph.
 
 Definition inner' := fun (A : Type) (l : list A) => rev (tl (rev (tl l))).
 
