@@ -188,55 +188,6 @@ Section splits_sound.
              ++ right. eauto.
   Qed.
 
-  Parameter is_exit_edge : Lab -> Lab -> option Lab.
-  Parameter is_exit_edge_sound :
-    forall p q h, is_exit_edge p q = Some h <-> exit_edge h p q.
-
-  Fixpoint suffix_from (h : Lab) (π : list Lab) : option (list Lab) :=
-    match π with
-    | p :: π' => if (decision (p = h)) then Some π' else suffix_from h π'
-    | [] => None
-    end.
-
-  Fixpoint dissect_at (h : Lab) (π : list Lab) : (list Lab) * (list Lab) :=
-    match π with
-    | p :: π' => if (decision (p = h)) then ([p], π') else
-                 let (segment, rest) := dissect_at h π' in (p :: segment, rest)
-    | [] => ([], [])
-    end.
-
-  Lemma dissect_preserves (h : Lab) (π : list Lab) :
-    let (a, b) := dissect_at h π in π = a ++ b.
-  Proof.
-    induction π.
-    - reflexivity.
-    - simpl. decide (a = h).
-      + reflexivity.
-      + destruct (dissect_at h π). simpl. rewrite IHπ. reflexivity.
-  Qed.
-
-  Lemma dissect_rest_not_bigger (h : Lab) (π : list Lab) :
-    let (_, rest) := dissect_at h π in length rest <= length π.
-  Proof.
-    induction π; simpl.
-    - eauto.
-    - destruct (dissect_at h π).
-      decide (a = h); simpl; auto with zarith.
-  Qed.
-
-  Lemma deq_loop_basic
-        (a b c : Lab)
-        (Hab : deq_loop a b)
-        (Hedge : basic_edge b c)
-    : deq_loop a c.
-  Proof.
-    intros. 
-    unfold basic_edge in Hedge.
-    destruct Hedge as [Heq Hedge].
-    unfold eq_loop in Heq.
-    eauto using eq_loop2.
-  Qed.
-
   Lemma incl_app c
         (π ϕ : list Lab)
         (Hincl : π ⊆ ϕ)
@@ -245,14 +196,6 @@ Section splits_sound.
     unfold incl in *. firstorder.
   Qed.
     
-  Lemma incl_app2 c
-        (π ϕ : list Lab)
-        (Hincl : π ⊆ ϕ)
-    : π ⊆ (c :: ϕ).
-  Proof.
-    unfold incl in *. firstorder.
-  Qed.
-
   Lemma basic_edge_loop_contains a b x
         (Hedge : basic_edge a b)
         (Hinner : loop_contains x a)
