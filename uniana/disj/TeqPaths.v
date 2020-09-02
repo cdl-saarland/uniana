@@ -17,11 +17,12 @@ Section teq.
   Lemma teq_r2_incl_head_q : forall x, x ∈ (q2 :: map fst r2) -> deq_loop x q1.
   Admitted.
 
-  Lemma u1_deq_q
+  Lemma teq_u1_deq_q
     : deq_loop u1 q1.
+  Proof.
   Admitted.
 
-  Lemma u2_deq_q
+  Lemma teq_u2_deq_q
     : deq_loop u2 q1.
   Admitted.
 
@@ -43,4 +44,4 @@ Section teq.
 
 End teq.
 
-Hint Resolve teq_r1_incl_head_q teq_r2_incl_head_q u1_deq_q u2_deq_q Tloop : teq.
+Hint Resolve teq_r1_incl_head_q teq_r2_incl_head_q teq_u1_deq_q teq_u2_deq_q Tloop : teq.

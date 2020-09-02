@@ -67,9 +67,20 @@ Section graph.
     let Q := fresh "Q" in
     lazymatch type of H with
     | Path ?x ?y (?z :: ?π) => replace z with y in *;
-                                   [|eapply path_front;eauto]
+                                [|eapply path_front;eauto];
+                                match type of H with
+                                | Path _ _ (?w :: [])
+                                  => fold ([] ++ [w]) in H;
+                                    path_simpl' H;
+                                    unfold app in H
+                                | Path ?x ?y (?w :: ?z :: [])
+                                  => fold ([w] ++ [z]) in H;
+                                    path_simpl' H;
+                                    unfold app in H
+                                | _ => idtac
+                                end
     | Path ?x ?y (?π ++ [?z]) => replace z with x in *;
-                                      [|eapply path_back;eauto]
+                                   [|eapply path_back;eauto]
     end.
 
   Lemma path_dec p q π :
@@ -463,8 +474,11 @@ Section graph.
     : (hd z π) --> y.
   Proof.
     clear edge1 edge2.
-    (* PROVEME *)
-  Admitted.
+    revert y Hpath.
+    induction π;intros.
+    - cbn. path_simpl' Hpath. auto.
+    - cbn. inv Hpath. path_simpl' H0. auto.
+  Qed.
 
 End graph.
 
@@ -566,9 +580,20 @@ Ltac path_simpl' H :=
   let Q := fresh "Q" in
   lazymatch type of H with
   | Path ?e ?x ?y (?z :: ?π) => replace z with y in *;
-                           [|eapply path_front;eauto]
+                              [|eapply path_front;eauto];
+                              match type of H with
+                              | Path _ _ _ (?w :: [])
+                                => fold ([] ++ [w]) in H;
+                                  path_simpl' H;
+                                  unfold app in H
+                              | Path ?e ?x ?y (?w :: ?z :: [])
+                                => fold ([w] ++ [z]) in H;
+                                  path_simpl' H;
+                                  unfold app in H
+                              | _ => idtac
+                              end
   | Path ?e ?x ?y (?π ++ [?z]) => replace z with x in *;
-                              [|eapply path_back;eauto]
+                                 [|eapply path_back;eauto]
   end.
 
 Goal forall (L : Type) (x y z : L) (l : list L) e

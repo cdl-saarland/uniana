@@ -1,23 +1,5 @@
 Require Export Splits SplitsT TeqPaths.
 
-Ltac path_simpl2' H :=
-  let Q:= fresh "Q" in
-  lazymatch type of H with
-  | Path ?e ?x ?y (?z :: ?π) =>
-    replace y with z in *; [ | symmetry;eapply path_front;eauto ]
-  | Path ?e ?x ?y (?π ++ [?z]) => replace x with z in *; [ | symmetry;eapply path_back; eauto ]
-  end.
-
-Ltac inv_path H :=
-  try path_simpl' H;
-  let x := fresh "x" in
-  inversion H as [ | ? x ]; subst;
-  match goal with
-  | Q : Path _ _ x _ |- _ => path_simpl2' Q
-  | Q : Path _ _ _ [] |- _ => inversion Q
-  | |- _ => idtac
-  end.
-
 Definition inner' := fun (A : Type) (l : list A) => rev (tl (rev (tl l))).
 
 Lemma inner_inner' (A : Type) (l : list A)
@@ -575,7 +557,7 @@ Context `{C : redCFG}.
     eapply TPath_CPath in Tpath2. cbn in Tpath2.
     eapply contract_cpath' in Tpath1.
     eapply contract_cpath' in Tpath2.
-    2: { rewrite <-Tloop. eapply u2_deq_q;eauto. }
+    2: { rewrite <-Tloop. eapply teq_u2_deq_q;eauto. }
     3: eauto with teq.
     2,3: cbn.
     3: intros; eapply teq_no_back;eauto.
@@ -720,6 +702,32 @@ Context `{C : redCFG}.
   Proof.
   Admitted.
 
+  Lemma contract_one_empty s u2 p i q2 r2 k l2
+        (Hin2 : Path tcfg_edge (u2, l2) (p, i) ((p, i) :: (q2, k) :: r2))
+        (Hin4 : (s, k) -t> (u2, l2))
+        (Hqp1 : (s, k) -t> (p, i))
+        (D : DiamondPaths s p u2 p p s q2 k i i l2 k k [] ((q2, k) :: r2))
+    : exists (π ϕ : list Lab) (u u' : Lab),
+      HPath u p π /\
+      HPath u' p ϕ /\ Disjoint (tl π) (tl ϕ) /\ s --> u /\ s --> u' /\ (tl π <> [] \/ tl ϕ <> []).
+  Proof.
+    eapply TPath_CPath in Hin2. cbn in Hin2. inv_path Hin2.
+    eapply contract_cpath' in H.
+    - cbn in Hin2. destructH.
+      exists (p :: ϕ), [p], u2, p.
+      split_conj.
+      + econstructor;eauto. unfold head_rewired_edge. left;split;eauto.
+         intros N. eapply no_back2;eauto. rewrite Dloop. eapply loop_contains_self;eauto.
+      + econstructor.
+      + cbn. unfold Disjoint. firstorder.
+      + destruct Hin4;eauto.
+      + destruct Hqp1;eauto.
+      + cbn. left. inv_path H1; congruence.
+    - cbn. rewrite <-Dloop. eapply u2_deq_q; eauto. congruence.
+    - cbn. intros. rewrite <-Dloop. eapply no_back2;eauto.
+      right. cbn. right. auto.
+  Qed.
+
   Theorem splits_sound p
     : splitsT p ⊆ splits p.
   Proof.
@@ -735,47 +743,71 @@ Context `{C : redCFG}.
     unfold TPath in Hin2. path_simpl' Hin2.
     eapply edge_path_hd_edge in Hin0 as Hqp1;eauto.
     eapply edge_path_hd_edge in Hin2 as Hqp2;eauto.
-    destruct r1 as [|[q1 j1] r1]; destruct r2 as [|[q2 j2] r2];
-        unfold hd in Hqp1,Hqp2.
-    - tauto.
-    - eapply splits_spec. admit. (* I need a lemma for these symmetric cases,
-                                      only one Hpath is non-trivial (use contraction) *)
-    - admit.
-    - specialize (@two_edge_exit_cases q1 q2 p) as Hcase.
-      exploit Hcase.
-      1,2: eapply edge_path_hd_edge;eauto with tcfg; spot_path.
-      eassert (DiamondPaths s u1 u2 p p q1 q2 k i l1 l2 j1 j2 ((q1,j1) :: r1) ((q2,j2) :: r2)) as D.
-      {
-        econstructor. 3: eapply Hin0. 3: eapply Hin2.
-        all:cbn;eauto.
-        destruct Hcase.
-        - destructH. eapply eq_loop_exiting in H0. eapply eq_loop_exiting in H1.
-          rewrite <-H0. rewrite <-H1. reflexivity.
-        - destructH.
-          eapply nexit_injective in H0;eauto. subst j1.
-          eapply tcfg_edge_eq_loop;eauto.
-      }
+    rewrite hd_map_fst_snd in Hqp1, Hqp2.
+    set (q1 := hd s (map fst r1)) in *.
+    set (q2 := hd s (map fst r2)) in *.
+    set (j1 := hd k (map snd r1)) in *.
+    set (j2 := hd k (map snd r2)) in *.
+    specialize (@two_edge_exit_cases q1 q2 p) as Hcase.
+    exploit Hcase.
+    1: eapply TPath_CPath in Hin0.
+    2: eapply TPath_CPath in Hin2.
+    1,2: cbn in Hin0,Hin2.
+    1: eapply edge_path_hd_edge in Hin0;subst q1;eauto.
+    2: eapply edge_path_hd_edge in Hin2;subst q2;eauto.
+    1,2: destruct Hin3,Hin4;eauto.
+    eassert (DiamondPaths s u1 u2 p p q1 q2 k i l1 l2 j1 j2 (r1) (r2)) as D.
+    {
+      econstructor. 3: eapply Hin0. 3: eapply Hin2.
+      all:cbn;eauto.
+      1,2: subst q1 q2 j1 j2;eapply hd_map_fst_snd.
       destruct Hcase.
-      + destructH.
-        eapply tag_exit_eq' in H0 as Hn1;eauto. destruct Hn1 as [n1 Hn1].
-        eapply tag_exit_eq' in H1 as Hn2;eauto. destruct Hn2 as [n2 Hn2].
-        subst j1 j2.
-        eapply inhom_loop_exits in D as Hinhom.
-        destructH.
-        eapply splits_spec.
-        exists (p :: r1'), (p :: r2'), u1, u2.
-        split_conj;eauto. cbn.
-        destruct r1';[|left;congruence].
-        destruct r2';[|right;congruence].
-        exfalso.
-        inv_path Hinhom1. inv_path Hinhom3.
-        eapply tcfg_edge_det in Hin3;eauto. subst l2.
-        inv_path Hin0. inv_path Hin2.
-        eapply Hin1.
+      - destructH. eapply eq_loop_exiting in H0. eapply eq_loop_exiting in H1.
+        rewrite <-H0. rewrite <-H1. reflexivity.
+      - destructH.
+        eapply nexit_injective in H0;eauto. subst j1 j2.
+        eapply tcfg_edge_eq_loop;eauto. rewrite H0. eauto.
+    }
+    destruct Hcase.
+    - destructH.
+      eapply tag_exit_eq' in H0 as Hn1;eauto. destruct Hn1 as [n1 Hn1].
+      eapply tag_exit_eq' in H1 as Hn2;eauto. destruct Hn2 as [n2 Hn2].
+      subst j1 j2. rewrite Hn1 in D. rewrite Hn2 in D.
+      eapply inhom_loop_exits in D as Hinhom.
+      destructH.
+      eapply splits_spec.
+      exists (p :: r1'), (p :: r2'), u1, u2.
+      split_conj;eauto. cbn.
+      destruct r1';[|left;congruence].
+      destruct r2';[|right;congruence].
+      exfalso.
+      eapply path_single in Hinhom1. destruct Hinhom1 as [Hinhom1 _]. subst u1.
+      eapply path_single in Hinhom3. destruct Hinhom3 as [Hinhom3 _]. subst u2.
+      eapply tcfg_edge_det in Hin3;eauto. subst l2.
+      inv_path Hin0; inv_path Hin2.
+      + tauto.
+      + subst q1. destruct r2;[inv H|]. eapply path_acyclic_no_loop. 2: eapply Hin2.
+        eapply tcfg_acyclic.
+      + subst q2. destruct r1;[inv H|]. eapply path_acyclic_no_loop. 2: eapply Hin0.
+        eapply tcfg_acyclic.
+      + eapply Hin1.
         1,2: eapply path_contains_back;eauto.
-      + destructH.
-        eapply nexit_injective in H0;eauto.
-        subst j2.
+    - destructH.
+      subst q1 q2 j1 j2.
+      eapply nexit_injective in H0;eauto.
+      rewrite <-hd_map_fst_snd in Hqp1,Hqp2.
+      destruct r1 as [|[q1 j1] r1]; destruct r2 as [|[q2 j2] r2];
+        unfold hd in Hqp1,Hqp2.
+      + tauto.
+      + cbn in D,H0. subst j2.
+        eapply splits_spec. eapply path_single in Hin0. destruct Hin0. inversion H. subst.
+        clear H0 H1 Hin1 Hin3 Hin6 H. clear Hqp2.
+        eapply contract_one_empty;eauto.
+      + eapply DiamondPaths_sym in D.
+        cbn in D,H0. subst j1.
+        eapply splits_spec. eapply path_single in Hin2. destruct Hin2. inversion H. subst.
+        eapply contract_one_empty;eauto.
+      + cbn in H0. subst j2.
         decide (deq_loop q1 s).
         * eapply (tcfg_disj_paths_tageqs_base) in D as T;eauto.
           eapply inst_disj_node_disj_hpath in T as Hdisj;eauto.
