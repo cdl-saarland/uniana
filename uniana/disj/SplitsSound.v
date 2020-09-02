@@ -373,21 +373,43 @@ Context `{C : redCFG}.
       subst. inv Hπ; eauto.
   Qed.
 
+  Lemma path_prefix_path' p q r π ϕ
+    : Path edge__P p q π -> Prefix (r :: ϕ) π -> Path edge__P p r (r :: ϕ).
+  Proof.
+    eapply path_prefix_path.
+    intros. unfold dec. decide (x --> y); firstorder.
+  Qed.
+
+  Lemma enter_exit_same e h b c
+        (Hentry : entry_edge e h)
+        (Hexit: exit_edge h b c)
+    : eq_loop c e.
+  Proof.
+  Admitted.
+
+  Lemma path_no_loop_head_deq p e h π
+        (Hπ : Path edge__P p e π)
+        (Hinner : innermost_loop h e)
+        (Hnin : h ∉ π)
+    : forall x, x ∈ π -> deq_loop x e.
+  Proof.
+  Admitted.
+  
   Lemma contract_cpath (π : list Lab) p q
            (Hπ : CPath p q π)
-           (Hdeq : forall x, x ∈ π -> deq_loop p x)
+           (Hdeq : forall x, x ∈ π -> deq_loop x q)
            (Hnin : forall x, x ∈ tl π -> ~ loop_contains x q) (* Header of q is not on π *)
     : exists ϕ, HPath p q ϕ /\ ϕ ⊆ π.
   Proof.
     revert dependent q. revert dependent π.
     specialize (well_founded_ind (R:=(@StrictPrefix' Lab)) (@StrictPrefix_well_founded Lab)
-                                 (fun π : list Lab => (forall x, x ∈ π -> deq_loop p x) ->
-                                                   forall q, CPath p q π ->
+                                 (fun π : list Lab => forall q, CPath p q π ->
+                                                        (forall x, x ∈ π -> deq_loop x q) ->
                                                         (forall x, x ∈ tl π -> ~ loop_contains x q) ->
                                                         exists ϕ, HPath p q ϕ /\ ϕ ⊆ π))
       as WFind.
     eapply WFind.
-    intros π IH Hdeq q Hπ Hnin. clear WFind.
+    intros π IH q Hπ Hdeq Hnin. clear WFind.
     inv Hπ.
     - exists [q]. unfold incl. split; eauto; econstructor.
     - specialize (edge_Edge H0) as Hedge.
@@ -396,6 +418,7 @@ Context `{C : redCFG}.
       simpl in Hnin.
       inv Hedge.
       + edestruct IH as [ϕ [Hϕ Hincl]]; try eauto.
+        * unfold deq_loop in *. eauto using basic_edge_loop_contains.
         * intros. intro. eapply Hnin. simpl. eapply in_tl_in. eassumption.
           eauto using basic_edge_loop_contains.
         * exists (c :: ϕ). split; [| eauto using incl_app ].
@@ -404,20 +427,15 @@ Context `{C : redCFG}.
           intro.  eapply (Hnin b). eauto using path_contains_front.
           eauto using loop_contains_self, basic_edge_loop_contains.
       + edestruct IH as [ϕ [Hϕ Hincl]]; try eauto.
+        * unfold deq_loop in *. eauto using back_edge_loop_contains.
         * intros. intro. eapply Hnin. simpl. eapply in_tl_in. eassumption.
           eauto using back_edge_loop_contains.
         * exists (c :: ϕ). split; [| eauto using incl_app ].
           econstructor; [ eassumption |].
           left. split; eauto using back_edge_src_no_loop_head.
-      + edestruct IH as [ϕ [Hϕ Hincl]]; try eauto. clear IH.
-        * intros. intro. eapply Hnin; try eauto using in_tl_in.
-          eapply deq_loop_entry in H. unfold deq_loop in H. eauto.
-        * decide (loop_head b).
-          -- exfalso. apply (Hnin b).
-             ++ simpl. eapply path_contains_front; eassumption.
-             ++ eauto using deq_loop_entry, deq_loop_head_loop_contains.
-          -- exists (c :: ϕ). split; try eauto using incl_app.
-             econstructor; [ eassumption |]. left. eauto.
+      + unfold entry_edge in H. destruct H as [Hhead [H _]].
+        exfalso. apply H. unfold deq_loop in Hdeq.
+        eauto using loop_contains_self, in_cons, path_contains_front.
       + destruct H as [h Hexit].
         decide (h ∈ π) as [ Hhin | Hhnin ].
         * specialize (in_path_ex_prefix_not_in Hπ Hhin) as Hfirst.
@@ -431,57 +449,72 @@ Context `{C : redCFG}.
                 ** inversion H1. subst. eauto. inversion H2.
           -- assert (Hedge : e --> h) by (eauto using prefix_edge_exists).
 
-             assert (Hback : back_edge e h). {
+             assert (Hedge' : entry_edge e h \/ back_edge e h). {
                eapply edge_Edge in Hedge.
-               inv Hedge.
+               inv Hedge; try eauto.
                - exfalso. eapply basic_edge_no_loop2. eapply H.
                  eapply loop_contains_loop_head. eapply Hexit.
-               - eassumption.
-               - enough (loop_contains h p).
-                 + (* essentially we have a path e --> h -->* p and one p -->* e --> h
-                      which goes through c's header which contradicts Hnin *)
-                   admit.
-                 + destruct H as [H _]. eauto using deq_loop_head_loop_contains.
                - destruct H as [h' H]. eapply no_exit_head in H.
                  exfalso. apply H. unfold loop_contains in Hexit. unfold loop_head. firstorder.
              }
 
-             assert (Hnin2 : forall x, x ∈ (e :: ϕ) -> ~ loop_contains x e). {
-               intros. intro. eapply Hnin. eapply in_prefix_in.
-               2: eapply Hpre.
-               1: eapply in_cons. eassumption.
-               specialize (back_edge_innermost Hback) as Hinner1.
-               decide (deq_loop x e).
-               - exfalso. enough (Hinner2 : innermost_loop x e).
-                 + specialize (innermost_unique Hinner1 Hinner2) as Heq. subst. firstorder.
-                 + unfold innermost_loop. eauto.
-               - enough (x <> h).
-                 + eapply exit_edge_in_loop; try eassumption. eauto using back_edge_loop_contains.
-                 + intro. subst. firstorder.
-             }
+             destruct Hedge' as [Hent | Hback].
+             ++ edestruct (@IH (e :: ϕ)) as [ϕ' [Hϕ' Hincl']].
+                ** econstructor. eapply PreStep. eassumption.
+                ** eapply prefix_cons in Hpre. eapply path_prefix_path'; try eassumption.
+                ** intros. eapply eq_loop2.
+                   --- eauto using enter_exit_same.
+                   --- eapply Hdeq. eauto using in_prefix_in.
+                ** simpl. intros. intro. eapply Hnin. eapply in_prefix_in. eapply H.
+                   eauto using prefix_cons. eapply eq_loop2. eauto using enter_exit_same.
+                   eapply deq_loop_refl. eassumption.
+                ** exists (c :: h :: ϕ'). split.
+                   --- econstructor. econstructor. eapply Hϕ'.
+                       +++ left. split; [ eauto |].
+                           intro. eapply (Hnin e).
+                           *** eauto using prefix_cons, in_prefix_in.
+                           *** eauto using deq_loop_head_loop_contains, eq_loop2, enter_exit_same.
+                       +++ right. exists b. eassumption.
+                   --- intros x Hx.
+                       destruct Hx.
+                       +++ subst. left;auto.
+                       +++ destruct H.
+                           *** subst. right;auto.
+                           *** right. eapply prefix_incl;eauto.
+             
+             ++ assert (Hnin2 : forall x, x ∈ (e :: ϕ) -> ~ loop_contains x e). {
+                  intros. intro. eapply Hnin. eapply in_prefix_in.
+                  2: eapply Hpre.
+                  1: eapply in_cons. eassumption.
+                  specialize (back_edge_innermost Hback) as Hinner1.
+                  - enough (x <> h).
+                    + eapply (exit_edge_in_loop Hexit); try eassumption.
+                      eauto using back_edge_loop_contains, eq_loop2.
+                    + intro. subst. contradiction.
+                }
 
-            edestruct (@IH (e :: ϕ)) as [ϕ' [Hϕ' Hincl']].
-             ++ econstructor. eapply PreStep. eassumption.
-             ++ intros. eapply Hdeq. eapply in_cons. eauto using in_prefix_in.
-             ++ eapply prefix_cons in Hpre. eapply path_prefix_path; try eassumption.
-                unfold dec. intros. decide (x --> y); [ left | right ]; eassumption.
-             ++ eauto.
-             ++ exists (c :: h :: ϕ'). split.
-                ** econstructor. econstructor. eapply Hϕ'.
-                   --- left. split; [ eauto |].
-                       decide (loop_head e); [| eassumption ]. exfalso.
-                       eapply (Hnin2 e); eauto using loop_contains_self.
-                   --- right. exists b. eassumption.
-                ** intros x Hx.
-                   destruct Hx.
-                   --- subst. left;auto.
-                   --- destruct H.
-                       +++ subst. right;auto.
-                       +++ right. eapply prefix_incl;eauto.
+                edestruct (@IH (e :: ϕ)) as [ϕ' [Hϕ' Hincl']].
+                ** econstructor. eapply PreStep. eassumption.
+                ** eapply prefix_cons in Hpre. eapply path_prefix_path'; try eassumption.
+                ** eauto using exit_edge_innermost, back_edge_innermost,
+                   path_no_loop_head_deq, prefix_cons, path_prefix_path' .
+                ** eauto.
+                ** exists (c :: h :: ϕ'). split.
+                   --- econstructor. econstructor. eapply Hϕ'.
+                       +++ left. split; [ eauto |].
+                           decide (loop_head e); [| eassumption ]. exfalso.
+                           eapply (Hnin2 e); eauto using loop_contains_self.
+                       +++ right. exists b. eassumption.
+                   --- intros x Hx.
+                       destruct Hx.
+                       +++ subst. left;auto.
+                       +++ destruct H.
+                           *** subst. right; auto.
+                           *** right. eapply prefix_incl; eauto.
         * edestruct (IH π) as [ϕ [Hϕ Hincl]].
           -- econstructor. econstructor.
           -- eauto.
-          -- eassumption.
+          -- eauto using exit_edge_innermost, back_edge_innermost, path_no_loop_head_deq.
           -- intros. intro. eapply Hnin. simpl. eapply in_tl_in. eassumption.
              edestruct (deq_loop_exit_or Hexit); try eassumption.
              subst. exfalso. eauto using in_tl_in.
@@ -494,7 +527,7 @@ Context `{C : redCFG}.
                 eapply loop_contains_self in H.
                 destruct Hinner as [Hinner _].
                 eauto using head_unique.
-  Admitted.
+  Qed.
 
   Lemma contract_cpath' (π : list Lab) q p
            (Hπ : CPath p q π)
