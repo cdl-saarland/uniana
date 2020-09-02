@@ -247,14 +247,6 @@ Section splits_sound.
       eauto using back_edge_innermost.
   Qed.
 
-  Lemma deq_loop_entry_not_deq_loop
-        a b c
-        (Hdeq : deq_loop a b)
-        (Hentry : entry_edge b c)
-    : ~ deq_loop a c.
-  Proof.
-  Admitted.
-
   Lemma in_path_ex_prefix_not_in p q π x
         (Hπ : CPath p q π)
         (Hin : x ∈ π)
@@ -379,12 +371,12 @@ Section splits_sound.
                inv Hedge.
                - exfalso. eapply basic_edge_no_loop2. eapply H.
                  eapply loop_contains_loop_head. eapply Hexit.
-               - assumption.
-               - enough (deq_loop p e).
-                 + exfalso. eapply deq_loop_entry_not_deq_loop.
-                   2: eapply H. eassumption.
-                   1: eauto using deq_loop_trans, deq_loop_exited'.
-                 + eauto using in_prefix_in.
+               - eassumption.
+               - enough (loop_contains h p).
+                 + (* essentially we have a path e --> h -->* p and one p -->* e --> h
+                      which goes through c's header which contradicts Hnin *)
+                   admit.
+                 + destruct H as [H _]. eauto using deq_loop_head_loop_contains.
                - destruct H as [h' H]. eapply no_exit_head in H.
                  exfalso. apply H. unfold loop_contains in Hexit. unfold loop_head. firstorder.
              }
@@ -407,7 +399,7 @@ Section splits_sound.
              ++ econstructor. eapply PreStep. eassumption.
              ++ intros. eapply Hdeq. eapply in_cons. eauto using in_prefix_in.
              ++ eapply prefix_cons in Hpre. eapply path_prefix_path; try eassumption.
-                admit. (* requires decidable edges; not sure how to bring this here. *)
+                unfold dec. intros. decide (x --> y); [ left | right ]; eassumption.  
              ++ eauto.
              ++ exists (c :: h :: ϕ'). split.
                 ** econstructor. econstructor. eapply Hϕ'.
