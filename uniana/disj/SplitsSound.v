@@ -250,7 +250,7 @@ Context `{C : redCFG}.
   Proof.
     specialize (loop_contains_loop_head Hinner) as Hhead.
     destruct Hedge as [Hedge _].
-    eauto using loop_contains_deq_loop, back_edge_eq_loop, deq_loop_head_loop_contains, eq_loop1.
+    eauto using loop_contains_deq_loop, deq_loop_head_loop_contains, eq_loop1.
   Qed.
 
   Lemma back_edge_loop_contains a b x
@@ -355,6 +355,22 @@ Context `{C : redCFG}.
       subst. inv Hπ; eauto.
   Qed.
 
+  Lemma in_postfix_in l l' (a : Lab)
+     :  a ∈ l -> Postfix l l' -> a ∈ l'.
+  Proof.
+    intros Hin Hpost.
+    revert dependent l.
+    induction l'.
+    - intros. eapply postfix_nil_nil in Hpost. subst. inv Hin.
+    - intros.
+      destruct l as [| b  l].
+      + inv Hin.
+      + simpl in Hin.
+        destruct Hin.
+        * left. symmetry. rewrite H in Hpost. eauto using postfix_hd_eq. 
+        * right. eauto using cons_postfix. 
+  Qed.
+
   Lemma path_prefix_path' p q r π ϕ
     : Path edge__P p q π -> Prefix (r :: ϕ) π -> Path edge__P p r (r :: ϕ).
   Proof.
@@ -367,7 +383,18 @@ Context `{C : redCFG}.
         (Hexit: exit_edge h b c)
     : eq_loop c e.
   Proof.
-  Admitted.
+    enough (forall h, loop_contains h e <-> loop_contains h c).
+    - unfold eq_loop, deq_loop.
+      firstorder.
+    - intros h'. split; intros.
+      + eapply exit_edge_in_loop; try eassumption.
+        * eapply deq_loop_entry in Hentry. unfold deq_loop in Hentry. eauto.
+        * intro. subst. eapply Hentry. assumption.
+      + specialize (deq_loop_exited' Hexit) as Hdeq. unfold deq_loop in Hdeq.
+        edestruct (deq_loop_entry_or Hentry); eauto.
+        subst. unfold exit_edge in Hexit.
+        exfalso. destruct Hexit as [_ [Hexit _]]. contradiction. 
+  Qed.
 
   Lemma path_no_loop_head_deq p e h π
         (Hπ : Path edge__P p e π)
@@ -375,8 +402,21 @@ Context `{C : redCFG}.
         (Hnin : h ∉ π)
     : forall x, x ∈ π -> deq_loop x e.
   Proof.
-  Admitted.
-  
+    intros.
+    decide (deq_loop x e); try eassumption.
+    rename n into Hndeq.
+    exfalso.
+    assert (Hncont : ~ loop_contains h x). {
+      eauto using innermost_loop_deq_loop.
+    }
+    eapply path_from_elem in H; try eauto.
+    destruct H as [ϕ [Hϕ Hpost]].
+    eapply Hnin.
+    destruct Hinner. 
+    eapply in_postfix_in; try eassumption.
+    eapply dom_loop_contains; try eassumption.
+  Qed.
+
   Lemma contract_cpath (π : list Lab) p q
            (Hπ : CPath p q π)
            (Hdeq : forall x, x ∈ π -> deq_loop x q)
