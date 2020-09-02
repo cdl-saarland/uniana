@@ -113,6 +113,29 @@ Proof.
   - inversion H3.
 Qed.
 
+Lemma disjoint_app_app (A : Type) (l1 l2 l3 l4 : list A)
+  : Disjoint l1 l3
+    -> Disjoint l1 l4
+    -> Disjoint l2 l3
+    -> Disjoint l2 l4
+    -> Disjoint (l1 ++ l2) (l3 ++ l4).
+Proof.
+  revert l2 l3 l4.
+  induction l1;intros;cbn.
+  - induction l3;intros;cbn.
+    + eauto.
+    + eapply disjoint_cons2.
+      eapply disjoint_cons2 in H1. destruct H1.
+      split;eauto.
+      eapply IHl3;eauto.
+      firstorder.
+  - eapply disjoint_cons1. eapply disjoint_cons1 in H. eapply disjoint_cons1 in H0.
+    do 2 destructH.
+    split.
+    + intro N. eapply in_app_or in N. destruct N;contradiction.
+    + eapply IHl1;eauto.
+Qed.
+
 (** ^ move somewhere else **)
 
 Lemma tcfg_disj_paths_tageqs_base `(C : redCFG)
@@ -367,8 +390,8 @@ Context `{C : redCFG}.
       + inv Hin.
       + simpl in Hin.
         destruct Hin.
-        * left. symmetry. rewrite H in Hpost. eauto using postfix_hd_eq. 
-        * right. eauto using cons_postfix. 
+        * left. symmetry. rewrite H in Hpost. eauto using postfix_hd_eq.
+        * right. eauto using cons_postfix.
   Qed.
 
   Lemma path_prefix_path' p q r π ϕ
@@ -393,7 +416,7 @@ Context `{C : redCFG}.
       + specialize (deq_loop_exited' Hexit) as Hdeq. unfold deq_loop in Hdeq.
         edestruct (deq_loop_entry_or Hentry); eauto.
         subst. unfold exit_edge in Hexit.
-        exfalso. destruct Hexit as [_ [Hexit _]]. contradiction. 
+        exfalso. destruct Hexit as [_ [Hexit _]]. contradiction.
   Qed.
 
   Lemma path_no_loop_head_deq p e h π
@@ -412,7 +435,7 @@ Context `{C : redCFG}.
     eapply path_from_elem in H; try eauto.
     destruct H as [ϕ [Hϕ Hpost]].
     eapply Hnin.
-    destruct Hinner. 
+    destruct Hinner.
     eapply in_postfix_in; try eassumption.
     eapply dom_loop_contains; try eassumption.
   Qed.
@@ -503,7 +526,7 @@ Context `{C : redCFG}.
                        +++ destruct H.
                            *** subst. right;auto.
                            *** right. eapply prefix_incl;eauto.
-             
+
              ++ assert (Hnin2 : forall x, x ∈ (e :: ϕ) -> ~ loop_contains x e). {
                   intros. intro. eapply Hnin. eapply in_prefix_in.
                   2: eapply Hpre.
@@ -587,7 +610,9 @@ Context `{C : redCFG}.
         (Hjeq : j1 = j2)
     : exists r1' r2', HPath u1 p1 (p1 :: q1 :: r1')
                  /\ HPath u2 p2 (p2 :: q2 :: r2')
-                 /\ Disjoint (q1 :: r1') (q2 :: r2').
+                 /\ Disjoint (q1 :: r1') (q2 :: r2')
+                 /\ (q1 :: r1') ⊆ (q1 :: map fst r1)
+                 /\ (q2 :: r2') ⊆ (q2 :: map fst r2).
   Proof.
     eapply inst_disj_node_disj in T as Hndisj.
     cbn in Hndisj.
@@ -731,14 +756,17 @@ Context `{C : redCFG}.
      /\ r2 = r2'' ++ r2'
      /\ DiamondPaths s u1 u2 e1 e2 q1' q2' k j1 l1 l2 (n1 :: j1) (n2 :: j1)
                     ((q1',n1 :: j1) :: r1') ((q2',n2 :: j1) :: r2')
-     /\ TeqPaths e1 e2 q1 q2 (n1 :: j1) (n2 :: j1) j1 j2 r1'' r2''.
+     /\ TeqPaths e1 e2 q1 q2 (n1 :: j1) (n2 :: j1) j1 j2 r1'' r2''
+     /\ (forall x, x ∈ (q1 :: map fst r1'') -> ~ deq_loop x q1')
+     /\ (forall x, x ∈ (q2 :: map fst r2'') -> ~ deq_loop x q2').
  Admitted.
 
  Lemma inhom_loop_exits (s u1 u2 q1 q2 e1 e2 : Lab) r1 r2 (k i l1 l2 : Tag) (n1 n2 : nat)
         (D : DiamondPaths s u1 u2 e1 e2 q1 q2 k i l1 l2 (n1 :: i) (n2 :: i) r1 r2)
     : exists r1' r2', edge__P s u1 /\  edge__P s u2
                  /\ HPath u1 e1 (e1 :: r1') /\ HPath u2 e2 (e2 :: r2')
-                 /\ Disjoint r1' r2'.
+                 /\ Disjoint r1' r2'
+                 /\ r1' ⊆ map fst r1 /\ r2' ⊆ map fst r2.
   Proof.
   Admitted.
 
@@ -863,14 +891,30 @@ Context `{C : redCFG}.
           eapply inhom_loop_exits in D1 as Hinhom.
           eapply splits_spec.
           destructH.
-          eapply inst_disj_node_disj_hpath in D4 as Dinst;eauto.
+          eapply inst_disj_node_disj_hpath in D3 as Dinst;eauto.
           destructH.
           exists ((p :: q1 :: r1'1) ++ tl (e1 :: r1'0)), ((p :: q2 :: r2'1) ++ tl (e2 :: r2'0)), u1, u2.
           split_conj. 4,5: eauto.
           -- eapply path_app';eauto.
           -- eapply path_app';eauto.
-          -- cbn. (* cross disjointedness to show *) admit.
+          -- cbn.
+             do 2 rewrite app_comm_cons.
+             eapply disjoint_app_app;eauto.
+             ++ intros x Hx.
+                eapply Dinst3 in Hx.
+                specialize (D4 x Hx).
+                intro N.
+                eapply Hinhom7 in N.
+                eapply r2_incl_head_q in N;eauto.
+             ++ eapply Disjoint_sym.
+                intros x Hx.
+                eapply Dinst5 in Hx.
+                specialize (D6 x Hx).
+                intro N.
+                eapply Hinhom5 in N.
+                eapply r2_incl_head_q in N;eauto.
+                eapply DiamondPaths_sym. eauto.
           -- cbn. left. congruence.
-  Admitted.
+  Qed.
 
 End splits_sound.
