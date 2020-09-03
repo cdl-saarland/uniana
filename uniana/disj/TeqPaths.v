@@ -42,6 +42,11 @@ Section teq.
   Proof.
   Admitted.
 
+  Lemma jj_tagle
+    : j1 ⊴ j2.
+  Proof.
+  Admitted.
+
 End teq.
 
 Hint Resolve teq_r1_incl_head_q teq_r2_incl_head_q teq_u1_deq_q teq_u2_deq_q Tloop : teq.

@@ -59,19 +59,23 @@ Section disj.
       Tpath2 : TPath (u2,l2) (q2,j2) ((q2,j2) :: r2);
       Tdisj : Disjoint ((q1,j1) :: r1) ((q2,j2) :: r2);
       Tloop : eq_loop q1 q2;
+      Tjj_len : |j1| = |j2|;
       Ttl_eq : tl j1 = tl j2;
       Tlj_eq1 : l1 = j1 \/ l1 = 0 :: j1;
       Tlj_eq2 : l2 = j1 \/ l2 = 0 :: j1 \/ loop_contains u2 q1
     }.
 
   Context `(D : DiamondPaths).
+  Hypothesis (Hjle : j1 ⊴ j2).
 
   Lemma s_deq_q
     : deq_loop s q1.
   Proof.
+    clear Hjle.
   Admitted.
 
   Lemma r1_incl_head_q : forall x, x ∈ map fst r1 -> deq_loop x q1.
+    clear Hjle.
   Admitted.
 
   Lemma u1_deq_q
@@ -88,20 +92,30 @@ Section disj.
   Qed.
 
   Lemma r2_incl_head_q : forall x, x ∈ map fst r2 -> deq_loop x q1.
+  Proof.
+    clear Hjle.
   Admitted.
 
   Lemma u2_deq_q
         (Hnnil : r2 <> [])
     : deq_loop u2 q1.
   Proof.
+    clear Hjle.
   Admitted.
 
   Lemma no_back : forall x : Lab, x ∈ (q1 :: map fst r1) -> ~ loop_contains x q1.
+  Proof. (* Hjle needed *)
   Admitted.
 
   Lemma no_back2
         (Htageq : j1 = j2)
     : forall x : Lab, x ∈ (q2 :: map fst r2) -> ~ loop_contains x q1.
+  Proof.
+    clear Hjle.
+  Admitted.
+
+  Lemma jj_len
+    : |j1| = |j2|.
   Admitted.
 
   Lemma tl_eq
@@ -113,12 +127,13 @@ Section disj.
 
     Lemma lj_eq1
       : l1 = j1 \/ l1 = 0 :: j1.
+    Proof. (* Hjle needed *)
     Admitted.
 
     Lemma lj_eq2
       : l2 = j1 \/ l2 = 0 :: j1 \/ loop_contains u2 q1.
+    Proof. (* Hjle needed *)
     Admitted.
-
 
   End disj_eqdep.
 
