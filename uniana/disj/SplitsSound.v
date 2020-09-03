@@ -1,4 +1,5 @@
 Require Export Splits SplitsT TeqPaths.
+Require Import Lia.
 
 Definition inner' := fun (A : Type) (l : list A) => rev (tl (rev (tl l))).
 
@@ -574,6 +575,23 @@ Context `{C : redCFG}.
                 eauto using head_unique.
   Qed.
 
+  (*
+  Lemma step_out_path_contains_own_head p h x π 
+        (Hπ : Path edge__P p h π)
+        (Hcontp : loop_contains h p)
+        (Hconth : loop_contains h h)
+        (Hinx : x ∈ π)
+        (Hncontx : ~ loop_contains h x)
+    : forall hx, innermost_loop hx x -> hx ∈ π.
+  Proof.
+    induction Hπ; intros.
+    - inv Hinx. contradiction. inv H0.
+    - inv Hinx. contradiction.
+    intros.
+*)
+    
+        
+
   Lemma contract_cpath' (π : list Lab) q p
            (Hπ : CPath p q π)
            (Hdeq : deq_loop p q)
@@ -581,9 +599,83 @@ Context `{C : redCFG}.
     : exists ϕ, HPath p q ϕ /\ ϕ ⊆ π.
   Proof.
     eapply contract_cpath;eauto.
-    intros.
-  Admitted.
-
+    unfold deq_loop. intros x Hxin h Hhcont.
+    decide (loop_contains h x) as [Htmp | Hxcont]; [ assumption |].
+    exfalso.
+    destruct π as [|l π']; [ contradiction |].
+    replace l with q in * by (eauto using path_front).
+    simpl in Hnin.
+    inversion Hπ; subst. {
+      inv Hxin. contradiction. inv H.
+    }
+    rename H3 into Hedge. rename H0 into Hπ'.
+    destruct Hxin as [Htmp | Hxin]. {
+      subst. contradiction.
+    }
+    decide (loop_contains q q) as [Hhead | Hnhead ].
+    - (* if q is a loop header, we cannot use Hnin to create a contradiction because it
+         is only applicable to tl π. We essentially need to show that there is a header
+         that contains q and lies on π' that contains all nodes on π'.
+         We get that header using p_p_ex_head. Then, the fact that this header
+         contains all other loops is in contradiction with Hnin. *)
+      edestruct loop_reachs_member as [ρ Hρ].
+      eapply (deq_loop_head_loop_contains Hdeq).
+      eauto using loop_contains_loop_head.
+      remember ((q :: π') ++ tl ρ) as σ.
+      assert (Hσ : CPath q q σ). {
+        rewrite Heqσ.
+        eapply path_app'.
+        - eapply subgraph_path'; eauto using a_edge_incl.
+        - eassumption.
+      }
+      edestruct (p_p_ex_head Hσ) as [ho [Hin Hcont]]. {
+        rewrite Heqσ. simpl.
+        induction π'; try contradiction.
+        simpl. lia.
+      }
+      assert (Hne : q <> ho). {
+        intro. subst ho.
+        eapply Hxcont.
+        eapply loop_contains_trans.
+        eapply Hhcont. eapply Hcont.
+        rewrite Heqσ.
+        eauto using in_or_app. 
+      }
+      assert (Hoinπ' : ho ∈ π'). {
+        (* Show that ho is on the π' part of σ.
+           Essentially by constructing an acyclic path from ho to ho. *)
+        assert (Hinσ := Hin).
+        rewrite Heqσ in Hin. simpl in Hin.
+        destruct Hin.
+        - exfalso. eauto. 
+        - eapply in_app_or in H.
+          destruct H;[ eassumption |].
+          exfalso.
+          edestruct loop_reachs_member as [τ Hτ]. {
+            eapply Hcont. rewrite Heqσ. simpl. left. reflexivity.
+          }
+          eapply in_tl_in in H.
+          edestruct (path_to_elem Hρ H) as [ω [Hω _]].
+          eapply (path_path_acyclic Hτ Hω); eauto.
+      }          
+      eapply (Hnin _ Hoinπ').
+      eapply Hcont.
+      rewrite Heqσ. eauto. 
+    - (* the other case is simple. The path needs to go through the loop header h
+         to reach p. This header contradicts Hnin. *)
+      eapply path_from_elem in Hπ'; try eauto.
+      destruct Hπ' as [ϕ [Hϕ Hpost]].
+      eapply (Hnin h); try eassumption.
+      eapply in_postfix_in; try eassumption.
+      eapply (dom_loop_contains).
+      2: eapply Hxcont.
+      2: eapply Hϕ.
+      eapply (preds_in_same_loop Hhcont). {
+        intro. subst. eauto.
+      }
+      eassumption.
+   Qed.
+  
   Lemma path_to_cons_path (L : Type) (ed : L -> L -> Prop) p q π
         (Hpath : Path ed p q π)
     : exists ϕ, π = q :: ϕ.
