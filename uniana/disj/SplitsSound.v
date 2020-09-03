@@ -139,7 +139,7 @@ Qed.
 
 (** ^ move somewhere else **)
 
-Lemma tcfg_disj_paths_tageqs_base `(C : redCFG)
+Lemma diamond_teq `(C : redCFG)
       (s u1 u2 p1 p2 q1 q2 : Lab) (k i l1 l2 j1 j2 : Tag) r1 r2
       (Hdeq : deq_loop q1 s)
       (D : DiamondPaths s u1 u2 p1 p2 q1 q2 k i l1 l2 j1 j2 ((q1,j1) :: r1) ((q2,j2) :: r2))
@@ -179,7 +179,7 @@ Context `{C : redCFG}.
 
   Infix "-->" := edge__P.
   Infix "-t>" := tcfg_edge (at level 70).
-
+  Infix "-h>" := head_rewired_edge (at level 70).
 
   Lemma tag_exit_eq' h p q i j
         (Hedge : (p,i) -t> (q,j))
@@ -202,10 +202,59 @@ Context `{C : redCFG}.
     : eq_loop q1 q2.
   Admitted.
 
-  Lemma inst_disj_node_disj
+  Lemma teq_node_disj
         `(T : TeqPaths)
+        (Hjeq : j1 = j2)
     : Disjoint (q1 :: map fst r1) (q2 :: map fst r2).
   Admitted.
+
+  Lemma diamond_qj_eq1 s u1 u2 p1 p2 q1 q2 k i l1 l2 j1 j2 qj1 r1 r2
+        (D : DiamondPaths s u1 u2 p1 p2 q1 q2 k i l1 l2 j1 j2 (qj1 :: r1) r2)
+    : qj1 = (q1,j1).
+  Proof.
+    destruct D. cbn in Dqj1. auto.
+  Qed.
+
+  Lemma diamond_qj_eq2 s u1 u2 p1 p2 q1 q2 k i l1 l2 j1 j2 qj2 r1 r2
+        (D : DiamondPaths s u1 u2 p1 p2 q1 q2 k i l1 l2 j1 j2 r1 (qj2 :: r2))
+    : qj2 = (q2,j2).
+  Proof.
+    destruct D. cbn in Dqj2. auto.
+  Qed.
+
+  Ltac diamond_subst_qj D :=
+    lazymatch type of D with
+    | DiamondPaths _ _ _ _ _ ?q1 ?q2 _ _ _ _ ?j1 ?j2 (?qj1 :: ?r1) _
+      => replace qj1 with (q1,j1) in *;
+        [clear qj1|destruct D;
+                   lazymatch goal with
+                   | Q : hd _ (qj1 :: _) = _ |- _ => cbn in Q; eauto
+                   end
+        ]
+    | _ => idtac
+    end;
+    lazymatch type of D with
+    | DiamondPaths _ _ _ _ _ ?q1 ?q2 _ _ _ _ ?j1 ?j2 _ (?qj2 :: ?r2)
+      => replace qj2 with (q2,j2) in *;
+        [clear qj2|destruct D;
+                   lazymatch goal with
+                   | Q : hd _ (qj2 :: _) = _ |- _ => cbn in Q; eauto
+                   end
+        ]
+    | _ => idtac
+    end.
+
+  Lemma node_disj
+        `(D : DiamondPaths)
+        (Hjeq : j1 = j2)
+        (Hdeq : deq_loop q1 s)
+    : Disjoint (map fst r1) (map fst r2).
+  Proof.
+    destruct r1,r2.
+    1-3: cbn; firstorder.
+    diamond_subst_qj D.
+    eapply teq_node_disj;eauto. eapply diamond_teq. eassumption. exact D.
+  Qed.
 
   Lemma TeqPaths_sym u1 u2 q1 q2 l1 l2 j r1 r2
         (T : TeqPaths u1 u2 q1 q2 l1 l2 j j r1 r2)
@@ -694,7 +743,7 @@ Context `{C : redCFG}.
         rename r2 into r
     end.
 
-  Lemma inst_disj_node_disj_hpath u1 u2 q1 q2 l1 l2 j1 j2 r1 r2
+  Lemma teq_node_disj_hpath u1 u2 q1 q2 l1 l2 j1 j2 r1 r2
         (T : TeqPaths u1 u2 q1 q2 l1 l2 j1 j2 (r1) (r2))
         p1 p2 i
         (Hedge1 : (q1,j1) -t> (p1,i))
@@ -706,10 +755,10 @@ Context `{C : redCFG}.
                  /\ (q1 :: r1') ⊆ (q1 :: map fst r1)
                  /\ (q2 :: r2') ⊆ (q2 :: map fst r2).
   Proof.
-    eapply inst_disj_node_disj in T as Hndisj.
+    eapply teq_node_disj in T as Hndisj;eauto.
     cbn in Hndisj.
     copy T T'.
-    destruct T. subst j2.
+    destruct T.
     eapply TPath_CPath in Tpath1.  cbn in Tpath1.
     eapply TPath_CPath in Tpath2. cbn in Tpath2.
     eapply contract_cpath' in Tpath1.
@@ -733,7 +782,63 @@ Context `{C : redCFG}.
     - eapply disjoint_subset;eauto.
   Qed.
 
-  Lemma inst_disj_node_disj_prefix `(TeqPaths) n1 n2 i
+  Lemma node_disj_hpath s p1 p2 u1 u2 q1 q2 k i l1 l2 j1 j2 r1 r2
+        (D : DiamondPaths s u1 u2 p1 p2 q1 q2 k i l1 l2 j1 j2 r1 r2)
+        (Hdeq : deq_loop q1 s)
+        (Hjeq : j1 = j2)
+    : exists r1' r2', HPath u1 p1 (p1 :: r1')
+                 /\ HPath u2 p2 (p2 :: r2')
+                 /\ Disjoint r1' r2'
+                 /\ r1' ⊆ map fst r1
+                 /\ r2' ⊆ map fst r2.
+  Proof.
+    destruct r1,r2.
+    - exists [],[].
+      destruct D.
+      eapply path_single in Dpath1. destruct Dpath1. inv H.
+      eapply path_single in Dpath2. destruct Dpath2. inv H.
+      split_conj. 1,2: econstructor.
+      all: cbn;firstorder 0.
+    - copy D D'. destruct D.
+      eapply path_single in Dpath1. destruct Dpath1. inv H.
+      eapply TPath_CPath in Dpath2. destruct p as [q j]. cbn in Dpath2. inv_path Dpath2.
+      cbn in Dqj1, Dqj2. inv Dqj1. inv Dqj2.
+      eapply contract_cpath' in H.
+      + cbn in Dpath2. destructH.
+        exists [], ϕ.
+        split_conj. 3,4: cbn;firstorder 0.
+        * econstructor.
+        * econstructor;eauto. unfold head_rewired_edge. left;split;eauto.
+          intros N. eapply no_back2;eauto. rewrite Dloop. eapply loop_contains_self;eauto.
+        * cbn. eassumption.
+    + rewrite <-Dloop. eapply u2_deq_q; eauto. congruence.
+    + cbn. intros. rewrite <-Dloop. eapply no_back2;eauto.
+      right. cbn. right. auto.
+    - copy D D'. destruct D.
+      eapply path_single in Dpath2. destruct Dpath2. inv H.
+      eapply TPath_CPath in Dpath1. destruct p as [q j]. cbn in Dpath1. inv_path Dpath1.
+      cbn in Dqj1, Dqj2. inv Dqj1. inv Dqj2.
+      eapply contract_cpath' in H.
+      + cbn in Dpath1. destructH.
+        exists ϕ, [].
+        split_conj. 3,5: cbn;firstorder 0.
+        * econstructor;eauto. unfold head_rewired_edge. left;split;eauto.
+          intros N. eapply no_back;eauto. eapply loop_contains_self;eauto.
+        * econstructor.
+        * cbn. eassumption.
+    + eapply u1_deq_q; eauto. congruence.
+    + cbn. intros. eapply no_back;eauto.
+      right. cbn. right. auto.
+    - diamond_subst_qj D.
+      eapply diamond_teq in D as T;eauto.
+      destruct D.
+      eapply teq_node_disj_hpath in T.
+      2,3: inv_path Dpath1;inv_path Dpath2;eauto. 2:auto.
+      destructH.
+      eexists;eexists;split_conj;eauto.
+  Qed.
+
+  Lemma teq_node_disj_prefix `(TeqPaths) n1 n2 i
         (Hn1 : j1 = n1 :: i)
         (Hn2 : j2 = n2 :: i)
         (Hlt : n1 < n2)
@@ -855,12 +960,30 @@ Context `{C : redCFG}.
 
  Lemma inhom_loop_exits (s u1 u2 q1 q2 e1 e2 : Lab) r1 r2 (k i l1 l2 : Tag) (n1 n2 : nat)
         (D : DiamondPaths s u1 u2 e1 e2 q1 q2 k i l1 l2 (n1 :: i) (n2 :: i) r1 r2)
-    : exists r1' r2', edge__P s u1 /\  edge__P s u2
-                 /\ HPath u1 e1 (e1 :: r1') /\ HPath u2 e2 (e2 :: r2')
+    : exists r1' r2', HPath u1 e1 (e1 :: r1') /\ HPath u2 e2 (e2 :: r2')
                  /\ Disjoint r1' r2'
                  /\ r1' ⊆ map fst r1 /\ r2' ⊆ map fst r2.
-  Proof.
-  Admitted.
+ Proof.
+   remember (depth s - depth q1) as m.
+   revert q1 q2 e1 e2 n1 n2 i D Heqm.
+   induction m;intros.
+   - assert (depth s = depth q1) as Hseqq.
+     {
+       enough(depth q1 <= depth s);[lia|].
+       eapply deq_loop_depth. eauto using s_deq_q.
+     }
+     specialize (Nat.lt_trichotomy n1 n2) as Htri. destruct Htri as [Hlt|[Heq|Hlt]].
+     +
+
+
+       admit.
+     + subst n2. eapply node_disj_hpath in D as Hndisj.
+       2: eapply deq_loop_depth_eq;eauto using s_deq_q.
+       2: reflexivity.
+       destructH.
+       do 2 eexists;split_conj;eauto.
+     + admit.
+ Admitted.
 
   Lemma contract_one_empty s u2 p i q2 r2 k l2
         (Hin2 : Path tcfg_edge (u2, l2) (p, i) ((p, i) :: (q2, k) :: r2))
@@ -937,12 +1060,13 @@ Context `{C : redCFG}.
       destructH.
       eapply splits_spec.
       exists (p :: r1'), (p :: r2'), u1, u2.
-      split_conj;eauto. cbn.
+      split_conj;eauto;cbn.
+      1,2: destruct Hin3,Hin4;eauto.
       destruct r1';[|left;congruence].
       destruct r2';[|right;congruence].
       exfalso.
-      eapply path_single in Hinhom1. destruct Hinhom1 as [Hinhom1 _]. subst u1.
-      eapply path_single in Hinhom3. destruct Hinhom3 as [Hinhom3 _]. subst u2.
+      eapply path_single in Hinhom0. destruct Hinhom0 as [Hinhom0 _]. subst u1.
+      eapply path_single in Hinhom2. destruct Hinhom2 as [Hinhom2 _]. subst u2.
       eapply tcfg_edge_det in Hin3;eauto. subst l2.
       inv_path Hin0; inv_path Hin2.
       + tauto.
@@ -969,8 +1093,8 @@ Context `{C : redCFG}.
         eapply contract_one_empty;eauto.
       + cbn in H0. subst j2.
         decide (deq_loop q1 s).
-        * eapply (tcfg_disj_paths_tageqs_base) in D as T;eauto.
-          eapply inst_disj_node_disj_hpath in T as Hdisj;eauto.
+        * eapply (diamond_teq) in D as T;eauto.
+          eapply teq_node_disj_hpath in T as Hdisj;eauto.
           destructH.
           eapply splits_spec.
           repeat eexists;split_conj.
@@ -983,10 +1107,10 @@ Context `{C : redCFG}.
           eapply inhom_loop_exits in D1 as Hinhom.
           eapply splits_spec.
           destructH.
-          eapply inst_disj_node_disj_hpath in D3 as Dinst;eauto.
+          eapply teq_node_disj_hpath in D3 as Dinst;eauto.
           destructH.
           exists ((p :: q1 :: r1'1) ++ tl (e1 :: r1'0)), ((p :: q2 :: r2'1) ++ tl (e2 :: r2'0)), u1, u2.
-          split_conj. 4,5: eauto.
+          split_conj. 4,5: destruct Hin3,Hin4;eauto.
           -- eapply path_app';eauto.
           -- eapply path_app';eauto.
           -- cbn.
@@ -996,14 +1120,14 @@ Context `{C : redCFG}.
                 eapply Dinst3 in Hx.
                 specialize (D4 x Hx).
                 intro N.
-                eapply Hinhom7 in N.
+                eapply Hinhom5 in N.
                 eapply r2_incl_head_q in N;eauto.
              ++ eapply Disjoint_sym.
                 intros x Hx.
                 eapply Dinst5 in Hx.
                 specialize (D6 x Hx).
                 intro N.
-                eapply Hinhom5 in N.
+                eapply Hinhom3 in N.
                 eapply r2_incl_head_q in N;eauto.
                 eapply DiamondPaths_sym. eauto.
           -- cbn. left. congruence.

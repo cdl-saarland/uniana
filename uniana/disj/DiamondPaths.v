@@ -50,6 +50,7 @@ Section disj.
       Dloop : eq_loop q1 q2
     }.
 
+  (* It is not possible to define TeqPaths for empty r1 or r2 in a meaningful way *)
   Class TeqPaths (u1 u2 q1 q2 : Lab)
         (l1 l2 j1 j2 : Tag)
         (r1 r2 : list (Lab * Tag)) :=
@@ -103,12 +104,12 @@ Section disj.
     : forall x : Lab, x ∈ (q2 :: map fst r2) -> ~ loop_contains x q1.
   Admitted.
 
+  Lemma tl_eq
+    : tl j1 = tl j2.
+  Admitted.
+
   Section disj_eqdep.
     Hypothesis (Hdeq : deq_loop q1 s).
-
-    Lemma tl_eq
-      : tl j1 = tl j2.
-    Admitted.
 
     Lemma lj_eq1
       : l1 = j1 \/ l1 = 0 :: j1.
