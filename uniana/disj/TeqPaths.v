@@ -47,6 +47,18 @@ Section teq.
   Proof.
   Admitted.
 
+  Lemma u1_exit_eq_q h p
+        (Hexit : exit_edge h p u1)
+    : eq_loop u1 q1.
+  Proof.
+  Admitted.
+
+  Lemma u2_exit_eq_q h p
+        (Hexit : exit_edge h p u2)
+    : eq_loop u2 q1.
+  Proof.
+  Admitted.
+
 End teq.
 
 Hint Resolve teq_r1_incl_head_q teq_r2_incl_head_q teq_u1_deq_q teq_u2_deq_q Tloop : teq.
