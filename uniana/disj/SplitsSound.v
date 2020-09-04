@@ -152,16 +152,6 @@ Proof.
   econstructor; eauto using tl_eq, lj_eq1, lj_eq2, jj_len.
 Qed.
 
-  (*
-  Lemma tcfg_disj_paths_tageqs_step
-        (Heq : eq_loop q1 q2)
-        (Hueq : eq_loop u1 u2)
-        (Hqueq : eq_loop u1 q1)
-    : tl j1 = tl j2
-      /\ (l1 = j1 \/ l1 = 0 :: j1)
-      /\ (l2 = j1 \/ l2 = 0 :: j1 \/ loop_contains u2 q1).
-  Admitted.
- *)
 Lemma loop_head_eq_loop_eq `(C : redCFG) h1 h2
           (Hloop1 : loop_head h1)
           (Hloop2 : loop_head h2)
@@ -209,6 +199,16 @@ Context `{C : redCFG}.
     : Disjoint (q1 :: map fst r1) (q2 :: map fst r2).
   Admitted.
 
+  Lemma tpath_jeq_prefix u2 l2 q2 n2 j n1 r2
+        (Tpath2 : TPath (u2, l2) (q2, n2 :: j) ((q2, n2 :: j) :: r2))
+        (Tlj_eq2 : l2 = n1 :: j \/ l2 = 0 :: n1 :: j \/ loop_contains u2 q2)
+        (Hlt : n1 < n2)
+    : exists h r2',
+      Prefix ((h,(S n1) :: j) :: r2') ((q2, n2 :: j) ::  r2)
+      /\ innermost_loop h q2
+      /\ forall x, x ∈ map fst r2' -> x <> h.
+  Admitted.
+
   Lemma teq_jeq_prefix u1 u2 q1 q2 l1 l2 n1 n2 j r1 r2
         (T : TeqPaths u1 u2 q1 q2 l1 l2 (n1 :: j) (n2 :: j) r1 r2)
         (Hlt : n1 < n2)
@@ -217,15 +217,6 @@ Context `{C : redCFG}.
                /\ TeqPaths u1 u2 q1 h l1 l2 (n1 :: j) (n1 :: j) r1 r2'.
   Proof.
     destruct T.
-    Lemma tpath_jeq_prefix u2 l2 q2 n2 j n1 r2
-          (Tpath2 : TPath (u2, l2) (q2, n2 :: j) ((q2, n2 :: j) :: r2))
-          (Tlj_eq2 : l2 = n1 :: j \/ l2 = 0 :: n1 :: j \/ loop_contains u2 q2)
-          (Hlt : n1 < n2)
-      : exists h r2',
-        Prefix ((h,(S n1) :: j) :: r2') ((q2, n2 :: j) ::  r2)
-        /\ innermost_loop h q2
-        /\ forall x, x ∈ map fst r2' -> x <> h.
-    Admitted.
   Admitted.
 
   Lemma diamond_qj_eq1 s u1 u2 p1 p2 q1 q2 k i l1 l2 j1 j2 qj1 r1 r2
