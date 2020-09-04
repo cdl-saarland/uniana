@@ -215,6 +215,17 @@ Context `{C : redCFG}.
     : exists h r2', Prefix (h :: map fst r2') (q2 :: map fst r2)
                /\ innermost_loop h q1
                /\ TeqPaths u1 u2 q1 h l1 l2 (n1 :: j) (n1 :: j) r1 r2'.
+  Proof.
+    destruct T.
+    Lemma tpath_jeq_prefix u2 l2 q2 n2 j n1 r2
+          (Tpath2 : TPath (u2, l2) (q2, n2 :: j) ((q2, n2 :: j) :: r2))
+          (Tlj_eq2 : l2 = n1 :: j \/ l2 = 0 :: n1 :: j \/ loop_contains u2 q2)
+          (Hlt : n1 < n2)
+      : exists h r2',
+        Prefix ((h,(S n1) :: j) :: r2') ((q2, n2 :: j) ::  r2)
+        /\ innermost_loop h q2
+        /\ forall x, x ∈ map fst r2' -> x <> h.
+    Admitted.
   Admitted.
 
   Lemma diamond_qj_eq1 s u1 u2 p1 p2 q1 q2 k i l1 l2 j1 j2 qj1 r1 r2
@@ -638,7 +649,7 @@ Context `{C : redCFG}.
   Qed.
 
   (*
-  Lemma step_out_path_contains_own_head p h x π 
+  Lemma step_out_path_contains_own_head p h x π
         (Hπ : Path edge__P p h π)
         (Hcontp : loop_contains h p)
         (Hconth : loop_contains h h)
@@ -651,8 +662,8 @@ Context `{C : redCFG}.
     - inv Hinx. contradiction.
     intros.
 *)
-    
-        
+
+
 
   Lemma contract_cpath' (π : list Lab) q p
            (Hπ : CPath p q π)
@@ -701,7 +712,7 @@ Context `{C : redCFG}.
         eapply loop_contains_trans.
         eapply Hhcont. eapply Hcont.
         rewrite Heqσ.
-        eauto using in_or_app. 
+        eauto using in_or_app.
       }
       assert (Hoinπ' : ho ∈ π'). {
         (* Show that ho is on the π' part of σ.
@@ -709,7 +720,7 @@ Context `{C : redCFG}.
         assert (Hinσ := Hin).
         rewrite Heqσ in Hin. simpl in Hin.
         destruct Hin.
-        - exfalso. eauto. 
+        - exfalso. eauto.
         - eapply in_app_or in H.
           destruct H;[ eassumption |].
           exfalso.
@@ -719,10 +730,10 @@ Context `{C : redCFG}.
           eapply in_tl_in in H.
           edestruct (path_to_elem Hρ H) as [ω [Hω _]].
           eapply (path_path_acyclic Hτ Hω); eauto.
-      }          
+      }
       eapply (Hnin _ Hoinπ').
       eapply Hcont.
-      rewrite Heqσ. eauto. 
+      rewrite Heqσ. eauto.
     - (* the other case is simple. The path needs to go through the loop header h
          to reach p. This header contradicts Hnin. *)
       eapply path_from_elem in Hπ'; try eauto.
@@ -737,7 +748,7 @@ Context `{C : redCFG}.
       }
       eassumption.
    Qed.
-  
+
   Lemma path_to_cons_path (L : Type) (ed : L -> L -> Prop) p q π
         (Hpath : Path ed p q π)
     : exists ϕ, π = q :: ϕ.
@@ -819,6 +830,11 @@ Context `{C : redCFG}.
       eapply loop_contains_self;eauto.
   Qed.
 
+  Lemma tag_cons_exit q p n i
+        (Hedge : (q,n :: i) -t> (p,i))
+    : exists h, exit_edge h q p.
+  Admitted.
+
   Lemma teq_node_disj_prefix_hpath u1 u2 q1 q2 l1 l2 r1 r2 n1 n2 i
         (T : TeqPaths u1 u2 q1 q2 l1 l2 (n1 :: i) (n2 :: i) (r1) (r2))
         p1 p2
@@ -840,8 +856,108 @@ Context `{C : redCFG}.
       transitivity (h :: map fst r2');eauto.
     - left;split;destruct Hedge1,Hedge2;eauto;intro N.
       eapply teq_no_back;eauto using loop_contains_self.
-    - right. exists q2. admit.
+    - right. exists q2.
+      eapply tag_cons_exit in Hedge2. destructH.
+      replace h with h0;eauto.
+      eapply loop_head_eq_loop_eq.
+      + destruct Hedge2. eapply loop_contains_loop_head;eauto.
+      + destruct Hlt2. eapply loop_contains_loop_head;eauto.
+      + eapply innermost_eq_loop in Hlt2. rewrite Hlt2.
+        eapply eq_loop_exiting in Hedge2.
+        rewrite Hedge2.
+        symmetry. eapply Tloop.
+  Qed.
+
+  Lemma tagle_monotone q1 q2 j1 j2 r
+        (Hpath : TPath (q1,j1) (q2,j2) r)
+        (Hin : forall x, x ∈ map fst r -> deq_loop x q1)
+        (Heq : eq_loop q1 q2)
+    : j1 ⊴ j2.
   Admitted.
+
+  Lemma le_cons_tagle n1 n2 i
+        (Hlt : n1 <= n2)
+    : n1 :: i ⊴ n2 :: i.
+  Proof.
+  Admitted.
+
+  Lemma lt_cons_ntagle n1 n2 i
+        (Hlt : n2 < n1)
+    : ~ n1 :: i ⊴ n2 :: i.
+  Admitted.
+
+  Lemma node_disj_prefix_hpath s u1 u2 p1 p2 q1 q2 k i l1 l2 n1 n2 r1 r2
+        (D : DiamondPaths s u1 u2 p1 p2 q1 q2 k i l1 l2 (n1 :: i) (n2 :: i) r1 r2)
+        (Hdeq : deq_loop q1 s)
+        (Hlt : n1 < n2)
+    : exists r1' r2', HPath u1 p1 (p1 :: r1')
+                 /\ HPath u2 p2 (p2 :: r2')
+                 /\ Disjoint (r1') (r2')
+                 /\ r1' ⊆ map fst r1
+                 /\ r2' ⊆ map fst r2.
+  Proof.
+    destruct r1,r2.
+    - exfalso.
+      destruct D. cbn in *. inv Dqj1; inv Dqj2. lia.
+    - copy D D'.
+      destruct D'.
+      cbn in Dqj1.
+      eapply path_single in Dpath1. destruct Dpath1 as [Dpath1 _]. inv Dpath1. inv Dqj1.
+      cbn in Dqj2. subst p.
+      inv_path Dpath2.
+      eapply tpath_jeq_prefix in H as Hpre;eauto.
+      2: rewrite <-Dloop; eapply lj_eq2;eauto.
+      2: eapply le_cons_tagle;lia.
+      destructH.
+      eapply path_prefix_path in H;eauto.
+      eapply TPath_CPath in H. cbn in H.
+      eapply contract_cpath' in H.
+      + destructH.
+        exists [], ϕ.
+        split_conj;eauto.
+        * econstructor.
+        * econstructor;eauto.
+          eapply tag_cons_exit in H0. destructH.
+          replace h0 with h in H0.
+          -- right. eexists;eauto.
+          -- eapply loop_head_eq_loop_eq.
+             1,2: destruct Hpre2,H0;eauto using loop_contains_loop_head.
+             eapply eq_loop_exiting in H0. rewrite H0. eapply innermost_eq_loop in Hpre2.
+             rewrite Hpre2. reflexivity.
+        * firstorder 0.
+        * cbn. eapply prefix_incl in Hpre0. eapply incl_map with (f:=fst) in Hpre0.
+          cbn in Hpre0. transitivity (h :: map fst r2');eauto.
+      + eapply innermost_eq_loop in Hpre2. rewrite Hpre2.
+        rewrite <-Dloop. eapply u2_deq_q;eauto. congruence.
+      + cbn. intros. intro N. eapply Hpre3;eauto.
+        eapply loop_head_eq_loop_eq;[|destruct Hpre2|];eauto using loop_contains_loop_head.
+        split.
+        * eapply innermost_eq_loop in Hpre2. rewrite Hpre2. rewrite <-Dloop.
+          eapply r2_incl_head_q;eauto.
+          eapply prefix_incl in Hpre0.
+          eapply incl_map with (f:=fst) in Hpre0. cbn in Hpre0. cbn. eapply Hpre0. right. auto.
+        * eapply loop_contains_deq_loop;eauto.
+    - exfalso.
+      copy D D'.
+      destruct D.
+      cbn in Dqj1,Dqj2.
+      subst p. inv Dqj2.
+      eapply path_single in Dpath2. destruct Dpath2 as [Dpath2 _]. inv Dpath2.
+      inv_path Dpath1.
+      eapply path_rcons in Dsk1;eauto.
+      eapply tagle_monotone in Dsk1.
+      + eapply lt_cons_ntagle;eauto.
+      + cbn. rewrite map_rcons. cbn. intros. rewrite In_rcons in H1.
+        destruct H1 as [H1|[H1|H1]]. 1,2: subst x0.
+        * destruct Dloop;eauto.
+        * reflexivity.
+        * rewrite <-Dloop. eapply r1_incl_head_q;eauto. cbn. right. eauto.
+      + symmetry. eauto.
+    - diamond_subst_qj D. eapply diamond_teq in D as T;eauto.
+      2: eapply le_cons_tagle;lia.
+      eapply teq_node_disj_prefix_hpath in T;eauto.
+      1,2: destruct D;inv_path Dpath1; inv_path Dpath2;eauto.
+  Qed.
 
   Lemma node_disj_hpath s p1 p2 u1 u2 q1 q2 k i l1 l2 j1 j2 r1 r2
         (D : DiamondPaths s u1 u2 p1 p2 q1 q2 k i l1 l2 j1 j2 r1 r2)
@@ -1012,9 +1128,8 @@ Context `{C : redCFG}.
    : exists r1' r2' r1'' r2'' e1 e2 n1 n2 q1' q2',
      r1 = r1'' ++ r1'
      /\ r2 = r2'' ++ r2'
-     /\ DiamondPaths s u1 u2 e1 e2 q1' q2' k j1 l1 l2 (n1 :: j1) (n2 :: j1)
-                    ((q1',n1 :: j1) :: r1') ((q2',n2 :: j1) :: r2')
-     /\ TeqPaths e1 e2 q1 q2 (n1 :: j1) (n2 :: j1) j1 j2 r1'' r2''
+     /\ DiamondPaths s u1 u2 e1 e2 q1' q2' k j1 l1 l2 (n1 :: j1) (n2 :: j1) r1' r2'
+     /\ TeqPaths e1 e2 q1 q2 j1 j1 j1 j2 r1'' r2''
      /\ (forall x, x ∈ (q1 :: map fst r1'') -> ~ deq_loop x q1')
      /\ (forall x, x ∈ (q2 :: map fst r2'') -> ~ deq_loop x q2').
  Admitted.
@@ -1026,24 +1141,77 @@ Context `{C : redCFG}.
                  /\ r1' ⊆ map fst r1 /\ r2' ⊆ map fst r2.
  Proof.
    remember (depth s - depth q1) as m.
-   revert q1 q2 e1 e2 n1 n2 i D Heqm.
+   revert q1 q2 e1 e2 r1 r2 n1 n2 i D Heqm.
    induction m;intros.
    - assert (depth s = depth q1) as Hseqq.
      {
        enough(depth q1 <= depth s);[lia|].
        eapply deq_loop_depth. eauto using s_deq_q.
      }
-     specialize (Nat.lt_trichotomy n1 n2) as Htri. destruct Htri as [Hlt|[Heq|Hlt]].
-     +
-
-
-       admit.
-     + subst n2. eapply node_disj_hpath in D as Hndisj.
-       2: eapply deq_loop_depth_eq;eauto using s_deq_q.
-       2: reflexivity.
+     assert (deq_loop q1 s) as Hdeq.
+     { eapply deq_loop_depth_eq;eauto using s_deq_q. }
+     specialize (Nat.lt_trichotomy n1 n2) as Htri. destruct Htri as [Hlt|[Heq|Hlt]];cycle 1.
+     + subst n2. eapply node_disj_hpath in D as Hndisj;eauto.
+     + eapply DiamondPaths_sym in D.
+       eapply node_disj_prefix_hpath in D as Hndisj;eauto.
+       2: eapply eq_loop1;eauto;symmetry; eauto using Dloop.
        destructH.
-       do 2 eexists;split_conj;eauto.
-     + admit.
+       exists r2', r1'.
+       split_conj;eauto.
+       eapply Disjoint_sym;eauto.
+     + eapply node_disj_prefix_hpath in D as Hndisj;eauto.
+   - destruct r1,r2. (* all nil cases can be contradicted *)
+     1-3: exfalso;destruct D; cbn in Dqj1,Dqj2.
+     1,2: inv Dqj1. 1,3: inv Dqj2.
+     1-3: tryif lia then idtac else rewrite Dloop in Heqm;lia.
+     diamond_subst_qj D.
+     assert (~ deq_loop q1 s) as Hqs.
+     { intro N. eapply deq_loop_depth in N. lia. }
+     specialize (Nat.lt_trichotomy n1 n2) as [Hlt|[Hlt|Hlt]].
+     + eapply split_DiamondPaths in D as Dsplit;eauto.
+       2: { eapply le_cons_tagle. lia. }
+       destructH.
+       subst r1 r2.
+       eapply IHm in Dsplit1 as Hinhom.
+       2: {
+         enough (depth q1' = S (depth q1)).
+         - clear - Heqm H.
+           rewrite H. lia.
+         - admit. (* bc. exiting loop *)
+       }
+       destructH.
+       assert ((q1, n1 :: i) -t> (e1, i)) as Hedge1.
+       { destruct D. inv_path Dpath1;eauto. }
+       assert ((q2, n2 :: i) -t> (e2, i)) as Hedge2.
+       { destruct D. inv_path Dpath2;eauto. }
+       eapply teq_node_disj_prefix_hpath in Dsplit3 as Dinst;eauto.
+       destructH.
+       exists (r1'1 ++ tl (e0 :: r1'0)), (r2'1 ++ tl (e3 :: r2'0)).
+       split_conj.
+       -- rewrite app_comm_cons. eapply path_app';eauto.
+       -- rewrite app_comm_cons. eapply path_app';eauto.
+       -- cbn.
+          eapply disjoint_app_app;eauto.
+          ++ intros x Hx.
+             eapply Dinst3 in Hx.
+             specialize (Dsplit4 x Hx).
+             intro N.
+             eapply Hinhom5 in N.
+             eapply r2_incl_head_q in N;eauto.
+          ++ eapply Disjoint_sym.
+             intros x Hx.
+             eapply Dinst5 in Hx.
+             specialize (Dsplit6 x Hx).
+             intro N.
+             eapply Hinhom3 in N.
+             eapply r2_incl_head_q in N;eauto.
+             eapply DiamondPaths_sym. eauto.
+       -- cbn. rewrite map_app. rewrite app_comm_cons.
+          eapply incl_app_app;eauto.
+       -- cbn. rewrite map_app. rewrite app_comm_cons.
+          eapply incl_app_app;eauto.
+     + (*simalarily*) admit.
+     + (*analogously*) admit.
  Admitted.
 
   Lemma contract_one_empty s u2 p i q2 r2 k l2
