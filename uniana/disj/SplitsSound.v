@@ -370,6 +370,19 @@ Context `{C : redCFG}.
     eauto using loop_contains_Antisymmetric.
   Qed.
 
+  Lemma innermost_unique' a b c d
+        (Ha : innermost_loop a c)
+        (Hb : innermost_loop b d)
+        (Heq : eq_loop c d)
+    : a = b.
+  Proof.
+    destruct Ha as [Ha Ha'].
+    destruct Hb as [Hb Hb'].
+    destruct Heq. 
+    unfold deq_loop in *.
+    eapply loop_contains_Antisymmetric; eauto.
+  Qed.
+
   Lemma back_edge_src_no_loop_head
         a b
         (Hbe : back_edge b a)
@@ -638,23 +651,6 @@ Context `{C : redCFG}.
                 destruct Hinner as [Hinner _].
                 eauto using head_unique.
   Qed.
-
-  (*
-  Lemma step_out_path_contains_own_head p h x π
-        (Hπ : Path edge__P p h π)
-        (Hcontp : loop_contains h p)
-        (Hconth : loop_contains h h)
-        (Hinx : x ∈ π)
-        (Hncontx : ~ loop_contains h x)
-    : forall hx, innermost_loop hx x -> hx ∈ π.
-  Proof.
-    induction Hπ; intros.
-    - inv Hinx. contradiction. inv H0.
-    - inv Hinx. contradiction.
-    intros.
-*)
-
-
 
   Lemma contract_cpath' (π : list Lab) q p
            (Hπ : CPath p q π)
@@ -1053,64 +1049,88 @@ Context `{C : redCFG}.
                         /\ eq_loop e q
                         /\ loop_contains h s
                         /\ exit_edge h qe e
+                        /\ (forall x, x ∈ (q :: map fst r'') -> ~ deq_loop x qe)
                         /\ hd (s,k) r' = (qe, n :: j)
                         /\ TPath (e,j) (p,i) ((p,i) :: (q,j) :: r'')
                         /\ TPath (u,l) (e,j) ((e,j) :: r').
  Proof.
-   revert p q i j Hndeq Hpath.
-   induction r;intros.
-   - unfold TPath in Hpath. fold ([(p,i)]++[(q,j)]) in Hpath. path_simpl2' Hpath. cbn in Hpath.
-     simpl_dec' Hndeq. destructH. simpl_dec' Hndeq. destructH.
-     assert (exit_edge x s q) as Hexit.
-     { split;eauto;split;eauto;destruct Hedge;eauto. }
-     eapply tag_exit_eq' in Hedge;[|eauto].
-     destructH. subst k.
-     exists q, x, s, nil, nil, n.
-     split_conj;cbn;eauto.
-     + reflexivity.
-     + econstructor.
-   - destruct a as [a f].
-     specialize (IHr q a j f).
-     decide (deq_loop a s).
-     + admit.
-     + inv_path Hpath. exploit IHr.
-       destructH.
-       admit. (* prove it using well founded prefix induction *)
- Admitted.
+   revert dependent j.
+   revert dependent i.
+   revert dependent q.
+   revert dependent p.
+   specialize (well_founded_ind (R:=(@StrictPrefix' (Lab * Tag))) (@StrictPrefix_well_founded (Lab * Tag))
+                                (fun r => forall p q : Lab, 
+                                     ~ deq_loop q s ->
+                                     forall i j : Tag,  
+                                     TPath (u, l) (p, i) ((p, i) :: (q, j) :: r) ->
+                                     exists (e h qe : Lab) (r' r'' : list (Lab * Tag)) (n : nat),
+                                       r = r'' ++ r' /\
+                                       eq_loop e q /\
+                                       loop_contains h s /\
+                                       exit_edge h qe e /\
+                                       (forall x : Lab, x ∈ (q :: map fst r'') -> ~ deq_loop x qe) /\
+                                       hd (s, k) r' = (qe, n :: j) /\
+                                       TPath (e, j) (p, i) ((p, i) :: (q, j) :: r'') /\ TPath (u, l) (e, j) ((e, j) :: r'))) as WFind.
+   eapply WFind.
+   intros r' H p q Hndeq i j Hpath .
+   clear WFind.
+   unfold TPath in Hpath.
 
- Lemma find_last_exits p1 p2 q1 q2 u1 u2 s k i l1 l2 j1 j2 r1 r2
-       (Heq : eq_loop q1 q2)
-       (Hedge1 : (s,k) -t> (u1,l1))
-       (Hedge2 : (s,k) -t> (u2,l2))
-       (Hpath1 : TPath (u1,l1) (p1,i) ((p1,i) :: (q1,j1) :: r1))
-       (Hpath2 : TPath (u2,l2) (p2,i) ((p2,i) :: (q2,j2) :: r2))
-       (Hndeq : ~ deq_loop q1 s)
-       (Hdisj : Disjoint r1 r2)
-   : exists e1 e2 qe1 qe2 r1' r2' r1'' r2'' n1 n2,
-     r1 = r1'' ++ r1'
-     /\ r2 = r2'' ++ r2'
-     /\ eq_loop qe1 qe2
-     /\ deq_loop e1 q1
-     /\ deq_loop e2 q1
-     /\ hd (s, k) r1' = (qe1, n1 :: j1)
-     /\ hd (s, k) r2' = (qe2, n2 :: j2)
-     /\ TPath (e1,j1) (p1,i) ((p1,i) :: (q1,j1) :: r1'')
-     /\ TPath (e2,j2) (p2,i) ((p2,i) :: (q2,j2) :: r2'')
-     /\ TPath (u1,l1) (e1,j1) ((e1,j1) :: r1')
-     /\ TPath (u2,l2) (e2,j2) ((e2,j2) :: r2').
- Proof. (* TODO: move these proof arguments into split_Diamondpaths *)
-   eapply find_last_exit in Hpath1 as Hone;eauto.
-   destructH.
-   eapply find_last_exit in Hpath2 as Htwo;eauto.
-   2: { intro N. symmetry in Heq. eapply eq_loop1 in N. 2: eauto. contradiction. }
-   destructH.
-   do 10 eexists.
-   split_conj. 6: eapply Hone4. 6: eapply Htwo4. all:eauto. all: cycle 1.
-   - destruct Hone2;eauto.
-   - destruct Htwo2. rewrite Heq. eauto.
-   - eapply exit_edges_loop_eq;eauto.
-     rewrite Htwo2. rewrite Hone2. eauto.
- Qed.
+   inv Hpath.
+   rename H1 into Hpath. rename H4 into Edge1.
+   eapply path_front in Hpath as Htmp; subst b.
+   inv Hpath.
+   - clear H.
+     exists q. eexists. exists s. exists []. exists []. eexists.
+     split. eauto.
+     split. reflexivity.
+     split. {
+       admit.
+       }
+     split. {
+       admit.
+       }
+     split. {
+       intros. simpl in H. inv H; [ eassumption | contradiction ].
+     }
+     split. {
+       simpl. admit.
+     }
+     split; repeat (econstructor; eassumption).
+     econstructor; [ econstructor | eassumption ].
+   - rename H1 into Hpath. rename H4 into Edge2.
+     destruct b as [b m].
+     destruct r' as [| x rb]; [ inv Hpath |].
+     eapply path_front in Hpath as Htmp; subst x.
+     assert (Hprefix : StrictPrefix' rb ((b, m) :: rb)) by (repeat econstructor).
+     decide (eq_loop q b) as [ Heqqb | Hneqqb ].
+     + assert (Hndeqb : ~ deq_loop b s). {
+         symmetry in Heqqb. eauto using eq_loop1.
+       }
+       edestruct H as [e [h [qe [r' [r'' [n [Hcons [Heq [Hcont [Hexit [Hndeq' [Hhd [Hp1 Hp2]]]]]]]]]]]]]; try eassumption. {
+         econstructor. eapply Hpath. eassumption.
+       }
+       exists e, h, qe, r'. eexists. exists n.
+       split. {
+         rewrite Hcons. eapply app_comm_cons.
+       }
+       split. { 
+         rewrite Heqqb. eassumption.
+       }
+       split; [ eassumption |].
+       split; [ eassumption |].
+       split. {
+         intros x Hxin. eapply in_inv in Hxin.
+         destruct Hxin; [| eauto ].
+         subst x. intro. eapply (Hndeq' b); eauto using eq_loop1.
+       }
+
+       replace j with m in *.
+       * split; [ eassumption |].
+         split; [| eassumption ].
+         econstructor; eassumption.
+       * admit.
+ Admitted.
 
  Lemma split_DiamondPaths s u1 u2 p1 p2 q1 q2 k i l1 l2 j1 j2 r1 r2
        (Hndeq : ~ deq_loop q1 s)
@@ -1119,12 +1139,69 @@ Context `{C : redCFG}.
    : exists r1' r2' r1'' r2'' e1 e2 n1 n2 q1' q2',
      r1 = r1'' ++ r1'
      /\ r2 = r2'' ++ r2'
-     /\ DiamondPaths s u1 u2 e1 e2 q1' q2' k j1 l1 l2 (n1 :: j1) (n2 :: j1) r1' r2'
+     /\ DiamondPaths s u1 u2 e1 e2 q1' q2' k j1 l1 l2 (n1 :: j1) (n2 :: j1) r1'  r2'
      /\ TeqPaths e1 e2 q1 q2 j1 j1 j1 j2 r1'' r2''
      /\ (forall x, x ∈ (q1 :: map fst r1'') -> ~ deq_loop x q1')
      /\ (forall x, x ∈ (q2 :: map fst r2'') -> ~ deq_loop x q2')
      /\ eexit_edge q1' e1
      /\ eexit_edge q2' e2.
+ Proof.
+   destruct D.
+   edestruct (find_last_exit Dsk1 Dpath1 Hndeq) as [e1 [h1 [qe1 [r1' [r1'' [n1 P1]]]]]].
+   edestruct (find_last_exit Dsk2 Dpath2) as [e2 [h2 [qe2 [r2' [r2'' [n2 P2]]]]]]. {
+     intro. eapply Hndeq. symmetry in Dloop. eauto using eq_loop1.
+   }
+
+   do 2 destructH.
+
+   assert (Heq : eq_loop e1 e2). {
+     rewrite <- P1 in Dloop. rewrite <- P2 in Dloop.
+     eauto using exit_edges_loop_eq. 
+   }
+
+   replace h2 with h1 in *.
+   2: {
+     enough (eq_loop qe1 qe2).
+     - eauto using innermost_unique', exit_edge_innermost.
+     - eauto using exit_edges_loop_eq.
+   }
+
+   replace j2 with j1 in *.
+   2: {
+     assert (Edge1 : (q1, j1) -t> (p1, i)). {
+       inv P14. eapply path_front in H0. subst b. assumption.
+     }
+     assert (Edge2 : (q2, j2) -t> (p2, i)). {
+       inv P7. eapply path_front in H0. subst b. assumption.
+     }
+     eapply nexit_injective; try eassumption.
+     admit.
+   }
+
+   exists r1', r2', r1'', r2'', e1, e2, n1, n2, qe1, qe2.
+   do 2 (split; [ firstorder |]).
+
+   (* Diamond Paths *)
+   split. {
+     econstructor; try eassumption.
+     - unfold Disjoint in *. intro. intros. intro. eapply Ddisj.
+       rewrite P8. eapply in_cons. eauto using in_or_app. 
+       rewrite P0. eauto using in_cons, in_or_app. 
+     - rewrite <- P1 in Dloop. rewrite <- P2 in Dloop.
+       eauto using exit_edges_loop_eq. 
+   }
+
+   (* TeqPaths *)
+   split. {
+     econstructor; try eauto.
+     - inv P14. unfold TPath. eapply path_front in H0 as H0'. subst. eassumption.
+     - inv P7. unfold TPath. eapply path_front in H0 as H0'. subst. eassumption.
+     - unfold Disjoint in *. intros. intro. eapply (Ddisj a).
+       + rewrite P8. rewrite app_comm_cons. eauto using in_or_app. 
+       + rewrite P0. rewrite app_comm_cons. eauto using in_or_app. 
+    }
+
+   split; do 2 destructH; eassumption.
  Admitted.
 
  Lemma inhom_loop_exits_step_lt
