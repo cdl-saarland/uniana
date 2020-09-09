@@ -233,28 +233,6 @@ Context `{C : redCFG}.
     destruct D. cbn in Dqj2. auto.
   Qed.
 
-  Ltac diamond_subst_qj D :=
-    lazymatch type of D with
-    | DiamondPaths _ _ _ _ _ ?q1 ?q2 _ _ _ _ ?j1 ?j2 (?qj1 :: ?r1) _
-      => replace qj1 with (q1,j1) in *;
-        [clear qj1|destruct D;
-                   lazymatch goal with
-                   | Q : hd _ (qj1 :: _) = _ |- _ => cbn in Q; eauto
-                   end
-        ]
-    | _ => idtac
-    end;
-    lazymatch type of D with
-    | DiamondPaths _ _ _ _ _ ?q1 ?q2 _ _ _ _ ?j1 ?j2 _ (?qj2 :: ?r2)
-      => replace qj2 with (q2,j2) in *;
-        [clear qj2|destruct D;
-                   lazymatch goal with
-                   | Q : hd _ (qj2 :: _) = _ |- _ => cbn in Q; eauto
-                   end
-        ]
-    | _ => idtac
-    end.
-
   Lemma node_disj
         `(D : DiamondPaths)
         (Hjeq : j1 = j2)
