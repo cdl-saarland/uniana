@@ -258,13 +258,61 @@ Section cfg.
         cbn in H. eapply path_nlrcons_edge in H. eauto.
   Qed.
 
+  Lemma ex_entry'' (h p q : Lab) (i j j' k : Tag) t
+        (Hin : loop_contains h q)
+        (Hnin : ~ loop_contains h p)
+        (Hpath : TPath (p,i) (q,j) t)
+        (Heq : j = j' ++ k)
+        (Hlen : | k | = depth h - 1)
+    : (h,0 :: k) ∈ t.
+  Proof.
+    revert j' j q Heq Hpath Hin.
+    induction t;intros;inv_path Hpath.
+    - contradiction.
+    - destruct x as [u l].
+      decide (loop_contains h u).
+      + right.
+        eapply tcfg_edge_destruct' in H0.
+        destruct H0 as [[H0 H1]|[[H0 H1]|[[H0 H1]|[H0 H1]]]].
+        * eapply IHt. all: cycle 1; eauto.
+        * destruct j'.
+          -- exfalso. admit.
+          -- eapply IHt. all: cycle 1; eauto. cbn in H0. inversion H0. eauto.
+        * destruct j'.
+          -- admit.
+          -- destruct l;cbn in H0;[congruence|].
+             eapply IHt. all: cycle 1; eauto.
+             instantiate (1:=(n0 :: j')). cbn. inv H0. reflexivity.
+        * destruct l.
+          -- admit.
+          -- cbn in H0. eapply IHt. all: cycle 1; eauto. instantiate (1:=n :: j').
+             cbn. rewrite H0. reflexivity.
+      + eapply entry_through_header in Hin as Hin'. 2:eauto. 2: destruct H0;eauto.
+        subst q.
+        assert (entry_edge u h) as Hentry.
+        { split. 1: eapply loop_contains_loop_head;eauto. split;destruct H0;eauto. }
+        rewrite <-tag_entry_iff in Hentry;eauto.
+        assert (| j' ++ k | = depth h) by admit.
+        destruct j'.
+        * exfalso.
+          cbn in H1, Hentry. destruct k;[congruence|]. rewrite <-H1 in Hlen. cbn in Hlen. lia.
+        * destruct j'.
+          -- cbn in Hentry. inv Hentry. left. reflexivity.
+          -- exfalso.
+             rewrite <- H1 in Hlen. cbn in Hlen.
+             rewrite app_length in Hlen. lia.
+  Admitted.
+
+    (* (tl (take_r (depth h) j)) *)
   Lemma ex_entry (h p q : Lab) (i j : Tag) t
         (Hin : innermost_loop h q)
         (Hnin : ~ loop_contains h p)
         (Hpath : TPath (p,i) (q,j) t)
     : (h,0 :: tl j) ∈ t.
   Proof.
-  Admitted.-
+
+  Admitted.
+
 End cfg.
 
 Section diadef.
