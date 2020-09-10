@@ -1,9 +1,44 @@
 Require Import Lia.
 Require Export DisjPaths.
 
+
 Section disj.
 
   Context `{C : redCFG}.
+
+  Lemma tpath_depth_eq (p q : Lab) (i j : Tag) pi qj t
+        (Hpath : TPath pi qj t)
+        (Hel1 : (p,i) ∈ t)
+        (Hel2 : (q,j) ∈ t)
+        (Heq : |i| = |j|)
+    : depth p = depth q.
+  Proof.
+    (* FIXME *)
+  Admitted.
+
+  Lemma tpath_depth_lt (p q : Lab) (i j : Tag) pi qj t
+        (Hpath : TPath pi qj t)
+        (Hel1 : (p,i) ∈ t)
+        (Hel2 : (q,j) ∈ t)
+        (Hlt : |i| < |j|)
+    : depth p < depth q.
+  Proof.
+    (* FIXME *)
+  Admitted.
+
+  Lemma loop_tag_dom (h p : Lab) (i j : Tag) t
+    (Hloop : loop_contains h p)
+    (Hpath : TPath (root,start_tag) (p,i) t)
+    (Htagle : j ⊴ i)
+    (Hdep : |j| = depth h)
+    : (h,j) ∈ t.
+  Proof.
+    eapply dom_loop in Hloop as Hdom.
+    eapply TPath_CPath in Hpath as Hpath'. cbn in Hpath'.
+    eapply Hdom in Hpath'.
+    (* FIXME *)
+  Admitted.
+
 
   Infix "⊴" := Tagle (at level 70).
 

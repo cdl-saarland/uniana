@@ -1,4 +1,4 @@
-Require Export Tagged Disjoint.
+Require Export Tcfg Disjoint.
 
 
 Parameter splitsT : forall `{redCFG}, Lab -> list Lab.

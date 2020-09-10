@@ -82,13 +82,7 @@ Section eval.
            => let x1 := fresh "x" in
              let x2 := fresh "x" in
              destruct x as [x1 x2];
-             decide (edge__P q x1);[|try congruence; try contradiction](*
-              unfold eff_tag' in H;
-              match goal with
-              | Q : edge__P q x1 |- _
-                => destruct (edge_Edge Q);
-                  inversion H;subst
-              end*)
+             decide (edge__P q x1);[|try congruence; try contradiction]
          end
         |try congruence; try contradiction]
     | H : context [eff ?x] |- _

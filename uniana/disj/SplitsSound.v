@@ -1,4 +1,4 @@
-Require Export Splits SplitsT TeqPaths.
+Require Export Splits SplitsT TeqPaths TcfgDet.
 Require Import Lia.
 
 Definition inner' := fun (A : Type) (l : list A) => rev (tl (rev (tl l))).

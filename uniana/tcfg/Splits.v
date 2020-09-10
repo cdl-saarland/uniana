@@ -1,4 +1,4 @@
-Require Export HeadRewire Tagged Disjoint.
+Require Export HeadRewire Tcfg Disjoint.
 
 Section splits.
 

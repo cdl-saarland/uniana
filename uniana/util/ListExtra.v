@@ -439,3 +439,17 @@ Lemma hd_map_fst_snd (A B : Type) (a : A) (b : B) (l : list (A * B))
 Proof.
   destruct l;cbn;eauto using surjective_pairing.
 Qed.
+
+Lemma cons_neq (A : Type) (l : list A) (a : A)
+  : l = a :: l -> False.
+Proof.
+  induction l;intros;[congruence|].
+  inversion H. subst. eauto.
+Qed.
+
+Lemma tl_neq_cons (A : Type) (a : A) (l : list A)
+  : tl l = a :: l -> False.
+Proof.
+  revert a. induction l;intros;[cbn in *;congruence|].
+  eapply IHl. cbn in H. rewrite H at 1. cbn. reflexivity.
+Qed.

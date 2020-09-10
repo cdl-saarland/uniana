@@ -1,4 +1,4 @@
-Require Export Tagged Disjoint.
+Require Export TcfgLoop Disjoint.
 Require Import MaxPreSuffix Lia.
 
 
@@ -262,6 +262,7 @@ Section cfg.
         (Hin : loop_contains h q)
         (Hnin : ~ loop_contains h p)
         (Hpath : TPath (p,i) (q,j) t)
+        (Hleni : | i | = depth p)
         (Heq : j = j' ++ k)
         (Hlen : | k | = depth h - 1)
     : (h,0 :: k) ∈ t.
