@@ -149,7 +149,7 @@ Proof.
   copy D D'.
   destruct D.
   inv_path Dpath1. inv_path Dpath2.
-  econstructor; eauto using tl_eq, lj_eq1, lj_eq2, jj_len.
+  econstructor; eauto using tl_eq, lj_eq1, lj_eq2, jj_len, j_len1.
 Qed.
 
 Lemma loop_head_eq_loop_eq `(C : redCFG) h1 h2
@@ -263,6 +263,7 @@ Context `{C : redCFG}.
       exfalso. eapply teq_no_back2 in T';eauto.
       eapply TPath_CPath in Tpath2. cbn in Tpath2. eapply path_contains_back;eauto.
     - destruct Tlj_eq1;[left|right];firstorder.
+    - rewrite <-Tloop. eauto.
   Qed.
 
   Lemma expand_hpath (π : list Lab) q p
@@ -356,7 +357,7 @@ Context `{C : redCFG}.
   Proof.
     destruct Ha as [Ha Ha'].
     destruct Hb as [Hb Hb'].
-    destruct Heq. 
+    destruct Heq.
     unfold deq_loop in *.
     eapply loop_contains_Antisymmetric; eauto.
   Qed.
@@ -1037,9 +1038,9 @@ Context `{C : redCFG}.
    revert dependent q.
    revert dependent p.
    specialize (well_founded_ind (R:=(@StrictPrefix' (Lab * Tag))) (@StrictPrefix_well_founded (Lab * Tag))
-                                (fun r => forall p q : Lab, 
+                                (fun r => forall p q : Lab,
                                      ~ deq_loop q s ->
-                                     forall i j : Tag,  
+                                     forall i j : Tag,
                                      TPath (u, l) (p, i) ((p, i) :: (q, j) :: r) ->
                                      exists (e h qe : Lab) (r' r'' : list (Lab * Tag)) (n : nat),
                                        r = r'' ++ r' /\
@@ -1092,7 +1093,7 @@ Context `{C : redCFG}.
        split. {
          rewrite Hcons. eapply app_comm_cons.
        }
-       split. { 
+       split. {
          rewrite Heqqb. eassumption.
        }
        split; [ eassumption |].
@@ -1134,7 +1135,7 @@ Context `{C : redCFG}.
 
    assert (Heq : eq_loop e1 e2). {
      rewrite <- P1 in Dloop. rewrite <- P2 in Dloop.
-     eauto using exit_edges_loop_eq. 
+     eauto using exit_edges_loop_eq.
    }
 
    replace h2 with h1 in *.
@@ -1163,10 +1164,10 @@ Context `{C : redCFG}.
    split. {
      econstructor; try eassumption.
      - unfold Disjoint in *. intro. intros. intro. eapply Ddisj.
-       rewrite P8. eapply in_cons. eauto using in_or_app. 
-       rewrite P0. eauto using in_cons, in_or_app. 
+       rewrite P8. eapply in_cons. eauto using in_or_app.
+       rewrite P0. eauto using in_cons, in_or_app.
      - rewrite <- P1 in Dloop. rewrite <- P2 in Dloop.
-       eauto using exit_edges_loop_eq. 
+       eauto using exit_edges_loop_eq.
    }
 
    (* TeqPaths *)
@@ -1175,11 +1176,12 @@ Context `{C : redCFG}.
      - inv P14. unfold TPath. eapply path_front in H0 as H0'. subst. eassumption.
      - inv P7. unfold TPath. eapply path_front in H0 as H0'. subst. eassumption.
      - unfold Disjoint in *. intros. intro. eapply (Ddisj a).
-       + rewrite P8. rewrite app_comm_cons. eauto using in_or_app. 
-       + rewrite P0. rewrite app_comm_cons. eauto using in_or_app. 
+       + rewrite P8. rewrite app_comm_cons. eauto using in_or_app.
+       + rewrite P0. rewrite app_comm_cons. eauto using in_or_app.
+     - admit.
     }
 
-   split; do 2 destructH; eassumption.
+
  Admitted.
 
  Lemma inhom_loop_exits_step_lt
@@ -1386,7 +1388,7 @@ Context `{C : redCFG}.
     eapply splitsT_spec in Hin.
     destructH.
     (* contradict π and ϕ (the paths from (u,l) to (p,i)) being empty *)
-    destruct π as [|pi1 r1]; destruct ϕ as [|pi2 r2]; cbn in Hin1, Hin6.
+    destruct π as [|pi1 r1]; destruct ϕ as [|pi2 r2]; cbn in Hin1, Hin5.
     1: tauto.
     1: inversion Hin0.
     1: inversion Hin2.
@@ -1453,7 +1455,7 @@ Context `{C : redCFG}.
       + tauto.
       + cbn in D,H0. subst j2.
         eapply splits_spec. eapply path_single in Hin0. destruct Hin0. inversion H. subst.
-        clear H0 H1 Hin1 Hin3 Hin6 H. clear Hqp2.
+        clear H0 H1 Hin1 Hin3 Hin5 H. clear Hqp2.
         eapply contract_one_empty;eauto.
       + eapply DiamondPaths_sym in D.
         cbn in D,H0. subst j1.

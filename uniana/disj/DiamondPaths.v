@@ -331,7 +331,8 @@ Section diadef.
       Dqj1 : hd (s,k) r1 = (q1,j1);
       Dqj2 : hd (s,k) r2 = (q2,j2);
       Ddisj : Disjoint r1 r2;
-      Dloop : eq_loop q1 q2
+      Dloop : eq_loop q1 q2;
+      Dlen : | k | = depth s
     }.
 
   (* It is not possible to define TeqPaths for empty r1 or r2 in a meaningful way *)
@@ -346,7 +347,8 @@ Section diadef.
       Tjj_len : |j1| = |j2|;
                           Ttl_eq : tl j1 = tl j2;
       Tlj_eq1 : l1 = j1 \/ l1 = 0 :: j1;
-      Tlj_eq2 : l2 = j1 \/ l2 = 0 :: j1 \/ loop_contains u2 q1
+      Tlj_eq2 : l2 = j1 \/ l2 = 0 :: j1 \/ loop_contains u2 q1;
+      Tj_len : | j1 | = depth q1
     }.
 End diadef.
 
@@ -441,6 +443,17 @@ Lemma Dpath_sq2 `(D : DiamondPaths)
 Proof.
   eapply Dpath_sq1.
   eapply DiamondPaths_sym;eauto.
+Qed.
+
+Lemma j_len1 `(D : DiamondPaths)
+  : | j1 | = depth q1.
+Proof.
+Admitted.
+
+Lemma j_len2 `(D : DiamondPaths)
+  : | j2 | = depth q2.
+Proof.
+  eapply j_len1; eauto using DiamondPaths_sym.
 Qed.
 
 Lemma jj_len `(D : DiamondPaths)

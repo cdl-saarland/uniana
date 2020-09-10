@@ -309,10 +309,11 @@ Section uniana.
           1: eapply Hlc4.
           1: eapply Hlc0.
           all:cbn;eauto.
+          admit.
         * inversion Htr2.
           eapply Tr_EPath in H4;eauto. destructH. eapply EPath_TPath in H4. cbn in *. eauto.
           cbn. eauto.
-  Qed.
+  Admitted.
 
   Hint Resolve Conf_dec.
 

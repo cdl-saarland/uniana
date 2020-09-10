@@ -92,6 +92,7 @@ Proof.
     - destruct r2; cbn; cbn in H0; inv_path H0; eauto.
     - auto.
     - eapply exiting_eq_loop;eauto.
+    - admit.
   }
   inv_path Hpath1. inv_path Hpath2.
   eapply tag_exit_eq' in Hexit1;eauto.

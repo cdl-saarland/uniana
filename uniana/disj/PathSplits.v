@@ -46,6 +46,8 @@ Proof.
     tryif inv H2' then idtac else subst.
   1: contradiction.
   all: split_conj.
+  7,14: eapply tag_depth';eauto.
+  19: { admit. }
   3,9,15: eauto.
   1,5,7,10,15: cbn.
   1,3:econstructor.
@@ -67,4 +69,4 @@ Proof.
   all: try (replace (hd (p, i) (rev ((q1, j1) :: x))) with (hd (q1, j1) (rev ((q1, j1) :: x)));
             [|eapply hd_nnil;cbn;intro N;congruence']).
   all:now eauto.
-Qed.
+Admitted.

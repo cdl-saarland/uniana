@@ -13,4 +13,5 @@ Parameter splitsT_spec
                             /\ Disjoint (tl π) (tl ϕ)
                             /\ tcfg_edge (sp,k) (u1,l1)
                             /\ tcfg_edge (sp,k) (u2,l2)
-                            /\ (tl π <> nil \/ tl ϕ <> nil).
+                            /\ (tl π <> nil \/ tl ϕ <> nil)
+                            /\ | k | = depth sp.
