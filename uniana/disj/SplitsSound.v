@@ -1020,96 +1020,133 @@ Context `{C : redCFG}.
   Admitted.
   Ltac spot_path := admit.
 
- Lemma find_last_exit p q u s k i l j r
-       (Hedge : (s,k) -t> (u,l))
-       (Hpath : TPath (u,l) (p,i) ((p,i) :: (q,j) :: r))
-       (Hndeq : ~ deq_loop q s)
-   : exists e h qe r' r'' n, r = r'' ++ r'
-                        /\ eq_loop e q
-                        /\ loop_contains h s
-                        /\ exit_edge h qe e
-                        /\ (forall x, x ∈ (q :: map fst r'') -> ~ deq_loop x qe)
-                        /\ hd (s,k) r' = (qe, n :: j)
-                        /\ TPath (e,j) (p,i) ((p,i) :: (q,j) :: r'')
-                        /\ TPath (u,l) (e,j) ((e,j) :: r').
- Proof.
-   revert dependent j.
-   revert dependent i.
-   revert dependent q.
-   revert dependent p.
-   specialize (well_founded_ind (R:=(@StrictPrefix' (Lab * Tag))) (@StrictPrefix_well_founded (Lab * Tag))
-                                (fun r => forall p q : Lab,
-                                     ~ deq_loop q s ->
-                                     forall i j : Tag,
-                                     TPath (u, l) (p, i) ((p, i) :: (q, j) :: r) ->
-                                     exists (e h qe : Lab) (r' r'' : list (Lab * Tag)) (n : nat),
-                                       r = r'' ++ r' /\
-                                       eq_loop e q /\
-                                       loop_contains h s /\
-                                       exit_edge h qe e /\
-                                       (forall x : Lab, x ∈ (q :: map fst r'') -> ~ deq_loop x qe) /\
-                                       hd (s, k) r' = (qe, n :: j) /\
-                                       TPath (e, j) (p, i) ((p, i) :: (q, j) :: r'') /\ TPath (u, l) (e, j) ((e, j) :: r'))) as WFind.
-   eapply WFind.
-   intros r' H p q Hndeq i j Hpath .
-   clear WFind.
-   unfold TPath in Hpath.
+  Lemma not_deq_edge_is_exit a b h
+        (Edge : a --> b)
+        (Hinner : innermost_loop h a)
+        (Hndeq : ~ deq_loop b a)
+    : exit_edge h a b.
+  Proof.
+    eapply edge_Edge in Edge.
+    inv Edge.
+    - exfalso. destruct H as [H _]. eapply Hndeq. eapply eq_loop1. eapply H. reflexivity.
+    - exfalso. eapply back_edge_eq_loop in H. eapply Hndeq. eapply eq_loop1. eapply H. reflexivity.
+    - exfalso. eapply deq_loop_entry in H. contradiction.
+    - destruct H as [h' Hexit].
+      enough (h = h').
+      + subst h'. eassumption.
+      + eauto using exit_edge_innermost, innermost_unique. 
+  Qed.
 
-   inv Hpath.
-   rename H1 into Hpath. rename H4 into Edge1.
-   eapply path_front in Hpath as Htmp; subst b.
-   inv Hpath.
-   - clear H.
-     exists q. eexists. exists s. exists []. exists []. eexists.
-     split. eauto.
-     split. reflexivity.
-     split. {
-       admit.
-       }
-     split. {
-       admit.
-       }
-     split. {
-       intros. simpl in H. inv H; [ eassumption | contradiction ].
-     }
-     split. {
-       simpl. admit.
-     }
-     split; repeat (econstructor; eassumption).
-     econstructor; [ econstructor | eassumption ].
-   - rename H1 into Hpath. rename H4 into Edge2.
-     destruct b as [b m].
-     destruct r' as [| x rb]; [ inv Hpath |].
-     eapply path_front in Hpath as Htmp; subst x.
-     assert (Hprefix : StrictPrefix' rb ((b, m) :: rb)) by (repeat econstructor).
-     decide (eq_loop q b) as [ Heqqb | Hneqqb ].
-     + assert (Hndeqb : ~ deq_loop b s). {
-         symmetry in Heqqb. eauto using eq_loop1.
-       }
-       edestruct H as [e [h [qe [r' [r'' [n [Hcons [Heq [Hcont [Hexit [Hndeq' [Hhd [Hp1 Hp2]]]]]]]]]]]]]; try eassumption. {
-         econstructor. eapply Hpath. eassumption.
-       }
-       exists e, h, qe, r'. eexists. exists n.
-       split. {
-         rewrite Hcons. eapply app_comm_cons.
-       }
-       split. {
-         rewrite Heqqb. eassumption.
-       }
-       split; [ eassumption |].
-       split; [ eassumption |].
-       split. {
-         intros x Hxin. eapply in_inv in Hxin.
-         destruct Hxin; [| eauto ].
-         subst x. intro. eapply (Hndeq' b); eauto using eq_loop1.
-       }
+  Lemma find_last_exit p q u s k i l j r
+        (Hedge : (s,k) -t> (u,l))
+        (Hpath : TPath (u,l) (p,i) ((p,i) :: (q,j) :: r))
+        (Hndeq : ~ deq_loop q s)
+        (Hallin : forall x : Lab, x ∈ map fst ((q, j) :: r) -> deq_loop x q)
+    : exists e h qe r' r'' n (m : Tag), r = r'' ++ r'
+                                   /\ eq_loop e q
+                                   /\ loop_contains h s
+                                   /\ exit_edge h qe e
+                                   /\ (forall x, x ∈ (q :: map fst r'') -> ~ deq_loop x qe)
+                                   /\ tl m = tl j
+                                   /\ hd (s,k) r' = (qe, n :: m)
+                                   /\ TPath (e,m) (p,i) ((p,i) :: (q,j) :: r'')
+                                   /\ TPath (u,l) (e,m) ((e,m) :: r').
+  Proof.
+    revert dependent j.
+    revert dependent i.
+    revert dependent q.
+    revert dependent p.
+    specialize (well_founded_ind (R:=(@StrictPrefix' (Lab * Tag))) (@StrictPrefix_well_founded (Lab * Tag))
+                                 (fun r => forall p q : Lab, 
+                                      ~ deq_loop q s ->
+                                      forall i j : Tag,  
+                                        TPath (u, l) (p, i) ((p, i) :: (q, j) :: r) ->
+                                        (forall x : Lab, x ∈ map fst ((q, j) :: r) -> deq_loop x q) ->
+                                        exists (e h qe : Lab) (r' r'' : list (Lab * Tag)) (n : nat) (m : Tag),
+                                          r = r'' ++ r'
+                                          /\ eq_loop e q
+                                          /\ loop_contains h s
+                                          /\ exit_edge h qe e
+                                          /\ (forall x : Lab, x ∈ (q :: map fst r'') -> ~ deq_loop x qe)
+                                          /\ tl m = tl j
+                                          /\ hd (s, k) r' = (qe, n :: m)
+                                          /\ TPath (e, m) (p, i) ((p, i) :: (q, j) :: r'')
+                                          /\ TPath (u, l) (e, m) ((e, m) :: r'))) as WFind.
+    eapply WFind.
+    intros r' H p q Hndeq i j Hpath Hallin.
+    clear WFind.
+    unfold TPath in Hpath.
 
-       replace j with m in *.
-       * split; [ eassumption |].
-         split; [| eassumption ].
-         econstructor; eassumption.
-       * admit.
- Admitted.
+    inv Hpath.
+    rename H1 into Hpath. rename H4 into Edge1.
+    eapply path_front in Hpath as Htmp; subst b.
+    inv Hpath.
+    - clear H Hallin.
+      assert (Hcont' := Hndeq).
+      do 2 (simpl_dec' Hcont').
+      destruct Hcont' as [h' [Hcont' _]].
+      edestruct loop_contains_innermost as [h Hinner]; try eassumption.
+      clear h' Hcont'.
+      assert (Hcont : loop_contains h s) by firstorder.
+      assert (Hexit : exit_edge h s q). {
+        destruct Hedge. eauto using not_deq_edge_is_exit.
+      }
+      destruct k as [| n j']. {
+        eapply loop_contains_depth_lt in Hcont.
+        erewrite <- (@tag_depth') with (p := s) (i := []) in Hcont.
+        - simpl in Hcont. inv Hcont.
+        - admit.
+      }
+      replace j' with j in *.
+      2: {
+        eapply tag_exit_eq in Hexit; try eassumption. simpl in Hexit. eassumption.
+      }
+      exists q, h, s. exists []. exists []. exists n, j.
+      do 4 (split; eauto; try reflexivity).
+      split. {
+        intros. simpl in H. inv H; [ eassumption | contradiction ].
+      }
+      do 2 (split; [ reflexivity |]).
+      split; repeat (econstructor; eassumption).
+      econstructor; [ econstructor | eassumption ].
+    - rename H1 into Hpath. rename H4 into Edge2.
+      destruct b as [b m].
+      destruct r' as [| x rb]; [ inv Hpath |].
+      eapply path_front in Hpath as Htmp; subst x.
+      assert (Hprefix : StrictPrefix' rb ((b, m) :: rb)) by (repeat econstructor).
+      assert (Hdeqbq : deq_loop b q). {
+        eapply Hallin. simpl. eauto.
+      }
+      decide (eq_loop q b) as [ Heqqb | Hneqqb ].
+      + clear Hdeqbq.
+        assert (Hndeqb : ~ deq_loop b s). {
+          symmetry in Heqqb. eauto using eq_loop1.
+        }
+        edestruct H as [e [h [qe [r' [r'' [n' [m' [Hcons [Heq [Hcont [Hexit [Hndeq' [Htail [Hhd [Hp1 Hp2]]]]]]]]]]]]]]]; try eassumption.
+        * econstructor. eapply Hpath. eassumption. 
+        * intros. eapply eq_loop2. eassumption. eapply Hallin. simpl. eauto.
+        * clear H.
+          exists e, h, qe, r'. eexists. exists n', m'.
+          split. {
+            rewrite Hcons. eapply app_comm_cons.
+          }
+          split. { 
+            rewrite Heqqb. eassumption.
+          }
+          split; [ eassumption |].
+          split; [ eassumption |].
+          split. {
+            intros x Hxin. eapply in_inv in Hxin.
+            destruct Hxin; [| eauto ].
+            subst x. intro. eapply (Hndeq' b); eauto using eq_loop1.
+          }
+
+          split; [ eassumption |].
+          split; [ eassumption |].
+          split; [| eassumption ].
+          econstructor; eassumption.
+      + admit.
+  Admitted.
 
  Lemma split_DiamondPaths s u1 u2 p1 p2 q1 q2 k i l1 l2 j1 j2 r1 r2
        (Hndeq : ~ deq_loop q1 s)
@@ -1125,6 +1162,7 @@ Context `{C : redCFG}.
      /\ eexit_edge q1' e1
      /\ eexit_edge q2' e2.
  Proof.
+   specialize (r2_incl_head_q D) as Hinclh.
    destruct D.
    edestruct (find_last_exit Dsk1 Dpath1 Hndeq) as [e1 [h1 [qe1 [r1' [r1'' [n1 P1]]]]]].
    edestruct (find_last_exit Dsk2 Dpath2) as [e2 [h2 [qe2 [r2' [r2'' [n2 P2]]]]]]. {
@@ -1145,16 +1183,18 @@ Context `{C : redCFG}.
      - eauto using exit_edges_loop_eq.
    }
 
+   assert (Edge1 : (q1, j1) -t> (p1, i)). {
+     inv P14. eapply path_front in H0. subst b. assumption.
+   }
+   assert (Edge2 : (q2, j2) -t> (p2, i)). {
+     inv P7. eapply path_front in H0. subst b. assumption.
+   }
+
+   eapply tl_eq in Htagle.
+
    replace j2 with j1 in *.
    2: {
-     assert (Edge1 : (q1, j1) -t> (p1, i)). {
-       inv P14. eapply path_front in H0. subst b. assumption.
-     }
-     assert (Edge2 : (q2, j2) -t> (p2, i)). {
-       inv P7. eapply path_front in H0. subst b. assumption.
-     }
-     eapply nexit_injective; try eassumption.
-     admit.
+     
    }
 
    exists r1', r2', r1'', r2'', e1, e2, n1, n2, qe1, qe2.
