@@ -25,7 +25,7 @@ Section cfg.
     rewrite <-rev_length. eapply take_len_id.
   Qed.
 
-  Lemma tagle_prefix i j
+  Local Lemma tagle_prefix i j
         (Hpre : Prefix i j)
     : i ⊴ j.
   Proof.
@@ -62,7 +62,7 @@ Section cfg.
   Qed.
   Notation "x ◁ y" := (x ⊴ y /\ x <> y) (at level 70).
 
-  Lemma tagle_or i j
+  Local Lemma tagle_or i j
         (Htag : i ⊴ j)
     : |i| <= |j| \/ i ◁ j.
   Proof.
@@ -106,7 +106,7 @@ Section cfg.
     rewrite <-rev_rev_eq. eauto.
   Qed.
 
-  Lemma taglt_eq i j
+  Local Lemma taglt_eq i j
         (Htlt : i ◁ j)
         (Hlen : |i| = |j|)
     : exists k0 k1 k2 n1 n2, i = k1 ++ n1 :: k0 /\ j = k2 ++ n2 :: k0 /\ n1 < n2.
@@ -131,7 +131,7 @@ Section cfg.
       eapply IHk. eapply Tagle_rcons;eauto.
   Qed.
 
-  Lemma taglt_cons i j n m
+  Local Lemma taglt_cons i j n m
         (Hlen : |i| = |j|)
         (Htlt : i ◁ j)
     : n :: i ◁ m :: j.
@@ -207,7 +207,7 @@ Section cfg.
     rewrite take_r_len_id. reflexivity.
   Qed.
 
-  Lemma tagle_take_r (i j : Tag) (n : nat)
+  Local Lemma tagle_take_r (i j : Tag) (n : nat)
         (Htgl : i ⊴ take_r n j)
     : i ⊴ j.
   Proof.
@@ -227,7 +227,7 @@ Section cfg.
     reflexivity.
   Qed.
 
-  Lemma tagle_take_r_leq (i j : Tag) (n : nat)
+  Local Lemma tagle_take_r_leq (i j : Tag) (n : nat)
         (Hleq : |i| <= n)
         (Htgl : i ⊴ j)
     : i ⊴ take_r n j.
@@ -266,7 +266,7 @@ Section cfg.
 
   (** ** Weak monotonicity **)
 
-  Lemma tcfg_monotone' p i t q j t' h
+  Local Lemma tcfg_monotone' p i t q j t' h
         (Hpath : TPath (root,start_tag) (p,i) t)
         (Hsuff : Postfix t' t)
         (Hel : (q,j) ∈ t')
@@ -483,7 +483,7 @@ Section cfg.
 
   (* TODO: move ex_entry proof to this point. it does not require any assumptions,
 thus it should be possible *)
-  Lemma tcfg_fresh_head' h p i k t
+  Local Lemma tcfg_fresh_head' h p i k t
         (Hpath : TPath (root,start_tag) (h,0::k) t)
         (Hloop : loop_contains h p)
         (Hsp : splinter_strict [(h,0::k);(p,i)] t)
