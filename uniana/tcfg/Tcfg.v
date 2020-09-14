@@ -1,4 +1,4 @@
-Require Export EEdge Tagle.
+Require Export EEdge Tagleq.
 Require Import PropExtensionality Lia.
 
 Section cfg.
