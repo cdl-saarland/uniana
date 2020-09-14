@@ -2,6 +2,7 @@ Require Export TcfgLoop.
 Require Import Lia.
 
 Section cfg.
+
   Context `(C : redCFG).
 
   Lemma tag_depth_unroot p q i j t
