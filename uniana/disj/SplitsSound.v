@@ -1091,7 +1091,7 @@ Context `{C : redCFG}.
                                    /\ loop_contains h s
                                    /\ exit_edge h qe e
                                    /\ (forall x, x ∈ (q :: map fst r'') -> ~ deq_loop x qe)
-                                   /\ (exists k', k = k' ++ m)
+                                   /\ take_r (depth h - 1) k = take_r (depth h - 1) m
                                    /\ tl m = tl j
                                    /\ hd (s,k) r' = (qe, n :: m)
                                    /\ TPath (e,m) (p,i) ((p,i) :: (q,j) :: r'')
@@ -1114,7 +1114,7 @@ Context `{C : redCFG}.
                                           /\ loop_contains h s
                                           /\ exit_edge h qe e
                                           /\ (forall x : Lab, x ∈ (q :: map fst r'') -> ~ deq_loop x qe)
-                                          /\ (exists k', k = k' ++ m)
+                                          /\ take_r (depth h - 1) k = take_r (depth h - 1) m
                                           /\ tl m = tl j
                                           /\ hd (s, k) r' = (qe, n :: m)
                                           /\ TPath (e, m) (p, i) ((p, i) :: (q, j) :: r'')
@@ -1151,7 +1151,7 @@ Context `{C : redCFG}.
         intros. simpl in H. inv H; [ eassumption | contradiction ].
       }
       split. {
-        exists [n]. reflexivity.
+        admit.
       }
       do 2 (split; [ reflexivity |]).
       split; repeat (econstructor; eassumption).
@@ -1257,6 +1257,8 @@ Context `{C : redCFG}.
                intros. destruct H; [| inv H]. subst x. unfold eq_loop in Hneqqb. firstorder.
              }
              split. {
+                admit.
+                (*
                 eapply exit_tag_all_contained.
                 ** econstructor; [| eassumption ].
                    eapply path_app in Hedge.
@@ -1268,6 +1270,7 @@ Context `{C : redCFG}.
                    --- simpl. unfold exit_edge in Hexit. firstorder.
                    --- rewrite map_rcons in H0. simpl in H0. eapply in_app_or in H0. inv H0; eauto.
                        inv H. eauto. inv H0.
+*)
              }
              do 2 (split; try reflexivity).
              split.
@@ -1289,67 +1292,6 @@ Context `{C : redCFG}.
      /\ eexit_edge q1' e1
      /\ eexit_edge q2' e2.
  Proof.
-   specialize (r2_incl_head_q D) as Hinclh.
-   destruct D.
-    (*
-   edestruct (find_last_exit Dsk1 Dpath1 Hndeq) as [e1 [h1 [qe1 [r1' [r1'' [n1 P1]]]]]].
-   edestruct (find_last_exit Dsk2 Dpath2) as [e2 [h2 [qe2 [r2' [r2'' [n2 P2]]]]]]. {
-     intro. eapply Hndeq. symmetry in Dloop. eauto using eq_loop1.
-   }
-
-   do 2 destructH.
-
-   assert (Heq : eq_loop e1 e2). {
-     rewrite <- P1 in Dloop. rewrite <- P2 in Dloop.
-     eauto using exit_edges_loop_eq.
-   }
-
-   replace h2 with h1 in *.
-   2: {
-     enough (eq_loop qe1 qe2).
-     - eauto using innermost_unique', exit_edge_innermost.
-     - eauto using exit_edges_loop_eq.
-   }
-
-   assert (Edge1 : (q1, j1) -t> (p1, i)). {
-     inv P14. eapply path_front in H0. subst b. assumption.
-   }
-   assert (Edge2 : (q2, j2) -t> (p2, i)). {
-     inv P7. eapply path_front in H0. subst b. assumption.
-   }
-
-   eapply tl_eq in Htagle.
-
-   replace j2 with j1 in *.
-   2: {
-
-   }
-
-   exists r1', r2', r1'', r2'', e1, e2, n1, n2, qe1, qe2.
-   do 2 (split; [ firstorder |]).
-
-   (* Diamond Paths *)
-   split. {
-     econstructor; try eassumption.
-     - unfold Disjoint in *. intro. intros. intro. eapply Ddisj.
-       rewrite P8. eapply in_cons. eauto using in_or_app.
-       rewrite P0. eauto using in_cons, in_or_app.
-     - rewrite <- P1 in Dloop. rewrite <- P2 in Dloop.
-       eauto using exit_edges_loop_eq.
-   }
-
-   (* TeqPaths *)
-   split. {
-     econstructor; try eauto.
-     - inv P14. unfold TPath. eapply path_front in H0 as H0'. subst. eassumption.
-     - inv P7. unfold TPath. eapply path_front in H0 as H0'. subst. eassumption.
-     - unfold Disjoint in *. intros. intro. eapply (Ddisj a).
-       + rewrite P8. rewrite app_comm_cons. eauto using in_or_app.
-       + rewrite P0. rewrite app_comm_cons. eauto using in_or_app.
-     - admit.
-    }
-*)
-
  Admitted.
 
  Lemma inhom_loop_exits_step_lt
