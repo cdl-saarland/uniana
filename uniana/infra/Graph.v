@@ -480,6 +480,15 @@ Section graph.
     - cbn. inv Hpath. path_simpl' H0. auto.
   Qed.
 
+  Lemma path_single (a b c : L)
+        (Hpath : Path a b [c])
+    : a = b /\ b = c.
+  Proof.
+    inversion Hpath.
+    - subst; eauto.
+    - inversion H3.
+  Qed.
+
 End graph.
 
 Arguments Path {L}.
@@ -604,3 +613,33 @@ Proof.
   path_simpl' Hpath.
   reflexivity.
 Qed.
+
+
+Ltac path_simpl2' H :=
+  let Q:= fresh "Q" in
+  lazymatch type of H with
+  | Path ?e ?x ?y (?z :: ?π) =>
+    replace y with z in *; [ | symmetry;eapply path_front;eauto ];
+                              match type of H with
+                              | Path _ _ _ (?w :: [])
+                                => fold ([] ++ [w]) in H;
+                                  path_simpl' H;
+                                  unfold app in H
+                              | Path _ _ _ (?w :: ?z :: [])
+                                => fold ([w] ++ [z]) in H;
+                                  path_simpl' H;
+                                  unfold app in H
+                              | _ => idtac
+                              end
+  | Path ?e ?x ?y (?π ++ [?z]) => replace x with z in *; [ | symmetry;eapply path_back; eauto ]
+  end.
+
+Ltac inv_path H :=
+  try path_simpl' H;
+  let x := fresh "x" in
+  inversion H as [ | ? x ]; subst;
+  match goal with
+  | Q : Path _ _ x _ |- _ => path_simpl2' Q
+  | Q : Path _ _ _ [] |- _ => inversion Q
+  | |- _ => idtac
+  end.

@@ -105,15 +105,6 @@ Proof.
   eapply Hacy;eauto.
 Qed.
 
-Lemma path_single (L : Type) (e : L -> L -> Prop) (a b c : L)
-      (Hpath : Path e a b [c])
-  : a = b /\ b = c.
-Proof.
-  inversion Hpath.
-  - subst; eauto.
-  - inversion H3.
-Qed.
-
 Lemma disjoint_app_app (A : Type) (l1 l2 l3 l4 : list A)
   : Disjoint l1 l3
     -> Disjoint l1 l4
