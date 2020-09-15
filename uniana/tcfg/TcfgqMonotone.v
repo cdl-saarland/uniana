@@ -273,6 +273,60 @@ Section cfg.
     destruct Hedge;auto.
   Qed.
 
+  (* (tl (take_r (depth h) j)) *)
+  Lemma ex_entry (h p q : Lab) (i j : Tag) n t
+        (Hlen : | i | = depth p)
+        (Hin : loop_contains h q)
+        (Hnin : ~ loop_contains h p)
+        (Hpath : TPath (p,i) (q,j) t)
+        (Hdep : depth h = n)
+    : (h,0 :: (take_r (n-1) j)) ∈ t.
+  Proof.
+  Admitted.
+
+  Lemma ex_entry_rooted (h q : Lab) (j : Tag) n t
+        (Hin : loop_contains h q)
+        (Hpath : TPath (root,start_tag) (q,j) t)
+        (Hdep : depth h = n)
+    : (h,0 :: (take_r (n-1) j)) ∈ t.
+  Proof.
+  Admitted.
+
+  Lemma taglt_leq i j m n
+        (Htaglt : take_r m j ◁ take_r m i)
+        (Hleq : m <= n)
+    : take_r n j ◁ take_r n i.
+  Admitted.
+
+  Lemma taglt_cons i j n
+    : n :: i ◁ n :: j <-> i ◁ j.
+  Admitted.
+
+  Lemma taglt_cons_cons i j n m
+        (Htaglt : i ◁ j)
+    : n :: i ◁ m :: j.
+  Admitted.
+
+  Lemma take_r_len (A : Type) n (l : list A)
+        (H : n <= | l |)
+    : | take_r n l | = n.
+  Admitted.
+
+  Lemma take_r_self (A : Type) (l : list A)
+    : take_r (|l|) l = l.
+  Admitted.
+
+  Lemma taglt_tagle (i j : Tag)
+    : i ◁ j -> i ⊴ j.
+  Proof.
+    intros. left. auto.
+  Qed.
+
+  Lemma take_r_take_r_leq (A : Type) (l : list A) n m
+        (Hle : n <= m)
+    : take_r n (take_r m l) = take_r n l.
+  Admitted.
+
   Lemma monotone q j p i t h n
         (Hlen : |j| = depth q)
         (Hpath : TPath (q,j) (p,i) t)
@@ -292,7 +346,56 @@ Section cfg.
       destruct H0 as [[H0 Q0]|[[H0 Q0]|[[H0 Q0]|[H0 Q0]]]].
       + subst. eapply IHt;eauto.
         eapply basic_edge_eq_loop in Q0. symmetry in Q0. eapply eq_loop1;eauto.
-      + admit.
+      + decide (loop_contains p q).
+        * subst i.
+          specialize (tcfg_reachability Hlen) as Hreach.
+          destructH.
+          eapply ex_entry_rooted in Hreach as Hentry;eauto.
+          eapply path_from_elem in Hentry;eauto.
+          destructH.
+          eapply path_app' in Hpath;eauto.
+          eapply depth_entry in Q0 as Q1.
+          eapply loop_contains_deq_loop in l as Hdeppq. eapply deq_loop_depth in Hdeppq.
+          assert (depth p - 1 = depth e) as Hdeppe by lia.
+          eapply deq_loop_depth in Hdeqq as Hdepq.
+          eapply deq_loop_depth in Hdeqp as Hdepp.
+          eapply tcfg_fresh in Hpath.
+          2: {
+            cbn.
+            rewrite take_r_len.
+            1: lia.
+            lia.
+          }
+          2: { cbn. destruct t;[inv H|]. cbn. lia. }
+          rewrite taglt_cons in Hpath.
+          decide (depth p - 1 <= S n).
+          -- left.
+             eapply taglt_leq with (m:=depth p - 1).
+             2: lia.
+             rewrite take_r_leq_cons.
+             2: lia.
+             rewrite Hdeppe at 2. rewrite <-Htagt0.
+             rewrite take_r_self. eassumption.
+          -- eapply taglt_tagle in Hpath. eapply tagle_take_r with (n:=S n) in Hpath.
+             rewrite take_r_leq_cons.
+             2: lia.
+             rewrite take_r_take_r_leq in Hpath.
+             2: lia.
+             eassumption.
+        * subst i.
+          assert (deq_loop e h) as Hdeqe.
+          {
+            intros h' Hh'.
+             eapply deq_loop_entry_or in Q0;cycle 1.
+             { eapply Hdeqp;eauto. }
+             destruct Q0.
+             - auto.
+             - exfalso.
+               subst p. eapply n0. eauto using loop_contains_deq_loop.
+          }
+          rewrite take_r_leq_cons.
+          -- eapply IHt;eauto.
+          -- rewrite Htagt0. rewrite <-E. eapply deq_loop_depth. auto.
       + destruct t0.
         { exfalso. cbn in Htagt0. eapply back_edge_eq_loop in Q0.
           rewrite Q0 in Htagt0. enough (depth p > 0) by lia.
@@ -321,6 +424,6 @@ Section cfg.
           erewrite tag_depth_unroot;eauto. lia.
         * transitivity p;eauto.
           destruct Q0. eapply deq_loop_exited;eauto.
-  Admitted.
+  Qed.
 
 End cfg.
