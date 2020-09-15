@@ -161,7 +161,7 @@ Section cfg.
   Global Instance eq_loop_proper_deq_loop1 (p : Lab)
     : Proper (eq_loop ==> Basics.impl) ((Basics.flip deq_loop) p).
   Proof.
-    unfold Proper. unfold respectful. unfold Basics.impl.
+    unfold Proper, respectful, Basics.impl.
     intros. eapply eq_loop1; eauto.
   Qed.
 
@@ -515,6 +515,15 @@ Section cfg.
     split;[eapply Heq in Hinner0;auto|].
     unfold eq_loop in Heq. destructH.
     eapply deq_loop_trans;eauto.
+  Qed.
+
+  Global Instance eq_loop_proper_innermost (h : Lab)
+    : Proper (eq_loop ==> iff) (innermost_loop h).
+  Proof.
+    unfold Proper, respectful, Basics.impl.
+    intros. unfold innermost_loop. split; intros.
+    - rewrite H in H0. eassumption.
+    - rewrite <- H in H0. eassumption.
   Qed.
 
   (** ** Uniqueness *)
