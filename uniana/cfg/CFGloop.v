@@ -280,26 +280,6 @@ Section cfg.
 
   (** * Path and Dominance facts **)
 
-  Lemma path_front'
-    : forall (*(L : Type) (edge : L -> L -> bool)*) (p q r : Lab) (π : list Lab),
-      Path edge__P p q π -> q = hd r π.
-  Proof.
-    intros.
-    destruct π.
-    - inversion H.
-    - cbn. eapply path_front;eauto.
-  Qed.
-
-  Lemma path_back'
-    : forall (*(L : Type) (edge : L -> L -> bool)*) (p q r : Lab) (π : list Lab),
-      Path edge__P p q π -> p = hd r (rev π).
-  Proof.
-    intros.
-    destr_r' π;subst.
-    - cbn in *. inversion H.
-    - rewrite rev_rcons. cbn. eapply path_back;eauto.
-  Qed.
-
   Lemma app_tl_switch (A : Type) (a b : A) (π ϕ : list A)
         (Heq : hd a (rev π) = hd b ϕ)
         (Hπ : π <> nil)

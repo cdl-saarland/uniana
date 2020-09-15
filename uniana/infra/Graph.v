@@ -214,6 +214,50 @@ Section graph.
       eapply IHHpre;eauto.
   Qed.
 
+  Lemma path_app_inv p q t1 t2
+        (Hpath : Path p q (t2 ++ t1))
+        (Hnemp1 : t1 <> [])
+        (Hnemp2 : t2 <> [])
+    : exists b1 b2, Path p b1 t1 /\ Path b2 q t2.
+  Proof.
+    revert dependent q.
+    induction t2; intros.
+    - contradiction.
+    - clear Hnemp2.
+      destruct t2 as [| b2 t2 ].
+      + clear IHt2. destruct t1 as [| b1 t1 ]; [ contradiction |]. clear Hnemp1.
+        exists b1, a. split.
+        eapply path_prefix_path; try eassumption.
+        * rewrite prefix_eq. exists [a]. reflexivity.
+        * eapply path_front in Hpath. subst. econstructor.
+      + inv Hpath.
+        destruct (IHt2) with (q := b2) as [a1 [a2 [Hp1 Hp2]]]; try eassumption.
+        * intro. inv H.
+        * eapply path_front in H3 as Heq. subst b. eassumption.
+        * exists a1, a2. split. eassumption. econstructor. eapply Hp2.
+          eapply path_front in H3. subst b. eassumption.
+  Qed.
+
+  Lemma path_front'
+    : forall p q r π,
+      Path p q π -> q = hd r π.
+  Proof.
+    intros.
+    destruct π.
+    - inversion H.
+    - cbn. eapply path_front;eauto.
+  Qed.
+
+  Lemma path_back'
+    : forall p q r π,
+      Path p q π -> p = hd r (rev π).
+  Proof.
+    intros.
+    destr_r' π;subst.
+    - cbn in *. inversion H.
+    - rewrite rev_rcons. cbn. eapply path_back;eauto.
+  Qed.
+
   Lemma path_rcons p q r π
         (Hπ : Path p q π)
         (Hedge : r --> p)
