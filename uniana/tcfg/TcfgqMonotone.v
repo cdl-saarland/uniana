@@ -222,7 +222,7 @@ Section cfg.
   Proof.
   Admitted.
 
-  Lemma monotone q j p i t h n
+  Lemma tagle_monotone q j p i t h n
         (Hlen : |j| = depth q)
         (Hpath : TPath (q,j) (p,i) t)
         (Hdeqq : deq_loop q h)
