@@ -196,3 +196,21 @@ Proof.
     eapply Taglt_eq_rcons_Taglt in Htaglt.
     eapply Hstep;eauto.
 Qed.
+
+Lemma taglt_tagle_trans (i j k : Tag)
+  : i ◁ j -> j ⊴ k -> i ◁ k.
+Proof.
+  intros.
+  destruct H0.
+  - transitivity j;eauto.
+  - subst. auto.
+Qed.
+
+Lemma tagle_taglt_trans (i j k : Tag)
+  : i ⊴ j -> j ◁ k -> i ◁ k.
+Proof.
+  intros.
+  destruct H.
+  - transitivity j;eauto.
+  - subst. auto.
+Qed.

@@ -6,9 +6,6 @@ Require Import PropExtensionality.
 Section cfg.
 Context `{C : redCFG}.
 
-Definition basic_edge p q := eq_loop p q /\ a_edge__P p q.
-Definition eexit_edge p q := exists h, exit_edge h p q.
-
 Inductive Edge (p q : Lab) : Type :=
 | Enormal : basic_edge p q -> Edge p q
 | Eback : back_edge p q -> Edge p q

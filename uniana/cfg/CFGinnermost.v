@@ -199,6 +199,45 @@ Section cfg.
     all: unfold eq_loop,deq_loop in *;destructH;eauto using loop_contains_self.
   Qed.
 
+  Definition basic_edge p q := eq_loop p q /\ a_edge__P p q.
+  Definition eexit_edge p q := exists h, exit_edge h p q.
+
+
+  Lemma basic_edge_eq_loop p q
+        (Hedge : basic_edge p q)
+    : eq_loop p q.
+  Proof.
+    destruct Hedge;auto.
+  Qed.
+
+  Lemma depth_basic p q
+        (Hedge : basic_edge p q)
+    : depth p = depth q.
+  Proof.
+    eapply basic_edge_eq_loop in Hedge.
+    rewrite Hedge. reflexivity.
+  Qed.
+
+  Lemma back_edge_eq_loop (p h : Lab)
+        (Hp : p ↪ h)
+    : eq_loop p h.
+  Proof.
+    split.
+    - eapply loop_contains_deq_loop. eapply loop_contains_ledge;eauto.
+    - decide (deq_loop h p);[auto|exfalso]. unfold deq_loop in n. simpl_dec' n.
+      simpl_dec' n. destructH. eapply no_exit_head.
+      + unfold exit_edge. split_conj;eauto 1. eapply back_edge_incl;eauto.
+      + eexists;eauto.
+  Qed.
+
+  Lemma depth_back p q
+        (Hedge : p ↪ q)
+    : depth p = depth q.
+  Proof.
+    eapply back_edge_eq_loop in Hedge.
+    rewrite Hedge. reflexivity.
+  Qed.
+
   (** * Innermost loops and strit-innermost loops **)
 
   (** ** Definitions **)
@@ -575,19 +614,5 @@ Section cfg.
        | Some h => h
        | None => root
        end.
-
-
-  Lemma back_edge_eq_loop (p h : Lab)
-        (Hp : p ↪ h)
-    : eq_loop p h.
-  Proof.
-    split.
-    - eapply loop_contains_deq_loop. eapply loop_contains_ledge;eauto.
-    - decide (deq_loop h p);[auto|exfalso]. unfold deq_loop in n. simpl_dec' n.
-      simpl_dec' n. destructH. eapply no_exit_head.
-      + unfold exit_edge. split_conj;eauto 1. eapply back_edge_incl;eauto.
-      + eexists;eauto.
-  Qed.
-
 
 End cfg.

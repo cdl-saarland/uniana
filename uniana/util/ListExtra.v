@@ -381,6 +381,126 @@ Section Take_r.
 
 End Take_r.
 
+Lemma rcons_cons'
+  : forall (A : Type) (a : A) (l : list A),
+    l ++ [a] = hd a l :: (tl (l ++ [a])).
+Proof.
+  intros.
+  induction l;cbn;eauto.
+Qed.
+
+Lemma rcons_cons
+  : forall (A : Type) (a' : A) (l' : list A), exists (a : A) (l : list A), l' :r: a' = a :: l.
+Proof.
+  intros. eexists. eexists. eapply rcons_cons'.
+Qed.
+
+Lemma take_rcons_drop (A : Type) (l : list A) n a
+      (Hle : n <= | l |)
+  : take n (l ++[a]) = take n l.
+Proof.
+  revert l Hle.
+  induction n;[cbn;eauto|];intros.
+  rewrite rcons_cons'.
+  cbn.
+  destruct l;cbn.
+  - cbn in Hle. lia.
+  - cbn in Hle.
+    f_equal. eapply IHn. lia.
+Qed.
+
+Lemma take_r_cons_drop (A : Type) (l : list A) n a
+      (Hle : n <= | l |)
+  : take_r n (a :: l) = take_r n l.
+Proof.
+  unfold take_r.
+  rewrite rev_cons. rewrite take_rcons_drop.
+  - reflexivity.
+  - rewrite rev_length. auto.
+Qed.
+
+Lemma take_r_cons_replace (A : Type) (a b : A) l n
+      (Hlen : n <= |l|)
+  : take_r n (a :: l) = take_r n (b :: l).
+Proof.
+  rewrite take_r_cons_drop;eauto.
+  rewrite take_r_cons_drop;eauto.
+Qed.
+
+Lemma tl_len (A : Type) (l : list A)
+  : |tl l| = |l| - 1.
+Proof.
+  induction l;cbn;eauto. lia.
+Qed.
+
+Lemma take_self (A : Type) (l : list A)
+  : take (|l|) l = l.
+Proof.
+  induction l;cbn;eauto.
+  rewrite IHl;eauto.
+Qed.
+
+Lemma take_r_self (A : Type) (l : list A)
+  : take_r (|l|) l = l.
+Proof.
+  unfold take_r. eapply rev_rev_eq. rewrite rev_involutive.
+  rewrite <-rev_length. eapply take_self.
+Qed.
+
+Lemma take_r_tl_eq (A : Type) (l : list A)
+  : tl l = take_r (|l| - 1) l.
+Proof.
+  rewrite <- tl_len.
+  destruct l;eauto. unfold tl in *.
+  rewrite take_r_cons_drop;[|eauto].
+  rewrite take_r_self. reflexivity.
+Qed.
+
+Lemma take_r_geq (A : Type) n (l : list A)
+      (Hgeq : n >= | l |)
+  : take_r n l = l.
+Proof.
+  unfold take_r. rewrite take_eq_ge.
+  - eapply rev_involutive.
+  - rewrite rev_length. auto.
+Qed.
+
+Lemma take_take_le:
+  forall [X : Type] (L : list X) [n m : nat], n <= m -> take n L = take n (take m L).
+Proof.
+  intros. revert dependent L; revert dependent m;  induction n;intros; destruct L, m; simpl; eauto.
+  - lia.
+  - erewrite IHn; eauto. lia.
+Qed.
+
+Lemma take_r_take_r_leq (A : Type) (l : list A) n m
+      (Hle : n <= m)
+  : take_r n (take_r m l) = take_r n l.
+Proof.
+  unfold take_r.
+  rewrite rev_involutive.
+  erewrite <-take_take_le;eauto.
+Qed.
+
+Lemma take_r_length_le (A : Type) n (l : list A)
+      (Hle : n <= |l|)
+  : | take_r n l | = n.
+Proof.
+  unfold take_r.
+  rewrite rev_length.
+  rewrite take_length_le;auto.
+  rewrite rev_length. auto.
+Qed.
+
+Lemma take_r_length_ge (A : Type) n (l : list A)
+      (Hle : n >= |l|)
+  : | take_r n l | = | l |.
+Proof.
+  unfold take_r.
+  rewrite rev_length.
+  rewrite take_length_ge;rewrite rev_length;auto.
+Qed.
+
 Ltac destr_r' l :=
   let H := fresh "Hl" in
   let x := fresh "x" in

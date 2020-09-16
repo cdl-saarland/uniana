@@ -570,6 +570,25 @@ Proof.
   induction Hpost;[econstructor|rewrite map_rcons;econstructor;assumption].
 Qed.
 
+Lemma prefix_map_fst (A B : Type) (l l' : list (A * B))
+      (Hpre: Prefix l l')
+  : Prefix (map fst l) (map fst l').
+Proof.
+  induction Hpre.
+  - econstructor.
+  - destruct a. cbn. econstructor;eauto.
+Qed.
+
+Lemma postfix_map_fst (A B : Type) (l l' : list (A * B))
+      (Hpre: Postfix l l')
+  : Postfix (map fst l) (map fst l').
+Proof.
+  eapply prefix_rev_postfix'.
+  do 2 rewrite <-map_rev.
+  eapply prefix_map_fst.
+  eapply postfix_rev_prefix;eauto.
+Qed.
+
 (** StrictPrefix **)
 
 Section StrictPre.

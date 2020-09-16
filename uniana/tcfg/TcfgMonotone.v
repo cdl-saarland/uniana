@@ -168,11 +168,6 @@ Section cfg.
 
   Notation "p '>=' q" := (deq_loop p q).
 
-  Lemma tl_len (A : Type) (l : list A)
-    : |tl l| = |l| - 1.
-  Proof.
-    induction l;cbn;eauto. lia.
-  Qed.
 
   Lemma take_rcons_drop (A : Type) (l : list A) n a
         (Hle : n <= | l |)

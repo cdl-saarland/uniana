@@ -18,7 +18,8 @@ Section cfg.
       + path_simpl' Hreach.
         rewrite depth_root in Hlen. destruct j;[|cbn in Hlen;congruence].
         eexists;econstructor;eauto.
-      + admit.
+      + inv_path Hreach. destruct (edge_Edge H0).
+        * (* this approach is wrong, the problem is way harder than that *)
   Admitted.
 
   Lemma tag_depth_unroot p q i j t
@@ -32,19 +33,11 @@ Section cfg.
     eapply tag_depth';eauto.
   Qed.
 
-  Lemma take_r_leq_cons (A : Type) (a : A) l n
-        (Hlen : n <= |l|)
-    : take_r n (a :: l) = take_r n l.
-  Admitted.
-
-  Lemma take_r_leq_cons2 (A : Type) (a b : A) l n
-        (Hlen : n <= |l|)
-    : take_r n (a :: l) = take_r n (b :: l).
-  Admitted.
-
-  Lemma tagle_take_r i j n
-        (Htagle : i ⊴ j)
-    : take_r n i ⊴ take_r n j.
+  Lemma non_entry_head_back_edge p h
+        (Hedge : edge__P p h)
+        (Hloop : loop_contains h p)
+    : p ↪ h.
+  Proof.
   Admitted.
 
   (* the more general formulation with deq_loop is wrong *)
@@ -72,18 +65,18 @@ Section cfg.
       + subst. eapply IHt;eauto.
       + subst.
         eapply depth_entry in Q0.
-        rewrite take_r_leq_cons.
+        rewrite take_r_cons_drop.
         * eapply IHt;eauto.
         * rewrite Htagt0. lia.
       + destruct t0.
         { cbn in Htagt0. lia. }
         cbn in H0. subst i.
-        erewrite take_r_leq_cons2.
+        erewrite take_r_cons_replace.
         * eapply IHt;eauto.
         * cbn in Htagt0. clear - E Hincl Htagt0. rewrite E in Hincl. rewrite <-Htagt0 in Hincl. lia.
       + destruct t0. 1:cbn in Htagt0;lia.
         cbn in H0. subst.
-        setoid_rewrite <-take_r_leq_cons at 2.
+        setoid_rewrite <-take_r_cons_drop at 2.
         * eapply IHt;eauto.
         * cbn in Htagt0. lia.
   Qed.
@@ -112,7 +105,7 @@ Section cfg.
       + subst. eapply IHt;eauto.
       + subst.
         eapply depth_entry in Q0.
-        setoid_rewrite take_r_leq_cons.
+        setoid_rewrite take_r_cons_drop.
         * eapply IHt;eauto.
         * rewrite Htagt0. lia.
       + destruct t0.
@@ -128,69 +121,13 @@ Section cfg.
       + specialize (Hincl' p). exploit Hincl'. 1: left;cbn;eauto.
         destruct t0. 1:cbn in Htagt0;lia.
         cbn in H0. subst.
-        setoid_rewrite <-take_r_leq_cons at 2.
+        setoid_rewrite <-take_r_cons_drop at 2.
         * eapply IHt;eauto.
         * cbn in Htagt0.
           eapply depth_exit in Q0.
           eapply deq_loop_depth in Hincl'.
           rewrite Q0 in Htagt0. lia.
   Qed.
-
-  Lemma non_entry_head_back_edge p h
-        (Hedge : edge__P p h)
-        (Hloop : loop_contains h p)
-    : p ↪ h.
-  Admitted.
-
-  Lemma prefix_map_fst (A B : Type) (l l' : list (A * B))
-        (Hpre: Prefix l l')
-    : Prefix (map fst l) (map fst l').
-  Proof.
-    induction Hpre.
-    - econstructor.
-    - destruct a. cbn. econstructor;eauto.
-  Qed.
-
-  Lemma postfix_map_fst (A B : Type) (l l' : list (A * B))
-        (Hpre: Postfix l l')
-    : Postfix (map fst l) (map fst l').
-  Proof.
-    eapply prefix_rev_postfix'.
-    do 2 rewrite <-map_rev.
-    eapply prefix_map_fst.
-    eapply postfix_rev_prefix;eauto.
-  Qed.
-
-  Lemma taglt_stag n (i : Tag)
-    : n :: i ◁ STag (n :: i).
-  Proof.
-    cbn. econstructor. auto.
-  Qed.
-  Lemma taglt_tagle_trans (i j k : Tag)
-    : i ◁ j -> j ⊴ k -> i ◁ k.
-  Admitted.
-  Lemma tagle_taglt_trans (i j k : Tag)
-    : i ⊴ j -> j ◁ k -> i ◁ k.
-  Admitted.
-  Lemma take_r_geq (A : Type) n (l : list A)
-        (Hgeq : n >= | l |)
-    : take_r n l = l.
-  Admitted.
-
-  Lemma tcfg_edge_depth_iff p q i j
-        (Hedge : tcfg_edge (p,i) (q,j))
-    : | i | = depth p <-> | j | = depth q.
-  Admitted.
-
-  Lemma taglt_take_r_taglt i j n
-        (Hlt : take_r n i ◁ take_r n j)
-        (Hlen : | i | = | j |)
-    : i ◁ j.
-  Admitted.
-
-  Lemma tagle_neq_taglt (i j : Tag)
-    : i ⊴ j -> i <> j -> i ◁ j.
-  Admitted.
 
   Lemma tcfg_fresh p i j t
         (Hpath : TPath (p,i) (p,j) t)
@@ -266,13 +203,6 @@ Section cfg.
     erewrite tag_depth_unroot;eauto.
   Qed.
 
-  Lemma basic_edge_eq_loop p q
-        (Hedge : basic_edge p q)
-    : eq_loop p q.
-  Proof.
-    destruct Hedge;auto.
-  Qed.
-
   (* (tl (take_r (depth h) j)) *)
   Lemma ex_entry (h p q : Lab) (i j : Tag) n t
         (Hlen : | i | = depth p)
@@ -290,41 +220,6 @@ Section cfg.
         (Hdep : depth h = n)
     : (h,0 :: (take_r (n-1) j)) ∈ t.
   Proof.
-  Admitted.
-
-  Lemma taglt_leq i j m n
-        (Htaglt : take_r m j ◁ take_r m i)
-        (Hleq : m <= n)
-    : take_r n j ◁ take_r n i.
-  Admitted.
-
-  Lemma taglt_cons i j n
-    : n :: i ◁ n :: j <-> i ◁ j.
-  Admitted.
-
-  Lemma taglt_cons_cons i j n m
-        (Htaglt : i ◁ j)
-    : n :: i ◁ m :: j.
-  Admitted.
-
-  Lemma take_r_len (A : Type) n (l : list A)
-        (H : n <= | l |)
-    : | take_r n l | = n.
-  Admitted.
-
-  Lemma take_r_self (A : Type) (l : list A)
-    : take_r (|l|) l = l.
-  Admitted.
-
-  Lemma taglt_tagle (i j : Tag)
-    : i ◁ j -> i ⊴ j.
-  Proof.
-    intros. left. auto.
-  Qed.
-
-  Lemma take_r_take_r_leq (A : Type) (l : list A) n m
-        (Hle : n <= m)
-    : take_r n (take_r m l) = take_r n l.
   Admitted.
 
   Lemma monotone q j p i t h n
@@ -362,7 +257,7 @@ Section cfg.
           eapply tcfg_fresh in Hpath.
           2: {
             cbn.
-            rewrite take_r_len.
+            rewrite take_r_length_le.
             1: lia.
             lia.
           }
@@ -371,13 +266,13 @@ Section cfg.
           decide (depth p - 1 <= S n).
           -- left.
              eapply taglt_leq with (m:=depth p - 1).
-             2: lia.
-             rewrite take_r_leq_cons.
+             2-4: cbn;lia.
+             rewrite take_r_cons_drop.
              2: lia.
              rewrite Hdeppe at 2. rewrite <-Htagt0.
              rewrite take_r_self. eassumption.
           -- eapply taglt_tagle in Hpath. eapply tagle_take_r with (n:=S n) in Hpath.
-             rewrite take_r_leq_cons.
+             rewrite take_r_cons_drop.
              2: lia.
              rewrite take_r_take_r_leq in Hpath.
              2: lia.
@@ -393,7 +288,7 @@ Section cfg.
              - exfalso.
                subst p. eapply n0. eauto using loop_contains_deq_loop.
           }
-          rewrite take_r_leq_cons.
+          rewrite take_r_cons_drop.
           -- eapply IHt;eauto.
           -- rewrite Htagt0. rewrite <-E. eapply deq_loop_depth. auto.
       + destruct t0.
@@ -419,7 +314,7 @@ Section cfg.
         }
         eapply IHt in H;eauto.
         * cbn in H0. subst t0.
-          setoid_rewrite <-take_r_leq_cons at 2;eauto.
+          setoid_rewrite <-take_r_cons_drop at 2;eauto.
           eapply deq_loop_depth in Hdeqp.
           erewrite tag_depth_unroot;eauto. lia.
         * transitivity p;eauto.

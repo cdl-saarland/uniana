@@ -274,6 +274,59 @@ Section cfg.
     eapply deq_loop_depth;auto.
   Qed.
 
+  Lemma tcfg_edge_exit_nil p q j
+        (Hedge : tcfg_edge (p,[]) (q,j))
+        (Hexit : eexit_edge p q)
+    : False.
+  Proof.
+    destruct Hedge. unfold eff_tag in H0.
+    decide (edge__P p q).
+    2: contradiction.
+    eapply depth_exit in Hexit.
+    destruct (edge_Edge e).
+    - eapply depth_basic in b. lia.
+    - congruence.
+    - eapply depth_entry in e0. lia.
+    - congruence.
+  Qed.
+
+  Lemma tcfg_edge_back_nil p q j
+        (Hedge : tcfg_edge (p,[]) (q,j))
+        (Hback : back_edge p q)
+    : False.
+  Proof.
+    destruct Hedge. unfold eff_tag in H0.
+    decide (edge__P p q).
+    2: contradiction.
+    eapply depth_back in Hback as Hdep.
+    destruct (edge_Edge e).
+    - destruct b. destruct Hback. contradiction.
+    - congruence.
+    - eapply depth_entry in e0. lia.
+    - congruence.
+  Qed.
+
+  Lemma tcfg_edge_depth_iff p q i j
+        (Hedge : tcfg_edge (p,i) (q,j))
+    : | i | = depth p <-> | j | = depth q.
+  Proof.
+    specialize (tcfg_edge_destruct' Hedge) as Hd.
+    destruct Hd as [Hd|[Hd|[Hd|Hd]]].
+    all: destructH.
+    - subst. eapply basic_edge_eq_loop in Hd1. rewrite Hd1. reflexivity.
+    - subst. eapply depth_entry in Hd1. rewrite <-Hd1. cbn.
+      split;lia.
+    - eapply back_edge_eq_loop in Hd1 as Hd2. rewrite Hd2. subst.
+      destruct i.
+      + exfalso.
+        eapply tcfg_edge_back_nil;eauto.
+      + cbn. lia.
+    - eapply depth_exit in Hd1 as Hd2. rewrite Hd2. subst.
+      destruct i.
+      + exfalso. eapply tcfg_edge_exit_nil;eauto.
+      + cbn. lia.
+  Qed.
+
   (** ** p p ex head **)
 
   Lemma p_p_ex_head' (p q : Lab) π ϕ
@@ -303,5 +356,83 @@ Section cfg.
     - admit.
     - econstructor.
   Admitted.
+
+  (** ** Lemmas with take_r **)
+
+  Lemma taglt_take_r_taglt i j n
+        (Hlt : take_r n i ◁ take_r n j)
+        (Hlen : | i | = | j |)
+    : i ◁ j.
+  Proof.
+    remember (|i| - n) as m.
+    revert n i j Hlt Hlen Heqm.
+    induction m;intros.
+    - do 2 (rewrite take_r_geq in Hlt;[|lia]). auto.
+    - destruct i;[cbn in Heqm;lia|].
+      destruct j;[cbn in Hlen;lia|].
+      econstructor.
+      cbn in Hlen. replace (|n0 :: i|) with (S (|i|)) in Heqm by (cbn;auto).
+      eapply IHm;auto.
+      + do 2 (rewrite take_r_cons_drop in Hlt;[|lia]).
+        eassumption.
+      + lia.
+  Qed.
+
+  Lemma tagle_neq_taglt (i j : Tag)
+    : i ⊴ j -> i <> j -> i ◁ j.
+  Proof.
+    intros. destruct H;[assumption|contradiction].
+  Qed.
+
+  Lemma tagle_take_r i j n
+        (Htagle : i ⊴ j)
+    : take_r n i ⊴ take_r n j.
+  Proof.
+    destruct Htagle.
+    - induction H.
+      + decide (n <= |i|).
+        * erewrite take_r_cons_replace;eauto. reflexivity.
+        * rewrite take_r_geq. 2: cbn;lia.
+          rewrite take_r_geq. 2: cbn;lia.
+          left. econstructor;eauto.
+      + decide (n <= |i|).
+        * do 2 (rewrite take_r_cons_drop;eauto).
+          erewrite <-Taglt_len;eauto.
+        * do 2 (rewrite take_r_geq;[|cbn;try lia]).
+          2: erewrite <-Taglt_len;eauto;lia.
+          left.
+          econstructor;eauto.
+    - subst. reflexivity.
+  Qed.
+
+  Lemma taglt_leq i j m n
+        (Htaglt : take_r m j ◁ take_r m i)
+        (Hleq : m <= n)
+        (Hleni : n <= |i|)
+        (Hlenj : n <= |j|)
+    : take_r n j ◁ take_r n i.
+  Proof.
+    eapply taglt_take_r_taglt.
+    - do 2 (rewrite take_r_take_r_leq;eauto).
+    - decide (n <= |i|).
+      + do 2 (rewrite take_r_length_le;[|auto;lia]). reflexivity.
+      + do 2 (rewrite take_r_length_ge;[|auto;lia]). lia.
+  Qed.
+
+  Lemma taglt_cons i j n
+    : n :: i ◁ n :: j <-> i ◁ j.
+  Proof.
+    split.
+    - intros. inv H.
+      + lia.
+      + auto.
+    - intros. econstructor. auto.
+  Qed.
+
+  Lemma taglt_tagle (i j : Tag)
+    : i ◁ j -> i ⊴ j.
+  Proof.
+    intros. left. auto.
+  Qed.
 
 End cfg.

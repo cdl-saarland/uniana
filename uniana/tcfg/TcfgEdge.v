@@ -21,6 +21,12 @@ Proof.
   destruct i,j; cbn in *;eauto;congruence.
 Qed.
 
+Lemma taglt_stag n (i : Tag)
+  : n :: i ◁ STag (n :: i).
+Proof.
+  cbn. econstructor. auto.
+Qed.
+
 Section eff_tag_facts.
   Context `{C : redCFG}.
   Notation "pi -t> qj" := (tcfg_edge pi qj) (at level 50).

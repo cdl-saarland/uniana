@@ -243,20 +243,6 @@ Section graph.
       eexists. split;[econstructor|];eauto.
   Qed.
 
-  Lemma rcons_cons'
-     : forall (A : Type) (a : A) (l : list A),
-      l ++ [a] = hd a l :: (tl (l ++ [a])).
-  Proof.
-    intros.
-    induction l;cbn;eauto.
-  Qed.
-
-  Lemma rcons_cons
-    : forall (A : Type) (a' : A) (l' : list A), exists (a : A) (l : list A), l' :r: a' = a :: l.
-  Proof.
-    intros. eexists. eexists. eapply rcons_cons'.
-  Qed.
-
   Ltac turn_rcons l a :=
     let Q := fresh "Q" in
     let a' := fresh a in
