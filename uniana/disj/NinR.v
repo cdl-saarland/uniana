@@ -178,17 +178,6 @@ Section disj.
     eapply Hlc1;eauto.
   Qed.
 
-  (* TODO : move *)
-  Lemma path_rcons_rinv
-    : forall (L : Type) (edge : L -> L -> Prop) (p q r : L) (π : list L),
-      Path edge r p ((π :r: q) :r: r) -> Path edge q p (π :r: q).
-  Proof.
-    clear.
-    intros. revert dependent p. induction π;cbn in *;intros.
-    - path_simpl' H. econstructor.
-    - path_simpl' H. inversion H;[congruence'|subst].
-      econstructor;eauto.
-  Qed.
 
   (* TODO: move *)
   Lemma only_inner_heads_tag_prefix p i q j l

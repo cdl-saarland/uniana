@@ -1,4 +1,4 @@
-Require Export EqNeqDisj GetSucc SplitsT DiamondPaths SplitsSound.
+Require Export GetSucc SplitsT DiamondPaths SplitsSound LastCommon.
 
 
 Lemma tl_eq `(C : redCFG) (h q1 q2 e1 e2 : Lab) (i j1 j2 : Tag) t1 t2

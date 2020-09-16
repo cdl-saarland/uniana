@@ -435,4 +435,37 @@ Section cfg.
     intros. left. auto.
   Qed.
 
+  Lemma loop_contains_depth_lt h p
+        (Hloop : loop_contains h p)
+    : depth p > 0.
+  Proof.
+    unfold depth.
+    match goal with |- length ?x > 0 => enough (x <> []) end.
+    - enough (depth p <> 0). 1:unfold depth in *;lia.
+      contradict H.
+      eapply length_zero_iff_nil. eauto.
+    - intro N. eapply filter_nil;eauto.
+  Qed.
+
+  Lemma succ_in_tpath_tcfg_edge
+    : forall (p q : Lab) (i j : Tag) (t : list Coord) (a b : Coord),
+      TPath a b t -> (p, i) ≻ (q, j) | t -> tcfg_edge (q,j) (p,i).
+    (* PROVEME (analogous to below lemma) *)
+  Admitted.
+
+  (* TODO: remove (after proof is adjusted to above lemma) *)
+  Lemma succ_in_tpath_eff_tag p q i j t a b
+        (Hpath : TPath a b t)
+        (Hsucc : (p,i) ≻ (q,j) | t)
+    : eff_tag q p j = Some i.
+  Proof.
+    unfold succ_in in Hsucc. destructH.
+    revert dependent t. revert b. induction l2; cbn in *; intros.
+    - rewrite Hsucc in Hpath. unfold TPath in Hpath. destruct b.
+      inversion Hpath. subst. destruct b. inversion H3;subst;destruct H5;eauto.
+    - destruct t. 1: inversion Hpath.
+      inversion Hsucc. subst. inversion Hpath;subst. 1: congruence'.
+      eauto.
+  Qed.
+
 End cfg.

@@ -573,3 +573,14 @@ Proof.
   revert a. induction l;intros;[cbn in *;congruence|].
   eapply IHl. cbn in H. rewrite H at 1. cbn. reflexivity.
 Qed.
+
+Lemma filter_nil (A : Type) (f : decPred A) l
+      (Hnil : filter f l = [])
+  : forall x, x ∈ l -> ~ f x.
+Proof.
+  induction l;intros;cbn.
+  - contradiction.
+  - destruct H;subst.
+    + cbn in Hnil. decide (f x);[congruence|auto].
+    + eapply IHl;eauto. cbn in Hnil. decide (f a);[congruence|auto].
+Qed.

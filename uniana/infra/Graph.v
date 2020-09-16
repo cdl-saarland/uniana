@@ -571,6 +571,7 @@ Proof.
   - eapply IHl;eauto.
 Qed.
 
+
 Ltac path_simpl' H :=
   let Q := fresh "Q" in
   lazymatch type of H with
@@ -591,15 +592,16 @@ Ltac path_simpl' H :=
                                  [|eapply path_back;eauto]
   end.
 
-Goal forall (L : Type) (x y z : L) (l : list L) e
-      (Hpath : Path e x y (l ++ [z])),
-    x = z.
+Lemma path_rcons_rinv
+  : forall (L : Type) (edge : L -> L -> Prop) (p q r : L) (π : list L),
+    Path edge r p ((π :r: q) :r: r) -> Path edge q p (π :r: q).
 Proof.
-  intros.
-  path_simpl' Hpath.
-  reflexivity.
+  clear.
+  intros. revert dependent p. induction π;cbn in *;intros.
+  - path_simpl' H. econstructor.
+  - path_simpl' H. inversion H;[congruence'|subst].
+    econstructor;eauto.
 Qed.
-
 
 Ltac path_simpl2' H :=
   let Q:= fresh "Q" in

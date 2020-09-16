@@ -11,7 +11,7 @@ Require Import Nat.
 Require Import Lia.
 Require Import Program.Basics.
 
-Require Import PathSplits Unchanged ListOrderTac FirstDiff.
+Require Import PathSplits Unchanged ListOrderTac FirstDiff RelSplits.
 
 Section uniana.
 

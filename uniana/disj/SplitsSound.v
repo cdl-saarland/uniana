@@ -1025,10 +1025,10 @@ Context `{C : redCFG}.
     - destruct H as [h' Hexit].
       enough (h = h').
       + subst h'. eassumption.
-      + eauto using exit_edge_innermost, innermost_unique. 
+      + eauto using exit_edge_innermost, innermost_unique.
   Qed.
 
-  Lemma contains_entry_or_contains_head  a b i m h r 
+  Lemma contains_entry_or_contains_head  a b i m h r
         (Hr : TPath (a,i) (b,m) ((b,m) :: r))
         (Hinner : innermost_loop h b)
     : (exists r' pre, Prefix ((h,0 :: tl m) :: (pre, tl m) :: r') ((b, m) :: r) /\ TPath (a,i) (h, 0 :: tl m) ((h, 0 :: tl m) :: (pre, tl m) :: r') /\ entry_edge pre h)
@@ -1060,7 +1060,7 @@ Context `{C : redCFG}.
     : exists k', k = k' ++ j.
   Proof.
   Admitted.
-    
+
   Lemma is_entry_edge h a b
         (Hcont : loop_contains h b)
         (Hncont : ~ loop_contains h a)
@@ -1078,7 +1078,7 @@ Context `{C : redCFG}.
       eapply deq_loop_exited in Hexit.
       exfalso. unfold deq_loop in Hexit. eauto.
   Qed.
-    
+
   Lemma find_last_exit p q u s k i l j r
         (Hedge : (s,k) -t> (u,l))
         (Dlen: | k | = depth s)
@@ -1102,10 +1102,10 @@ Context `{C : redCFG}.
     revert dependent q.
     revert dependent p.
     specialize (well_founded_ind (R:=(@StrictPrefix' (Lab * Tag))) (@StrictPrefix_well_founded (Lab * Tag))
-                                 (fun r => forall p q : Lab, 
+                                 (fun r => forall p q : Lab,
                                       deq_loop s q ->
                                       ~ deq_loop q s ->
-                                      forall i j : Tag,  
+                                      forall i j : Tag,
                                         TPath (u, l) (p, i) ((p, i) :: (q, j) :: r) ->
                                         (forall x : Lab, x ∈ map fst ((q, j) :: r) -> deq_loop x q) ->
                                         exists (e h qe : Lab) (r' r'' : list (Lab * Tag)) (n : nat) (m : Tag),
@@ -1175,14 +1175,14 @@ Context `{C : redCFG}.
         * eapply Hprefix.
         * rewrite Heqqb in Hsinq. eapply Hsinq.
         * symmetry in Heqqb. eauto using eq_loop1.
-        * econstructor. eapply Hpath. eassumption. 
+        * econstructor. eapply Hpath. eassumption.
         * intros. eapply eq_loop2. eassumption. eapply Hallin. simpl. eauto.
         * clear H.
           exists e, h, qe, r'. eexists. exists n', m'.
           split. {
             rewrite Hcons. eapply app_comm_cons.
           }
-          split. { 
+          split. {
             rewrite Heqqb. eassumption.
           }
           split; [ eassumption |].
@@ -1291,6 +1291,7 @@ Context `{C : redCFG}.
  Proof.
    specialize (r2_incl_head_q D) as Hinclh.
    destruct D.
+    (*
    edestruct (find_last_exit Dsk1 Dpath1 Hndeq) as [e1 [h1 [qe1 [r1' [r1'' [n1 P1]]]]]].
    edestruct (find_last_exit Dsk2 Dpath2) as [e2 [h2 [qe2 [r2' [r2'' [n2 P2]]]]]]. {
      intro. eapply Hndeq. symmetry in Dloop. eauto using eq_loop1.
@@ -1321,7 +1322,7 @@ Context `{C : redCFG}.
 
    replace j2 with j1 in *.
    2: {
-     
+
    }
 
    exists r1', r2', r1'', r2'', e1, e2, n1, n2, qe1, qe2.
@@ -1347,7 +1348,7 @@ Context `{C : redCFG}.
        + rewrite P0. rewrite app_comm_cons. eauto using in_or_app.
      - admit.
     }
-
+*)
 
  Admitted.
 
