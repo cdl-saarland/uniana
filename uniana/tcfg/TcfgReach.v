@@ -68,7 +68,14 @@ Section cfg.
 
   Lemma depth_zero_iff q
     : depth q = 0 <-> forall h, loop_contains h q -> False.
-  Admitted.
+  Proof.
+    unfold depth.
+    rewrite length_zero_iff_nil.
+    split;intros.
+    - eapply filter_nil;eauto.
+    - eapply list_emp_in. intros. intro N. eapply H.
+      eapply in_filter_iff in N. destructH. cbn in N1. eauto.
+  Qed.
 
   Lemma loop_head_acyclic_entry p h
         (Hloop : loop_head h)
@@ -94,6 +101,7 @@ Section cfg.
         (Heq : eq_loop p q)
         (Hlen : | i | = depth p)
     : exists t, TPath (p,i) (q,i) t.
+  Proof.
   Admitted.
 
   Lemma tcfg_reachability q j
