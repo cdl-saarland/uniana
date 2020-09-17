@@ -1056,7 +1056,11 @@ Context `{C : redCFG}.
   Lemma app_cons_rcons {A : Type} (a b : list A) x
     : a ++ x :: b = (a :r: x) ++ b.
   Proof.
-  Admitted.
+    revert a b.
+    induction a; intros.
+    - reflexivity.
+    - simpl. rewrite IHa. reflexivity.
+  Qed.
 
   Lemma hd_rev_idempotent {A : Type} (l : list A) a b d1 d2
     : hd d1 (rev (b :: l)) = hd d2 (rev (a :: b :: l)).
