@@ -346,6 +346,17 @@ Section Rcons.
 
 End Rcons.
 
+Lemma set_eq_NoDup_len (A : Type) (l l' : list A)
+      (Heq : l =' l')
+      (Hnd : NoDup l)
+      (Hnd' : NoDup l')
+  : | l | = | l' |.
+Proof.
+  destruct Heq.
+  eapply Nat.le_antisymm;eapply NoDup_incl_length;eauto.
+Qed.
+
+
 (** take_r
     - 'take_r' is the dual variant to 'take'
 **)

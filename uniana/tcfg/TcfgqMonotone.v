@@ -1,37 +1,9 @@
-Require Export TcfgLoop.
+Require Export TcfgReach.
 Require Import Lia.
 
 Section cfg.
 
   Context `(C : redCFG).
-
-  Lemma tcfg_reachability q j
-        (Hlen : | j | = depth q)
-    : exists t, TPath (root,start_tag) (q,j) t.
-  Proof.
-    specialize (reachability q) as Hreach.
-    destructH.
-    revert q j Hlen Hreach.
-    induction π;intros.
-    - inv Hreach.
-    - destruct π.
-      + path_simpl' Hreach.
-        rewrite depth_root in Hlen. destruct j;[|cbn in Hlen;congruence].
-        eexists;econstructor;eauto.
-      + inv_path Hreach. destruct (edge_Edge H0).
-        * (* this approach is wrong, the problem is way harder than that *)
-  Admitted.
-
-  Lemma tag_depth_unroot p q i j t
-        (Hpath : TPath (q,j) (p,i) t)
-        (Hlen : |j| = depth q)
-    : |i| = depth p.
-  Proof.
-    eapply tcfg_reachability in Hlen.
-    destructH.
-    eapply path_app' in Hpath;eauto.
-    eapply tag_depth';eauto.
-  Qed.
 
   Lemma non_entry_head_back_edge p h
         (Hedge : edge__P p h)

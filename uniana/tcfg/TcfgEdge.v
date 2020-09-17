@@ -1,4 +1,5 @@
-Require Export Tcfg.
+Require Export Tcfg CFGinnermost.
+Require Import Lia.
 
 (** ** STag **)
 
@@ -215,3 +216,115 @@ Section eff_tag_facts.
     Qed. *)
 
 End eff_tag_facts.
+
+Ltac edge_excl
+  := match goal with
+     | H : basic_edge ?p ?q |- _
+       => let tac
+             := eapply depth_basic in H
+           in
+             lazymatch goal with
+             | Q : entry_edge p q |- _
+               => eapply depth_entry in Q;tac;lia
+             | Q : eexit_edge p q |- _
+               => eapply depth_exit in Q;tac;lia
+             | Q : back_edge p q |- _
+               => destruct H, Q; firstorder
+             end
+     | H : entry_edge ?p ?q |- _
+       => let tac
+             := eapply depth_entry in H
+           in
+             lazymatch goal with
+             | Q : basic_edge p q |- _
+               => eapply depth_basic in Q;tac;lia
+             | Q : eexit_edge p q |- _
+               => eapply depth_exit in Q;tac;lia
+             | Q : back_edge p q |- _
+               => eapply depth_back in Q;tac;lia
+             end
+     | H : eexit_edge ?p ?q |- _
+       => let tac
+             := eapply depth_exit in H
+           in
+             lazymatch goal with
+             | Q : basic_edge p q |- _
+               => eapply depth_basic in Q;tac;lia
+             | Q : entry_edge p q |- _
+               => eapply depth_entry in Q;tac;lia
+             | Q : back_edge p q |- _
+               => eapply depth_back in Q;tac;lia
+             end
+     | H : back_edge ?p ?q |- _
+       => let tac
+             := eapply depth_back in H
+           in
+             lazymatch goal with
+             | Q : basic_edge p q |- _
+               => destruct H, Q; firstorder
+             | Q : entry_edge p q |- _
+               => eapply depth_entry in Q;tac;lia
+             | Q : back_edge p q |- _
+               => eapply depth_back in Q;tac;lia
+             end
+     end.
+Section cfg.
+  Context `(C : redCFG).
+  Notation "pi -t> qj" := (tcfg_edge pi qj) (at level 50).
+
+  Lemma tcfg_basic_edge p q i
+        (H : basic_edge p q)
+    : (p,i) -t> (q,i).
+  Proof.
+    copy H H'.
+    destruct H.
+    eapply a_edge_incl in H0.
+    split;eauto.
+    unfold eff_tag.
+    decide (edge__P p q);[|contradiction].
+    destruct (edge_Edge e);eauto.
+    all:exfalso;edge_excl.
+  Qed.
+
+  Lemma tcfg_back_edge p q n i
+        (H : back_edge p q)
+    : (p, n :: i) -t> (q, S n :: i).
+  Proof.
+    copy H H'.
+    destruct H.
+    split;eauto.
+    unfold eff_tag.
+    decide (edge__P p q);[|contradiction].
+    destruct (edge_Edge e);eauto.
+    all:exfalso;edge_excl.
+  Qed.
+
+  Lemma tcfg_entry_edge p q i
+        (H : entry_edge p q)
+    : (p,i) -t> (q, 0 :: i).
+  Proof.
+    copy H H'.
+    destruct H.
+    destructH.
+    split;eauto.
+    unfold eff_tag.
+    decide (edge__P p q);[|contradiction].
+    destruct (edge_Edge e);eauto.
+    all:exfalso;edge_excl.
+  Qed.
+
+  Lemma tcfg_exit_edge p q i n
+        (H : eexit_edge p q)
+    : (p,n :: i) -t> (q, i).
+  Proof.
+    copy H H'.
+    destruct H.
+    destruct H. destructH.
+    split;eauto.
+    unfold eff_tag.
+    decide (edge__P p q);[|contradiction].
+    destruct (edge_Edge e);eauto.
+    all:exfalso;edge_excl.
+  Qed.
+
+End cfg.

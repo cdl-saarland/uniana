@@ -202,7 +202,6 @@ Section cfg.
   Definition basic_edge p q := eq_loop p q /\ a_edge__P p q.
   Definition eexit_edge p q := exists h, exit_edge h p q.
 
-
   Lemma basic_edge_eq_loop p q
         (Hedge : basic_edge p q)
     : eq_loop p q.
@@ -236,6 +235,199 @@ Section cfg.
   Proof.
     eapply back_edge_eq_loop in Hedge.
     rewrite Hedge. reflexivity.
+  Qed.
+  Lemma deq_loop_entry (p q : Lab)
+        (Hentry : entry_edge p q)
+    : deq_loop q p.
+  Proof.
+    unfold entry_edge in Hentry.
+    destructH.
+    intros h Heq.
+    assert (~ exit_edge h p q).
+    - contradict Hentry0. eapply no_exit_head;eauto.
+    - do 2 simpl_dec' H. destruct H as [H|[H|H]];[contradiction| |contradiction].
+      eapply dec_DN;eauto.
+  Qed.
+
+  Lemma deq_loop_entry_or (p q : Lab)
+        (Hentry : entry_edge p q)
+    : forall h, loop_contains h q -> loop_contains h p \/ h = q.
+  Proof.
+    intros.
+    decide (h = q);[right;auto|left].
+    unfold loop_contains,entry_edge in *. destructH. destructH.
+    exists p0, (π :r: p). split_conj;eauto.
+    - eapply path_rcons;eauto.
+    - rewrite rev_rcons. cbn. rewrite <-in_rev. eapply nin_tl_iff in H3;eauto.
+      destruct H3;[eauto|]. destr_r' π;subst π;cbn in H. 1: inversion H2.
+      path_simpl' H2.
+      rewrite rev_rcons in H. cbn in H. inversion H. contradiction.
+  Qed.
+
+  Lemma depth_entry p q
+        (Hentry : entry_edge p q)
+    : S (depth p) = depth q.
+  Proof.
+    unfold depth.
+    match goal with |- S (| ?l |) = | ?l' | => set (lp := l); set (lq := l') end.
+    assert (lq =' (q :: lp)).
+    {
+      split.
+      - intros h H. eapply deq_loop_entry_or in Hentry. destruct Hentry;[right|left].
+        + eapply in_filter_iff in H. eapply in_filter_iff. destructH. cbn in *. split;eauto.
+        + symmetry;eauto.
+        + eapply in_filter_iff in H. destructH. cbn in *. eauto.
+      - intros h H. destruct H.
+        + subst. eapply in_filter_iff. split;eauto. cbn.
+          unfold entry_edge in Hentry. destructH.
+          eauto using loop_contains_self.
+        + eapply in_filter_iff. split; eauto; cbn. eapply deq_loop_entry;eauto.
+          eapply in_filter_iff in H. destructH. cbn in H1. auto.
+    }
+    setoid_rewrite set_eq_NoDup_len at 2;eauto.
+    - cbn. reflexivity.
+    - eapply NoDup_iff_dupfree. eapply dupfree_filter.
+      eapply dupfree_elements.
+    - econstructor.
+      + intro N. eapply in_filter_iff in N. destructH. cbn in N1. unfold entry_edge in Hentry.
+        destructH. contradiction.
+      + eapply NoDup_iff_dupfree. eapply dupfree_filter.
+        eapply dupfree_elements.
+  Qed.
+
+  Lemma deq_loop_exit_or (h p q : Lab)
+        (Hexit : exit_edge h p q)
+    : forall h', loop_contains h' p -> loop_contains h' q \/ h' = h.
+  Proof.
+    intros.
+    decide (h' = h);[right;auto|left].
+    decide (loop_contains h' q);[eauto|].
+    exfalso. eapply n.
+    eapply single_exit;eauto.
+    unfold exit_edge in *. destructH. split;eauto.
+  Qed.
+
+
+  Lemma deq_loop_exiting h qe e
+        (Hexit : exit_edge h qe e)
+    : deq_loop h qe.
+  Proof.
+    unfold deq_loop;intros. copy Hexit Hexit'.
+    unfold exit_edge in Hexit. destructH. eapply loop_contains_either in Hexit0;eauto.
+    destruct Hexit0;[auto|].
+    enough (h = h0) by (subst;eauto using loop_contains_self,loop_contains_loop_head).
+    eapply single_exit;eauto.
+    unfold exit_edge. repeat (split;eauto).
+    contradict Hexit2. eapply loop_contains_trans;eauto.
+  Qed.
+
+  Lemma deq_loop_exited h qe e
+        (Hexit : exit_edge h qe e)
+    : deq_loop qe e.
+  Proof.
+    eapply no_exit_head in Hexit as Hneh.
+    unfold exit_edge in *. destructH.
+    unfold deq_loop. intros.
+    eapply preds_in_same_loop in H;eauto.
+    intro N. eapply loop_contains_loop_head in H. subst. contradiction.
+  Qed.
+
+  Lemma deq_loop_exited' : forall (h qe e : Lab), exit_edge h qe e -> deq_loop h e.
+  Proof.
+    intros.
+    eapply deq_loop_exited in H as H'.
+    eapply deq_loop_exiting in H as H''.
+    eapply deq_loop_trans;eauto.
+  Qed.
+
+  Lemma eq_loop_exiting h p q
+        (Hexit : exit_edge h p q)
+    : eq_loop h p.
+  Proof.
+    split.
+    - eapply deq_loop_exiting;eauto.
+    - unfold exit_edge in Hexit.
+      destruct Hexit as [Hexit _].
+      eapply loop_contains_deq_loop;eauto.
+  Qed.
+
+  Lemma depth_exit p q
+        (Heexit : eexit_edge p q)
+    : depth p = S (depth q).
+  Proof.
+    unfold depth.
+    match goal with |- | ?l | = S (| ?l' |) => set (lp := l); set (lq := l') end.
+    unfold eexit_edge in Heexit. destructH.
+    assert (lp =' (h :: lq)).
+    {
+      split;intros h' H;[|destruct H]. 1,3: eapply in_filter_iff in H; cbn in H; destructH.
+      1: decide (h = h');[left;auto|right].
+      all: eapply in_filter_iff; cbn;split;eauto.
+      - eapply deq_loop_exit_or in Heexit;eauto. destruct Heexit;[auto|subst;contradiction].
+      - eapply deq_loop_exited;eauto.
+      - subst. unfold exit_edge in Heexit;destructH;eauto.
+    }
+    setoid_rewrite set_eq_NoDup_len at 1;eauto.
+    3: econstructor.
+    2,4: eapply NoDup_iff_dupfree; eapply dupfree_filter;
+      eapply dupfree_elements.
+    - cbn. reflexivity.
+    - intro N. eapply in_filter_iff in N. destructH. cbn in N1. unfold exit_edge in Heexit.
+      destructH. contradiction.
+  Qed.
+
+  Lemma root_no_loop h
+    : ~ loop_contains h root.
+  Proof.
+    intro H. copy H Q.
+    eapply dom_loop in H. unfold Dom in H.
+    specialize (H [root]). exploit H. 1: econstructor.
+    destruct H;[|contradiction]. subst h.
+    eapply loop_contains_loop_head in Q.
+    unfold loop_head in Q. destructH. eapply back_edge_incl in Q.
+    eapply root_no_pred;eauto.
+  Qed.
+
+  Lemma basic_edge_no_loop2 p q
+        (Hedge : basic_edge p q)
+    : ~ loop_head q.
+  Proof.
+    intro N.
+    destruct Hedge.
+    assert (loop_contains q p) as Hloop.
+    { destruct H. eapply H. eapply loop_contains_self. eauto. }
+    eapply dom_loop in Hloop.
+    specialize (a_reachability p) as Hreach. destructH.
+    eapply PathCons in H0;eauto.
+    eapply dom_dom_acyclic in Hloop.
+    unfold Dom in Hloop. eapply Hloop in Hreach.
+    eapply acyclic_path_NoDup in H0. inversion H0;subst. contradiction.
+  Qed.
+
+  Lemma depth_root
+    : depth root = 0.
+  Proof.
+    unfold depth. eapply length_zero_iff_nil.
+    remember (elem Lab) as l. clear Heql.
+    induction l;cbn;auto.
+    decide (loop_contains a root).
+    - exfalso;eapply root_no_loop;eauto.
+    - eauto.
+  Qed.
+
+  Lemma depth_loop_head h
+        (Hhead : loop_head h)
+    : depth h > 0.
+  Proof.
+    unfold depth.
+    match goal with |- | ?x | > 0 => set (l := x) end.
+    enough (h ∈ l).
+    - eapply not_le. intro N. setoid_rewrite <-NoDup_incl_length with (l:=[h]) in N.
+      + cbn in N. lia.
+      + econstructor;eauto. econstructor.
+      + eauto.
+    - eapply loop_contains_self in Hhead.
+      eapply in_filter_iff. split;eauto.
   Qed.
 
   (** * Innermost loops and strit-innermost loops **)
@@ -523,49 +715,6 @@ Section cfg.
   Qed.
 
   (** * Lemmas about relative loop depth on exit edges **)
-
-  Lemma deq_loop_exiting h qe e
-        (Hexit : exit_edge h qe e)
-    : deq_loop h qe.
-  Proof.
-    unfold deq_loop;intros. copy Hexit Hexit'.
-    unfold exit_edge in Hexit. destructH. eapply loop_contains_either in Hexit0;eauto.
-    destruct Hexit0;[auto|].
-    enough (h = h0) by (subst;eauto using loop_contains_self,loop_contains_loop_head).
-    eapply single_exit;eauto.
-    unfold exit_edge. repeat (split;eauto).
-    contradict Hexit2. eapply loop_contains_trans;eauto.
-  Qed.
-
-  Lemma deq_loop_exited h qe e
-        (Hexit : exit_edge h qe e)
-    : deq_loop qe e.
-  Proof.
-    eapply no_exit_head in Hexit as Hneh.
-    unfold exit_edge in *. destructH.
-    unfold deq_loop. intros.
-    eapply preds_in_same_loop in H;eauto.
-    intro N. eapply loop_contains_loop_head in H. subst. contradiction.
-  Qed.
-
-  Lemma deq_loop_exited' : forall (h qe e : Lab), exit_edge h qe e -> deq_loop h e.
-  Proof.
-    intros.
-    eapply deq_loop_exited in H as H'.
-    eapply deq_loop_exiting in H as H''.
-    eapply deq_loop_trans;eauto.
-  Qed.
-
-  Lemma eq_loop_exiting h p q
-        (Hexit : exit_edge h p q)
-    : eq_loop h p.
-  Proof.
-    split.
-    - eapply deq_loop_exiting;eauto.
-    - unfold exit_edge in Hexit.
-      destruct Hexit as [Hexit _].
-      eapply loop_contains_deq_loop;eauto.
-  Qed.
 
   Lemma exit_edge_innermost h q e
         (Hexit : exit_edge h q e)
