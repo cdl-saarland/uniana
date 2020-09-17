@@ -516,6 +516,12 @@ Section disj.
     clear Hjle.
   Admitted.
 
+  Lemma tag_eq_take_r
+    : forall h q' k', (q',k') ∈ r1 -> deq_loop q' h -> deq_loop s h -> take_r (depth h) k' = take_r (depth h) k.
+  Proof.
+  Admitted.
+
+
   Section disj_eqdep.
     Hypothesis (Hdeq : deq_loop q1 s).
 

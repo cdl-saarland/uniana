@@ -140,6 +140,13 @@ Section cfg.
       + cbn. lia.
   Qed.
 
+  Lemma tpath_tag_take_r_eq p i q j t h n
+        (Hpath : TPath (q,j) (p,i) t)
+        (Hincl : forall r, r ∈ map fst t -> loop_contains h r)
+        (Hdep : depth h = n)
+    : take_r (n-1) j = take_r (n-1) i.
+  Admitted.
+
   (** ** p p ex head **)
 
   Lemma p_p_ex_head' (p q : Lab) π ϕ
