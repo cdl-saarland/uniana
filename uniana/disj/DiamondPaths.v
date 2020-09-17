@@ -418,6 +418,16 @@ Proof.
   eapply DiamondPaths_sym;eauto.
 Qed.
 
+Lemma u_len1 `(D : DiamondPaths)
+  : | l1 | = depth u1.
+Proof.
+Admitted.
+
+Lemma u_len2 `(D : DiamondPaths)
+  : | l2 | = depth u2.
+Proof.
+Admitted.
+
 Lemma j_len1 `(D : DiamondPaths)
   : | j1 | = depth q1.
 Proof.
