@@ -589,6 +589,13 @@ Proof.
   eapply postfix_rev_prefix;eauto.
 Qed.
 
+Lemma prefix_len_leq (A : Type) (l l' : list A)
+      (Hpre : Prefix l l')
+  : | l | <= | l' |.
+Proof.
+  induction Hpre;cbn;eauto.
+Qed.
+
 (** StrictPrefix **)
 
 Section StrictPre.

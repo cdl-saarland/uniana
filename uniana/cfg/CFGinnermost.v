@@ -130,6 +130,17 @@ Section cfg.
     lia.
   Qed.
 
+  Lemma depth_zero_iff q
+    : depth q = 0 <-> forall h, loop_contains h q -> False.
+  Proof.
+    unfold depth.
+    rewrite length_zero_iff_nil.
+    split;intros.
+    - eapply filter_nil;eauto.
+    - eapply list_emp_in. intros. intro N. eapply H.
+      eapply in_filter_iff in N. destructH. cbn in N1. eauto.
+  Qed.
+
   (** ** Equivalence relation eq_loop **)
 
   Definition eq_loop q p : Prop :=

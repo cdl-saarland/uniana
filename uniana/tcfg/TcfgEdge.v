@@ -217,57 +217,6 @@ Section eff_tag_facts.
 
 End eff_tag_facts.
 
-Ltac edge_excl
-  := match goal with
-     | H : basic_edge ?p ?q |- _
-       => let tac
-             := eapply depth_basic in H
-           in
-             lazymatch goal with
-             | Q : entry_edge p q |- _
-               => eapply depth_entry in Q;tac;lia
-             | Q : eexit_edge p q |- _
-               => eapply depth_exit in Q;tac;lia
-             | Q : back_edge p q |- _
-               => destruct H, Q; firstorder
-             end
-     | H : entry_edge ?p ?q |- _
-       => let tac
-             := eapply depth_entry in H
-           in
-             lazymatch goal with
-             | Q : basic_edge p q |- _
-               => eapply depth_basic in Q;tac;lia
-             | Q : eexit_edge p q |- _
-               => eapply depth_exit in Q;tac;lia
-             | Q : back_edge p q |- _
-               => eapply depth_back in Q;tac;lia
-             end
-     | H : eexit_edge ?p ?q |- _
-       => let tac
-             := eapply depth_exit in H
-           in
-             lazymatch goal with
-             | Q : basic_edge p q |- _
-               => eapply depth_basic in Q;tac;lia
-             | Q : entry_edge p q |- _
-               => eapply depth_entry in Q;tac;lia
-             | Q : back_edge p q |- _
-               => eapply depth_back in Q;tac;lia
-             end
-     | H : back_edge ?p ?q |- _
-       => let tac
-             := eapply depth_back in H
-           in
-             lazymatch goal with
-             | Q : basic_edge p q |- _
-               => destruct H, Q; firstorder
-             | Q : entry_edge p q |- _
-               => eapply depth_entry in Q;tac;lia
-             | Q : back_edge p q |- _
-               => eapply depth_back in Q;tac;lia
-             end
-     end.
 Section cfg.
   Context `(C : redCFG).
   Notation "pi -t> qj" := (tcfg_edge pi qj) (at level 50).

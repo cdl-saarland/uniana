@@ -283,14 +283,6 @@ Proof.
     (* FIXME *)
   Admitted.
 
-  Lemma loop_cutting q p t
-        (Hpath : CPath q p t)
-        (Hnoh : forall h, loop_contains h q -> h ∉ t)
-    : exists t', Path a_edge__P q p t'.
-  Proof. (* used below *)
-    (* FIXME *)
-  Admitted.
-
   Lemma tpath_exit_nin h q e n j t
         (Hpath : TPath (root, start_tag) (q,n :: j) t)
         (Hloop : loop_contains h q)

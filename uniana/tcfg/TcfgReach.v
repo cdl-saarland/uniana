@@ -1,4 +1,4 @@
-Require Export TcfgLoop.
+Require Export TcfgLoop CFGloopcutting.
 Require Import Lia.
 
 Section cfg.
@@ -53,48 +53,65 @@ Section cfg.
     : exists t, TPath (q,i) (q,j) t.
    *)
 
-  Lemma tcfg_zero_iter q j
-        (Hlen : | j | = depth q)
-    : exists t, TPath (q, zero_tag (depth q)) (q,j) t.
+  Lemma tcfg_path_acyclic_deq p q π i j
+        (Hpath : APath p q π)
+        (Hdeq : deq_loop q p)
+        (Hlenp : | i | = depth p)
+        (Hj : j = zero_tag (depth q - depth p) ++ i)
+    : exists t, TPath (p,i) (q,j) t.
   Proof.
-    revert dependent q.
-    induction j;intros.
-    - cbn in Hlen.
-      rewrite <-Hlen. cbn. eexists;econstructor.
-    - cbn in Hlen.
-      induction a.
-      +
-  Admitted.
-
-  Lemma depth_zero_iff q
-    : depth q = 0 <-> forall h, loop_contains h q -> False.
-  Proof.
-    unfold depth.
-    rewrite length_zero_iff_nil.
-    split;intros.
-    - eapply filter_nil;eauto.
-    - eapply list_emp_in. intros. intro N. eapply H.
-      eapply in_filter_iff in N. destructH. cbn in N1. eauto.
+    revert q j Hpath Hj Hdeq.
+    induction π;intros;[|destruct π];inv_path Hpath.
+      - replace (depth a - depth a) with 0 by lia. cbn.
+        eexists;econstructor.
+      - eapply a_edge_incl in H0 as Hedge.
+        remember (zero_tag (depth e - depth p) ++ i) as j.
+        specialize (IHπ e j).
+        do 2 exploit' IHπ.
+        destruct (edge_Edge Hedge).
+        + copy b b'.
+          destruct b.
+          exploit IHπ.
+          * eapply eq_loop1;eauto. symmetry;eauto.
+          * destructH. exists ((a,j) :: t). rewrite H1 in Heqj. subst j. econstructor;eauto.
+            eapply tcfg_basic_edge;eauto.
+        + exfalso.
+          destruct b. contradiction.
+        + decide (deq_loop p a).
+          * exfalso.
+            assert (loop_contains a p) as Hloop.
+            { eapply deq_loop_head_loop_contains;eauto. destruct e0. auto. }
+            eapply loop_reachs_member in Hloop. destruct Hloop as [π' Hloop].
+            eapply path_app' in H;eauto. cbn in H.
+            eapply a_edge_acyclic;eauto.
+          * exploit IHπ.
+            -- intros h Hh. eapply deq_loop_entry_or in e0.
+               ++ destruct e0;[eauto|]. subst a. exfalso. eapply loop_contains_deq_loop in Hh. contradiction.
+               ++ eapply Hdeq;eauto.
+            -- eapply depth_entry in e0 as Hdep. rewrite <-Hdep.
+               assert (depth p < depth a) as Hlt.
+               {
+                 copy Hdeq Hdeq'.
+                 eapply deq_loop_depth in Hdeq. eapply le_lt_or_eq in Hdeq. destruct Hdeq;[auto|].
+                 exfalso. eapply n. eapply deq_loop_depth_leq;auto. rewrite H1. reflexivity.
+               }
+               replace (S (depth e) - depth p) with (S (depth e - depth p)) by lia.
+               cbn.
+               destructH.
+               exists ((a,0 :: j) :: t).
+               subst j. econstructor;eauto.
+               eapply tcfg_entry_edge;eauto.
+        + exploit IHπ.
+          { destruct e0. transitivity a;eauto. eapply deq_loop_exited;eauto. }
+          eapply depth_exit in e0 as Hdep. rewrite Hdep in Heqj.
+          rewrite Nat.sub_succ_l in Heqj. 2: eapply deq_loop_depth;assumption.
+          cbn in Heqj.
+          destructH.
+          exists ((a,tl j) :: t).
+          subst j. cbn.
+          econstructor;eauto.
+          eapply tcfg_exit_edge;eauto.
   Qed.
-
-  Lemma loop_head_acyclic_entry p h
-        (Hloop : loop_head h)
-        (Hedge : a_edge__P p h)
-    : entry_edge p h.
-  Proof.
-    copy Hedge Hedge'.
-    eapply a_edge_incl in Hedge.
-    destruct (edge_Edge Hedge).
-    all:auto;exfalso.
-    - eapply basic_edge_no_loop2;eauto.
-    - destruct b. contradiction.
-    - destruct e. eapply no_exit_head;eauto.
-  Qed.
-
-  Lemma member_reachs_innermost_latch_acyclic h q
-        (Hloop : loop_contains h q)
-    : exists p, p ↪ h /\ q -a>* p.
-  Admitted.
 
   Lemma tcfg_path_acyclic p q π i
         (Hpath : APath p q π)
@@ -102,7 +119,10 @@ Section cfg.
         (Hlen : | i | = depth p)
     : exists t, TPath (p,i) (q,i) t.
   Proof.
-  Admitted.
+    eapply tcfg_path_acyclic_deq;eauto.
+    - destruct Heq;auto.
+    - rewrite Heq. replace (depth q - depth q) with 0 by lia. cbn. reflexivity.
+  Qed.
 
   Lemma tcfg_reachability q j
         (Hlen : | j | = depth q)
@@ -143,11 +163,11 @@ Section cfg.
           eapply tcfg_entry_edge;eauto.
       + exploit IHa. destructH.
         copy Hinner Hinner'.
-        destruct Hinner'. copy H H'.
-        eapply member_reachs_innermost_latch_acyclic in H.
+        eapply member_reachs_innermost_latch_acyclic in Hinner' as H.
+        destruct Hinner'. copy H0 H'.
         destructH.
-        eapply tcfg_path_acyclic with (i := a :: j) in H2.
-        2: { eapply back_edge_eq_loop in H1. rewrite H1. symmetry. eapply innermost_eq_loop;eauto. }
+        eapply tcfg_path_acyclic with (i := a :: j) in H3.
+        2: { eapply back_edge_eq_loop in H2. rewrite H2. symmetry. eapply innermost_eq_loop;eauto. }
         2: { cbn in Hlen. cbn. eassumption. }
         destructH.
         eapply loop_reachs_member in H'.

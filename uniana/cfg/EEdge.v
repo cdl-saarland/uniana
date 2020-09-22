@@ -1,5 +1,5 @@
 Require Export CFGinnermost.
-Require Import PropExtensionality.
+Require Import PropExtensionality Lia.
 
 (** * Kinds of edges in a redCFG **)
 
@@ -73,3 +73,75 @@ Proof.
   erewrite Edge_disj. reflexivity.
 Qed.
 End cfg.
+
+
+
+Ltac edge_excl
+  := match goal with
+     | H : basic_edge ?p ?q |- _
+       => let tac
+             := eapply depth_basic in H
+           in
+             lazymatch goal with
+             | Q : entry_edge p q |- _
+               => eapply depth_entry in Q;tac;lia
+             | Q : eexit_edge p q |- _
+               => eapply depth_exit in Q;tac;lia
+             | Q : back_edge p q |- _
+               => destruct H, Q; firstorder
+             end
+     | H : entry_edge ?p ?q |- _
+       => let tac
+             := eapply depth_entry in H
+           in
+             lazymatch goal with
+             | Q : basic_edge p q |- _
+               => eapply depth_basic in Q;tac;lia
+             | Q : eexit_edge p q |- _
+               => eapply depth_exit in Q;tac;lia
+             | Q : back_edge p q |- _
+               => eapply depth_back in Q;tac;lia
+             end
+     | H : eexit_edge ?p ?q |- _
+       => let tac
+             := eapply depth_exit in H
+           in
+             lazymatch goal with
+             | Q : basic_edge p q |- _
+               => eapply depth_basic in Q;tac;lia
+             | Q : entry_edge p q |- _
+               => eapply depth_entry in Q;tac;lia
+             | Q : back_edge p q |- _
+               => eapply depth_back in Q;tac;lia
+             end
+     | H : back_edge ?p ?q |- _
+       => let tac
+             := eapply depth_back in H
+           in
+             lazymatch goal with
+             | Q : basic_edge p q |- _
+               => destruct H, Q; firstorder
+             | Q : entry_edge p q |- _
+               => eapply depth_entry in Q;tac;lia
+             | Q : back_edge p q |- _
+               => eapply depth_back in Q;tac;lia
+             end
+     end.
+
+Lemma entry_edge_acyclic `(C : redCFG) p q
+      (Hentry : entry_edge p q)
+  : a_edge__P p q.
+Proof.
+  decide (back_edge p q).
+  - edge_excl.
+  - simpl_dec' n. simpl_dec' n. unfold entry_edge in Hentry. destruct n;firstorder.
+Qed.
+
+Lemma exit_edge_acyclic `(C : redCFG) p q
+      (Hexit : eexit_edge p q)
+  : a_edge__P p q.
+Proof.
+  decide (back_edge p q).
+  - edge_excl.
+  - do 2 simpl_dec' n. destruct Hexit. destruct H. destruct H0. destruct n;firstorder.
+Qed.
