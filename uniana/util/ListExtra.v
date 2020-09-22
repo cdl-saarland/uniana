@@ -3,9 +3,7 @@
 **)
 Require Import Program.Equality Lia.
 Require Export List.
-
 Require Export Take.
-
 Require Export Util UtilTac.
 
 (**  Notations for lists used as sets **)

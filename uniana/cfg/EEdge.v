@@ -25,20 +25,19 @@ Proof.
     try contradiction.
   7,10:eapply no_exit_head;unfold exit_edge;eauto.
   4,8:exfalso;eapply no_exit_head;eexists;eauto; unfold back_edge; unfold_edge_op; eauto.
-(*    all: lazymatch goal with
-         | H : ~ loop_contains ?q ?p,
-               Q : eq_loop ?p ?q |- _ => eapply H; rewrite Q; eapply loop_contains_self;eauto
-         | H : eq_loop ?p ?q,
-               Q : ~ loop_contains _ ?q |- _ => rewrite <-H in Q; contradiction
-         | _ : loop_head ?q,
-               H : ~ loop_contains ?q ?p,
-                   _ : ~ a_edge__P ?p ?q |- _
-           => eapply H; specialize (back_edge_eq_loop (p:=p) (h:=q)) as Q;
-               exploit Q;[firstorder|rewrite Q;eapply loop_contains_self;eauto]
-         | _ => idtac
-         end.
- *)
-Admitted.
+  all: lazymatch goal with
+       | H : ~ loop_contains ?q ?p,
+             Q : eq_loop ?p ?q |- _ => eapply H; rewrite Q; eapply loop_contains_self;eauto
+       | H : eq_loop ?p ?q,
+             Q : ~ loop_contains _ ?q |- _ => rewrite <-H in Q; contradiction
+       | _ : loop_head ?q,
+             H : ~ loop_contains ?q ?p,
+                 _ : ~ a_edge__P ?p ?q |- _
+         => eapply H; specialize (back_edge_eq_loop (p:=p) (h:=q)) as Q;
+             exploit Q;[firstorder|rewrite Q;eapply loop_contains_self;eauto]
+       | _ => idtac
+       end.
+Qed.
 
 Lemma edge_Edge : forall (p q : Lab), edge__P p q -> Edge p q.
 Proof.

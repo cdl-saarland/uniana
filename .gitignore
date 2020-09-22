@@ -2,6 +2,7 @@
 .\#*
 *.glob
 *.vo
+*.vio
 *.vok
 *.vos
 *.coq.d

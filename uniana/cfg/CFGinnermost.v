@@ -746,7 +746,7 @@ Section cfg.
     - eapply deq_loop_exiting;eauto.
   Qed.
 
-  Lemma dom_self_loop h p π
+(*  Lemma dom_self_loop h p π
         (Hpath : CPath p p π)
         (Hinl : innermost_loop h p)
         (Hnin : h ∉ π)
@@ -756,7 +756,7 @@ Section cfg.
     inversion Hpath;subst.
     - reflexivity.
     - exfalso. eapply Hnin.
-  Admitted. (* FIXME *)
+*)
 
   (** * Variant of get_innermost_loop that uses the root if there is no loop **)
 

@@ -476,6 +476,16 @@ Section graph.
     destruct (L_dec p q);[rewrite e in *|];eauto.
   Qed.
 
+  Lemma acyclic_NoDup p q π
+        (Hpath : Path p q π)
+        (Hacy : acyclic)
+    : NoDup π.
+  Proof.
+    induction Hpath.
+    - econstructor;eauto. econstructor.
+    - econstructor;eauto. intro N. eapply path_from_elem in N; eauto. destructH. eapply Hacy;eauto.
+  Qed.
+
   Lemma postfix_path l p q q' l' : (* FIXME: duplicate *)
     Path q' q l'
     -> Postfix (l ++ [p]) l'

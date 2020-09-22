@@ -1,4 +1,4 @@
-Require Export LoopSplits CncLoop SplitsSound.
+Require Export LoopSplits SplitsSound.
 
 Notation "pi -t> qj" := (tcfg_edge pi qj) (at level 50).
 Lemma both_exit_or_teq `(C : redCFG) q1 q2 p j1 j2 i

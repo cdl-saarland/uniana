@@ -9,7 +9,7 @@ Section hr_cfg.
   Lemma subgraph_refl {L : Type} [edge1 : L -> L -> Prop]
     : sub_graph edge1 edge1.
   Proof.
-    unfold sub_graph. intros; tauto.
+    unfold sub_graph. intros. tauto.
   Qed.
 
   (* the head rewired DAG is not a redCFG (because of unreachability) *)
@@ -24,6 +24,7 @@ Section hr_cfg.
         (Hpath : HPath p q π)
     : NoDup π.
   Proof.
-  Admitted.
+    eapply acyclic_NoDup; eauto using acyclic_head_rewired_edge.
+  Qed.
 
 End hr_cfg.
