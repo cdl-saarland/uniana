@@ -470,12 +470,6 @@ Section graph.
     destruct (L_dec p q);[auto|]. eapply path_path_acyclic in c;eauto. contradiction.
   Qed.
 
-  Lemma acyclic_path_path : (forall p q π ϕ, p <> q -> Path p q π -> ~ Path q p ϕ) -> (forall p, p -> p -> False) -> acyclic.
-  Proof.
-    intros. unfold acyclic. intros p q Hedge Hpath.
-    destruct (L_dec p q);[rewrite e in *|];eauto.
-  Qed.
-
   Lemma acyclic_NoDup p q π
         (Hpath : Path p q π)
         (Hacy : acyclic)
@@ -685,3 +679,17 @@ Ltac inv_path H :=
   | Q : Path _ _ _ [] |- _ => inversion Q
   | |- _ => idtac
   end.
+
+Lemma acyclic_path_path (L : Type) (e : L -> L -> Prop)
+  : (forall p q π ϕ, p <> q -> Path e p q π -> ~ Path e q p ϕ) -> (forall p q, e p q -> q <> p) -> acyclic e.
+Proof.
+  intros. intros p q π Hedge Hpath. revert p q Hedge Hpath.
+  induction π;intros;inv_path Hpath.
+  - eapply H0;eauto.
+  - eapply H.
+    + eapply H0. eapply Hedge.
+    + eapply Hpath.
+    + instantiate (1:=[q;p]).
+      econstructor;eauto.
+      econstructor.
+Qed.
