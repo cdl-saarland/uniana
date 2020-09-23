@@ -27,4 +27,46 @@ Section hr_cfg.
     eapply acyclic_NoDup; eauto using acyclic_head_rewired_edge.
   Qed.
 
+  Lemma head_rewired_head_no_entry h p t
+        (Hloop : loop_contains h p)
+        (Hpath : HPath h p t)
+    : h = p.
+  Admitted.
+  Lemma head_rewired_entry_eq h p q t
+        (Hpath : HPath q p t)
+        (Hnin : ~ loop_contains h q)
+        (Hin : loop_contains h p)
+    : h = p.
+  Proof.
+
+  Admitted.
+  Lemma head_rewired_final_exit e p t q h
+        (Hpath : HPath e p t)
+        (Hexit : exit_edge h q e)
+        (Hloop : loop_contains h p)
+    : False.
+  Proof.
+    eapply head_rewired_entry_eq in Hloop;eauto.
+    2: destruct Hexit as [? [Hexit _]];eauto.
+    subst p.
+    specialize (path_rcons) with (r:=h) as Hpath'.
+    specialize Hpath' with (edge:=head_rewired_edge).
+    eapply Hpath' in Hpath as Hpath''.
+    - eapply acyclic_HPath in Hpath'' as Hnd.
+      eapply NoDup_nin_rcons;eauto.
+      destruct t;[inv Hpath|].
+      cbn in Hpath''. path_simpl' Hpath''. left. reflexivity.
+    - right. eexists;eauto.
+  Qed.
+  Lemma head_rewired_final_exit_elem e p t q h x
+        (Hpath : HPath e p t)
+        (Hexit : exit_edge h q e)
+        (Hin : x ∈ t)
+        (Hloop : loop_contains h x)
+    : False.
+  Proof.
+    eapply path_to_elem in Hpath;eauto. destructH.
+    eapply head_rewired_final_exit;eauto.
+  Qed.
+
 End hr_cfg.

@@ -1521,10 +1521,10 @@ Context `{C : redCFG}.
      enough (depth q1' = S (depth q1)).
      - clear - Heqm H.
        rewrite H. lia.
-     - copy Dsplit6 Hexit.
-       eapply depth_exit in Dsplit6. admit. (*rewrite Dsplit6. f_equal. eapply eq_loop_depth.
+     - copy Dsplit4 Hexit.
+       eapply depth_exit in Dsplit4. rewrite Dsplit4. f_equal. eapply eq_loop_depth.
        destruct Hexit.
-       eapply u1_exit_eq_q;eauto. *)
+       eapply u1_exit_eq_q;eauto.
    }
    destructH.
    assert ((q1, n1 :: i) -t> (e1, i)) as Hedge1.
@@ -1539,27 +1539,28 @@ Context `{C : redCFG}.
    - rewrite app_comm_cons. eapply path_app';eauto.
    - cbn.
       eapply disjoint_app_app;eauto.
-      + intros x Hx.
-        eapply Dinst3 in Hx.
-        admit. (*
-         specialize (Dsplit4 x Hx).
-         intro N.
-         eapply Hinhom5 in N.
-         eapply r2_incl_head_q in N;eauto.*)
-      + eapply Disjoint_sym.
-         intros x Hx.
-         eapply Dinst5 in Hx.
-         admit. (*
-         specialize (Dsplit5 x Hx).
-         intro N.
-         eapply Hinhom3 in N.
-         eapply r2_incl_head_q in N;eauto.
-         eapply DiamondPaths_sym. eauto.*)
-   - cbn. rewrite map_app. rewrite app_comm_cons.
-      eapply incl_app_app;eauto.
+     + intros x Hx.
+       intro N.
+       destruct Dsplit4.
+       destruct r1'1;[contradiction|].
+       inv_path Dinst0.
+       eapply head_rewired_final_exit_elem;eauto.
+       eapply r2_incl_head_q;eauto.
+       eapply exit_edge_innermost in H. destruct H. auto.
+     + eapply Disjoint_sym.
+       intros x Hx.
+       intro N.
+       destruct Dsplit6.
+       destruct r2'1;[contradiction|].
+       inv_path Dinst2.
+       eapply head_rewired_final_exit_elem;eauto.
+       eapply r1_incl_head_q;eauto.
+       eapply exit_edge_innermost in H. rewrite <-Dloop in H. destruct H. auto.
    - cbn. rewrite map_app. rewrite app_comm_cons.
      eapply incl_app_app;eauto.
- Admitted.
+   - cbn. rewrite map_app. rewrite app_comm_cons.
+     eapply incl_app_app;eauto.
+ Qed.
 
  Lemma inhom_loop_exits (s u1 u2 q1 q2 e1 e2 : Lab) r1 r2 (k i l1 l2 : Tag) (n1 n2 : nat)
         (D : DiamondPaths s u1 u2 e1 e2 q1 q2 k i l1 l2 (n1 :: i) (n2 :: i) r1 r2)
@@ -1605,11 +1606,10 @@ Context `{C : redCFG}.
          enough (depth q1' = S (depth q1)).
          - clear - Heqm H.
            rewrite H. lia.
-         - copy Dsplit6 Hexit.
-           admit. (*
-           eapply depth_exit in Dsplit6. rewrite Dsplit6. f_equal. eapply eq_loop_depth.
+         - copy Dsplit4 Hexit.
+           eapply depth_exit in Dsplit4. rewrite Dsplit4. f_equal. eapply eq_loop_depth.
            destruct Hexit.
-           eapply u1_exit_eq_q;eauto.*)
+           eapply u1_exit_eq_q;eauto.
        }
        destructH.
        assert ((q1, n1 :: i) -t> (e1, i)) as Hedge1.
@@ -1626,22 +1626,21 @@ Context `{C : redCFG}.
           do 2 rewrite app_comm_cons.
           eapply disjoint_app_app;eauto.
           ++ intros x Hx.
-             eapply Dinst3 in Hx.
-             admit. (*
-             specialize (Dsplit4 x Hx).
              intro N.
-             eapply Hinhom5 in N.
-             eapply r2_incl_head_q in N;eauto.*)
+             destruct Dsplit4.
+             inv_path Dinst0.
+             eapply head_rewired_final_exit_elem;eauto.
+             eapply r2_incl_head_q;eauto.
+             eapply exit_edge_innermost in H. destruct H. auto.
           ++ eapply Disjoint_sym.
              intros x Hx.
-             eapply Dinst5 in Hx.
-             admit. (*
-             specialize (Dsplit5 x Hx).
              intro N.
-             eapply Hinhom3 in N.
-             eapply r2_incl_head_q in N;eauto.
-             eapply DiamondPaths_sym. eauto.*)
-   -- cbn. rewrite map_app. rewrite app_comm_cons.
+             destruct Dsplit6.
+             inv_path Dinst2.
+             eapply head_rewired_final_exit_elem;eauto.
+             eapply r1_incl_head_q;eauto.
+             eapply exit_edge_innermost in H. rewrite <-Dloop in H. destruct H. auto.
+       -- cbn. rewrite map_app. rewrite app_comm_cons.
       rewrite app_comm_cons. eapply incl_app_app;eauto.
    -- cbn. rewrite map_app. rewrite app_comm_cons.
       rewrite app_comm_cons. eapply incl_app_app;eauto.
@@ -1663,7 +1662,7 @@ Context `{C : redCFG}.
        * rewrite <-Dloop. eauto.
        * intro N. eapply eq_loop1 in N;[eauto|symmetry;eauto]. eapply Dloop.
        * eauto.
- Admitted.
+ Qed.
 
 
   Lemma contract_one_empty s u2 p i q2 r2 k l2
@@ -1798,22 +1797,23 @@ Context `{C : redCFG}.
              do 2 rewrite app_comm_cons.
              eapply disjoint_app_app;eauto.
              ++ intros x Hx.
-                eapply Dinst3 in Hx.
-                admit. (*
-                specialize (D4 x Hx).
                 intro N.
-                eapply Hinhom5 in N.
-                eapply r2_incl_head_q in N;eauto.*)
+                destruct D4.
+                inv_path Dinst0.
+                eapply head_rewired_final_exit_elem.
+                1: eapply H0.
+                1,2: eauto.
+                eapply r2_incl_head_q;eauto.
+                eapply exit_edge_innermost in H. destruct H. auto.
              ++ eapply Disjoint_sym.
                 intros x Hx.
-                eapply Dinst5 in Hx.
-                admit. (*
-                specialize (D5 x Hx).
                 intro N.
-                eapply Hinhom3 in N.
-                eapply r2_incl_head_q in N;eauto.
-                eapply DiamondPaths_sym. eauto.*)
+                destruct D6.
+                inv_path Dinst2.
+                eapply head_rewired_final_exit_elem;eauto.
+                eapply r1_incl_head_q;eauto.
+                eapply exit_edge_innermost in H. rewrite <-Dloop in H. destruct H. auto.
           -- cbn. left. congruence.
-  Admitted.
+  Qed.
 
 End splits_sound.
