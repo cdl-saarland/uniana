@@ -651,6 +651,17 @@ Proof.
     econstructor;eauto.
 Qed.
 
+Lemma path_nlrcons_edge {A : Type} (a b c : A) l f
+      (Hpath : Path f b c (l :r: a :r: b))
+  : f b a.
+Proof.
+  revert dependent c.
+  induction l; intros; inversion Hpath; subst; cbn in *.
+  - inversion H3. subst b0 b;auto. inversion H5.
+  - congruence'.
+  - eauto.
+Qed.
+
 Ltac path_simpl2' H :=
   let Q:= fresh "Q" in
   lazymatch type of H with

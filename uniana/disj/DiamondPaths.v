@@ -1,19 +1,6 @@
 Require Export TcfgLoop Disjoint.
 Require Import MaxPreSuffix Lia.
 
-
-
-Lemma path_nlrcons_edge {A : Type} (a b c : A) l f
-      (Hpath : Path f b c (l :r: a :r: b))
-  : f b a.
-Proof.
-  revert dependent c.
-  induction l; intros; inversion Hpath; subst; cbn in *.
-  - inversion H3. subst b0 b;auto. inversion H5.
-  - congruence'.
-  - eauto.
-Qed.
-
 Section cfg.
   Context `(C : redCFG).
   Lemma geq_tag_suffix_deq (p q : Lab) l t i j
