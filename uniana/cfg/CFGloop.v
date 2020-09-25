@@ -389,6 +389,19 @@ Section cfg.
     intro N. congruence.
   Qed.
 
+  Lemma loop_reachs_exit h p q
+        (Hexit : exit_edge h p q)
+    : h -a>* q.
+  Proof.
+    copy Hexit Hexit'.
+    destruct Hexit.
+    eapply loop_reachs_member in H.
+    destruct H.
+    exists (q :: x).
+    econstructor;eauto.
+    eapply exit_a_edge;eauto.
+  Qed.
+
   Lemma acyclic_path_stays_in_loop (h p q : Lab) π
         (Hpath : Path a_edge__P p q π)
         (Hp : loop_contains h p)

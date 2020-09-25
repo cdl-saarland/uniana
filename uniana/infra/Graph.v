@@ -536,6 +536,12 @@ Infix "∖" := minus_edge (at level 49).
 Arguments sub_graph {L}.
 Arguments acyclic {L}.
 
+Lemma subgraph_refl {L : Type} [edge1 : L -> L -> Prop]
+  : sub_graph edge1 edge1.
+Proof.
+  unfold sub_graph. intros. tauto.
+Qed.
+
 Lemma subgraph_path {L : Type} (edge1 edge2 : L -> L -> Prop) p q :
   sub_graph edge1 edge2 -> (exists π, Path edge1 p q π) -> (exists ϕ, Path edge2 p q ϕ).
 Proof.
@@ -703,4 +709,73 @@ Proof.
     + instantiate (1:=[q;p]).
       econstructor;eauto.
       econstructor.
+Qed.
+
+(*
+Lemma rotate_forward' (L : Type) (e : L -> L -> Prop) (p q : L) π
+      (Hedge : e q p)
+      (Hpath : Path e p q π)
+  : let π' := p :: r_tl π in
+    let q' := hd p (rev π') in
+    e p q' /\ Path e q' p π'.
+Proof.
+  intros. subst q' π'. cbn.
+  destr_r' π;subst;cbn.
+  1: inv Hpath.
+  rewrite r_tl_rcons.
+  rewrite hd_rcons'. path_simpl' Hpath.
+  destr_r' l;subst;cbn in *.
+  + path_simpl' Hpath. split; assumption.
+  + rewrite rev_rcons. cbn.
+    split.
+    * eapply path_nlrcons_edge in Hpath;eauto.
+    * eapply path_rcons_rinv in Hpath. econstructor;eauto.
+Qed.
+
+Lemma rotate_forward (L : Type) (e : L -> L -> Prop) (p q : L) π
+      (Hedge : e q p)
+      (Hpath : Path e p q π)
+  : exists π' q', e p q' /\ Path e q' p π'.
+Proof.
+  do 2 eexists;eapply rotate_forward';eauto.
+Qed.
+*)
+
+Lemma acyclic_path_NoDup (L : Type) `{EqDec L eq} (ed : L -> L -> Prop) (π : list L) p q
+      (Hpath : Path ed p q π)
+      (Hacy : acyclic ed)
+  : NoDup π.
+Proof.
+  induction Hpath.
+  - econstructor;eauto. econstructor.
+  - econstructor;eauto.
+    intro N.
+    eapply path_from_elem in N;eauto.
+    destructH.
+    eapply Hacy;eauto.
+Qed.
+
+Lemma acy_path_incl_cons (L : Type) `{EqDec L eq} (ed : L -> L -> Prop) (π ϕ : list L) p q
+      (Hpath : Path ed p q π)
+      (Hincl : π ⊆ (q :: ϕ))
+      (Hacy : acyclic ed)
+  : tl π ⊆ ϕ.
+Proof.
+  inv_path Hpath;cbn;eauto.
+  unfold incl in *.
+  intros a Ha.
+  specialize (Hincl a). exploit Hincl.
+  destruct Hincl;subst.
+  - eapply acyclic_path_NoDup in Hpath;eauto.
+    inv Hpath. contradiction.
+  - auto.
+Qed.
+
+Lemma path_acyclic_no_loop (L : Type) (e : L -> L -> Prop) (a b c : L) (π : list L)
+      (Hacy : acyclic e)
+  : ~ Path e a a (b :: c :: π).
+Proof.
+  intro N.
+  inv_path N.
+  eapply Hacy;eauto.
 Qed.

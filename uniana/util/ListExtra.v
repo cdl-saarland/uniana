@@ -120,6 +120,12 @@ Section Rcons.
     induction l; intros; cbn in *; eauto. lia.
   Qed.
 
+  Lemma hd_rcons' (a : A) (l : list A)
+    : hd a (l ++ [a]) = hd a l.
+  Proof.
+    induction l;cbn;eauto.
+  Qed.
+
   Lemma In_rcons (a b : A) l :
     In a (l :r: b) <-> a = b \/ In a l.
   Proof.
@@ -592,4 +598,61 @@ Proof.
   - destruct H;subst.
     + cbn in Hnil. decide (f x);[congruence|auto].
     + eapply IHl;eauto. cbn in Hnil. decide (f a);[congruence|auto].
+Qed.
+
+
+Definition inner' := fun (A : Type) (l : list A) => rev (tl (rev (tl l))).
+
+Lemma inner_inner' (A : Type) (l : list A)
+  : inner l = inner' l.
+Proof.
+  unfold inner, inner'.
+  destruct l;cbn;eauto.
+  destr_r' l;subst l;cbn;eauto.
+  rewrite rev_rcons. cbn.
+  rewrite rev_involutive.
+  rewrite rev_rcons. cbn.
+  rewrite rev_involutive.
+  reflexivity.
+Qed.
+
+Lemma inner_rtl (A : Type) (l : list A) (a : A)
+  : inner (a :: l) = r_tl l.
+Proof.
+  rewrite inner_inner'.
+  unfold inner',r_tl in *.
+  cbn.
+  reflexivity.
+Qed.
+
+Lemma inner_tl (A : Type) (l : list A) (a : A)
+  : inner (l ++ [a]) = tl l.
+Proof.
+  unfold inner.
+  rewrite rev_rcons.
+  cbn.
+  rewrite rev_involutive.
+  reflexivity.
+Qed.
+
+Lemma inner_eval_lr (A : Type) (l : list A) (a b : A)
+  : inner (a :: l ++ [b]) = l.
+Proof.
+  rewrite <-cons_rcons_assoc.
+  rewrite inner_tl.
+  cbn.
+  reflexivity.
+Qed.
+
+Lemma inner_empty_iff (A : Type) (l : list A) (a b : A)
+  : inner (a :: b :: l) = [] <-> l = nil.
+Proof.
+  destruct l;cbn.
+  - firstorder.
+  - split;intro H;[|congruence].
+    specialize (cons_rcons a0 l) as Hspec. destructH. rewrite Hspec in H.
+    rewrite inner_rtl in H.
+    rewrite <-cons_rcons_assoc in H.
+    rewrite r_tl_rcons in H.
+    congruence.
 Qed.

@@ -8,12 +8,6 @@ Section hr_cfg.
 
   Infix "-h>" := (head_rewired_edge) (at level 70).
 
-  Lemma subgraph_refl {L : Type} [edge1 : L -> L -> Prop]
-    : sub_graph edge1 edge1.
-  Proof.
-    unfold sub_graph. intros. tauto.
-  Qed.
-
   (* the head rewired DAG is not a redCFG (because of unreachability) *)
 
   Definition HPath := Path head_rewired_edge.
@@ -105,129 +99,6 @@ Section hr_cfg.
         * destruct H0. eapply deq_loop_exited' in H0. eapply H0 in Hin. contradiction.
   Qed.
 
-  Definition loop_contains_strict h p
-    := loop_contains h p /\ h <> p.
-
-  Definition deq_loop_mh q p
-    := forall h, h <> p -> loop_contains h p -> loop_contains h q.
-
-  Definition eq_loop_mh q p
-    := deq_loop_mh q p /\ deq_loop_mh p q.
-
-  Lemma eq_loop_mh_sym : Symmetric eq_loop_mh.
-  Proof.
-    firstorder.
-  Qed.
-
-  Instance deq_loop_mh_refl : Reflexive deq_loop_mh.
-  Proof.
-    unfold Reflexive. intros x h Hloop Hneq.
-    auto.
-  Qed.
-
-  Lemma deq_loop_deq_loop_mh p q
-        (Hdeq : deq_loop p q)
-    : deq_loop_mh p q.
-  Proof.
-    intros h Hloop Hneq.
-    eauto.
-  Qed.
-
-  Lemma deq_loop_mh_deq_loop p q
-        (Hnh : ~ loop_head q)
-        (Hdeq : deq_loop_mh p q)
-    : deq_loop p q.
-  Proof.
-    intros h Hloop.
-    eapply Hdeq.
-    - contradict Hnh. subst h. eapply loop_contains_loop_head;eauto.
-    - assumption.
-  Qed.
-
-  Lemma head_rewired_deq_loop_mh p q
-        (Hedge : p -h> q)
-  : deq_loop_mh p q.
-  Proof.
-    destruct Hedge.
-    - destructH. destruct (edge_Edge H0);intros h Hloop Hneq.
-      + eapply basic_edge_eq_loop in b.
-        rewrite b. auto.
-      + eapply back_edge_eq_loop in b. rewrite b. assumption.
-      + eapply deq_loop_entry_or in e;eauto.
-        destruct e;[assumption|contradiction].
-      + destruct e. eapply deq_loop_exited;eauto.
-    - destruct H. intros h Hloop Hneq.
-      eapply deq_loop_exited';eauto.
-  Qed.
-
-  Lemma hpath_deq_loop_mh p q π
-        (Hpath : HPath p q π)
-    : deq_loop_mh p q.
-  Proof.
-    induction Hpath.
-    - reflexivity.
-    - eapply head_rewired_deq_loop_mh in H as Hmh.
-      intros h Hneq Hloop.
-      eapply IHHpath;eauto.
-      contradict Hloop.
-      subst h. eapply head_rewired_not_contains;eauto.
-  Qed.
-
-  Lemma hpath_deq_loop_mh_elem p q π x
-        (Hpath : HPath p q π)
-        (Hin : x ∈ π)
-    : deq_loop_mh x q.
-  Proof.
-    eapply path_from_elem in Hpath;eauto.
-    destructH.
-    eapply hpath_deq_loop_mh;eauto.
-  Qed.
-
-  Lemma rotate_forward' (L : Type) (e : L -> L -> Prop) (p q : L) π
-        (Hedge : e q p)
-        (Hpath : Path e p q π)
-    : let π' := p :: r_tl π in
-      let q' := hd p (rev π') in
-      e p q' /\ Path e q' p π'.
-  Proof.
-    intros. subst q' π'. cbn.
-      destr_r' π;subst;cbn.
-      1: inv Hpath.
-      rewrite r_tl_rcons.
-      Lemma hd_rcons' (A : Type) (a : A) (l : list A)
-        : hd a (l ++ [a]) = hd a l.
-      Proof.
-        induction l;cbn;eauto.
-      Qed.
-      rewrite hd_rcons'. path_simpl' Hpath.
-      destr_r' l;subst;cbn in *.
-      + path_simpl' Hpath. split; assumption.
-      + rewrite rev_rcons. cbn.
-        split.
-        * eapply path_nlrcons_edge in Hpath;eauto.
-        * eapply path_rcons_rinv in Hpath. econstructor;eauto.
-  Qed.
-
-  Lemma rotate_forward (L : Type) (e : L -> L -> Prop) (p q : L) π
-        (Hedge : e q p)
-        (Hpath : Path e p q π)
-    : exists π' q', e p q' /\ Path e q' p π'.
-  Proof.
-    do 2 eexists;eapply rotate_forward';eauto.
-  Qed.
-
-  Lemma loop_reachs_exit h p q
-        (Hexit : exit_edge h p q)
-    : h -a>* q.
-  Proof.
-    copy Hexit Hexit'.
-    destruct Hexit.
-    eapply loop_reachs_member in H.
-    destruct H.
-    exists (q :: x).
-    econstructor;eauto.
-    eapply exit_a_edge;eauto.
-  Qed.
 
   Lemma acyclic_head_rewired_edge
     : acyclic head_rewired_edge.
@@ -301,6 +172,7 @@ Section hr_cfg.
       cbn in Hpath''. path_simpl' Hpath''. left. reflexivity.
     - right. eexists;eauto.
   Qed.
+
   Lemma head_rewired_final_exit_elem e p t q h x
         (Hpath : HPath e p t)
         (Hexit : exit_edge h q e)

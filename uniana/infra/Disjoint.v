@@ -8,7 +8,7 @@ Lemma disjoint_cons1 {A : Type} (a : A) l l' :
 Proof.
   split; revert l.
   - induction l'; intros l; firstorder.
-  - intros l [nin disj]. 
+  - intros l [nin disj].
     + intros b in' N.
       destruct in'.
       * destruct H. contradiction.
@@ -20,7 +20,7 @@ Lemma disjoint_cons2 {A : Type} (a : A) l l' :
 Proof.
   split; revert l.
   - induction l'; intros l; firstorder.
-  - intros l [nin disj]. 
+  - intros l [nin disj].
     + intros b in' N.
       destruct N.
       * destruct H. contradiction.
@@ -65,4 +65,27 @@ Proof.
   unfold Disjoint in *.
   intros a Hel Hel'. eapply H;eauto.
   1,2: eapply in_map;eauto.
+Qed.
+
+Lemma disjoint_app_app (A : Type) (l1 l2 l3 l4 : list A)
+  : Disjoint l1 l3
+    -> Disjoint l1 l4
+    -> Disjoint l2 l3
+    -> Disjoint l2 l4
+    -> Disjoint (l1 ++ l2) (l3 ++ l4).
+Proof.
+  revert l2 l3 l4.
+  induction l1;intros;cbn.
+  - induction l3;intros;cbn.
+    + eauto.
+    + eapply disjoint_cons2.
+      eapply disjoint_cons2 in H1. destruct H1.
+      split;eauto.
+      eapply IHl3;eauto.
+      firstorder.
+  - eapply disjoint_cons1. eapply disjoint_cons1 in H. eapply disjoint_cons1 in H0.
+    do 2 destructH.
+    split.
+    + intro N. eapply in_app_or in N. destruct N;contradiction.
+    + eapply IHl1;eauto.
 Qed.
