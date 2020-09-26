@@ -1508,7 +1508,7 @@ Context `{C : redCFG}.
     set (q2 := hd s (map fst r2)) in *.
     set (j1 := hd k (map snd r1)) in *.
     set (j2 := hd k (map snd r2)) in *.
-    specialize (@two_edge_exit_cases q1 q2 p) as Hcase.
+    specialize (two_edge_exit_cases) with (q1:=q1) (q2:=q2) (p:=p) as Hcase.
     exploit Hcase.
     1: eapply TPath_CPath in Hin0.
     2: eapply TPath_CPath in Hin2.
