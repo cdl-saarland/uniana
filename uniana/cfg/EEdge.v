@@ -73,10 +73,15 @@ Proof.
 Qed.
 End cfg.
 
-
-
 Ltac edge_excl
-  := match goal with
+  := let He := fresh "Hexcleexit" in
+     match goal with
+     | H : exit_edge ?h ?p ?q |- _
+       => assert (eexit_edge p q) as He;
+         [eexists;eauto|]
+     | _ => idtac
+     end;
+     match goal with
      | H : basic_edge ?p ?q |- _
        => let tac
              := eapply depth_basic in H
@@ -125,7 +130,8 @@ Ltac edge_excl
              | Q : back_edge p q |- _
                => eapply depth_back in Q;tac;lia
              end
-     end.
+     end;
+     try clear He.
 
 Lemma entry_edge_acyclic `(C : redCFG) p q
       (Hentry : entry_edge p q)

@@ -1,66 +1,12 @@
 Require Export Splits SplitsT TeqPaths TcfgDet TcfgReach.
 Require Import Lia.
 
-
-Lemma diamond_teq `(C : redCFG)
-      (s u1 u2 p1 p2 q1 q2 : Lab) (k i l1 l2 j1 j2 : Tag) r1 r2
-      (Hdeq : deq_loop q1 s)
-      (Hjle : j1 ⊴ j2)
-      (D : DiamondPaths s u1 u2 p1 p2 q1 q2 k i l1 l2 j1 j2 ((q1,j1) :: r1) ((q2,j2) :: r2))
-  : TeqPaths u1 u2 q1 q2 l1 l2 j1 j2 (r1) (r2).
-Proof.
-  copy D D'.
-  destruct D.
-  inv_path Dpath1. inv_path Dpath2.
-  econstructor; eauto using tl_eq, lj_eq1, lj_eq2, jj_len, j_len1.
-Qed.
-
-Lemma loop_head_eq_loop_eq `(C : redCFG) h1 h2
-          (Hloop1 : loop_head h1)
-          (Hloop2 : loop_head h2)
-          (Heq : eq_loop h1 h2)
-  : h1 = h2.
-Proof.
-  destruct Heq.
-  eapply loop_contains_Antisymmetric;eauto.
-  1: eapply H0.
-  2: eapply H.
-  1,2: eapply loop_contains_self;eauto.
-Qed.
-
 Section splits_sound.
 Context `{C : redCFG}.
 
   Infix "-->" := edge__P.
   Infix "-t>" := tcfg_edge (at level 70).
   Infix "-h>" := head_rewired_edge (at level 70).
-
-  Lemma tag_exit_eq' h p q i j
-        (Hedge : (p,i) -t> (q,j))
-        (Hexit : exit_edge h p q)
-    : exists n, i = n :: j.
-  Admitted.
-
-  Lemma tcfg_edge_eq_loop q1 q2 j p i
-        (Hedge1 : (q1,j) -t> (p,i))
-        (Hedge2 : (q2,j) -t> (p,i))
-    : eq_loop q1 q2.
-  Admitted.
-
-  Lemma exit_edges_loop_eq h1 h2 e1 e2 q1 q2 p
-        (Hexit1 : exit_edge h1 q1 e1)
-        (Hexit2 : exit_edge h2 q2 e2)
-        (Hin1 : loop_contains h1 p)
-        (Hin2 : loop_contains h2 p)
-        (Heq : eq_loop e1 e2)
-    : eq_loop q1 q2.
-  Admitted.
-
-  Lemma teq_node_disj
-        `(T : TeqPaths)
-        (Hjeq : j1 = j2)
-    : Disjoint (q1 :: map fst r1) (q2 :: map fst r2).
-  Admitted.
 
   Lemma tpath_jeq_prefix u2 l2 q2 n2 j n1 r2
         (Tpath2 : TPath (u2, l2) (q2, n2 :: j) ((q2, n2 :: j) :: r2))
@@ -858,30 +804,9 @@ Context `{C : redCFG}.
     (* FIXME: tcfg_edge is NOT acyclic (although *rooted* TPaths are) *)
   Admitted.
 
-  Lemma tcfg_edge_edge (q p : Lab) (i j : Tag)
-        (Hedge : (q,j) -t> (p,i))
-    : q --> p.
-  Admitted.
-
   Hint Resolve tcfg_edge_edge : tcfg.
 
-  Definition nexit_edge q p := forall h, ~ exit_edge h q p.
 
-  Lemma two_edge_exit_cases (q1 q2 p : Lab)
-        (Hedge1 : q1 --> p)
-        (Hedge2 : q2 --> p)
-    : (exists h, exit_edge h q1 p /\ exit_edge h q2 p)
-      \/ nexit_edge q1 p /\ nexit_edge q2 p.
-  Proof.
-  Admitted.
-
-  Lemma nexit_injective q1 q2 p1 p2 j1 j2 i
-        (Hedge1 : (q1,j1) -t> (p1,i))
-        (Hedge2 : (q2,j2) -t> (p2,i))
-        (Hnexit1 : nexit_edge q1 p1)
-    : j1 = j2.
-  Admitted.
-  Ltac spot_path := admit.
 
   Lemma not_deq_edge_is_exit a b h
         (Edge : a --> b)

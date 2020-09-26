@@ -535,3 +535,16 @@ Section disj.
   End disj_eqdep.
 
 End disj.
+
+Lemma diamond_teq `(C : redCFG)
+      (s u1 u2 p1 p2 q1 q2 : Lab) (k i l1 l2 j1 j2 : Tag) r1 r2
+      (Hdeq : deq_loop q1 s)
+      (Hjle : j1 ⊴ j2)
+      (D : DiamondPaths s u1 u2 p1 p2 q1 q2 k i l1 l2 j1 j2 ((q1,j1) :: r1) ((q2,j2) :: r2))
+  : TeqPaths u1 u2 q1 q2 l1 l2 j1 j2 (r1) (r2).
+Proof.
+  copy D D'.
+  destruct D.
+  inv_path Dpath3. inv_path Dpath4.
+  econstructor; eauto using tl_eq, lj_eq1, lj_eq2, jj_len, j_len1.
+Qed.

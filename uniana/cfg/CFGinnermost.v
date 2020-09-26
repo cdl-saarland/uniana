@@ -200,6 +200,19 @@ Section cfg.
     lia.
   Qed.
 
+  Lemma loop_head_eq_loop_eq h1 h2
+        (Hloop1 : loop_head h1)
+        (Hloop2 : loop_head h2)
+        (Heq : eq_loop h1 h2)
+    : h1 = h2.
+  Proof.
+    destruct Heq.
+    eapply loop_contains_Antisymmetric;eauto.
+    1: eapply H0.
+    2: eapply H.
+    1,2: eapply loop_contains_self;eauto.
+  Qed.
+
   Lemma eq_loop_same (h h' : Lab)
         (Heq : eq_loop h h')
         (Hl : loop_head h)
@@ -440,6 +453,25 @@ Section cfg.
     - eapply loop_contains_self in Hhead.
       eapply in_filter_iff. split;eauto.
   Qed.
+
+  Definition nexit_edge q p := forall h, ~ exit_edge h q p.
+
+  Lemma two_edge_exit_cases (q1 q2 p : Lab)
+        (Hedge1 : q1 --> p)
+        (Hedge2 : q2 --> p)
+    : (exists h, exit_edge h q1 p /\ exit_edge h q2 p)
+      \/ nexit_edge q1 p /\ nexit_edge q2 p.
+  Proof.
+  Admitted.
+
+  Lemma exit_edges_loop_eq h1 h2 e1 e2 q1 q2 p
+        (Hexit1 : exit_edge h1 q1 e1)
+        (Hexit2 : exit_edge h2 q2 e2)
+        (Hin1 : loop_contains h1 p)
+        (Hin2 : loop_contains h2 p)
+        (Heq : eq_loop e1 e2)
+    : eq_loop q1 q2.
+  Admitted.
 
   (** * Innermost loops and strit-innermost loops **)
 

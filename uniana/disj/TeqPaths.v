@@ -59,6 +59,12 @@ Section teq.
   Proof.
   Admitted.
 
+  Lemma teq_node_disj
+        (Hjeq : j1 = j2)
+    : Disjoint (q1 :: map fst r1) (q2 :: map fst r2).
+  Admitted.
+
+
 End teq.
 
 Hint Resolve teq_r1_incl_head_q teq_r2_incl_head_q teq_u1_deq_q teq_u2_deq_q Tloop : teq.

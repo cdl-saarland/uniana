@@ -656,3 +656,12 @@ Proof.
     rewrite r_tl_rcons in H.
     congruence.
 Qed.
+
+Lemma list_cycle2 (A : Type) (a b : A) (l : list A)
+  : a :: b :: l <> l.
+Proof.
+  revert a b.
+  induction l;intros;cbn.
+  - congruence.
+  - intro N. inv N. eapply IHl;eauto.
+Qed.
