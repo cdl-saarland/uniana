@@ -1,4 +1,4 @@
-Require Export TcfgReach.
+Require Export TcfgReach PPexhead.
 Require Import Lia.
 
 Section cfg.
@@ -292,5 +292,12 @@ Section cfg.
         * transitivity p;eauto.
           destruct Q0. eapply deq_loop_exited;eauto.
   Qed.
+
+  Lemma tcfg_acyclic
+    : acyclic tcfg_edge.
+  Proof.
+    (* now tcfg_edge is acyclic but the freshness lemma is not general enough *)
+
+  Admitted.
 
 End cfg.

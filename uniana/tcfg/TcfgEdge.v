@@ -375,6 +375,18 @@ Section cfg.
       split;[transitivity h|transitivity h0];eauto.
   Qed.
 
+  Lemma tag_cons_exit q p n i
+        (Hedge : (q,n :: i) -t> (p,i))
+    : exists h, exit_edge h q p.
+  Proof.
+    destruct Hedge.
+    unfold eff_tag in H0.
+    decide (edge__P q p);[|congruence].
+    destruct (edge_Edge e).
+    1-3: exfalso. 4:unfold eexit_edge in *;destructH;eexists;eauto.
+    1,2: inv H0; eapply list_cycle;eauto.
+    1: inv H0; eapply list_cycle2;eauto.
+  Qed.
 
   Lemma nexit_injective q1 q2 p1 p2 j1 j2 i
         (Hedge1 : (q1,j1) -t> (p1,i))

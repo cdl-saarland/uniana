@@ -64,7 +64,23 @@ Section teq.
     : Disjoint (q1 :: map fst r1) (q2 :: map fst r2).
   Admitted.
 
-
 End teq.
+
+Lemma TeqPaths_sym `(C : redCFG) u1 u2 q1 q2 l1 l2 j r1 r2
+      (T : TeqPaths u1 u2 q1 q2 l1 l2 j j r1 r2)
+  : TeqPaths u2 u1 q2 q1 l2 l1 j j r2 r1.
+Proof.
+  copy T T'.
+  destruct T.
+  econstructor;eauto.
+  - eapply Disjoint_sym;eauto.
+  - symmetry. eauto.
+  - destruct Tlj_eq2;[firstorder|].
+    destruct H;[right;auto|].
+    exfalso. eapply teq_no_back2 in T';eauto.
+    eapply TPath_CPath in Tpath2. cbn in Tpath2. eapply path_contains_back;eauto.
+  - destruct Tlj_eq1;[left|right];firstorder.
+  - rewrite <-Tloop. eauto.
+Qed.
 
 Hint Resolve teq_r1_incl_head_q teq_r2_incl_head_q teq_u1_deq_q teq_u2_deq_q Tloop : teq.

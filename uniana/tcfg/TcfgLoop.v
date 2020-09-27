@@ -4,6 +4,7 @@ Require Import Lia.
 Section cfg.
   Context `{C : redCFG}.
 
+  Infix "-->" := edge__P.
   Notation "pi -t> qj" := (tcfg_edge pi qj) (at level 50).
 
   (** * Depth of a node equals Tag length **)
@@ -147,36 +148,6 @@ Section cfg.
     : take_r (n-1) j = take_r (n-1) i.
   Admitted.
 
-  (** ** p p ex head **)
-
-  Lemma p_p_ex_head' (p q : Lab) π ϕ
-        (Hpath : CPath p q π)
-        (Hdeq : forall x, x ∈ π -> deq_loop p x)
-        (Hacy : APath q p ϕ)
-        (Hlen : | π | >= 2)
-    : exists h, h ∈ π /\ forall x, x ∈ π -> loop_contains h x.
-  Proof.
-  (* by induction on π:
-   * * if nil,singleton: contradiction
-   * * if doubleton: easy style: h=q, bc of APath p-->q must be a back_edge, thus loop_contains q p
-   * * else:
-   * * edge distinction for ? --> q:
-   *   * if back_edge then: we have found h
-   *   * otw. IH
-   *)
-  Admitted.
-
-  Lemma p_p_ex_head (p : Lab) π
-        (Hpath : CPath p p π)
-        (Hlen : | π | >= 2)
-    : exists h, h ∈ π /\ forall x, x ∈ π -> loop_contains h x.
-  Proof.
-    (* implode π wrt. p then Hdeq of p_p_ex_head' holds and the conclusion is extendable from there *)
-    eapply p_p_ex_head';eauto.
-    - admit.
-    - econstructor.
-  Admitted.
-
   (** ** Lemmas with take_r **)
 
   Lemma taglt_take_r_taglt i j n
@@ -286,6 +257,28 @@ Section cfg.
     - destruct t. 1: inversion Hpath.
       inversion Hsucc. subst. inversion Hpath;subst. 1: congruence'.
       eauto.
+  Qed.
+
+  Lemma ex_pre_header s k h i t
+        (Hhead : loop_head h)
+        (Hpath : TPath (s,k) (h,0 :: i) t)
+        (Hncont : ~ loop_contains h s)
+    : exists pre, (pre, i) ∈ t /\ (pre,i) -t> (h,0 :: i) /\ entry_edge pre h.
+  Proof.
+    inv_path Hpath.
+    - exfalso. eapply Hncont. eauto using loop_contains_self.
+    - clear Hncont.
+      destruct x as [q j].
+      assert (Hedge := H0).
+      destruct H0.
+      unfold eff_tag in H1.
+      decide (q --> h); try easy.
+      destruct (edge_Edge e).
+      + exfalso. eapply basic_edge_no_loop2; try eassumption.
+      + destruct j; inv H1.
+      + inv H1. exists q. split; [| firstorder ].
+        right. eauto using path_contains_front.
+      + destruct e0. exfalso. eapply no_exit_head; try eassumption.
   Qed.
 
 End cfg.

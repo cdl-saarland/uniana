@@ -1,4 +1,4 @@
-Require Export TcfgLoop Disjoint.
+Require Export TcfgqMonotone Disjoint.
 Require Import MaxPreSuffix Lia.
 
 Section cfg.
@@ -547,4 +547,18 @@ Proof.
   destruct D.
   inv_path Dpath3. inv_path Dpath4.
   econstructor; eauto using tl_eq, lj_eq1, lj_eq2, jj_len, j_len1.
+Qed.
+
+Lemma diamond_qj_eq1 `(C : redCFG) s u1 u2 p1 p2 q1 q2 k i l1 l2 j1 j2 qj1 r1 r2
+      (D : DiamondPaths s u1 u2 p1 p2 q1 q2 k i l1 l2 j1 j2 (qj1 :: r1) r2)
+  : qj1 = (q1,j1).
+Proof.
+  destruct D. cbn in Dqj3. auto.
+Qed.
+
+Lemma diamond_qj_eq2 `(C : redCFG) s u1 u2 p1 p2 q1 q2 k i l1 l2 j1 j2 qj2 r1 r2
+      (D : DiamondPaths s u1 u2 p1 p2 q1 q2 k i l1 l2 j1 j2 r1 (qj2 :: r2))
+  : qj2 = (q2,j2).
+Proof.
+  destruct D. cbn in Dqj4. auto.
 Qed.

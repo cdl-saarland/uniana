@@ -74,4 +74,5 @@ Section cfg.
     - apply IHQ.
     - conv_bool. firstorder.
   Qed.
+
 End cfg.

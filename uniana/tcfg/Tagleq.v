@@ -1,4 +1,4 @@
-Require Import Program.Equality Lia.
+Require Import Program.Equality Lia SimplDec.
 Require Export ListExtra PreSuffix ListOrder.
 
 Definition Tag := list nat.
@@ -213,4 +213,26 @@ Proof.
   destruct H.
   - transitivity j;eauto.
   - subst. auto.
+Qed.
+
+Lemma le_cons_tagle n1 n2 i
+      (Hlt : n1 <= n2)
+  : n1 :: i ⊴ n2 :: i.
+Proof.
+  eapply le_lt_or_eq in Hlt. destruct Hlt.
+  - econstructor. econstructor. assumption.
+  - subst. reflexivity.
+Qed.
+
+Lemma lt_cons_ntagle n1 n2 i
+      (Hlt : n2 < n1)
+  : ~ n1 :: i ⊴ n2 :: i.
+Proof.
+  simpl_dec.
+  split.
+  - intro N.
+    inv N.
+    + lia.
+    + eapply Taglt_irrefl;eauto.
+  - intro N. inv N. lia.
 Qed.

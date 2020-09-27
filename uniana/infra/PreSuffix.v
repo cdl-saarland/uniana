@@ -596,6 +596,31 @@ Proof.
   induction Hpre;cbn;eauto.
 Qed.
 
+Lemma in_postfix_in {A : Type} l l' (a : A)
+  :  a ∈ l -> Postfix l l' -> a ∈ l'.
+Proof.
+  intros Hin Hpost.
+  revert dependent l.
+  induction l'.
+  - intros. eapply postfix_nil_nil in Hpost. subst. inv Hin.
+  - intros.
+    destruct l as [| b  l].
+    + inv Hin.
+    + simpl in Hin.
+      destruct Hin.
+      * left. symmetry. rewrite H in Hpost. eauto using postfix_hd_eq.
+      * right. eauto using cons_postfix.
+Qed.
+
+Lemma prefix_fst_prefix {S T : Type} (a b : list (S * T))
+      (Hprefix: Prefix a b)
+  : Prefix (map fst a) (map fst b).
+Proof.
+  induction Hprefix.
+  - econstructor.
+  - simpl. econstructor. eauto.
+Qed.
+
 (** StrictPrefix **)
 
 Section StrictPre.

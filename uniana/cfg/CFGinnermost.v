@@ -213,6 +213,18 @@ Section cfg.
     1,2: eapply loop_contains_self;eauto.
   Qed.
 
+  Lemma head_unique h b x y
+        (Hh : loop_contains h x)
+        (Hb : loop_contains b y)
+        (Heq : eq_loop h b)
+    : h = b.
+  Proof.
+    unfold eq_loop in Heq.
+    unfold deq_loop in *.
+    destruct Heq as [H1 H2].
+    eapply loop_contains_Antisymmetric; eauto using loop_contains_loop_head, loop_contains_self.
+  Qed.
+
   Lemma eq_loop_same (h h' : Lab)
         (Heq : eq_loop h h')
         (Hl : loop_head h)
@@ -560,6 +572,27 @@ Section cfg.
     eapply deq_loop_trans;eauto.
   Qed.
 
+  Lemma path_no_loop_head_deq p e h π
+        (Hπ : Path edge__P p e π)
+        (Hinner : innermost_loop h e)
+        (Hnin : h ∉ π)
+    : forall x, x ∈ π -> deq_loop x e.
+  Proof.
+    intros.
+    decide (deq_loop x e); try eassumption.
+    rename n into Hndeq.
+    exfalso.
+    assert (Hncont : ~ loop_contains h x). {
+      eauto using innermost_loop_deq_loop.
+    }
+    eapply path_from_elem in H; try eauto.
+    destruct H as [ϕ [Hϕ Hpost]].
+    eapply Hnin.
+    destruct Hinner.
+    eapply in_postfix_in; try eassumption.
+    eapply dom_loop_contains; try eassumption.
+  Qed.
+
   Global Instance eq_loop_proper_innermost (h : Lab)
     : Proper (eq_loop ==> iff) (innermost_loop h).
   Proof.
@@ -580,6 +613,60 @@ Section cfg.
     eapply H3 in Q0. destruct Q0;[|contradiction].
     eapply Q3 in H0. destruct H0;[|contradiction].
     eapply loop_contains_Antisymmetric;auto.
+  Qed.
+
+  Lemma innermost_unique a b c
+        (Ha : innermost_loop a c)
+        (Hb : innermost_loop b c)
+    : a = b.
+  Proof.
+    destruct Ha as [Ha Ha'].
+    destruct Hb as [Hb Hb'].
+    unfold deq_loop in *.
+    eauto using loop_contains_Antisymmetric.
+  Qed.
+
+  Lemma innermost_unique' a b c d
+        (Ha : innermost_loop a c)
+        (Hb : innermost_loop b d)
+        (Heq : eq_loop c d)
+    : a = b.
+  Proof.
+    destruct Ha as [Ha Ha'].
+    destruct Hb as [Hb Hb'].
+    destruct Heq.
+    unfold deq_loop in *.
+    eapply loop_contains_Antisymmetric; eauto.
+  Qed.
+
+  Lemma back_edge_loop_contains a b x
+        (Hedge : back_edge a b)
+        (Hinner : loop_contains x a)
+    : loop_contains x b.
+  Proof.
+    specialize (loop_contains_loop_head Hinner) as Hhead.
+    eauto using loop_contains_deq_loop, back_edge_eq_loop, deq_loop_head_loop_contains, eq_loop1.
+  Qed.
+
+  Lemma back_edge_innermost h l
+        (Hbe : back_edge l h)
+    : innermost_loop h l.
+  Proof.
+    destruct (back_edge_eq_loop Hbe) as [H1 H2].
+    unfold innermost_loop.
+    eauto using loop_contains_ledge.
+  Qed.
+
+  Lemma back_edge_src_no_loop_head
+        a b
+        (Hbe : back_edge b a)
+    : ~ loop_head b.
+  Proof.
+    intro. eapply no_self_loops.
+    - eapply Hbe.
+    - eapply innermost_unique. unfold innermost_loop. unfold deq_loop.
+      eauto using loop_contains_self.
+      eauto using back_edge_innermost.
   Qed.
 
   (** ** Paths in the loop tree **)

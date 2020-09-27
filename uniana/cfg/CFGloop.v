@@ -145,6 +145,13 @@ Section cfg.
     eapply no_exit_head in Hhead;[contradiction|].
    *)
 
+  Lemma path_prefix_path' p q r π ϕ
+    : Path edge__P p q π -> Prefix (r :: ϕ) π -> Path edge__P p r (r :: ϕ).
+  Proof.
+    eapply path_prefix_path.
+    intros. unfold dec. decide (x --> y); firstorder.
+  Qed.
+
   Lemma root_loop_root h
     : loop_contains h root -> h = root.
   Proof.
@@ -563,6 +570,30 @@ Section cfg.
     inversion H;[|contradiction]. subst.
     exfalso.
     apply Hnin. eapply loop_contains_self. eauto using loop_contains_loop_head.
+  Qed.
+
+  Lemma in_path_ex_prefix_not_in p q π x
+        (Hπ : CPath p q π)
+        (Hin : x ∈ π)
+        : exists ϕ, Prefix (x :: ϕ) π /\ x ∉ ϕ.
+  Proof.
+    revert dependent q.
+    induction π.
+    - inv Hin.
+    - intros.
+      replace a with q in *.
+      + decide (x ∈ π).
+        * destruct π; [ inv i |].
+          destruct (IHπ i e) as [ϕ [Hpre Hnin]].
+          -- inv Hπ. enough (b = e).
+             ++ subst. eassumption.
+             ++ eauto using path_front.
+          -- exists ϕ. split; [| eassumption ].
+             econstructor. eassumption.
+        * inv Hin.
+          -- exists π. split; [ econstructor | eassumption ].
+          -- contradiction.
+      + eauto using path_front.
   Qed.
 
 End cfg.

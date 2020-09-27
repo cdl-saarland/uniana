@@ -59,6 +59,14 @@ Section Facts.
     unfold incl. cbn. firstorder.
   Qed.
 
+  Lemma incl_app (c : A)
+        (π ϕ : list A)
+        (Hincl : π ⊆ ϕ)
+    : (c :: π) ⊆ (c :: ϕ).
+  Proof.
+    unfold incl in *. firstorder.
+  Qed.
+
   Lemma eq_incl (l l':list A) :
     l = l' -> incl l l'.
   Proof.
@@ -664,4 +672,65 @@ Proof.
   induction l;intros;cbn.
   - congruence.
   - intro N. inv N. eapply IHl;eauto.
+Qed.
+
+Lemma len_tl_neq_cons (A : Type) (l l' : list A)
+  : |l| = |l'| -> tl l = tl l' -> l <> l' -> exists a a' l'', l = a :: l'' /\ l' = a' :: l''.
+Proof.
+  intros.
+  destruct l,l';cbn in *;try congruence.
+  subst l'.
+  exists a, a0, l.
+  split;eauto.
+Qed.
+
+Lemma map_rcons' {A B : Type} (a : A) (r : list A) (f : A -> B)
+  : map f (r :r: a) = (map f r) ++ (map f [a]).
+Proof.
+  induction r.
+  - reflexivity.
+  - simpl. rewrite IHr. f_equal.
+Qed.
+
+Lemma app_cons_rcons {A : Type} (a b : list A) x
+  : a ++ x :: b = (a :r: x) ++ b.
+Proof.
+  revert a b.
+  induction a; intros.
+  - reflexivity.
+  - simpl. rewrite IHa. reflexivity.
+Qed.
+
+Lemma hd_rev_idempotent {A : Type} (l : list A) a b d1 d2
+  : hd d1 (rev (b :: l)) = hd d2 (rev (a :: b :: l)).
+Proof.
+  revert a b.
+  induction l as [| x l].
+  - reflexivity.
+  - intros a b. rewrite rev_cons.
+    erewrite hd_rcons.
+    2: { rewrite rev_length. simpl. eauto with zarith. }
+    rewrite (IHl b x).
+    repeat rewrite rev_cons.
+    repeat rewrite <- app_assoc.
+    remember (rev l) as rl.
+    destruct rl as [| y rl]; reflexivity.
+Qed.
+
+Lemma hd_rev_app_eq {A : Type} (p l : list A) a d
+  : hd d (rev (p ++ a :: l)) = hd d (rev (a :: l)).
+Proof.
+  revert a p.
+  induction l; intros.
+  - rewrite rev_unit. reflexivity.
+  - rewrite app_cons_rcons. rewrite IHl. eauto using hd_rev_idempotent.
+Qed.
+
+Lemma hd_rev_cons_eq {A : Type} (l : list A) a b d
+  : hd d (rev (a :: b :: l)) = hd d (rev (b :: l)).
+Proof.
+  revert a b.
+  induction l; intros.
+  - reflexivity.
+  - simpl. rewrite <- 3 app_cons_rcons. remember (rev l) as l'. destruct l'; simpl; eauto.
 Qed.

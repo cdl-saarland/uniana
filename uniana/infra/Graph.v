@@ -258,6 +258,31 @@ Section graph.
     - rewrite rev_rcons. cbn. eapply path_back;eauto.
   Qed.
 
+  Lemma prefix_singleton p q π h
+        (Hπ : Path p q π)
+        (Hpre : Prefix [h] π)
+    : p = h.
+  Proof.
+    induction Hπ.
+    - inv Hpre.
+      + reflexivity.
+      + inv H1.
+    - inv Hpre.
+      + inv Hπ.
+      + eauto.
+  Qed.
+
+  Lemma prefix_edge_exists a b p q π ϕ
+        (Hπ : Path p q π)
+        (Hpre : Prefix (a :: b :: ϕ) π)
+    : b --> a.
+  Proof.
+    induction Hπ.
+    - inv Hpre. inv H1.
+    - inversion Hpre; [| eauto ].
+      subst. inv Hπ; eauto.
+  Qed.
+
   Lemma path_rcons p q r π
         (Hπ : Path p q π)
         (Hedge : r --> p)
@@ -285,6 +310,13 @@ Section graph.
       cbn in Hπ. inversion Hπ;subst. path_simpl' H0. auto.
     - cbn in *. inversion Hπ. subst. path_simpl' H0. eapply IHπ in H0. destructH.
       eexists. split;[econstructor|];eauto.
+  Qed.
+
+  Lemma path_to_cons_path p q π
+        (Hpath : Path p q π)
+    : exists ϕ, π = q :: ϕ.
+  Proof.
+    inv Hpath;cbn;eexists;eauto.
   Qed.
 
   Ltac turn_rcons l a :=
