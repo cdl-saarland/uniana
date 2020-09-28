@@ -43,16 +43,14 @@ Section eff_tag_facts.
       end -> j = tl i.
   Proof.
     destruct (get_innermost_loop p);[|contradiction].
-  Admitted. (*
-      tag_fact_prep.
-      intro H.
-      apply ex_intro with (x:=e) in H.
-      specialize (Edge_disj (Eexit H) (edge_Edge Hedge)) as Hdj.
-      unfold eff_tag'.
-      rewrite <-Hdj.
-      reflexivity.
-    Qed.
-             *)
+    intro Hexit.
+    destruct Hpq as [Hedge Htag].
+    unfold eff_tag in Htag.
+    decide (edge__P p q);[|congruence].
+    destruct (edge_Edge e0);try edge_excl.
+    destruct i;[congruence|]. cbn. inv Htag.
+    reflexivity.
+  Qed.
 
   (* TODO : change name *)
   Lemma tag_exit_iff'
@@ -79,46 +77,43 @@ Section eff_tag_facts.
         (Hgt : |j| < |i|)
     : j = tl i.
   Proof.
-  Admitted. (*
-      tag_fact_prep.
-      unfold eff_tag' in *. destruct (edge_Edge Hedge). 4:auto.
-      all: exfalso;try lia.
-      - destruct i;cbn in *;lia.
-      - cbn in *;lia.
-    Qed. *)
+    destruct Hpq as [Hedge Htag].
+    unfold eff_tag in Htag.
+    decide (edge__P p q);[|congruence].
+    destruct (edge_Edge e);inv Htag.
+    all:try lia.
+    - destruct i;[congruence|]. cbn in *. inv H0. cbn in *. lia.
+    - cbn in *. lia.
+    - destruct i;[congruence|]. cbn. inv H0. reflexivity.
+  Qed.
+
+  Ltac prep :=
+    destruct Hpq as [Hedge Htag];
+    unfold eff_tag in Htag;
+    decide (edge__P p q);[|congruence].
 
   Lemma tag_entry_lt
         (Hlt : |i| < |j|)
     : j = O :: i.
   Proof.
-  Admitted. (*
-      tag_fact_prep.
-      unfold eff_tag' in *. destruct (edge_Edge Hedge). 3:auto.
-      all: exfalso;try lia.
-      - destruct i;cbn in *;lia.
-      - destruct i;cbn in *;lia.
-    Qed.*)
-
-  (* possibly unused
-    Lemma tag_normal_iff
-      : j = i <-> eq_loop p q.
-    Proof.
-   *)
-
-  (*    Ltac tag_fact_s1 H Hedge :=
-      unfold eff_tag' in *; destruct (edge_Edge Hedge) in H;auto;exfalso;
-      eauto using cons_neq, STag_neq_cons, tl_neq_cons.
-
-    Ltac tag_fact_s2 H Q :=
-      let Hdj := fresh "Hdj" in
-      specialize (Edge_disj H Q) as Hdj;
-      unfold eff_tag';
-      rewrite <-Hdj;
-      reflexivity.*)
+    prep.
+    destruct (edge_Edge e);inv Htag.
+    all:try lia.
+    - destruct i;[congruence|]. inv H0. cbn in Hlt. lia.
+    - reflexivity.
+    - destruct i;[congruence|]. inv H0. cbn in Hlt. lia.
+  Qed.
 
   Lemma tag_entry_iff
     : j = O :: i <-> entry_edge p q.
   Proof.
+    split; intro Q.
+    - prep.
+      destruct (edge_Edge e);inv Htag.
+      all: try (now (exfalso;eapply list_cycle;eauto)).
+      + destruct i;[congruence|]. admit. (* this is not true in general! *)
+
+
   Admitted. (*
       tag_fact_prep.
       split;intro H.
