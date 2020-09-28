@@ -135,6 +135,18 @@ Section cfg.
     eexists;eauto.
   Qed.
 
+  Lemma non_entry_head_back_edge p h
+        (Hedge : edge__P p h)
+        (Hloop : loop_contains h p)
+    : p ↪ h.
+  Proof.
+    decide (p ↪ h);[assumption|exfalso].
+    simpl_dec' n.
+    destruct n;[contradiction|].
+    simpl_dec' H.
+    eapply loop_reachs_member in Hloop. destruct Hloop.
+    eapply a_edge_acyclic;eauto.
+  Qed.
   (*
   Lemma edge_head_same_loop p h h'
         (Hedge : edge p h = true)

@@ -195,7 +195,15 @@ Context `{C : redCFG}.
           2: eauto.
           2: { rewrite app_comm_cons. eauto using path_rcons. }
           destruct Hxoin as [t [Ht Htpost]].
-          eapply ex_entry in Hinner; try eauto.
+          eapply ex_entry_innermost in Hinner. 3,4:eauto.
+          2: {
+            eapply path_rcons in Hedge;eauto.
+            eapply path_contains_back in Ht.
+            eapply postfix_incl in Htpost. eapply Htpost in Ht.
+            eapply path_to_elem in Ht;eauto.
+            destructH.
+            eapply tag_depth_unroot;eauto.
+          }
           (* here we got the header *)
 
           eapply path_to_elem in Hinner as Hfrom; eauto.

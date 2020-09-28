@@ -1,6 +1,5 @@
 Require Export LoopSplits SplitsSound.
 
-Notation "pi -t> qj" := (tcfg_edge pi qj) (at level 50).
 Lemma both_exit_or_teq `(C : redCFG) q1 q2 p j1 j2 i
       (Hedge1 : (q1,j1) -t> (p,i))
       (Hedge2 : (q2,j2) -t> (p,i))

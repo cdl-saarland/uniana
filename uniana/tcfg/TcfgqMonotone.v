@@ -5,13 +5,6 @@ Section cfg.
 
   Context `(C : redCFG).
 
-  Lemma non_entry_head_back_edge p h
-        (Hedge : edge__P p h)
-        (Hloop : loop_contains h p)
-    : p ↪ h.
-  Proof.
-  Admitted.
-
   (* the more general formulation with deq_loop is wrong *)
   Lemma tpath_tag_take_r_eq p i q j t h n
         (Hlen : |j| = depth q)
@@ -175,16 +168,70 @@ Section cfg.
     erewrite tag_depth_unroot;eauto.
   Qed.
 
-  (* (tl (take_r (depth h) j)) *)
-  Lemma ex_entry (h p q : Lab) (i j : Tag) n t
-        (Hlen : | i | = depth p)
+  Lemma ex_entry (h p q : Lab) (i j j' k : Tag) t
         (Hin : loop_contains h q)
         (Hnin : ~ loop_contains h p)
         (Hpath : TPath (p,i) (q,j) t)
-        (Hdep : depth h = n)
-    : (h,0 :: (take_r (n-1) j)) ∈ t.
+        (Hleni : | i | = depth p)
+        (Heq : j = j' ++ k)
+        (Hlen : | k | = depth h - 1)
+    : (h,0 :: k) ∈ t.
   Proof.
-  Admitted.
+    revert j' j q Heq Hpath Hin.
+    induction t;intros;inv_path Hpath.
+    - contradiction.
+    - destruct x as [u l].
+      decide (loop_contains h u).
+      + right.
+        copy H0 Htedge.
+        eapply tcfg_edge_destruct' in H0.
+        destruct H0 as [[H0 H1]|[[H0 H1]|[[H0 H1]|[H0 H1]]]].
+        * eapply IHt. all: cycle 1; eauto.
+        * destruct j'.
+          -- exfalso.
+             cbn in Hpath.
+             eapply tag_depth_unroot in Hpath;eauto.
+             eapply loop_contains_deq_loop in Hin. eapply deq_loop_depth in Hin.
+             rewrite Hpath in Hlen.
+             destruct k;cbn in *;[congruence|lia].
+          -- eapply IHt. all: cycle 1; eauto. cbn in H0. inversion H0. eauto.
+        * destruct j'.
+          -- exfalso.
+             cbn in Hpath.
+             eapply tag_depth_unroot in Hpath;eauto.
+             eapply loop_contains_deq_loop in Hin. eapply deq_loop_depth in Hin.
+             rewrite Hpath in Hlen.
+             destruct k;cbn in *;[|lia].
+             eapply loop_contains_loop_head in l0.
+             eapply depth_loop_head in l0. lia.
+          -- destruct l;cbn in H0;[congruence|].
+             eapply IHt. all: cycle 1; eauto.
+             instantiate (1:=(n0 :: j')). cbn. inv H0. reflexivity.
+        * destruct l.
+          -- exfalso.
+             eapply tag_depth_unroot in Hpath;eauto.
+             rewrite H0 in Hpath. cbn in Hpath.
+             eapply loop_contains_deq_loop in Hin as Hdeq. eapply deq_loop_depth in Hdeq.
+             eapply loop_contains_loop_head in Hin.
+             eapply depth_loop_head in Hin. lia.
+          -- cbn in H0. eapply IHt. all: cycle 1; eauto. instantiate (1:=n :: j').
+             cbn. rewrite H0. reflexivity.
+      + eapply entry_through_header in Hin as Hin'. 2:eauto. 2: destruct H0;eauto.
+        subst q.
+        assert (entry_edge u h) as Hentry.
+        { split. 1: eapply loop_contains_loop_head;eauto. split;destruct H0;eauto. }
+        rewrite <-tag_entry_iff in Hentry;eauto.
+        assert (| j' ++ k | = depth h).
+        { eapply tag_depth_unroot in Hpath;eauto. }
+        destruct j'.
+        * exfalso.
+          cbn in H1, Hentry. destruct k;[congruence|]. rewrite <-H1 in Hlen. cbn in Hlen. lia.
+        * destruct j'.
+          -- cbn in Hentry. inv Hentry. left. reflexivity.
+          -- exfalso.
+             rewrite <- H1 in Hlen. cbn in Hlen.
+             rewrite app_length in Hlen. lia.
+  Qed.
 
   Lemma ex_entry_rooted (h q : Lab) (j : Tag) n t
         (Hin : loop_contains h q)
@@ -192,7 +239,40 @@ Section cfg.
         (Hdep : depth h = n)
     : (h,0 :: (take_r (n-1) j)) ∈ t.
   Proof.
-  Admitted.
+    assert (n <= |j|) as Hnj.
+    {
+      eapply loop_contains_deq_loop in Hin.
+      eapply deq_loop_depth in Hin.
+      eapply tag_depth' in Hpath. rewrite Hpath.
+      lia.
+    }
+    eapply ex_entry in Hpath;eauto.
+    - eapply root_no_loop.
+    - cbn. symmetry. eapply depth_root.
+    - eapply take_take_r with (n:=|j| - (n - 1)).
+      lia.
+    - rewrite <- Hdep.
+      eapply (take_r_length_le).
+      lia.
+  Qed.
+
+  Lemma ex_entry_innermost (h p q : Lab) (i j : Tag) t
+        (Hdep : | i | = depth p)
+        (Hin : innermost_loop h q)
+        (Hnin : ~ loop_contains h p)
+        (Hpath : TPath (p,i) (q,j) t)
+    : (h,0 :: tl j) ∈ t.
+  Proof.
+    destruct Hin as [Hloop Hinner].
+    eapply loop_contains_deq_loop in Hloop as Hdeq.
+    eapply deq_loop_depth in Hdeq.
+    eapply loop_contains_loop_head in Hloop as Hhead.
+    eapply depth_loop_head in Hhead. cbn in Hpath.
+    eapply tag_depth_unroot in Hpath as Hq;eauto.
+    destruct j;cbn;[exfalso;cbn in Hq;lia|].
+    eapply ex_entry with (j':=[n]) in Hloop;eauto.
+    cbn in Hq. eapply deq_loop_depth in Hinner. lia.
+  Qed.
 
   Lemma tagle_monotone q j p i t h n
         (Hlen : |j| = depth q)

@@ -524,6 +524,20 @@ Proof.
   rewrite take_length_ge;rewrite rev_length;auto.
 Qed.
 
+Lemma take_take_r (A : Type) (l : list A) (n m : nat)
+      (Hsum : n + m = | l |)
+  : l = take n l ++ take_r m l.
+Proof.
+  revert n m Hsum.
+  induction l;intros;cbn.
+  - cbn. cbn in Hsum. destruct n;[|lia];destruct m;[|lia]. cbn. reflexivity.
+  - destruct n.
+    + cbn. rewrite take_r_geq;eauto. lia.
+    + cbn. f_equal. rewrite take_r_cons_drop.
+      * eapply IHl. cbn in Hsum. lia.
+      * cbn in Hsum. lia.
+Qed.
+
 Ltac destr_r' l :=
   let H := fresh "Hl" in
   let x := fresh "x" in
