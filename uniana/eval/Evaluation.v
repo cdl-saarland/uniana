@@ -329,7 +329,11 @@ Section eval.
         eapply EPath_TPath in t; eauto.
       + destruct x;cbn in Heqc;[congruence|].
         inversion Heqc. subst c.
-        unfold sem_step in H. cbn in H.
+        unfold sem_step in H.
+        unfold hd_error in H. unfold option_chain in H.
+        split.
+        { eapply step_conf_implies_edge;eauto. }
+        cbn in H.
         destruct (eff' (e,s0)).
         * destruct p0. unfold eff_tag in *.
           decide (edge__P e e0). 2:congruence.
