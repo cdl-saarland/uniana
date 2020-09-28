@@ -426,6 +426,15 @@ Proof.
   eapply j_len1; eauto using DiamondPaths_sym.
 Qed.
 
+Lemma i_len1 `(D : DiamondPaths)
+  : | i | = depth p1.
+Admitted.
+
+Lemma i_len2 `(D : DiamondPaths)
+  : | i | = depth p2.
+Proof.
+Admitted.
+
 Lemma jj_len `(D : DiamondPaths)
   : |j1| = |j2|.
 Proof.

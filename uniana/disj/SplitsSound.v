@@ -632,10 +632,16 @@ Context `{C : redCFG}.
       eapply tcfg_edge_det in Hin3;eauto. subst l2.
       inv_path Hin0; inv_path Hin2.
       + tauto.
-      + subst q1. destruct r2;[inv H|]. eapply path_acyclic_no_loop. 2: eapply Hin2.
-        eapply tcfg_acyclic.
-      + subst q2. destruct r1;[inv H|]. eapply path_acyclic_no_loop. 2: eapply Hin0.
-        eapply tcfg_acyclic.
+      + subst q1. destruct r2;[inv H|].
+        eapply tcfg_fresh in Hin2.
+        3:cbn;lia.
+        2:eapply i_len1;eauto.
+        eapply Taglt_irrefl;eassumption.
+      + subst q2. destruct r1;[inv H|].
+        eapply tcfg_fresh in Hin0.
+        3:cbn;lia.
+        2:eapply i_len1;eauto.
+        eapply Taglt_irrefl;eassumption.
       + eapply Hin1.
         1,2: eapply path_contains_back;eauto.
     - destructH.

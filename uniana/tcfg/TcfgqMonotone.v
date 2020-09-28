@@ -293,11 +293,16 @@ Section cfg.
           destruct Q0. eapply deq_loop_exited;eauto.
   Qed.
 
-  Lemma tcfg_acyclic
-    : acyclic tcfg_edge.
+  Lemma tcfg_acyclic p i q j t
+        (Hdep : | i | = depth p)
+        (Hedge : tcfg_edge (q,j) (p,i))
+        (Hpath : TPath (p,i) (q,j) t)
+    : False.
   Proof.
-    (* now tcfg_edge is acyclic but the freshness lemma is not general enough *)
-
-  Admitted.
+    eapply PathCons in Hedge;eauto.
+    eapply tcfg_fresh in Hedge;cbn;eauto.
+    2: inv_path Hpath;cbn;eauto;lia.
+    eapply Taglt_irrefl;eassumption.
+  Qed.
 
 End cfg.
