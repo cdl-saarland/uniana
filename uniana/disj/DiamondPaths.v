@@ -369,6 +369,8 @@ Proof.
   - symmetry. eauto.
 Qed.
 
+Hint Immediate DiamondPaths_sym : diamond.
+
 Lemma Dpath_uq1 `(D : DiamondPaths)
       (Hnnil : r1 <> nil)
   : TPath (u1,l1) (q1,j1) r1.
@@ -405,20 +407,33 @@ Proof.
   eapply DiamondPaths_sym;eauto.
 Qed.
 
+Hint Resolve Dsk1 Dsk2 Dpath1 Dpath2 Dqj1 Dqj2 Ddisj Dloop Dlen : diamond.
+Hint Resolve Dpath_uq1 Dpath_uq2 Dpath_sq1 Dpath_sq2 : diamond.
+
 Lemma u_len1 `(D : DiamondPaths)
   : | l1 | = depth u1.
 Proof.
-Admitted.
+  rewrite <-tcfg_edge_depth_iff.
+  all:eauto with diamond.
+Qed.
 
 Lemma u_len2 `(D : DiamondPaths)
   : | l2 | = depth u2.
 Proof.
-Admitted.
+  rewrite <-tcfg_edge_depth_iff.
+  all:eauto with diamond.
+Qed.
+
+Hint Resolve u_len1 u_len2 : diamond.
 
 Lemma j_len1 `(D : DiamondPaths)
   : | j1 | = depth q1.
 Proof.
-Admitted.
+  destruct r1.
+  - inv D. cbn in Dqj3. inv Dqj3. assumption.
+  - assert (p :: r1 <> nil) by congruence.
+    eapply tag_depth_unroot; eauto with diamond.
+Qed.
 
 Lemma j_len2 `(D : DiamondPaths)
   : | j2 | = depth q2.
@@ -428,21 +443,86 @@ Qed.
 
 Lemma i_len1 `(D : DiamondPaths)
   : | i | = depth p1.
-Admitted.
+Proof.
+  destruct D.
+  inv_path Dpath3.
+  - eapply u_len1. econstructor;eauto.
+  - assert ((p1,i) :: r1 <> nil) by congruence.
+    eapply tag_depth_unroot;eauto with diamond.
+    eapply u_len1. econstructor;eauto.
+Qed.
 
 Lemma i_len2 `(D : DiamondPaths)
   : | i | = depth p2.
 Proof.
-Admitted.
+  eapply DiamondPaths_sym in D.
+  eapply i_len1;eauto.
+Qed.
 
 Lemma jj_len `(D : DiamondPaths)
   : |j1| = |j2|.
 Proof.
-Admitted.
+  erewrite j_len1. 2:eapply D.
+  erewrite j_len2. 2:eapply D.
+  rewrite Dloop. reflexivity.
+Qed.
+
+Infix "-t>" := tcfg_edge (at level 70).
+
+Lemma edge_qp1 `(D : DiamondPaths)
+  : (q1,j1) -t> (p1,i).
+Proof.
+  destruct D.
+  inv_path Dpath3;[cbn in Dqj3;inv Dqj3|].
+  all:inv_path Dpath4;[cbn in Dqj4;inv Dqj4|].
+  1: eassumption.
+  1:destruct r2;[inv H|path_simpl2' H];cbn in Dqj4.
+  2,3: destruct r1;[inv H|path_simpl2' H];cbn in Dqj3.
+  3:destruct r2;[inv H1|path_simpl2' H1];cbn in Dqj4.
+  all: subst p;eassumption.
+Qed.
+
+Lemma edge_qp2 `(D : DiamondPaths)
+  : (q2,j2) -t> (p2,i).
+Proof.
+  eapply edge_qp1.
+  eauto with diamond.
+Qed.
 
 Lemma tl_eq `(D : DiamondPaths)
   : tl j1 = tl j2.
-Admitted.
+Proof.
+  eapply edge_qp1 in D as Hqp1.
+  eapply edge_qp2 in D as Hqp2.
+  eapply tcfg_edge_destruct' in Hqp1.
+  eapply tcfg_edge_destruct' in Hqp2.
+  eapply j_len1 in D as Hlen1.
+  eapply j_len2 in D as Hlen2.
+  eapply jj_len in D as Hlenjj.
+  eapply i_len1 in D as Hleni1.
+  eapply i_len2 in D as Hleni2.
+  destruct Hqp1 as [Hqp1|[Hqp1|[Hqp1|Hqp1]]].
+  all: destruct Hqp2 as [Hqp2|[Hqp2|[Hqp2|Hqp2]]].
+  all: destruct Hqp1 as [Htag1 Hedge1].
+  all: destruct Hqp2 as [Htag2 Hedge2].
+  all: match goal with
+       | H : eexit_edge _ _, Q : eexit_edge _ _ |- _
+         => rewrite <- Htag1, <- Htag2;reflexivity
+       | H : entry_edge _ _, Q : entry_edge _ _ |- _
+         => destruct i;[congruence|];inv Htag1;inv Htag2;reflexivity
+       | H : entry_edge _ _ |- _
+         => exfalso;subst i;eapply f_equal with (f:=@length nat) in Htag2
+       | H : eexit_edge _ _ |- _
+         => exfalso;subst i;eapply f_equal with (f:=@length nat) in Htag2
+       | _ => subst i
+       end.
+  all:destruct j1,j2;cbn in *;eauto;try congruence.
+  all:try lia.
+  all: match goal with
+       | H : eexit_edge _ _ |- _
+         => eapply depth_exit in H;lia
+       end.
+Qed.
 
 Section disj.
 
