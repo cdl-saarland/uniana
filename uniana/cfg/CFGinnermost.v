@@ -467,6 +467,15 @@ Section cfg.
   Qed.
 
   Definition nexit_edge q p := forall h, ~ exit_edge h q p.
+  Definition nexited p := forall h q, ~ exit_edge h q p.
+
+  Lemma exited_or_nexited p
+    : (forall q, q --> p -> eexit_edge q p) \/ nexited p.
+  Proof.
+    decide (exists h q, exit_edge h q p);[left|right].
+    - intros. destructH. exists h. eapply exit_edge_pred_exiting;eauto.
+    - do 2 simpl_dec' n. eassumption.
+  Qed.
 
   Lemma two_edge_exit_cases (q1 q2 p : Lab)
         (Hedge1 : q1 --> p)
@@ -474,7 +483,14 @@ Section cfg.
     : (exists h, exit_edge h q1 p /\ exit_edge h q2 p)
       \/ nexit_edge q1 p /\ nexit_edge q2 p.
   Proof.
-  Admitted.
+    specialize (exited_or_nexited p) as Hen.
+    destruct Hen;[left|right].
+    - eapply H in Hedge1.
+      destruct Hedge1.
+      eexists;split;eauto.
+      eapply exit_edge_pred_exiting;eauto.
+    - unfold nexited,nexit_edge in *. split;intros;eapply  H.
+  Qed.
 
   Lemma exit_edges_loop_eq h1 h2 e1 e2 q1 q2 p
         (Hexit1 : exit_edge h1 q1 e1)
@@ -483,6 +499,7 @@ Section cfg.
         (Hin2 : loop_contains h2 p)
         (Heq : eq_loop e1 e2)
     : eq_loop q1 q2.
+  Proof.
   Admitted.
 
   (** * Innermost loops and strit-innermost loops **)

@@ -5,7 +5,6 @@ Section cfg.
   Context `{C : redCFG}.
 
   Infix "-->" := edge__P.
-  Infix "-t>" := tcfg_edge (at level 70).
   Infix "-h>" := head_rewired_edge (at level 70).
 
   Lemma tpath_jeq_prefix u2 l2 q2 n2 j n1 r2

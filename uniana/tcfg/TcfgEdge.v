@@ -28,9 +28,10 @@ Proof.
   cbn. econstructor. auto.
 Qed.
 
+Notation "pi -t> qj" := (tcfg_edge pi qj) (at level 50).
+
 Section eff_tag_facts.
   Context `{C : redCFG}.
-  Notation "pi -t> qj" := (tcfg_edge pi qj) (at level 50).
   Variables (p q : Lab) (i j : Tag).
   Hypothesis (Hpq : (p,i) -t> (q,j)).
 
@@ -111,32 +112,23 @@ Section eff_tag_facts.
     - prep.
       destruct (edge_Edge e);inv Htag.
       all: try (now (exfalso;eapply list_cycle;eauto)).
-      + destruct i;[congruence|]. admit. (* this is not true in general! *)
-
-
-  Admitted. (*
-      tag_fact_prep.
-      split;intro H.
-      - tag_fact_s1 H Hedge.
-      - tag_fact_s2 (Eentry H) (edge_Edge Hedge).
-    Qed. *)
+      + destruct i;[congruence|]. inv H0.
+      + assumption.
+      + destruct i;[congruence|]. inv H0. exfalso;eapply list_cycle2;eauto.
+    - prep.
+      destruct (edge_Edge e);try edge_excl.
+      inv Htag. reflexivity.
+  Qed.
 
   Lemma tag_back_edge
     : p ↪ q -> j = STag i.
   Proof.
-  Admitted. (*
-      tag_fact_prep.
-      intro H.
-      tag_fact_s2 (Eback H) (edge_Edge Hedge).
-    Qed.*)
+    intro H. prep.
+    destruct (edge_Edge e);try edge_excl.
+    destruct i;[congruence|]. cbn. inv Htag. reflexivity.
+  Qed.
 
-  Lemma tag_back_edge_iff n
-        (Hpq' : (p,n :: i) -t> (q,j))
-    : j = STag (n :: i) <-> p ↪ q.
-  Proof.
-    clear Hpq.
-    rename Hpq' into Hpq.
-  Admitted. (*
+ (*
       tag_fact_prep.
       split;intro H.
       - tag_fact_s1 H Hedge.
@@ -166,15 +158,13 @@ Section eff_tag_facts.
   Lemma tag_deq_or_entry
     : deq_loop p q \/ entry_edge p q.
   Proof.
-  Admitted. (*
-      tag_fact_prep.
-      eapply edge_Edge in Hedge.
-      destruct Hedge;eauto.
-      - left. destruct b. destruct H. auto.
-      - eapply back_edge_eq_loop in b. left. eapply b.
-      - unfold eexit_edge in e. destructH. left. eapply deq_loop_exited;eauto.
-    Qed.
-             *)
+    prep.
+    destruct (edge_Edge e).
+    - left. destruct b. destruct H. auto.
+    - eapply back_edge_eq_loop in b. left. eapply b.
+    - right;eauto.
+    - unfold eexit_edge in e0. destructH. left. eapply deq_loop_exited;eauto.
+  Qed.
 
   Lemma tcfg_edge_destruct'
     : (j = i /\ basic_edge p q)
@@ -182,21 +172,21 @@ Section eff_tag_facts.
       \/ (j = STag i /\ back_edge p q)
       \/ (j = tl i /\ eexit_edge p q).
   Proof.
-  Admitted. (*
-      tag_fact_prep.
-      unfold eff_tag'.
-      destruct (edge_Edge Hedge).
-      Local Ltac tcfg_dstr_tac
-        := match goal with
-           | |- ?P \/ ?Q => match P with
-                         | context [?x = ?x] => left; tcfg_dstr_tac
-                         | _ => right; tcfg_dstr_tac
-                         end
-           | |- ?P /\ ?Q => split;eauto
-           end.
-      all: tcfg_dstr_tac.
-    Qed.
-             *)
+    prep.
+    destruct (edge_Edge e).
+    all: inv Htag.
+    Local Ltac tcfg_dstr_tac
+      := match goal with
+         | |- ?P \/ ?Q => match P with
+                       | context [?x = ?x] => left; tcfg_dstr_tac
+                       | _ => right; tcfg_dstr_tac
+                       end
+         | |- ?P /\ ?Q => split;eauto
+         end.
+    2,4: destruct i;[congruence|inv H0].
+    all: cbn.
+    all: tcfg_dstr_tac.
+  Qed.
 
   Lemma tcfg_edge_destruct
     : i = j (* normal *)
@@ -204,17 +194,33 @@ Section eff_tag_facts.
       \/ j = STag i (* back *)
       \/ j = tl i. (* exit *)
   Proof.
-    unfold tcfg_edge in Hpq. destructH. unfold eff_tag in Hpq1.
-    decide (edge__P p q);[|congruence]. inversion Hpq1.
-  Admitted. (*
-      destruct (edge_Edge e);firstorder 0.
-    Qed. *)
+    specialize (tcfg_edge_destruct') as Hd.
+    destruct Hd as [Hd|[Hd|[Hd|Hd]]].
+    all: destruct Hd as [Hd1 Hd2].
+    all: subst.
+    all: firstorder 0.
+  Qed.
 
 End eff_tag_facts.
 
 Section cfg.
   Context `(C : redCFG).
   Notation "pi -t> qj" := (tcfg_edge pi qj) (at level 50).
+
+  Lemma tag_back_edge_iff n p q i j
+        (Hpq' : (p,n :: i) -t> (q,j))
+    : j = STag (n :: i) <-> p ↪ q.
+  Proof.
+    rename Hpq' into Hpq.
+    split;[|eapply tag_back_edge;eauto].
+    intros H.
+    cbn in H.
+    eapply tcfg_edge_destruct' in Hpq;try edge_excl.
+    destruct Hpq as [Hpq|[Hpq|[Hpq|Hpq]]].
+    all: destruct Hpq as [Hedge Htag];subst j;inv H;try congruence.
+    - lia.
+    - cbn in H0. exfalso;eapply list_cycle;eauto.
+  Qed.
 
   Lemma tcfg_basic_edge p q i
         (H : basic_edge p q)
@@ -383,11 +389,46 @@ Section cfg.
     1: inv H0; eapply list_cycle2;eauto.
   Qed.
 
-  Lemma nexit_injective q1 q2 p1 p2 j1 j2 i
-        (Hedge1 : (q1,j1) -t> (p1,i))
-        (Hedge2 : (q2,j2) -t> (p2,i))
-        (Hnexit1 : nexit_edge q1 p1)
+  Lemma nexit_injective q1 q2 p j1 j2 i
+        (Hedge1 : (q1,j1) -t> (p,i))
+        (Hedge2 : (q2,j2) -t> (p,i))
+        (Hnexit1 : nexit_edge q1 p)
+        (Hnexit2 : nexit_edge q2 p)
     : j1 = j2.
-  Admitted.
+  Proof.
+    unfold nexit_edge in Hnexit1,Hnexit2.
+    eapply tcfg_edge_destruct' in Hedge1.
+    eapply tcfg_edge_destruct' in Hedge2.
+    destruct Hedge1 as [Hedge1|[Hedge1|[Hedge1|Hedge1]]].
+    all: destruct Hedge2 as [Hedge2|[Hedge2|[Hedge2|Hedge2]]].
+    all: destruct Hedge1 as [Hed1 Htag1].
+    all: destruct Hedge2 as [Hed2 Htag2].
+    all: lazymatch goal with
+         | H : eexit_edge _ ?p |- _
+           => exfalso;destruct H;
+               try (now (eapply Hnexit1;eauto));
+               try (now (eapply Hnexit2;eauto))
+         | _ => idtac
+         end.
+    - subst. eauto.
+    - destruct Htag2.
+      eapply basic_edge_no_loop2 in Htag1.
+      contradiction.
+    - eapply loop_contains_ledge in Htag2.
+      eapply loop_contains_loop_head in Htag2.
+      eapply basic_edge_no_loop2 in Htag1.
+      contradiction.
+    - destruct Htag1.
+      eapply basic_edge_no_loop2 in Htag2.
+      contradiction.
+    - subst i. inv Hed2. reflexivity.
+    - destruct j2;subst;cbn in *; congruence.
+    - eapply loop_contains_ledge in Htag1.
+      eapply loop_contains_loop_head in Htag1.
+      eapply basic_edge_no_loop2 in Htag2.
+      contradiction.
+    - destruct j1;subst;cbn in *; congruence.
+    - subst i. destruct j1,j2; cbn in *. all: congruence.
+  Qed.
 
 End cfg.

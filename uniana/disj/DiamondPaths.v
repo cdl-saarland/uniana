@@ -124,7 +124,6 @@ Section diadef.
   Context `{C : redCFG}.
 
   Infix "-->" := edge__P.
-  Infix "-t>" := tcfg_edge (at level 70).
   Class DiamondPaths (s u1 u2 p1 p2 q1 q2 : Lab)
         (k i l1 l2 j1 j2 : Tag)
         (r1 r2 : list (Lab * Tag)) :=
@@ -312,7 +311,6 @@ Proof.
   rewrite Dloop. reflexivity.
 Qed.
 
-Infix "-t>" := tcfg_edge (at level 70).
 
 Lemma edge_qp1 `(D : DiamondPaths)
   : (q1,j1) -t> (p1,i).
@@ -372,7 +370,6 @@ Qed.
 Section disj.
 
   Infix "-->" := edge__P.
-  Infix "-t>" := tcfg_edge (at level 70).
 
   Context `(D : DiamondPaths).
   Hypothesis (Hjle : j1 ⊴ j2).

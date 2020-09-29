@@ -5,7 +5,6 @@ Section splits_sound.
 Context `{C : redCFG}.
 
   Infix "-->" := edge__P.
-  Infix "-t>" := tcfg_edge (at level 70).
   Infix "-h>" := head_rewired_edge (at level 70).
 
   Hint Resolve tcfg_edge_edge : tcfg.
@@ -619,7 +618,7 @@ Context `{C : redCFG}.
         rewrite <-H0. rewrite <-H1. reflexivity.
       - destructH.
         eapply nexit_injective in H0;eauto. subst j1 j2.
-        eapply tcfg_edge_eq_loop;eauto. rewrite H0. eauto.
+        eapply tcfg_edge_eq_loop;eauto. rewrite <-H0. eauto.
     }
     destruct Hcase.
     - destructH.
