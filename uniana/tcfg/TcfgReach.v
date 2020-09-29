@@ -193,4 +193,39 @@ Section cfg.
     eapply tag_depth';eauto.
   Qed.
 
+  Lemma tag_depth_unroot2 p q i j t
+        (Hpath : TPath (p,i) (q,j) t)
+        (Hdep : | j | = depth q)
+    : | i | = depth p.
+  Proof.
+    revert q j Hdep Hpath.
+    induction t;intros;inv_path Hpath.
+    - assumption.
+    - destruct x. specialize (IHt e t0). exploit IHt.
+      + eapply tcfg_edge_depth_iff;eauto.
+      + assumption.
+  Qed.
+
+  Lemma tag_depth_unroot_elem p q i j t x k
+        (Hpath : TPath (q,j) (p,i) t)
+        (Hlen : |j| = depth q)
+        (Hin : (x,k) ∈ t)
+    : |k| = depth x.
+  Proof.
+    eapply path_to_elem in Hin;eauto.
+    destructH.
+    eapply tag_depth_unroot;eauto.
+  Qed.
+
+  Lemma tcfg_enroot p q i j t
+        (Hpath : TPath (p,i) (q,j) t)
+        (Hlen  : | i | = depth p)
+    : exists t', TPath (root,start_tag) (q,j) (t ++ t').
+  Proof.
+    eapply tcfg_reachability in Hlen.
+    destructH.
+    eexists.
+    eapply path_app';eauto.
+  Qed.
+
 End cfg.

@@ -1,4 +1,4 @@
-Require Export DiamondPaths.
+Require Export DiamondIncl.
 
 Section teq.
   Context `(T : TeqPaths).

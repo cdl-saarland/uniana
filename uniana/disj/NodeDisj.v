@@ -211,6 +211,7 @@ Section cfg.
         split.
         * eapply innermost_eq_loop in Hpre2. rewrite Hpre2. rewrite <-Dloop.
           eapply r2_incl_head_q;eauto.
+          { left. econstructor;eauto. }
           eapply prefix_incl in Hpre0.
           eapply incl_map with (f:=fst) in Hpre0. cbn in Hpre0. cbn. eapply Hpre0. right. auto.
         * eapply loop_contains_deq_loop;eauto.
@@ -229,7 +230,9 @@ Section cfg.
         destruct H1 as [H1|[H1|H1]]. 1,2: subst x0.
         * destruct Dloop;eauto.
         * reflexivity.
-        * rewrite <-Dloop. eapply r1_incl_head_q;eauto. cbn. right. eauto.
+        * rewrite <-Dloop. eapply r1_incl_head_q;eauto.
+          -- left. econstructor;eauto.
+          -- cbn. right. eauto.
       + symmetry. eauto.
     - diamond_subst_qj D. eapply diamond_teq in D as T;eauto.
       2: eapply le_cons_tagle;lia.
@@ -281,7 +284,7 @@ Section cfg.
           intros N. eapply no_back;eauto;[reflexivity|]. eapply loop_contains_self;eauto.
         * econstructor.
         * cbn. eassumption.
-    + eapply u1_deq_q; eauto. congruence.
+    + eapply u1_deq_q; eauto. reflexivity. congruence.
     + cbn. intros. eapply no_back;eauto;[reflexivity|].
       right. cbn. right. auto.
     - diamond_subst_qj D. subst j2.
