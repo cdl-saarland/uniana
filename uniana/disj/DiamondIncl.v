@@ -91,6 +91,13 @@ Proof.
       eapply IHt;eauto.
       destruct Hedge. eapply deq_loop_exited in H0. eapply H0. eauto.
 Qed.
+(*
+Lemma loop_tag_dom_own_head*)
+
+(*Lemma loop_tag_dom_same' `(C : redCFG) (h p : Lab) (i j : Tag) t
+      (Hloop : loop_contains h p)
+      (Hpath : TPath (root,start_tag) (p,i) t)*)
+
 
 Lemma loop_tag_dom_same `(C : redCFG) (h : Lab) (i j : Tag) t
       (Hloop : loop_head h)
@@ -100,12 +107,14 @@ Lemma loop_tag_dom_same `(C : redCFG) (h : Lab) (i j : Tag) t
 Proof.
   destruct Htagle.
   2: { subst. eapply path_contains_front;eauto. }
+(*  remember h as p.
+  eapply loop_contains_loop_head in Hloop.*)
   revert h Hloop Hpath.
   induction H;intros.
   - induction H.
     + induction t.
       * inv Hpath.
-      *
+      * admit.
 Admitted.
 
 Lemma loop_tag_dom `(C : redCFG) (h p : Lab) (i j : Tag) t
@@ -272,13 +281,20 @@ Section disj.
   Proof.
   Admitted.
 
-  Lemma no_back : forall x : Lab, x ∈ (q1 :: map fst r1) -> ~ loop_contains x q1.
+  Lemma no_back : forall x : Lab, x ∈ (map fst r1) -> ~ loop_contains x q1.
   Proof. (* Hjle needed *)
+    intros h' Hel Hnin.
+    (*destruct Hel as [Hel|Hel].
+    - admit.
+    - *) eapply in_fst in Hel.
+      destructH.
+      eapply head_in_both in Hel as Hel';eauto.
+      eapply Ddisj;eauto.
   Admitted.
 
   Lemma no_back2
         (Htageq : j1 = j2)
-    : forall x : Lab, x ∈ (q2 :: map fst r2) -> ~ loop_contains x q1.
+    : forall x : Lab, x ∈ (map fst r2) -> ~ loop_contains x q1.
   Proof.
     clear Hjle.
   Admitted.
@@ -305,36 +321,6 @@ Section disj.
   End disj_eqdep.
 
 End disj.
-
-Lemma taglt_trichotomy i j
-      (Hlen : |i| = |j|)
-  : i ◁ j \/ i = j \/ j ◁ i.
-Proof.
-  remember (|i|) as n.
-  revert i j Heqn Hlen.
-  induction n;intros.
-  - destruct i,j;cbn in *;try congruence. right. left. reflexivity.
-  - destruct i,j;cbn in *;try congruence.
-    specialize (IHn i j).
-    exploit IHn.
-    destruct IHn as [IHn|[IHn|IHn]];[left| |right;right].
-    + econstructor;eauto.
-    + subst.
-      specialize (Nat.lt_trichotomy n0 n1) as Hcase.
-      destruct Hcase as [Hcase|Hcase];[left|right];[|destruct Hcase as [Hcase|Hcase];[left|right]].
-      * econstructor;eauto.
-      * subst. reflexivity.
-      * econstructor;eauto.
-    + econstructor;eauto.
-Qed.
-
-Lemma tagle_or i j
-      (Hlen : |i| = |j|)
-  : i ⊴ j \/ j ⊴ i.
-Proof.
-  eapply taglt_trichotomy in Hlen.
-  destruct Hlen as [Hlen|[Hlen|Hlen]];[left;left|left;right|right;left];eauto.
-Qed.
 
 Lemma r1_incl_head_q `(D : DiamondPaths)
   : forall x, x ∈ map fst r1 -> deq_loop x q1.

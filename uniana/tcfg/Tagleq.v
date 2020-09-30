@@ -236,3 +236,33 @@ Proof.
     + eapply Taglt_irrefl;eauto.
   - intro N. inv N. lia.
 Qed.
+
+Lemma taglt_trichotomy i j
+      (Hlen : |i| = |j|)
+  : i ◁ j \/ i = j \/ j ◁ i.
+Proof.
+  remember (|i|) as n.
+  revert i j Heqn Hlen.
+  induction n;intros.
+  - destruct i,j;cbn in *;try congruence. right. left. reflexivity.
+  - destruct i,j;cbn in *;try congruence.
+    specialize (IHn i j).
+    exploit IHn.
+    destruct IHn as [IHn|[IHn|IHn]];[left| |right;right].
+    + econstructor;eauto.
+    + subst.
+      specialize (Nat.lt_trichotomy n0 n1) as Hcase.
+      destruct Hcase as [Hcase|Hcase];[left|right];[|destruct Hcase as [Hcase|Hcase];[left|right]].
+      * econstructor;eauto.
+      * subst. reflexivity.
+      * econstructor;eauto.
+    + econstructor;eauto.
+Qed.
+
+Lemma tagle_or i j
+      (Hlen : |i| = |j|)
+  : i ⊴ j \/ j ⊴ i.
+Proof.
+  eapply taglt_trichotomy in Hlen.
+  destruct Hlen as [Hlen|[Hlen|Hlen]];[left;left|left;right|right;left];eauto.
+Qed.

@@ -569,7 +569,8 @@ Context `{C : redCFG}.
       exists (p :: ϕ), [p], u2, p.
       split_conj.
       + econstructor;eauto. unfold head_rewired_edge. left;split;eauto.
-         intros N. eapply no_back2;eauto. rewrite Dloop. eapply loop_contains_self;eauto.
+        intros N. eapply no_back2;eauto. cbn. left; eauto.
+        rewrite Dloop. eapply loop_contains_self;eauto.
       + econstructor.
       + cbn. unfold Disjoint. firstorder.
       + destruct Hin4;eauto.
@@ -577,7 +578,7 @@ Context `{C : redCFG}.
       + cbn. left. inv_path H1; congruence.
     - cbn. rewrite <-Dloop. eapply u2_deq_q; eauto. congruence.
     - cbn. intros. rewrite <-Dloop. eapply no_back2;eauto.
-      right. cbn. right. auto.
+      right. cbn. auto.
   Qed.
 
   Theorem splits_sound p

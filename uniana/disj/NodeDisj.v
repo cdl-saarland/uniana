@@ -264,11 +264,12 @@ Section cfg.
         split_conj. 3,4: cbn;firstorder 0.
         * econstructor.
         * econstructor;eauto. unfold head_rewired_edge. left;split;eauto.
-          intros N. eapply no_back2;eauto. rewrite Dloop. eapply loop_contains_self;eauto.
+          intros N. eapply no_back2;eauto. cbn. left;eauto. rewrite Dloop.
+          eapply loop_contains_self;eauto.
         * cbn. eassumption.
       + rewrite <-Dloop. eapply u2_deq_q; eauto. congruence.
       + cbn. intros. rewrite <-Dloop. eapply no_back2;eauto.
-        right. cbn. right. auto.
+        right. cbn. eauto.
     - copy D D'. destruct D.
       eapply path_single in Dpath2. destruct Dpath2. inv H.
       eapply TPath_CPath in Dpath1. destruct p as [q j]. cbn in Dpath1. inv_path Dpath1.
@@ -278,12 +279,13 @@ Section cfg.
         exists ϕ, [].
         split_conj. 3,5: cbn;firstorder 0.
         * econstructor;eauto. unfold head_rewired_edge. left;split;eauto.
-          intros N. eapply no_back;eauto;[reflexivity|]. eapply loop_contains_self;eauto.
+          intros N. eapply no_back;eauto;[reflexivity| |]. cbn. left;eauto.
+          eapply loop_contains_self;eauto.
         * econstructor.
         * cbn. eassumption.
     + eapply u1_deq_q; eauto. congruence.
     + cbn. intros. eapply no_back;eauto;[reflexivity|].
-      right. cbn. right. auto.
+      right. cbn. auto.
     - diamond_subst_qj D. subst j2.
       eapply diamond_teq in D as T;eauto;[|reflexivity].
       destruct D.
