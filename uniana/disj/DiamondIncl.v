@@ -1,6 +1,7 @@
 Require Export DiamondPaths.
 Require Import Lia.
 
+Definition sub_tag i j := |i| = |j| /\ hd 0 i <= hd 0 j /\ tl i = tl j.
 
 Lemma loop_tag_dom_eq `(C : redCFG) (h p : Lab) (i j : Tag) t
       (Hloop : loop_contains h p)
@@ -91,36 +92,19 @@ Proof.
       eapply IHt;eauto.
       destruct Hedge. eapply deq_loop_exited in H0. eapply H0. eauto.
 Qed.
-(*
-Lemma loop_tag_dom_own_head*)
-
-(*Lemma loop_tag_dom_same' `(C : redCFG) (h p : Lab) (i j : Tag) t
-      (Hloop : loop_contains h p)
-      (Hpath : TPath (root,start_tag) (p,i) t)*)
-
 
 Lemma loop_tag_dom_same `(C : redCFG) (h : Lab) (i j : Tag) t
       (Hloop : loop_head h)
       (Hpath : TPath (root,start_tag) (h,i) t)
-      (Htagle : j ⊴ i)
+      (Htagle : sub_tag j i)
   : (h,j) ∈ t.
 Proof.
-  destruct Htagle.
-  2: { subst. eapply path_contains_front;eauto. }
-(*  remember h as p.
-  eapply loop_contains_loop_head in Hloop.*)
-  revert h Hloop Hpath.
-  induction H;intros.
-  - induction H.
-    + induction t.
-      * inv Hpath.
-      * admit.
 Admitted.
 
 Lemma loop_tag_dom `(C : redCFG) (h p : Lab) (i j : Tag) t
       (Hloop : loop_contains h p)
       (Hpath : TPath (root,start_tag) (p,i) t)
-      (Htagle : j ⊴ take_r (depth h) i)
+      (Hstag : sub_tag j (take_r (depth h) i))
       (Hdep : |j| = depth h)
   : (h,j) ∈ t.
 Proof.
@@ -140,6 +124,102 @@ Proof.
   eapply loop_tag_dom_same;eauto.
   eapply loop_contains_loop_head;eauto.
 Qed.
+
+Lemma loop_tag_dom_between `(C : redCFG) q h k l t
+      (Hloop : loop_contains h q)
+      (Hpath : TPath (q,k) (h,l) t)
+      (Htagle : take_r (depth h) k <> l)
+  : (h, STag (take_r (depth h) k)) ∈ t.
+Admitted.
+
+Lemma loop_tag_dom_same' `(C : redCFG) (h : Lab) (i j : Tag) t
+      (Hloop : loop_head h)
+      (Hpath : TPath (root,start_tag) (h,i) t)
+      (Htagle : j ⊴ i)
+      (Htleq : tl j = tl i) (* I think it's not even possible to generalize further *)
+  : (h,j) ∈ t.
+Proof.
+  destruct Htagle as [Hlt|Heq].
+  2: { subst. eapply path_contains_front;eauto. }
+  revert h Hloop Hpath.
+  induction Hlt;intros.
+  - assert (| n :: i | = depth h).
+    { eapply tag_depth' in Hpath. cbn in Hpath. cbn. assumption. }
+    revert t Hpath.
+    induction H;intros.
+    + revert Hpath.
+      specialize (well_founded_ind (R:=(@StrictPrefix' Coord)) (@StrictPrefix_well_founded Coord)
+                                   (fun t : list Coord => TPath (root,start_tag) (h, S n :: i) t
+                                                       -> (h, n :: i) ∈ t))
+        as WFind.
+      eapply WFind. clear WFind.
+      intros t' IHwf Hpath.
+      destruct t';[inv Hpath|].
+      unfold TPath in Hpath. path_simpl' Hpath.
+      inversion Hpath. subst.
+      destruct b as [q j].
+      eapply tcfg_edge_destruct' in H4.
+      destruct H4 as [H4|[H4|[H4|H4]]].
+      all: destruct H4 as [Htag Hedge].
+      * admit.
+      * exfalso. admit.
+      * destruct j;cbn in Htag;[congruence|]. inv Htag.
+        right.
+        eapply loop_tag_dom_eq;eauto.
+        -- eapply loop_contains_ledge;eassumption.
+        -- rewrite take_r_geq;eauto. lia.
+      * admit.
+    + destruct t;[inv Hpath|].
+      unfold TPath in Hpath. path_simpl' Hpath.
+      inversion Hpath. subst.
+      destruct b as [q j].
+      eapply tcfg_edge_destruct' in H5.
+      destruct H5 as [H5|[H5|[H5|H5]]].
+      all: destruct H5 as [Htag Hedge].
+      * admit.
+      * admit.
+      * destruct j;cbn in Htag;[congruence|].
+        inv Htag.
+        right.
+        eapply loop_tag_dom_eq in H2 as Hel2;cycle 1.
+        -- eapply loop_contains_ledge;eassumption.
+        -- rewrite take_r_geq;eauto. cbn in H0. cbn. lia.
+        -- eassumption.
+        -- eapply path_to_elem in Hel2;eauto. destructH.
+           eapply prefix_incl;[eauto|].
+           eapply IHle;eassumption.
+      * admit.
+  - exfalso.
+    cbn in Htleq. subst.
+    eapply Taglt_irrefl;eauto.
+Admitted.
+
+
+Lemma loop_tag_dom' `(C : redCFG) (h p : Lab) (i j : Tag) t
+      (Hloop : loop_contains h p)
+      (Hpath : TPath (root,start_tag) (p,i) t)
+      (Htagle : j ⊴ take_r (depth h) i)
+      (Htleq : tl j = tl (take_r (depth h) i))
+      (Hdep : |j| = depth h)
+  : (h,j) ∈ t.
+Proof.
+  assert (depth h <= | i |) as Hdepi.
+  {
+    eapply tag_depth' in Hpath. rewrite Hpath.
+    eapply deq_loop_depth.
+    eapply loop_contains_deq_loop;eauto.
+  }
+  eapply loop_tag_dom_eq in Hpath as Hel2.
+  3: reflexivity.
+  2: eauto.
+  2: rewrite take_r_length_le;eauto.
+  eapply path_to_elem in Hel2;eauto.
+  destructH.
+  eapply prefix_incl;eauto.
+  eapply loop_tag_dom_same;eauto.
+  eapply loop_contains_loop_head;eauto.
+Qed.
+
 
 Section disj.
 
@@ -179,6 +259,7 @@ Section disj.
       eapply n;destruct Hinner'';eauto using loop_contains_self.
     eapply Ddisj;eauto.
   Qed.
+
 
   Lemma head_in_both (h : Lab) (l : Tag)
         (Hcont : loop_contains h q1)
@@ -221,7 +302,7 @@ Section disj.
         1: reflexivity.
         eapply loop_contains_deq_loop;eauto.
       }
-      eapply loop_tag_dom in Hreach as Hentry. 2:eauto. 2:reflexivity. 2: eauto.
+      eapply loop_tag_dom_eq in Hreach as Hentry. 2:eauto. 2:reflexivity. 2: eauto.
       eapply path_from_elem in Hreach;eauto.
       destructH.
       eapply path_to_elem in Hel. 2: eapply Dpath1'.
@@ -256,6 +337,7 @@ Section disj.
           all: eauto with diamond.
           -- reflexivity.
           -- eapply loop_contains_deq_loop;eauto.
+        * admit.
         * eapply tag_depth_unroot_elem. 1:eapply Hpath1. 1: cbn;symmetry;eapply depth_root.
           right. eapply in_or_app. left. assumption.
   Qed.
@@ -284,26 +366,16 @@ Section disj.
   Lemma no_back : forall x : Lab, x ∈ (map fst r1) -> ~ loop_contains x q1.
   Proof. (* Hjle needed *)
     intros h' Hel Hnin.
-    (*destruct Hel as [Hel|Hel].
-    - admit.
-    - *) eapply in_fst in Hel.
-      destructH.
-      eapply head_in_both in Hel as Hel';eauto.
-      eapply Ddisj;eauto.
-  Admitted.
-
-  Lemma no_back2
-        (Htageq : j1 = j2)
-    : forall x : Lab, x ∈ (map fst r2) -> ~ loop_contains x q1.
-  Proof.
-    clear Hjle.
-  Admitted.
+    eapply in_fst in Hel.
+    destructH.
+    eapply head_in_both in Hel as Hel';eauto.
+    eapply Ddisj;eauto.
+  Qed.
 
   Lemma tag_eq_take_r
     : forall h q' k', (q',k') ∈ r1 -> deq_loop q' h -> deq_loop s h -> take_r (depth h) k' = take_r (depth h) k.
   Proof.
   Admitted.
-
 
   Section disj_eqdep.
     Hypothesis (Hdeq : deq_loop q1 s).
@@ -321,6 +393,16 @@ Section disj.
   End disj_eqdep.
 
 End disj.
+
+Lemma no_back2 `(D : DiamondPaths)
+      (Htageq : j1 = j2)
+  : forall x : Lab, x ∈ (map fst r2) -> ~ loop_contains x q1.
+Proof.
+  setoid_rewrite Dloop.
+  eapply no_back.
+  - eapply DiamondPaths_sym;eauto.
+  - subst. reflexivity.
+Qed.
 
 Lemma r1_incl_head_q `(D : DiamondPaths)
   : forall x, x ∈ map fst r1 -> deq_loop x q1.

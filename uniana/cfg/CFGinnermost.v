@@ -882,6 +882,15 @@ Section cfg.
     - eapply deq_loop_exiting;eauto.
   Qed.
 
+  Lemma depth_ex_innermost p
+        (Hdep : 0 < depth p)
+    : exists h, innermost_loop h p.
+  Proof.
+    decide (exists h, loop_contains h p).
+    - destructH. eapply loop_contains_innermost;eauto.
+    - simpl_dec' n. eapply depth_zero_iff in n. lia.
+  Qed.
+
 (*  Lemma dom_self_loop h p π
         (Hpath : CPath p p π)
         (Hinl : innermost_loop h p)
