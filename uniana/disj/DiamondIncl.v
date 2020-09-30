@@ -251,7 +251,7 @@ Section disj.
           right. eapply in_or_app. left. assumption.
   Qed.
 
-  Lemma r1_incl_head_q : forall x, x ∈ map fst r1 -> deq_loop x q1.
+  Lemma r1_incl_head_q' : forall x, x ∈ map fst r1 -> deq_loop x q1.
     intros x Hel h Hh.
     eapply loop_contains_innermost in Hh as Hinner1. destructH.
     eapply eq_loop_innermost in Hinner1 as Hinner2. 2: eapply Dloop.
@@ -268,28 +268,8 @@ Section disj.
     eapply Ddisj;eauto.
   Qed.
 
-  Lemma u1_deq_q
-        (Hnnil : r1 <> [])
-    : deq_loop u1 q1.
+  Lemma r2_incl_head_q' : forall x, x ∈ map fst r2 -> deq_loop x q1.
   Proof.
-    eapply r1_incl_head_q.
-    destruct r1;[contradiction|].
-    destruct D.
-    inv_path Dpath1.
-    eapply path_contains_back in H.
-    fold (fst (u1,l1)).
-    eapply in_map;eauto.
-  Qed.
-
-  Lemma r2_incl_head_q : forall x, x ∈ map fst r2 -> deq_loop x q1.
-  Proof.
-  Admitted.
-
-  Lemma u2_deq_q
-        (Hnnil : r2 <> [])
-    : deq_loop u2 q1.
-  Proof.
-    clear Hjle.
   Admitted.
 
   Lemma no_back : forall x : Lab, x ∈ (q1 :: map fst r1) -> ~ loop_contains x q1.
@@ -325,6 +305,75 @@ Section disj.
   End disj_eqdep.
 
 End disj.
+
+Lemma taglt_trichotomy i j
+      (Hlen : |i| = |j|)
+  : i ◁ j \/ i = j \/ j ◁ i.
+Proof.
+  remember (|i|) as n.
+  revert i j Heqn Hlen.
+  induction n;intros.
+  - destruct i,j;cbn in *;try congruence. right. left. reflexivity.
+  - destruct i,j;cbn in *;try congruence.
+    specialize (IHn i j).
+    exploit IHn.
+    destruct IHn as [IHn|[IHn|IHn]];[left| |right;right].
+    + econstructor;eauto.
+    + subst.
+      specialize (Nat.lt_trichotomy n0 n1) as Hcase.
+      destruct Hcase as [Hcase|Hcase];[left|right];[|destruct Hcase as [Hcase|Hcase];[left|right]].
+      * econstructor;eauto.
+      * subst. reflexivity.
+      * econstructor;eauto.
+    + econstructor;eauto.
+Qed.
+
+Lemma tagle_or i j
+      (Hlen : |i| = |j|)
+  : i ⊴ j \/ j ⊴ i.
+Proof.
+  eapply taglt_trichotomy in Hlen.
+  destruct Hlen as [Hlen|[Hlen|Hlen]];[left;left|left;right|right;left];eauto.
+Qed.
+
+Lemma r1_incl_head_q `(D : DiamondPaths)
+  : forall x, x ∈ map fst r1 -> deq_loop x q1.
+Proof.
+  specialize (jj_len D) as Hlen.
+  eapply tagle_or in Hlen.
+  destruct Hlen.
+  - eapply r1_incl_head_q';eauto.
+  - setoid_rewrite Dloop.
+    eapply r2_incl_head_q';eauto.
+    eapply DiamondPaths_sym;eauto.
+Qed.
+
+Lemma r2_incl_head_q `(D : DiamondPaths)
+  : forall x, x ∈ map fst r2 -> deq_loop x q1.
+Proof.
+  setoid_rewrite Dloop.
+  eapply r1_incl_head_q.
+  eapply DiamondPaths_sym;eauto.
+Qed.
+
+Lemma u1_deq_q `(D : DiamondPaths)
+      (Hnnil : r1 <> [])
+  : deq_loop u1 q1.
+Proof.
+  eapply r1_incl_head_q;eauto.
+  destruct r1;[contradiction|].
+  destruct D.
+  inv_path Dpath1.
+  eapply path_contains_back in H.
+  fold (fst (u1,l1)).
+  eapply in_map;eauto.
+Qed.
+
+Lemma u2_deq_q `(D : DiamondPaths)
+      (Hnnil : r2 <> [])
+  : deq_loop u2 q1.
+Proof.
+Admitted.
 
 Lemma diamond_teq `(C : redCFG)
       (s u1 u2 p1 p2 q1 q2 : Lab) (k i l1 l2 j1 j2 : Tag) r1 r2

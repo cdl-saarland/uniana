@@ -90,8 +90,8 @@ Section disj.
     - reflexivity.
     - lia.
     - lia.
-    - eapply Tagle_cons2. auto.
-  Qed.
+    - admit. (*eapply Tagle_cons2. auto.*)
+  Admitted.
 
   Lemma head_in_both (h : Lab) (l : Tag)
         (Hcont : loop_contains h q1)
@@ -120,10 +120,10 @@ Section disj.
         unfold last_common' in Hlc. destructH. eapply postfix_step_left;eauto.
       }
       eapply loop_tag_dom;eauto.
-      + rewrite <-tagle_jj.
-        eapply tcfg_monotone_deq;eauto. rewrite <-Hloop in Hcont. eauto using loop_contains_deq_loop.
+      + rewrite <-tagle_jj. admit. (*
+        eapply tcfg_monotone_deq;eauto. rewrite <-Hloop in Hcont. eauto using loop_contains_deq_loop.*)
       + clear Hpath2. eapply tag_depth; eauto.
-  Qed.
+  Admitted.
 
   (** * r1 is a subset of q's loop **)
 
@@ -356,10 +356,10 @@ Section disj.
     - destructH.
       destruct l;[contradiction|].
       eapply PreOrder_Transitive in Hbacke1. exploit Hbacke1.
-      { eapply prefix_tagle. eapply tl_j2_prefix_k. }
+      { admit. (*eapply prefix_tagle. eapply tl_j2_prefix_k.*) }
+      admit. (*
       eapply tagle_prefix_hd_le in Hbacke0;eauto.
-      lia.
-  Qed.
-
+      lia.*)
+  Admitted.
 
 End disj.
