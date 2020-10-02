@@ -184,7 +184,6 @@ Section cfg.
       inv_path Dpath2.
       eapply tpath_jeq_prefix in H as Hpre;eauto.
       2: rewrite <-Dloop; eapply lj_eq2;eauto.
-      2: eapply le_cons_tagle;lia.
       destructH.
       eapply path_prefix_path in H;eauto.
       eapply TPath_CPath in H. cbn in H.

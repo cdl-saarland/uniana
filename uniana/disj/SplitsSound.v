@@ -363,12 +363,12 @@ Context `{C : redCFG}.
            eapply deq_loop_trans. eapply s_deq_q. eassumption. eapply loop_contains_deq_loop.
            destruct Hqinner'. eassumption.
          }
-         rewrite (tag_eq_take_r D Htagle) with (q' := q1) (h := h') (k' := j1); try eassumption.
-         2: { left. reflexivity. }
-         rewrite (tag_eq_take_r D Htagle) with (q' := e1) (h := h') (k' := m1); try eassumption.
-         2: { right. eapply in_or_app. left. eauto using path_contains_back. }
-         2: { symmetry in Heq1. eauto using eq_loop1. }
-         reflexivity.
+         eapply innermost_eq_loop in Hqinner'. rewrite Hqinner'.
+         setoid_rewrite take_r_geq at 2.
+         2: { erewrite j_len1;eauto. }
+         eapply tag_eq1;eauto.
+         right. rewrite map_app. eapply in_or_app. left. eapply path_contains_back in H2.
+         eapply in_map with (f:=snd) in H2. cbn in H2. eassumption.
        * simpl in Hnqinner.
          enough (Hdepq : depth q1 = 0).
          -- assert (Hdepe : depth e1 = 0). { rewrite Heq1. eassumption. }
