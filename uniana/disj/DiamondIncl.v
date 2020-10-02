@@ -512,30 +512,31 @@ Lemma tag_eq1 `(D : DiamondPaths)
              eapply in_map with (f:=fst) in H. cbn in *. eauto.
   Qed.
 
+  Lemma k_eq_j `(D : DiamondPaths)
+        (Hdeq : deq_loop q1 s)
+        (Hjle : j1 ⊴ j2)
+    : k = j1.
+  Proof.
+    rewrite <-take_r_geq at 1. eapply tag_eq_kj1;eauto. erewrite Dlen.
+    eapply deq_loop_depth. eauto.
+  Qed.
+
   Section disj_eqdep.
     Context `(C : redCFG).
     Variables (s u1 u2 p1 p2 q1 q2 : Lab)
               (k i l1 l2 j1 j2 : Tag)
               (r1 r2 : list (Lab * Tag)).
-    Context (D : DiamondPaths s u1 u2 p1 p2 q1 q2 k i l1 l2 j1 j2 ((q1,j1) :: r1) ((q2,j2) :: r2)).
     Hypothesis (Hdeq : deq_loop q1 s).
     Hypothesis (Hjle : j1 ⊴ j2).
 
-    Lemma k_eq_j
-      : k = j1.
-    Proof.
-      rewrite <-take_r_geq at 1. eapply tag_eq_kj1;eauto. erewrite Dlen.
-      eapply deq_loop_depth. eauto.
-    Qed.
-
-    Lemma lj_eq1
+    Lemma lj_eq1 (D : DiamondPaths s u1 u2 p1 p2 q1 q2 k i l1 l2 j1 j2 ((q1,j1) :: r1) r2)
       : l1 = j1 \/ l1 = 0 :: j1.
     Proof. (* Hjle needed *)
       specialize (tcfg_edge_destruct' Dsk1) as Dsk1.
       destruct Dsk1 as [Dsk1|[Dsk1|[Dsk1|Dsk1]]].
       all: destruct Dsk1 as [Htag Hedge].
-      - left. rewrite Htag. eapply k_eq_j.
-      - right. rewrite Htag. f_equal. eapply k_eq_j.
+      - left. rewrite Htag. eapply k_eq_j;eauto.
+      - right. rewrite Htag. f_equal. eapply k_eq_j;eauto.
       - exfalso. eapply no_back;eauto;cycle 1.
         + eapply loop_contains_ledge in Hedge. eapply Hdeq in Hedge. eauto.
         + destruct D. inv_path Dpath1. eapply path_contains_back in H.
@@ -547,14 +548,14 @@ Lemma tag_eq1 `(D : DiamondPaths)
         eapply in_map with (f:=fst) in H0. unfold fst in H0 at 1. eauto.
     Qed.
 
-    Lemma lj_eq2
+    Lemma lj_eq2 (D : DiamondPaths s u1 u2 p1 p2 q1 q2 k i l1 l2 j1 j2 r1 ((q2,j2) :: r2))
       : l2 = j1 \/ l2 = 0 :: j1 \/ loop_contains u2 q1.
     Proof. (* Hjle needed *)
       specialize (tcfg_edge_destruct' Dsk2) as Dsk2.
       destruct Dsk2 as [Dsk1|[Dsk1|[Dsk1|Dsk1]]].
       all: destruct Dsk1 as [Htag Hedge].
-      - left. rewrite Htag. eapply k_eq_j.
-      - right. left. rewrite Htag. f_equal. eapply k_eq_j.
+      - left. rewrite Htag. eapply k_eq_j;eauto.
+      - right. left. rewrite Htag. f_equal. eapply k_eq_j;eauto.
       - right. right. eapply loop_contains_ledge in Hedge. eapply Hdeq;eauto.
       - exfalso. destruct Hedge. eapply exit_not_deq in H;eauto.
         eapply eq_loop_exiting in H. rewrite H. transitivity q1;eauto.
