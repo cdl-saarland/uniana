@@ -9,7 +9,7 @@ Section cfg.
 
   Lemma tpath_jeq_prefix u2 l2 q2 n2 j n1 r2
         (Tpath2 : TPath (u2, l2) (q2, n2 :: j) ((q2, n2 :: j) :: r2))
-        (Tlj_eq2 : l2 = n1 :: j \/ l2 = 0 :: n1 :: j \/ loop_contains u2 q2)
+        (Tlj_eq2 : l2 = n1 :: j \/ (l2 = 0 :: n1 :: j /\ loop_head u2) \/ loop_contains u2 q2)
         (Hlt : n1 < n2)
     : exists h r2',
       Prefix ((h,(S n1) :: j) :: r2') ((q2, n2 :: j) ::  r2)

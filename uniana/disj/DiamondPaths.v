@@ -160,8 +160,8 @@ Section diadef.
       Tloop : eq_loop q1 q2;
       Tjj_len : |j1| = |j2|;
                           Ttl_eq : tl j1 = tl j2;
-      Tlj_eq1 : l1 = j1 \/ l1 = 0 :: j1;
-      Tlj_eq2 : l2 = j1 \/ l2 = 0 :: j1 \/ loop_contains u2 q1;
+      Tlj_eq1 : l1 = j1 \/ (l1 = 0 :: j1 /\ loop_head u1);
+      Tlj_eq2 : l2 = j1 \/ (l2 = 0 :: j1 /\ loop_head u2) \/ loop_contains u2 q1;
       Tj_len : | j1 | = depth q1
     }.
 End diadef.

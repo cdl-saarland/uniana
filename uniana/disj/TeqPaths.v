@@ -233,20 +233,20 @@ Proof.
       clear Tsym.
       decide (h = u1).
       - subst u1. eapply path_contains_back in Hin0.
-        specialize Tlj_eq1 as [Heq|Hentry];[exfalso|];subst.
+        specialize Tlj_eq1 as [Heq|Hentry];[exfalso|destructH];subst.
         + eapply tag_depth_unroot2 in Hpath1;eauto with teq.
           destruct T. rewrite <-Tj_len in Hdep. lia.
         + eassumption.
       - eapply ex_entry with (p:=u1).
         + destruct n. destruct c. exact l.
         + eapply tag_depth_unroot2 in Hpath1 as Hdepu;eauto with teq.
-          specialize Tlj_eq1 as [Heq|Hentry].
+          specialize Tlj_eq1 as [Heq|Hentry];[|destructH].
           * subst l1. intro N. rewrite Tj_len in Hdepu. rewrite Hdepu in Hdep.
             eapply loop_contains_deq_loop in N. eapply deq_loop_depth in N. lia.
           * contradict n0. destruct n. eapply eq_loop_same.
             -- split. 2: eapply loop_contains_deq_loop;eassumption.
                eapply deq_loop_depth_eq. 1: eapply loop_contains_deq_loop;eassumption.
-               rewrite Hentry in Hdepu. cbn in Hdepu. erewrite Tj_len in Hdepu. lia.
+               rewrite Hentry0 in Hdepu. cbn in Hdepu. erewrite Tj_len in Hdepu. lia.
             -- eapply loop_contains_loop_head;eauto.
             -- destruct H. eapply loop_contains_loop_head;eauto. admit.
         + eapply Hin0.

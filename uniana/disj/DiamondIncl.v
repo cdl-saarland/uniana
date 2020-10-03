@@ -132,13 +132,15 @@ Qed.
     Hypothesis (Hjle : j1 ⊴ j2).
 
     Lemma lj_eq1 (D : DiamondPaths s u1 u2 p1 p2 q1 q2 k i l1 l2 j1 j2 ((q1,j1) :: r1) r2)
-      : l1 = j1 \/ l1 = 0 :: j1.
+      : l1 = j1 \/ (l1 = 0 :: j1 /\ loop_head u1).
     Proof. (* Hjle needed *)
       specialize (tcfg_edge_destruct' Dsk1) as Dsk1.
       destruct Dsk1 as [Dsk1|[Dsk1|[Dsk1|Dsk1]]].
       all: destruct Dsk1 as [Htag Hedge].
       - left. rewrite Htag. eapply k_eq_j;eauto.
-      - right. rewrite Htag. f_equal. eapply k_eq_j;eauto.
+      - right. rewrite Htag. split.
+        + f_equal. eapply k_eq_j;eauto.
+        + destruct Hedge. eauto.
       - exfalso. eapply no_back;eauto;cycle 1.
         + eapply loop_contains_ledge in Hedge. eapply Hdeq in Hedge. eauto.
         + destruct D. inv_path Dpath1. eapply path_contains_back in H.
@@ -151,13 +153,15 @@ Qed.
     Qed.
 
     Lemma lj_eq2 (D : DiamondPaths s u1 u2 p1 p2 q1 q2 k i l1 l2 j1 j2 r1 ((q2,j2) :: r2))
-      : l2 = j1 \/ l2 = 0 :: j1 \/ loop_contains u2 q1.
+      : l2 = j1 \/ (l2 = 0 :: j1 /\ loop_head u2) \/ loop_contains u2 q1.
     Proof. (* Hjle needed *)
       specialize (tcfg_edge_destruct' Dsk2) as Dsk2.
       destruct Dsk2 as [Dsk1|[Dsk1|[Dsk1|Dsk1]]].
       all: destruct Dsk1 as [Htag Hedge].
       - left. rewrite Htag. eapply k_eq_j;eauto.
-      - right. left. rewrite Htag. f_equal. eapply k_eq_j;eauto.
+      - right. left. rewrite Htag. split.
+        + f_equal. eapply k_eq_j;eauto.
+        + destruct Hedge. eauto.
       - right. right. eapply loop_contains_ledge in Hedge. eapply Hdeq;eauto.
       - exfalso. destruct Hedge. eapply exit_not_deq in H;eauto.
         eapply eq_loop_exiting in H. rewrite H. transitivity q1;eauto.
