@@ -124,6 +124,16 @@ Section diadef.
   Context `{C : redCFG}.
 
   Infix "-->" := edge__P.
+  Class SplitPaths (s q1 q2 : Lab) (k j1 j2 : Tag) (r1 r2 : list (Lab * Tag)) :=
+    {
+      Spath1 : TPath (s,k) (q1,j1) (r1 ++ [(s,k)]);
+      Spath2 : TPath (s,k) (q2,j2) (r2 ++ [(s,k)]);
+      Sdisj : Disjoint r1 r2;
+      Sloop : eq_loop q1 q2;
+      Stl : tl j1 = tl j2;
+      Slen : | k | = depth s
+    }.
+
   Class DiamondPaths (s u1 u2 p1 p2 q1 q2 : Lab)
         (k i l1 l2 j1 j2 : Tag)
         (r1 r2 : list (Lab * Tag)) :=
@@ -365,4 +375,13 @@ Proof.
        | H : eexit_edge _ _ |- _
          => eapply depth_exit in H;lia
        end.
+Qed.
+
+Hint Resolve tl_eq : diamond.
+
+Lemma diamond_split `(D : DiamondPaths)
+  : SplitPaths s q1 q2 k j1 j2 r1 r2.
+Proof.
+  destruct r1,r2; inv_Dpaths D;cbn.
+  all: econstructor;eauto with diamond.
 Qed.

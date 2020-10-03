@@ -89,3 +89,15 @@ Proof.
     + intro N. eapply in_app_or in N. destruct N;contradiction.
     + eapply IHl1;eauto.
 Qed.
+
+Lemma Disjoint_nil1 (A : Type) (l : list A)
+  : Disjoint [] l.
+Proof.
+  unfold Disjoint. intros. contradiction.
+Qed.
+
+Lemma Disjoint_nil2 (A : Type) (l : list A)
+  : Disjoint l [].
+Proof.
+  eapply Disjoint_sym. eapply Disjoint_nil1.
+Qed.
