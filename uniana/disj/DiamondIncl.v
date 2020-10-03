@@ -30,68 +30,6 @@ Section disj.
 
 End disj.
 
-Lemma tpath_deq_no_haed_tag_eq `(C : redCFG) p q q0 i j t
-      (Hlen : | j | = depth q)
-      (Hpath : TPath (q,j) (p,i) t)
-      (Hincl : forall x, x ∈ map fst t -> deq_loop x q0)
-      (Hnback : forall x : Lab, x ∈ (map fst t) -> ~ loop_contains x q0)
-  : take_r (depth q0) i = take_r (depth q0) j.
-Proof.
-  revert q p i j Hpath Hlen.
-  induction t;intros;inv_path Hpath.
-  - reflexivity.
-  - exploit' IHt.
-    { intros. eapply Hincl. cbn. right;eauto. }
-    exploit' IHt.
-    { intros. eapply Hnback. cbn. right. eauto. }
-    destruct x as [e l].
-    eapply tcfg_edge_destruct' in H0.
-    destruct H0 as [H0|[H0|[H0|H0]]].
-    all: destruct H0 as [Htag Hedge];subst.
-    + eapply IHt;eauto.
-    + rewrite take_r_cons_drop.
-      * eapply IHt;eauto.
-      * eapply tag_depth_unroot in H as Hdep;eauto. rewrite Hdep.
-        eapply deq_loop_depth. eapply Hincl. cbn. right.
-        eapply path_contains_front in H. eapply in_map with (f:=fst) in H. eauto.
-    + destruct l;[exfalso|].
-      * eapply loop_contains_ledge in Hedge. eapply loop_contains_depth_lt in Hedge.
-        eapply tag_depth_unroot in H;eauto. cbn in H. lia.
-      * cbn in Hpath. cbn.
-        erewrite take_r_cons_replace.
-        -- eapply IHt;eauto.
-        -- specialize (Hnback p). exploit Hnback. 1: cbn;left;auto.
-           decide (S (|l|) <= depth q0);[exfalso|lia].
-           eapply tag_depth_unroot in H as Hdep;eauto. cbn in Hdep. rewrite Hdep in l0.
-           assert (deq_loop e q0) as Hdeq.
-           {
-             eapply Hincl. cbn. right. eapply path_contains_front in H.
-             eapply in_map with (f:=fst) in H. cbn in H. assumption.
-           }
-           eapply deq_loop_depth_leq in l0;eauto.
-           eapply Hnback. eapply deq_loop_head_loop_contains;eauto.
-           ++ eapply back_edge_eq_loop in Hedge. rewrite <-Hedge. eauto.
-           ++ eexists;eauto.
-    + destruct l;[exfalso|].
-      * eapply tag_depth_unroot in H;eauto. cbn in H. eapply depth_exit in Hedge. lia.
-      * cbn. cbn in Hpath.
-        erewrite <-take_r_cons_drop.
-        -- eapply IHt;eauto.
-        -- eapply tag_depth_unroot in Hpath;eauto. rewrite Hpath.
-           eapply deq_loop_depth. eapply Hincl;cbn. eauto.
-Qed.
-
-Lemma in_snd
-  : forall (A B : Type) (b : B) (l : list (A * B)), b ∈ map snd l -> exists a : A, (a, b) ∈ l.
-Proof.
-  intros.
-  induction l.
-  - contradiction.
-  - destruct a. cbn in H. destruct H.
-    + subst. eexists. left. eauto.
-    + exploit IHl. destructH. eexists. right. eassumption.
-Qed.
-
 Lemma r1_incl_head_q `(D : DiamondPaths)
   : forall x, x ∈ map fst r1 -> deq_loop x q1.
 Proof.
@@ -108,26 +46,11 @@ Qed.
 
 Lemma tag_eq1 `(D : DiamondPaths)
       (Hjle : j1 ⊴ j2)
-    : forall j, j ∈ map snd r1 -> take_r (depth q1) j = j1.
-  Proof.
-    intros. destruct r1;[contradiction|].
-    inv_Dpaths D.
-    specialize Dpath1 as Hpath1.
-    inv_path Hpath1.
-    eapply in_snd in H. destructH.
-    eapply path_to_elem in H as Hϕ;eauto. destructH.
-    eapply tpath_deq_no_haed_tag_eq in Hϕ0.
-    - eapply tpath_deq_no_haed_tag_eq in H0 as Hpath1';eauto with diamond.
-      + erewrite <-take_r_geq.
-        * rewrite Hpath1'. eapply Hϕ0.
-        * erewrite j_len1;eauto.
-      + intros. eapply r1_incl_head_q;eauto.
-      + intros. eapply no_back;eauto.
-    - eauto with diamond.
-    - intros. eapply r1_incl_head_q;eauto. eapply prefix_incl;eauto.
-      eapply prefix_map_fst;eauto.
-    - intros. eapply no_back;eauto. eapply prefix_incl;eauto. eapply prefix_map_fst;eauto.
-  Qed.
+  : forall j, j ∈ map snd r1 -> take_r (depth q1) j = j1.
+Proof.
+  eapply diamond_split in D.
+  eapply spath_tag_eq1;eauto.
+Qed.
 
   Lemma tag_eq_kj1 `(D : DiamondPaths)
         (Hjle : j1 ⊴ j2)

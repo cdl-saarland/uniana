@@ -47,6 +47,17 @@ Section Facts.
     - eapply IHl in H. destruct H. exists x; right;eauto.
   Qed.
 
+  Lemma in_snd
+    : forall (b : B) (l : list (A * B)), b ∈ map snd l -> exists a : A, (a, b) ∈ l.
+  Proof.
+    intros.
+    induction l.
+    - contradiction.
+    - destruct a. cbn in H. destruct H.
+      + subst. eexists. left. eauto.
+      + exploit IHl. destructH. eexists. right. eassumption.
+  Qed.
+
   Fixpoint list_is_set (l : list A) : Prop :=
     match l with
     | x :: xs => list_is_set xs /\ ~ In x xs

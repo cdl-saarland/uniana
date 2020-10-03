@@ -1,4 +1,4 @@
-Require Export TcfgqMonotone Disjoint.
+Require Export TcfgDom Disjoint.
 Require Import MaxPreSuffix Lia.
 
 Section cfg.

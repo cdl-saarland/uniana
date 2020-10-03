@@ -266,3 +266,10 @@ Proof.
   eapply taglt_trichotomy in Hlen.
   destruct Hlen as [Hlen|[Hlen|Hlen]];[left;left|left;right|right;left];eauto.
 Qed.
+
+Lemma Tagle_len: forall [i j : Tag], i ⊴ j -> | i | = | j |.
+Proof.
+  intros. destruct H.
+  - eapply Taglt_len;eauto.
+  - subst. reflexivity.
+Qed.
