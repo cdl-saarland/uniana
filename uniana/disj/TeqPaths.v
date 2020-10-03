@@ -102,7 +102,7 @@ Section teq.
   Admitted.
 
   Lemma teq_tag_eq1
-    : forall j, j ∈ map snd r1 -> take_r (depth q1) j = j1.
+    : forall j, j ∈ map snd ((q1,j1) :: r1) -> take_r (depth q1) j = j1.
   Admitted.
 
   Lemma teq_u1_deq_q
@@ -168,10 +168,55 @@ Proof.
   - destruct Tlj_eq1;[left|right];firstorder.
   - rewrite <-Tloop. eauto.
 Qed.
-Lemma ex_outermost `(C : redCFG) p q
-      (Hdeq : deq_loop p q)
-      (Hndeq : ~ deq_loop q p)
-  : exists h, loop_contains h p /\ ~ loop_contains h q /\ forall h', deq_loop h h' -> loop_contains h' h.
+
+Lemma node_disj_find_head `(T : TeqPaths)
+      (x : Lab)
+      (Hx1 : x el map fst ((q1, j1) :: r1))
+      (h : Lab)
+      (n : ocnc_loop h x q1)
+      (Hdep : depth h = S (depth q1))
+      (Hpath1 : TPath (u1, l1) (q1, j1) ((q1, j1) :: r1))
+      (b b0 : Tag)
+      (Hin1' : (x, b) el (q1, j1) :: r1)
+      (Hin2' : (x, b0) el (q2, j1) :: r2)
+      (ϕ : list (Lab * Tag))
+      (Hin0 : Path tcfg_edge (u1, l1) (x, b) ϕ)
+      (Hin3 : Prefix ϕ ((q1, j1) :: r1))
+      (ϕ0 : list (Lab * Tag))
+      (Hin1 : Path tcfg_edge (u2, l2) (x, b0) ϕ0)
+      (Hin4 : Prefix ϕ0 ((q2, j1) :: r2))
+  : (h, 0 :: j1) ∈ ϕ.
+Proof.
+  decide (h = u1).
+  - subst u1. eapply path_contains_back in Hin0.
+    specialize Tlj_eq1 as [Heq|Hentry];[exfalso|destructH];subst.
+    + eapply tag_depth_unroot2 in Hpath1;eauto with teq.
+      destruct T. rewrite <-Tj_len in Hdep. lia.
+    + eassumption.
+  - eapply ex_entry with (p:=u1).
+    + destruct n. destruct c. exact l.
+    + eapply tag_depth_unroot2 in Hpath1 as Hdepu;eauto with teq.
+      specialize Tlj_eq1 as [Heq|Hentry];[|destructH].
+      * subst l1. intro N. rewrite Tj_len in Hdepu. rewrite Hdepu in Hdep.
+        eapply loop_contains_deq_loop in N. eapply deq_loop_depth in N. lia.
+      * contradict n0. destruct n. eapply eq_loop_same.
+        -- split. 2: eapply loop_contains_deq_loop;eassumption.
+           eapply deq_loop_depth_eq. 1: eapply loop_contains_deq_loop;eassumption.
+           rewrite Hentry0 in Hdepu. cbn in Hdepu. erewrite Tj_len in Hdepu. lia.
+        -- eapply loop_contains_loop_head;eauto.
+        -- eauto.
+    + eapply Hin0.
+    + eapply tag_depth_unroot2 in Hpath1;eauto with teq.
+    + setoid_rewrite <-teq_tag_eq1 at 3. 2:eapply T.
+      eapply take_take_r. all: cycle 1.
+      * eapply in_map with (f:=snd) in Hin1'. cbn in *. eauto.
+      * eapply tag_depth_unroot2 in Hpath1;eauto with teq.
+        eapply tag_depth_unroot in Hin0;eauto. rewrite Hin0.
+        destruct n. destruct c. eapply loop_contains_deq_loop in l. eapply deq_loop_depth in l.
+        instantiate (1:=depth x - depth q1). lia.
+    + rewrite Hdep. cbn. rewrite Tj_len. lia.
+Qed.
+
 Lemma teq_node_disj `(T : TeqPaths)
       (Hjeq : j1 = j2)
   : Disjoint (q1 :: map fst r1) (q2 :: map fst r2).
@@ -191,32 +236,29 @@ Proof.
     assert (| b | = depth x) as Hxb1.
     {
       eapply path_to_elem in Hx1;eauto. 2: eapply Tpath1. destructH.
-      eapply tag_depth_unroot in Hx0;eauto. admit.
+      eapply tag_depth_unroot in Hx0;eauto. destruct T. eapply tag_depth_unroot2 in Tpath1;eauto.
     }
     assert (| b0 | = depth x) as Hxb2.
     {
       eapply path_to_elem in Hx2;eauto. 2: eapply Tpath2. destructH.
-      eapply tag_depth_unroot in Hx0;eauto. admit.
+      eapply tag_depth_unroot in Hx0;eauto. destruct T. eapply tag_depth_unroot2 in Tpath2;eauto.
+      rewrite <-Tjj_len. rewrite <-Tloop. eassumption.
     }
     assert (b = j1) as Hbj1.
     {
-      cbn in Hx1. destruct Hx1.
-      - inv H. reflexivity.
-      - erewrite <-take_r_geq with (n:=depth q1) at 1.
-        2: rewrite Heq,Hxb1;eauto.
-        eapply teq_tag_eq1;eauto.
-        eapply in_map with (f:=snd) in H. cbn in H. eassumption.
+      erewrite <-take_r_geq with (n:=depth q1) at 1.
+      2: rewrite Heq,Hxb1;eauto.
+      eapply teq_tag_eq1;eauto.
+      eapply in_map with (f:=snd) in Hx1. cbn in *. eauto.
     }
     assert (b0 = j1) as Hbj2.
     {
-      cbn in Hx2. destruct Hx2.
-      - inv H. reflexivity.
-      - erewrite <-take_r_geq with (n:=depth q1) at 1.
-        2: rewrite Heq,Hxb2;eauto.
-        rewrite Tloop. subst j2.
-        eapply TeqPaths_sym in T.
-        eapply teq_tag_eq1;eauto.
-        eapply in_map with (f:=snd) in H. cbn in H. eassumption.
+      erewrite <-take_r_geq with (n:=depth q1) at 1.
+      2: rewrite Heq,Hxb2;eauto.
+      rewrite Tloop. subst j2.
+      eapply TeqPaths_sym in T.
+      eapply teq_tag_eq1;eauto.
+      eapply in_map with (f:=snd) in Hx2. cbn in *. eassumption.
     }
     subst. reflexivity.
   - eapply ex_ocnc_loop in n. destructH.
@@ -226,38 +268,18 @@ Proof.
     subst j2. eapply TeqPaths_sym in T as Tsym.
     eapply in_fst in Hx1 as Hin1. destructH.
     eapply in_fst in Hx2 as Hin2. destructH.
+    copy Hin1 Hin1'. copy Hin2 Hin2'.
     eapply path_to_elem in Hin1;eauto. destructH.
     eapply path_to_elem in Hin2;eauto. destructH.
+
     assert ((h, 0 :: j1) ∈ ϕ) as Hinϕ.
-    {
-      clear Tsym.
-      decide (h = u1).
-      - subst u1. eapply path_contains_back in Hin0.
-        specialize Tlj_eq1 as [Heq|Hentry];[exfalso|destructH];subst.
-        + eapply tag_depth_unroot2 in Hpath1;eauto with teq.
-          destruct T. rewrite <-Tj_len in Hdep. lia.
-        + eassumption.
-      - eapply ex_entry with (p:=u1).
-        + destruct n. destruct c. exact l.
-        + eapply tag_depth_unroot2 in Hpath1 as Hdepu;eauto with teq.
-          specialize Tlj_eq1 as [Heq|Hentry];[|destructH].
-          * subst l1. intro N. rewrite Tj_len in Hdepu. rewrite Hdepu in Hdep.
-            eapply loop_contains_deq_loop in N. eapply deq_loop_depth in N. lia.
-          * contradict n0. destruct n. eapply eq_loop_same.
-            -- split. 2: eapply loop_contains_deq_loop;eassumption.
-               eapply deq_loop_depth_eq. 1: eapply loop_contains_deq_loop;eassumption.
-               rewrite Hentry0 in Hdepu. cbn in Hdepu. erewrite Tj_len in Hdepu. lia.
-            -- eapply loop_contains_loop_head;eauto.
-            -- destruct H. eapply loop_contains_loop_head;eauto. admit.
-        + eapply Hin0.
-        + eapply tag_depth_unroot2 in Hpath1;eauto with teq.
-        + setoid_rewrite <-teq_tag_eq1 at 3. 2:eapply T.
-          eapply take_take_r. admit. admit.
-        + rewrite Hdep. cbn. rewrite Tj_len. lia.
-    }
+    { clear Tsym. eapply node_disj_find_head;eauto. }
     assert ((h, 0 :: j1) ∈ ϕ0) as Hinϕ0.
-    {
-      admit.
+    { clear T. eapply node_disj_find_head;eauto.
+      - unfold ocnc_loop, cnc_loop.
+        split;destruct n;eauto. destruct H;split;eauto. contradict H1.
+        eapply eq_loop1;eauto with teq.
+      - setoid_rewrite Tloop. eassumption.
     }
     eapply Tdisj. 1,2: eapply prefix_incl;eauto.
-Admitted.
+Qed.
