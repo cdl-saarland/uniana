@@ -1,5 +1,5 @@
 Require Export DiamondIncl CncLoop.
-Require Import Lia.
+Require Import Lia LastCommon.
 
 Lemma only_inner_heads_tag_prefix `(C : redCFG) p i q j l
       (Hdep : | i | = depth p)
@@ -80,39 +80,209 @@ Proof.
       * eapply tag_depth_unroot2 in Hpath;eauto.
 Qed.
 
+Lemma teq_split `(T : TeqPaths)
+  : exists s k r1' r2', SplitPaths s q1 q2 k j1 j2 ((q1,j1) :: r1 ++ r1') ((q2,j2) :: r2 ++ r2').
+Proof.
+  destruct T.
+  assert (|l1| = depth u1) as Hul1.
+  { eapply tag_depth_unroot2 in Tpath1;eauto. }
+  assert (|l2| = depth u2) as Hul2.
+  { eapply tag_depth_unroot2 in Tpath2;eauto;rewrite <-Tjj_len;rewrite <-Tloop;eassumption. }
+  specialize (tcfg_reachability Hul1) as Hreach1. destructH.
+  specialize (tcfg_reachability Hul2) as Hreach2. destructH.
+  destr_r' t;subst;[inv Hreach1|].
+  destr_r' t0;subst;[inv Hreach2|].
+  unfold TPath in *. path_simpl' Hreach1. path_simpl' Hreach2.
+  destruct l;cbn in *.
+  - admit.
+  - destruct l0;cbn in *.
+    + admit.
+    + inv_path Hreach1. 1:congruence'. inv_path Hreach2. 1:congruence'.
+      specialize (ne_last_common) with (l1:=(q1,j1) :: r1 ++ l) (l2:=(q2,j2) :: r2 ++ l0) (a:=(root,start_tag)) as Hlc.
+      specialize (Hlc eq_equivalence Coord_dec). destructH.
+      destruct s as [s k].
+      rewrite last_common'_iff in Hlc. destructH.
+      unfold last_common' in Hlc. destructH.
+      assert (Postfix ((q1,j1) :: r1) l1') as Hpost1;[|copy Hpost1 Hr1].
+      {
+        admit.
+      }
+      assert (Postfix ((q2,j2) :: r2) l2') as Hpost2;[|copy Hpost2 Hr2].
+      {
+        admit.
+      }
+      eapply postfix_eq in Hr1 as [r1' Hr1].
+      eapply postfix_eq in Hr2 as [r2' Hr2].
+      exists s, k, r1', r2'.
+      assert (TPath (s, k) (q1, j1) (((q1, j1) :: r1 ++ r1') :r: (s, k))) as Hpath1.
+      {
+        cbn. rewrite <-app_assoc.
+        rewrite app_comm_cons. rewrite app_assoc. rewrite <-Hr1.
+        eapply path_postfix_path. 2:eauto.
+        cbn. rewrite <-app_assoc. rewrite app_comm_cons.
+        eapply path_app;eauto.
+      }
+      assert (TPath (s, k) (q2, j2) (((q2, j2) :: r2 ++ r2') :r: (s, k))) as Hpath2.
+      {
+        cbn. rewrite <-app_assoc.
+        rewrite app_comm_cons. rewrite app_assoc. rewrite <-Hr2.
+        eapply path_postfix_path. 2:eauto.
+        cbn. rewrite <-app_assoc. rewrite app_comm_cons.
+        eapply path_app;eauto.
+      }
+      econstructor;eauto.
+      * cbn in *. rewrite <-Hr1, <-Hr2. eassumption.
+      * eapply tag_depth_unroot2. 1: eapply Hpath1. eauto.
+
+Admitted.
+
 Section teq.
   Context `(T : TeqPaths).
 
-  Lemma teq_split
-    : exists s k r1' r2', SplitPaths s q1 q2 k j1 j2 (r1 ++ r1') (r2 ++ r2').
-  Admitted.
-
-  Lemma teq_no_back : forall x : Lab, x ∈ (q1 :: map fst r1) -> ~ loop_contains x q1.
-  Admitted.
-
-  Lemma teq_no_back2
-        (Htageq : j1 = j2)
-    : forall x : Lab, x ∈ (q2 :: map fst r2) -> ~ loop_contains x q1.
-  Admitted.
 
   Lemma teq_r1_incl_head_q : forall x, x ∈ (q1 :: map fst r1) -> deq_loop x q1.
-  Admitted.
+  Proof.
+    eapply teq_split in T as T'. destructH.
+    intros. eapply spath_r1_incl_head_q;eauto.
+    destruct H;cbn;eauto. right. rewrite map_app. eapply in_or_app. left. auto.
+  Qed.
 
   Lemma teq_r2_incl_head_q : forall x, x ∈ (q2 :: map fst r2) -> deq_loop x q1.
-  Admitted.
-
-  Lemma teq_tag_eq1
-    : forall j, j ∈ map snd ((q1,j1) :: r1) -> take_r (depth q1) j = j1.
-  Admitted.
+  Proof.
+    eapply teq_split in T as T'. destructH.
+    intros. eapply spath_r2_incl_head_q;eauto.
+    destruct H;cbn;eauto. right. rewrite map_app. eapply in_or_app. left. auto.
+  Qed.
 
   Lemma teq_u1_deq_q
     : deq_loop u1 q1.
   Proof.
-  Admitted.
+    eapply teq_r1_incl_head_q;eauto.
+    destruct T.
+    inv_path Tpath1. 1:left;eauto.
+    eapply path_contains_back in H.
+    fold (fst (u1,l1)). right.
+    eapply in_map;eauto.
+  Qed.
 
   Lemma teq_u2_deq_q
     : deq_loop u2 q1.
-  Admitted.
+  Proof.
+     eapply teq_r2_incl_head_q;eauto.
+    destruct T.
+    inv_path Tpath2. 1:left;eauto.
+    eapply path_contains_back in H.
+    fold (fst (u2,l2)). right.
+    eapply in_map;eauto.
+  Qed.
+
+End teq.
+
+Lemma jj_tagle `(T : TeqPaths)
+  : j1 ⊴ j2.
+Proof.
+  copy T T'.
+  destruct T.
+  assert (loop_contains u2 q1 -> j1 ⊴ j2) as Hncont.
+  {
+    intro Q.
+    eapply tagle_or in Tjj_len;destruct Tjj_len;[auto|exfalso].
+    eapply teq_split in T'. destructH.
+    eapply SplitPaths_sym in T'.
+    eapply spath_no_back in T';eauto.
+    + eapply T'. rewrite <-Tloop. eapply Q.
+    + rewrite app_comm_cons. rewrite map_app. eapply in_or_app. left.
+      eapply path_contains_back in Tpath2. eapply in_map with (f:=fst) in Tpath2.
+      cbn in *;eauto.
+  }
+  decide (loop_contains u2 q1) as [Hcont|HNcont];[eauto|].
+  destruct Tlj_eq2 as [Q|[Q|Q]].
+  - subst l2. eapply tagle_monotone with (n:=depth q1) in Tpath2.
+    + rewrite take_r_geq in Tpath2;[|lia].
+      rewrite take_r_geq in Tpath2;[|lia].
+      eassumption.
+    + eapply tag_depth_unroot2;eauto. rewrite <-Tloop. rewrite <-Tjj_len. assumption.
+    + eapply teq_u2_deq_q;eauto.
+    + rewrite Tloop. reflexivity.
+    + reflexivity.
+  - destructH. subst l2.
+    eapply tcfg_enroot in Tpath2 as Hroot.
+    2: { eapply tag_depth_unroot2;eauto. rewrite <-Tloop. rewrite <-Tjj_len. assumption. }
+    destructH.
+    destruct t';cbn in Hroot.
+    { exfalso. rewrite <-app_nil_end in Hroot.
+      destr_r' r2;subst.
+      - eapply path_single in Tpath2. inv Tpath2. eapply path_single in Hroot. inv Hroot. inv H.
+        cbn in Tjj_len. lia.
+      - rewrite app_comm_cons in Hroot. eapply path_back in Hroot. subst x.
+        rewrite app_comm_cons in Tpath2. eapply path_back in Tpath2. inv Tpath2.
+    }
+    destruct c.
+    assert (TPath (e, t) (q2, j2) ((q2, j2) :: r2 ++ [(e, t)])) as Hpath.
+    { rewrite app_comm_cons. eapply path_postfix_path;eauto.
+      setoid_rewrite app_cons_rcons at 2. eapply postfix_eq. exists t'. reflexivity.
+    }
+    copy Hpath Hpath'.
+    eapply path_rcons_inv' in Hpath. destructH.
+    replace p with (u2, 0 :: j1) in *.
+    2: { destr_r' r2;subst.
+         - eapply path_single in Tpath2. inv Tpath2. inv H. inv Hpath0;eauto. inv H1.
+         - rewrite app_comm_cons in Hpath0. eapply path_back in Hpath0.
+           rewrite app_comm_cons in Tpath2. eapply path_back in Tpath2. subst x p. reflexivity.
+    }
+    eapply tcfg_edge_destruct' in Hpath1.
+    destruct Hpath1 as [M|[M|[M|M]]].
+    all: destruct M as [Htag Hedge].
+    + exfalso. eapply basic_edge_no_loop2 in Hedge. contradiction.
+    + symmetry in Htag. inv Htag.
+      eapply tagle_monotone with (n:=depth q1) in Hpath'.
+      * rewrite take_r_geq in Hpath';[|lia].
+        rewrite take_r_geq in Hpath';[|lia].
+        eassumption.
+      * eapply tag_depth_unroot2;eauto. rewrite <-Tloop. rewrite <-Tjj_len. assumption.
+      * intros h Hh. eapply teq_u2_deq_q in Hh as Hh'. 2: eauto.
+        eapply deq_loop_entry_or in Hh'. 2:eauto. destruct Hh';[auto|]. subst h.
+        contradiction.
+      * rewrite Tloop. reflexivity.
+      * reflexivity.
+    + destruct t;cbn in Htag;congruence.
+    + destruct Hedge. exfalso. eapply no_exit_head;eauto.
+  - contradiction.
+Qed.
+
+Section teq.
+
+  Context `(T : TeqPaths).
+
+  Lemma teq_no_back : forall x : Lab, x ∈ (q1 :: map fst r1) -> ~ loop_contains x q1.
+  Proof.
+    eapply teq_split in T as T'. destructH.
+    intros. eapply spath_no_back in T';eauto.
+    - eapply jj_tagle;eauto.
+    - cbn. destruct H;eauto. right. rewrite map_app. eapply in_or_app. left. auto.
+  Qed.
+
+  Lemma teq_no_back2
+        (Htageq : j1 = j2)
+    : forall x : Lab, x ∈ (q2 :: map fst r2) -> ~ loop_contains x q1.
+  Proof.
+    eapply teq_split in T as T'. destructH.
+    intros. eapply SplitPaths_sym in T'.
+    subst j2.
+    eapply spath_no_back in T';eauto.
+    - rewrite Tloop. eauto.
+    - reflexivity.
+    - destruct H;cbn;eauto. right. rewrite map_app. eapply in_or_app. left. auto.
+  Qed.
+
+  Lemma teq_tag_eq1
+    : forall j, j ∈ map snd ((q1,j1) :: r1) -> take_r (depth q1) j = j1.
+  Proof.
+    eapply teq_split in T as T'. destructH.
+    intros. eapply spath_tag_eq1;eauto.
+    - eapply jj_tagle;eauto.
+    - destruct H;cbn;eauto. right. rewrite map_app. eapply in_or_app. left. auto.
+  Qed.
 
   Lemma q1_neq_q2
         (Hjeq : j1 = j2)
@@ -125,29 +295,44 @@ Section teq.
   Qed.
 
   Lemma q1_no_head
-        (Hjeq : j1 = j2)
     : ~ loop_head q1.
   Proof.
-  Admitted.
-
-  Lemma jj_tagle
-    : j1 ⊴ j2.
-  Proof.
-  Admitted.
-
-  Lemma u1_exit_eq_q h p
-        (Hexit : exit_edge h p u1)
-    : eq_loop u1 q1.
-  Proof.
-  Admitted.
-
-  Lemma u2_exit_eq_q h p
-        (Hexit : exit_edge h p u2)
-    : eq_loop u2 q1.
-  Proof.
-  Admitted.
+    intro N. eapply teq_no_back.
+    - left. reflexivity.
+    - eapply loop_contains_self;eauto.
+  Qed.
 
 End teq.
+
+Lemma u1_exit_eq_q `(T : TeqPaths) h p
+      (Hexit : exit_edge h p u1)
+  : eq_loop u1 q1.
+Proof.
+  copy T T'.
+  destruct T'.
+  destruct Tlj_eq1.
+  - eapply tag_depth_unroot2 in Tpath1;eauto. subst l1. split.
+    + eapply teq_u1_deq_q;eauto.
+    + eapply deq_loop_depth_eq. 1: eapply teq_u1_deq_q;eauto. rewrite <-Tj_len. assumption.
+  - destructH. subst l1. exfalso. eapply no_exit_head;eauto.
+Qed.
+
+Lemma u2_exit_eq_q `(T : TeqPaths) h p
+      (Hexit : exit_edge h p u2)
+  : eq_loop u2 q1.
+Proof.
+  copy T T'.
+  destruct T'.
+  destruct Tlj_eq2. 2:destruct H.
+  - eapply tag_depth_unroot2 in Tpath2;eauto. subst l2. split.
+    + eapply teq_u2_deq_q;eauto.
+    + eapply deq_loop_depth_eq. 1: eapply teq_u2_deq_q;eauto. rewrite <-Tj_len. assumption.
+    + rewrite <-Tjj_len. rewrite <-Tloop. assumption.
+  - destructH. subst l2. exfalso. eapply no_exit_head;eauto.
+  - split.
+    + eapply teq_u2_deq_q;eauto.
+    + eapply loop_contains_deq_loop;eauto.
+Qed.
 
 Hint Resolve Tpath1 Tpath2 Tdisj Tloop Tjj_len Ttl_eq Tlj_eq1 Tlj_eq2 Tj_len : teq.
 Hint Resolve teq_r1_incl_head_q teq_r2_incl_head_q teq_u1_deq_q teq_u2_deq_q Tloop : teq.
