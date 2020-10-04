@@ -162,7 +162,9 @@ Section diadef.
                           Ttl_eq : tl j1 = tl j2;
       Tlj_eq1 : l1 = j1 \/ (l1 = 0 :: j1 /\ loop_head u1);
       Tlj_eq2 : l2 = j1 \/ (l2 = 0 :: j1 /\ loop_head u2) \/ loop_contains u2 q1;
-      Tj_len : | j1 | = depth q1
+      Tj_len : | j1 | = depth q1;
+      TS : exists s k r1' r2', SplitPaths s q1 q2 k j1 j2 r1' r2'
+                          /\ Postfix ((q1,j1) :: r1) r1' /\ Postfix ((q2,j2) :: r2) r2'
     }.
 End diadef.
 

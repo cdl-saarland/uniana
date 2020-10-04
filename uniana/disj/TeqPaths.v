@@ -96,67 +96,6 @@ Qed.
 
 Hint Resolve teq_l_len1 teq_l_len2 : teq.
 
-Lemma teq_split `(T : TeqPaths)
-      (Hnroot1 : u1 <> root)
-      (Hnroot2 : u2 <> root)
-  : exists s k r1' r2', SplitPaths s q1 q2 k j1 j2 ((q1,j1) :: r1 ++ r1') ((q2,j2) :: r2 ++ r2').
-Proof.
-  destruct T.
-  assert (|l1| = depth u1) as Hul1.
-  { eapply tag_depth_unroot2 in Tpath1;eauto. }
-  assert (|l2| = depth u2) as Hul2.
-  { eapply tag_depth_unroot2 in Tpath2;eauto;rewrite <-Tjj_len;rewrite <-Tloop;eassumption. }
-  specialize (tcfg_reachability Hul1) as Hreach1. destructH.
-  specialize (tcfg_reachability Hul2) as Hreach2. destructH.
-  destr_r' t;subst;[inv Hreach1|].
-  destr_r' t0;subst;[inv Hreach2|].
-  unfold TPath in *. path_simpl' Hreach1. path_simpl' Hreach2.
-  destruct l,l0;cbn in *.
-  - exfalso.
-    eapply path_single in Hreach1. eapply path_single in Hreach2. do 2 destructH.
-    inv Hreach4. inv Hreach3. eapply Tdisj.
-    1,2: eapply path_contains_back;eauto.
-  - eapply path_single in Hreach1. inv Hreach1. inv H. contradiction.
-  - eapply path_single in Hreach2. inv Hreach2. inv H. contradiction.
-  - inv_path Hreach1. 1:congruence'. inv_path Hreach2. 1:congruence'.
-     specialize (ne_last_common) with (l1:=(q1,j1) :: r1 ++ l) (l2:=(q2,j2) :: r2 ++ l0) (a:=(root,start_tag)) as Hlc.
-     specialize (Hlc eq_equivalence Coord_dec). destructH.
-     destruct s as [s k].
-     rewrite last_common'_iff in Hlc. destructH.
-     unfold last_common' in Hlc. destructH.
-     assert (Postfix ((q1,j1) :: r1) l1') as Hpost1;[|copy Hpost1 Hr1].
-     {
-       eapply postfix_eq. eapply postfix_eq in Hlc0. admit.
-     }
-     assert (Postfix ((q2,j2) :: r2) l2') as Hpost2;[|copy Hpost2 Hr2].
-     {
-       admit.
-     }
-     eapply postfix_eq in Hr1 as [r1' Hr1].
-     eapply postfix_eq in Hr2 as [r2' Hr2].
-     exists s, k, r1', r2'.
-     assert (TPath (s, k) (q1, j1) (((q1, j1) :: r1 ++ r1') :r: (s, k))) as Hpath1.
-     {
-       cbn. rewrite <-app_assoc.
-       rewrite app_comm_cons. rewrite app_assoc. rewrite <-Hr1.
-       eapply path_postfix_path. 2:eauto.
-       cbn. rewrite <-app_assoc. rewrite app_comm_cons.
-       eapply path_app;eauto.
-     }
-     assert (TPath (s, k) (q2, j2) (((q2, j2) :: r2 ++ r2') :r: (s, k))) as Hpath2.
-     {
-       cbn. rewrite <-app_assoc.
-       rewrite app_comm_cons. rewrite app_assoc. rewrite <-Hr2.
-       eapply path_postfix_path. 2:eauto.
-       cbn. rewrite <-app_assoc. rewrite app_comm_cons.
-       eapply path_app;eauto.
-     }
-     econstructor;eauto.
-     * cbn in *. rewrite <-Hr1, <-Hr2. eassumption.
-     * eapply tag_depth_unroot2. 1: eapply Hpath1. eauto.
-
-Admitted.
-
 Lemma teq_root_all_nil1 `(T : TeqPaths)
       (Hin : root ∈ (q1 :: map fst r1))
   : u1 = root /\ l1 = [] /\ j1 = [] /\ j2 = [] /\ depth q1 = 0 /\ forall x, deq_loop x q1.
@@ -227,199 +166,25 @@ Proof.
     symmetry in Tj_len. eapply depth_zero_iff in Tj_len;eauto. contradiction.
 Qed.
 
-Lemma teq_root_teq1 `(C : redCFG) u2 q1 q2 l1 l2 j1 j2 r1 r2
-      (T : TeqPaths root u2 q1 q2 l1 l2 j1 j2 (r1 ++ [(root,start_tag)]) r2)
-  : exists u1 l1', u1 <> root /\ TeqPaths u1 u2 q1 q2 l1' l2 j1 j2 r1 r2.
-Proof.
-  eapply teq_root_all_nil1 in T as Hnil.
-  2: { destruct T. eapply TPath_CPath in Tpath1. cbn in Tpath1.
-       eapply path_contains_back in Tpath1. eauto. }
-  copy T T'.
-  destruct T'.
-  replace l1 with start_tag in *.
-  2: { rewrite app_comm_cons in Tpath1. eapply path_back in Tpath1. inv Tpath1. eauto. }
-  destructH. subst.
-  eapply path_rcons_inv' in Tpath1 as Hpath1. destructH.
-  destruct p.
-  exists e, t.
-  split;[|econstructor];eauto.
-  - eapply tcfg_edge_edge in Hpath2. intro N. subst e. eapply root_no_pred in Hpath2. contradiction.
-  - eapply disjoint_subset. 3: eapply Tdisj. 2:reflexivity. eauto.
-  - eapply tcfg_edge_destruct' in Hpath2.
-    destruct Hpath2 as [Q|[Q|[Q|Q]]].
-    all: destruct Q as [Htag Hedge];subst.
-    + left. eauto.
-    + right. split;eauto. destruct Hedge;eauto.
-    + exfalso. eapply loop_contains_ledge in Hedge. eapply loop_contains_depth_lt in Hedge.
-      rewrite depth_root in Hedge. lia.
-    + exfalso. eapply depth_exit in Hedge. rewrite depth_root in Hedge. lia.
-Qed.
-
-Lemma teq_root_teq2 `(C : redCFG) u1 q1 q2 l1 l2 j1 j2 r1 r2
-      (T : TeqPaths u1 root q1 q2 l1 l2 j1 j2 r1 (r2 ++ [(root,start_tag)]))
-  : exists u2 l2', u2 <> root /\ TeqPaths u1 u2 q1 q2 l1 l2' j1 j2 r1 r2.
-Proof.
-  eapply teq_root_all_nil2 in T as Hnil.
-  2: { destruct T. eapply TPath_CPath in Tpath2. cbn in Tpath2.
-       eapply path_contains_back in Tpath2. eauto. }
-  copy T T'.
-  destruct T'.
-  replace l2 with start_tag in *.
-  2: { rewrite app_comm_cons in Tpath2. eapply path_back in Tpath2. inv Tpath2. eauto. }
-  destructH. subst.
-  eapply path_rcons_inv' in Tpath2 as Hpath1. destructH.
-  destruct p.
-  exists e, t.
-  split;[|econstructor];eauto.
-  - eapply tcfg_edge_edge in Hpath2. intro N. subst e. eapply root_no_pred in Hpath2. contradiction.
-  - eapply disjoint_subset. 3: eapply Tdisj. 1:reflexivity. eauto.
-  - eapply tcfg_edge_destruct' in Hpath2.
-    destruct Hpath2 as [Q|[Q|[Q|Q]]].
-    all: destruct Q as [Htag Hedge];subst.
-    + left. eauto.
-    + right. left. split;eauto. destruct Hedge;eauto.
-    + exfalso. eapply loop_contains_ledge in Hedge. eapply loop_contains_depth_lt in Hedge.
-      rewrite depth_root in Hedge. lia.
-    + exfalso. eapply depth_exit in Hedge. rewrite depth_root in Hedge. lia.
-Qed.
-
-Lemma teq_split_root1 `(C : redCFG) u2 q1 q2 l1 l2 j1 j2 r1 r2
-      (Hnroot2 : u2 <> root)
-      (T : TeqPaths root u2 q1 q2 l1 l2 j1 j2 r1 r2)
-  : exists s k r1' r2', SplitPaths s q1 q2 k j1 j2 (r_tl ((q1,j1) :: r1) ++ r1') ((q2,j2) :: r2 ++ r2').
-Proof.
-  specialize (tcfg_reachability (teq_l_len2 T)) as Hreach2. destructH.
-  copy T T'. destruct T.
-  assert (l1 = []) as Hlnil.
-  { eapply tag_depth_unroot2 in Tpath1;eauto. rewrite depth_root in Tpath1.
-    destruct l1;[|cbn in Tpath1;congruence]. reflexivity. }
-  subst l1.
-  destr_r' r1;subst.
-  - eapply path_single in Tpath1. destructH. inversion Tpath0. subst q1 j1.
-    inv_path Hreach2. 1:contradiction.
-    destr_r' π;subst. 1: inv H. path_simpl' H.
-    eapply path_rcons_inv' in Hreach2 as H'. destructH.
-    exists root, nil, nil, l.
-    unfold r_tl. cbn.
-    econstructor;cbn;eauto.
-    + econstructor.
-    + rewrite app_comm_cons. eapply path_rcons;eauto.
-      eapply path_app' in Tpath2;eauto. cbn in Tpath2. eauto.
-    + eapply Disjoint_nil1.
-  - rewrite app_comm_cons in Tpath1. unfold TPath in Tpath1. path_simpl' Tpath1.
-    eapply teq_root_teq1 in T'. destructH.
-    eapply teq_split in T'1;eauto.
-    destructH. exists s, k. do 2 eexists.
-    rewrite app_comm_cons. rewrite r_tl_rcons. eassumption.
-Qed.
-
-Lemma teq_split_root2 `(C : redCFG) u1 q1 q2 l1 l2 j1 j2 r1 r2
-      (Hnroot2 : u1 <> root)
-      (T : TeqPaths u1 root q1 q2 l1 l2 j1 j2 r1 r2)
-  : exists s k r1' r2', SplitPaths s q1 q2 k j1 j2 ((q1,j1) :: r1 ++ r1') (r_tl ((q2,j2) :: r2) ++ r2').
-Proof.
-  specialize (tcfg_reachability (teq_l_len1 T)) as Hreach1. destructH.
-  copy T T'. destruct T.
-  assert (l2 = []) as Hlnil.
-  { eapply teq_l_len2 in T'. rewrite depth_root in T'.
-    destruct l2;[|cbn in T';congruence]. reflexivity. }
-  subst l2.
-  destr_r' r2;subst.
-  - eapply path_single in Tpath2. destructH. inversion Tpath0. subst q2 j2.
-    inv_path Hreach1. 1:contradiction.
-    destr_r' π;subst. 1: inv H. path_simpl' H.
-    eapply path_rcons_inv' in Hreach1 as H'. destructH.
-    exists root, nil, l, nil.
-    unfold r_tl. cbn.
-    econstructor;cbn;eauto.
-    + rewrite app_comm_cons. eapply path_rcons;eauto.
-      eapply path_app' in Tpath1;eauto. cbn in Tpath1. eauto.
-    + econstructor.
-    + eapply Disjoint_nil2.
-    + rewrite depth_root. reflexivity.
-  - rewrite app_comm_cons in Tpath2. unfold TPath in Tpath2. path_simpl' Tpath2.
-    eapply teq_root_teq2 in T'. destructH.
-    eapply teq_split in T'1;eauto.
-    destructH. exists s, k, r1', r2'.
-    assert (((q2, j2) :: l ++ r2') = (r_tl ((q2, j2) :: l :r: (root, [])) ++ r2')) as QQ.
-    { setoid_rewrite app_comm_cons at 2. rewrite r_tl_rcons. reflexivity. }
-    rewrite QQ in T'1. eassumption.
-Qed.
-
-Lemma teq_split_sub `(T : TeqPaths)
-  : exists s k r1' r2', SplitPaths s q1 q2 k j1 j2 r1' r2'
-                   /\ ((q1,j1) :: r1) ⊆ ((root,start_tag) :: r1')
-                   /\ ((q2,j2) :: r2) ⊆ ((root,start_tag) :: r2').
-Proof.
-  decide (u1 = root) as [Hroot1|Hnroot1].
-  - copy T T'.
-    destruct T.
-    subst u1.
-    eapply tag_depth_unroot2 in Tpath1 as Hdep1;eauto. rewrite depth_root in Hdep1.
-    destruct l1;[|cbn in Hdep1;congruence].
-    decide (u2 = root) as [Hroot2|Hnroot2].
-    + exfalso. subst u2.
-      eapply tag_depth_unroot2 in Tpath2 as Hdep2;eauto. 2: rewrite <-Tjj_len;rewrite <-Tloop;auto.
-      rewrite depth_root in Hdep2.
-      destruct l2;[|cbn in Hdep2;congruence].
-      eapply Tdisj.
-      1,2:eapply path_contains_back;eauto.
-    + eapply teq_split_root1 in T';eauto.
-      destructH. exists s, k. do 2 eexists.
-      split_conj;eauto.
-      destr_r' r1;subst.
-      * eapply path_single in Tpath1. destructH. rewrite <-Tpath0.
-        left. destruct H;[auto|contradiction].
-      * rewrite app_comm_cons in Tpath1. unfold TPath in Tpath1. path_simpl' Tpath1.
-        intros y Hin. setoid_rewrite app_comm_cons at 2. rewrite r_tl_rcons.
-        rewrite app_comm_cons in Hin. eapply In_rcons in Hin.
-        destruct Hin;[left;auto|].
-        right. eapply in_or_app. left. auto.
-  - decide (u2 = root) as [Hroot2|Hnroot2].
-    + subst u2. copy T T'. destruct T.
-      eapply tag_depth_unroot2 in Tpath2 as Hdep2;eauto. 2: rewrite <-Tjj_len;rewrite <-Tloop;auto.
-      rewrite depth_root in Hdep2.
-      destruct l2;[|cbn in Hdep2;congruence].
-      eapply teq_split_root2 in T';eauto.
-      destructH. exists s, k. do 2 eexists.
-      split_conj;eauto.
-      destr_r' r2;subst.
-      * eapply path_single in Tpath2. destructH. rewrite <-Tpath0.
-        left. destruct H;[auto|contradiction].
-      * rewrite app_comm_cons in Tpath2. unfold TPath in Tpath2. path_simpl' Tpath2.
-        intros y Hin. setoid_rewrite app_comm_cons at 2. rewrite r_tl_rcons.
-        rewrite app_comm_cons in Hin. eapply In_rcons in Hin.
-        destruct Hin;[left;auto|].
-        right. auto.
-    + eapply teq_split in T;eauto.
-      destructH.
-      exists s, k. do 2 eexists.
-      split_conj;eauto.
-Qed.
-
 Section teq.
   Context `(T : TeqPaths).
 
   Lemma teq_r1_incl_head_q : forall x, x ∈ (q1 :: map fst r1) -> deq_loop x q1.
   Proof.
-    decide (root ∈ (q1 :: map fst r1)).
-    - eapply teq_root_all_nil1 in i;eauto. destructH. intros. eauto.
-    - eapply teq_split_sub in T as T'. destructH.
-      intros.
-      eapply spath_r1_incl_head_q in T'0;eauto.
-      eapply incl_map with (f:=fst) in T'2;eauto. cbn in T'2.
-      eapply incl_rcons in T'2;eauto.
+    destruct T. destructH.
+    intros.
+    eapply spath_r1_incl_head_q in TS0;eauto.
+    eapply postfix_map with (f:=fst) in TS2.
+    eapply postfix_incl;eauto.
   Qed.
 
   Lemma teq_r2_incl_head_q : forall x, x ∈ (q2 :: map fst r2) -> deq_loop x q1.
   Proof.
-    decide (root ∈ (q2 :: map fst r2)).
-    - eapply teq_root_all_nil2 in i;eauto. destructH. intros. eauto.
-    - eapply teq_split_sub in T as T'. destructH.
-      intros.
-      eapply spath_r2_incl_head_q in T'0;eauto.
-      eapply incl_map with (f:=fst) in T'3;eauto. cbn in T'3.
-      eapply incl_rcons in T'3;eauto.
+    destruct T. destructH.
+    intros.
+    eapply spath_r2_incl_head_q in TS0;eauto.
+    eapply postfix_map with (f:=fst) in TS3.
+    eapply postfix_incl;eauto.
   Qed.
 
   Lemma teq_u1_deq_q
@@ -449,33 +214,20 @@ End teq.
 Lemma jj_tagle `(T : TeqPaths)
   : j1 ⊴ j2.
 Proof.
-  decide (u1 = root) as [?|Hnroot].
-  { eapply teq_l_len1 in T as Hdep;eauto. subst u1. rewrite depth_root in Hdep.
-    destruct l1;[|cbn in Hdep;congruence].
-    eapply teq_root_all_nil1 in T;eauto.
-    - destructH. subst. reflexivity.
-    - destruct T. eapply TPath_CPath in Tpath1. cbn in Tpath1. eapply path_contains_back;eauto.
-  }
-  decide (u2 = root) as [?|Hnroot2].
-  { eapply teq_l_len2 in T as Hdep;eauto. subst u2. rewrite depth_root in Hdep.
-    destruct l2;[|cbn in Hdep;congruence].
-    eapply teq_root_all_nil2 in T;eauto.
-    - destructH. subst. reflexivity.
-    - destruct T. eapply TPath_CPath in Tpath2. cbn in Tpath2. eapply path_contains_back;eauto.
-  }
+
   copy T T'.
   destruct T.
   assert (loop_contains u2 q1 -> j1 ⊴ j2) as Hncont.
   {
     intro Q.
     eapply tagle_or in Tjj_len;destruct Tjj_len;[auto|exfalso].
-    eapply teq_split in T';eauto. destructH.
-    eapply SplitPaths_sym in T'.
-    eapply spath_no_back in T';eauto.
-    + eapply T'. rewrite <-Tloop. eapply Q.
-    + rewrite app_comm_cons. rewrite map_app. eapply in_or_app. left.
-      eapply path_contains_back in Tpath2. eapply in_map with (f:=fst) in Tpath2.
-      cbn in *;eauto.
+    destructH.
+    eapply SplitPaths_sym in TS0.
+    eapply spath_no_back in TS0;eauto.
+    + eapply TS0. rewrite <-Tloop. eapply Q.
+    + eapply postfix_map with (f:=fst) in TS3.
+      eapply postfix_incl;eauto. eapply TPath_CPath in Tpath2. cbn in Tpath2.
+      eapply path_contains_back in Tpath2. eauto.
   }
   decide (loop_contains u2 q1) as [Hcont|HNcont];[eauto|].
   destruct Tlj_eq2 as [Q|[Q|Q]].
@@ -538,46 +290,32 @@ Section teq.
 
   Lemma teq_no_back : forall x : Lab, x ∈ (q1 :: map fst r1) -> ~ loop_contains x q1.
   Proof.
-    decide (root ∈ (q1 :: map fst r1)).
-    { intros. intro N. eapply teq_root_all_nil1 in i;eauto. destructH. subst.
-      eapply loop_contains_depth_lt in N. lia. }
-    eapply teq_split_sub in T as T'. destructH.
-    intros.
-    eapply spath_no_back in T'0;eauto.
-    { eapply jj_tagle;eauto. }
-    eapply incl_map with (f:=fst) in T'2;eauto. cbn in T'2.
-    eapply incl_rcons in T'2;eauto.
+    destruct T. destructH. intros.
+    eapply spath_no_back in TS0;eauto.
+    - eapply jj_tagle;eauto.
+    - eapply postfix_map with (f:=fst) in TS2. eapply postfix_incl;eauto.
   Qed.
 
   Lemma teq_no_back2
         (Htageq : j1 = j2)
     : forall x : Lab, x ∈ (q2 :: map fst r2) -> ~ loop_contains x q1.
   Proof.
-    decide (root ∈ (q2 :: map fst r2)).
-    { intros. intro N. eapply teq_root_all_nil2 in i;eauto. destructH. subst.
-      eapply loop_contains_depth_lt in N. lia. }
-    intros.
-    eapply teq_split_sub in T as T'. destructH.
-    intros. eapply SplitPaths_sym in T'0.
+    destruct T. destructH.
+    intros. eapply SplitPaths_sym in TS0.
     subst j2.
-    eapply spath_no_back in T'0;eauto.
+    eapply spath_no_back in TS0;eauto.
     - rewrite Tloop. eauto.
     - reflexivity.
-    - eapply incl_map with (f:=fst) in T'3;eauto. cbn in T'3.
-      eapply incl_rcons in T'3;eauto.
+    - eapply postfix_map with (f:=fst) in TS3. eapply postfix_incl;eauto.
   Qed.
 
   Lemma teq_tag_eq1
     : forall j, j ∈ map snd ((q1,j1) :: r1) -> take_r (depth q1) j = j1.
   Proof.
-    decide ((root,start_tag) ∈ ((q1,j1) :: r1)).
-    { intros. eapply in_map with (f:=fst) in i. eapply teq_root_all_nil1 in i;eauto. destructH. subst.
-      cbn in i4. rewrite i4. cbn. reflexivity. }
-    eapply teq_split_sub in T as T'. destructH.
-    intros. eapply spath_tag_eq1;eauto.
+    destruct T. destructH. intros.
+    eapply spath_tag_eq1 in TS0;eauto.
     - eapply jj_tagle;eauto.
-    - eapply incl_rcons in T'2;eauto.
-      eapply incl_map with (f:=snd) in T'2;eauto.
+    - eapply postfix_map with (f:=snd) in TS2. eapply postfix_incl;eauto.
   Qed.
 
   Lemma q1_neq_q2
@@ -648,6 +386,10 @@ Proof.
     eapply TPath_CPath in Tpath2. cbn in Tpath2. eapply path_contains_back;eauto.
   - destruct Tlj_eq1;[left|right];firstorder.
   - rewrite <-Tloop. eauto.
+  - destructH. do 4 eexists. split_conj.
+    + eapply SplitPaths_sym;eauto.
+    + eauto.
+    + eauto.
 Qed.
 
 Lemma node_disj_find_head `(T : TeqPaths)

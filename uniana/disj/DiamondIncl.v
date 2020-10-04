@@ -215,6 +215,9 @@ Proof.
   destruct D.
   inv_path Dpath1. inv_path Dpath2.
   econstructor; eauto using tl_eq, lj_eq1, lj_eq2, jj_len, j_len1.
+  eapply diamond_split in D'. do 4 eexists.
+  split_conj;eauto.
+  1,2: econstructor.
 Qed.
 
 Lemma diamond_qj_eq1 `(C : redCFG) s u1 u2 p1 p2 q1 q2 k i l1 l2 j1 j2 qj1 r1 r2

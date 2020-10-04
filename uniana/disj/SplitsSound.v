@@ -345,6 +345,10 @@ Context `{C : redCFG}.
          - erewrite j_len1, j_len2; try eassumption.
            rewrite <- Heq1, <- Heq2. eauto using eq_loop_depth.
          - eauto using j_len1.
+         - do 4 eexists. split_conj.
+           + eapply diamond_split;eauto.
+           + eapply postfix_eq. eexists. rewrite Hconc1. cbn. eauto.
+           + eapply postfix_eq. eexists. rewrite Hconc2. cbn. eauto.
        }
 
        split; exists h1; eauto.
