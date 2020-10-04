@@ -1,5 +1,5 @@
 Require Export TeqPaths HeadRewire ContractPath.
-Require Import MaxPreSuffix Lia.
+Require Import MaxPreSuffix Lia CncLoop.
 
 Section cfg.
   Context `{C : redCFG}.
@@ -7,16 +7,155 @@ Section cfg.
   Infix "-->" := edge__P.
   Infix "-h>" := head_rewired_edge (at level 70).
 
+  Lemma depth_loop_contains p
+    : depth p > 0 -> exists h, loop_contains h p.
+  Admitted.
+
   Lemma tpath_jeq_prefix u2 l2 q2 n2 j n1 r2
+        (Hdep : | l2 | = depth u2)
+        (Hdequ : deq_loop u2 q2)
         (Tpath2 : TPath (u2, l2) (q2, n2 :: j) ((q2, n2 :: j) :: r2))
-        (Tlj_eq2 : l2 = n1 :: j \/ (l2 = 0 :: n1 :: j /\ loop_head u2) \/ loop_contains u2 q2)
+        (Tlj_eq2 : l2 = n1 :: j /\ ~ loop_head u2
+                   \/ (l2 = 0 :: n1 :: j /\ loop_head u2)
+                   \/ (loop_contains u2 q2 /\ l2 = S n1 :: j))
         (Hlt : n1 < n2)
     : exists h r2',
       Prefix ((h,(S n1) :: j) :: r2') ((q2, n2 :: j) ::  r2)
       /\ innermost_loop h q2
       /\ forall x, x ∈ map fst r2' -> x <> h.
   Proof.
-  Admitted.
+    eapply tag_depth_unroot in Tpath2 as Hdepq;eauto.
+    assert (exists h, innermost_loop h q2) as Hinner.
+    { cbn in Hdepq. specialize depth_loop_contains as Hloop. exploit Hloop. lia.
+      destructH. eapply loop_contains_innermost;eauto. }
+    destruct Hinner as [h Hinner]. cbn in Hinner.
+    exists h.
+    copy Hinner Hloop.
+    destruct Hloop as [Hloop Hdeq].
+    specialize (tcfg_reachability Hdep) as Hreach. destructH.
+    eapply path_app' in Tpath2 as Hrooted;eauto.
+    eapply loop_tag_dom with (j0:= S n1 :: j) in Hloop;eauto.
+    - eapply in_app_or in Hloop. destruct Hloop.
+      + eapply path_to_elem in H;eauto. destructH.
+        exists (tl ϕ). split_conj.
+        * destruct ϕ;[inv H0|]. cbn. path_simpl' H0. eauto.
+        * assumption.
+        * intros. intro N. subst x. eapply in_fst in H.
+          destruct ϕ;[inv H0|]. path_simpl' H0. cbn in H. destructH.
+          decide (loop_contains u2 q2).
+          {
+            destruct Tlj_eq2 as [Q|[Q|Q]];destructH.
+            - contradict Q1. eapply loop_contains_loop_head;eauto.
+            - subst l2. eapply innermost_eq_loop in Hinner. eapply loop_contains_deq_loop in l.
+              eapply deq_loop_depth in l. cbn in Hdep,Hdepq. lia.
+            - subst l2.
+              replace u2 with h in *.
+              { destruct ϕ. 1:contradiction. eapply tcfg_fresh in H0.
+                - eapply Taglt_irrefl;eauto.
+                - eauto.
+                - cbn. lia.
+              }
+              eapply Hdeq in l as l'. eapply loop_contains_deq_loop in l'.
+              eapply eq_loop_same.
+              + split;auto.
+                eapply deq_loop_depth_eq;eauto. rewrite <-Hdep. eapply innermost_eq_loop in Hinner.
+                rewrite Hinner. rewrite <-Hdepq. cbn. reflexivity.
+              + destruct Hinner. eapply loop_contains_loop_head;eauto.
+              + eapply loop_contains_loop_head;eauto.
+          }
+          inv_path Hreach.
+          { destruct Tlj_eq2 as [Q|[Q|Q]]. all: unfold start_tag in *;try destructH; congruence. }
+          rename H2 into Hbase. destruct x.
+          rename H0 into Hjump.
+          enough (b ◁ S n1 :: j) as HSb.
+          enough (n1 :: j ◁ b) as Hb.
+          -- dependent destruction HSb.
+             ++ dependent destruction Hb.
+                ** lia.
+                ** eapply Taglt_irrefl;eauto.
+             ++ dependent destruction Hb.
+                ** eapply Taglt_irrefl;eauto.
+                ** eapply Taglt_irrefl. transitivity i;eauto.
+          -- eapply path_to_elem with (r:=(h,b)) in Hjump;eauto. destructH.
+             eapply path_from_elem with (r:=(h, n1 :: j)) in Hbase;eauto.
+             2: {
+               eapply PathCons in H3;eauto.
+               eapply loop_tag_dom in H3.
+               - destruct H3;[|eassumption]. inv H0. destruct Hinner. contradiction.
+               - destruct Hinner;eauto.
+               - eapply innermost_eq_loop in Hinner. rewrite Hinner.
+                 destruct Tlj_eq2 as [Q|[Q|Q]];destructH;subst.
+                 + rewrite take_r_geq. 2: rewrite <-Hdepq;eauto.
+                   unfold sub_tag.
+                   split_conj;cbn;eauto;lia.
+                 + rewrite take_r_cons_drop. 2: rewrite <-Hdepq;eauto.
+                   rewrite take_r_geq. 2: rewrite <-Hdepq;eauto.
+                   unfold sub_tag.
+                   split_conj;cbn;eauto;lia.
+                 + rewrite take_r_geq. 2: rewrite <-Hdepq;eauto.
+                   unfold sub_tag.
+                   split_conj;cbn;eauto;lia.
+               - eapply innermost_eq_loop in Hinner. rewrite Hinner. eauto.
+             }
+             destructH.
+             eapply tcfg_fresh.
+             ++ eapply path_app;eauto.
+             ++ eapply innermost_eq_loop in Hinner. rewrite Hinner. cbn. cbn in Hdepq. eauto.
+             ++ destruct ϕ0;[inv Hjump0|];destruct ϕ1;[inv Hbase0|]. cbn. rewrite app_length. cbn. lia.
+          -- inv_path Hjump. 1:contradiction.
+             eapply path_from_elem with (r:=(h,b)) in H0;eauto. destructH.
+             eapply PathCons in H2;eauto.
+             eapply tcfg_fresh;eauto.
+             ++ eapply path_to_elem with (r:=(h,b)) in Tpath2. destructH.
+                eapply tag_depth_unroot in Tpath0;eauto.
+                eapply prefix_incl;eauto.
+             ++ destruct ϕ0;[inv H4|]. cbn. lia.
+      + exfalso.
+        destruct t;cbn in H;[contradiction|].
+        cbn in Hrooted.
+        destruct t;[cbn in Hrooted,H;contradiction|].
+        unfold TPath in Hreach. path_simpl' Hreach.
+        inv_path Hreach. destruct c0.
+        eapply path_from_elem in H;eauto. destructH.
+        eapply PathCons in H1;eauto.
+        copy Hinner Hinner'.
+        eapply innermost_eq_loop in Hinner. copy H1 H1path.
+        eapply tagle_monotone in H1;cycle 1.
+        * rewrite Hinner. rewrite <-Hdepq. cbn. reflexivity.
+        * reflexivity.
+        * rewrite Hinner. eauto.
+        * reflexivity.
+        * rewrite take_r_geq in H1. 2: { rewrite Hinner. rewrite <-Hdepq. cbn. eauto. }
+          destruct Tlj_eq2 as [Q|[Q|Q]];destructH;subst.
+          -- rewrite take_r_geq in H1. 2: { rewrite Hinner. rewrite <-Hdepq. cbn. eauto. }
+             destruct H1.
+             ++ dependent destruction H. lia. eapply Taglt_irrefl;eauto.
+             ++ inv H. lia.
+          -- rewrite take_r_cons_drop in H1. 2: { rewrite Hinner. rewrite <-Hdepq. cbn. eauto. }
+             rewrite take_r_geq in H1. 2: { rewrite Hinner. rewrite <-Hdepq. cbn. eauto. }
+             destruct H1.
+             ++ dependent destruction H. lia. eapply Taglt_irrefl;eauto.
+             ++ inv H. lia.
+          -- replace u2 with h in *.
+             2: {
+              eapply Hdeq in Q0 as l'. eapply loop_contains_deq_loop in l'.
+              eapply eq_loop_same.
+              + split;auto.
+                eapply deq_loop_depth_eq;eauto. rewrite <-Hdep.
+                rewrite Hinner. rewrite <-Hdepq. cbn. reflexivity.
+              + destruct Hinner'. eapply loop_contains_loop_head;eauto.
+              + eapply loop_contains_loop_head;eauto.
+             }
+             eapply tcfg_fresh in H1path.
+             ++ eapply Taglt_irrefl;eauto.
+             ++ rewrite Hinner. rewrite <-Hdepq. cbn. reflexivity.
+             ++ destruct ϕ;[inv H2|]. cbn. lia.
+    - eapply innermost_eq_loop in Hinner. rewrite Hinner.
+      rewrite take_r_geq. 2: rewrite Hdepq;eauto.
+      unfold sub_tag.
+      split_conj;cbn;eauto;lia.
+    - eapply innermost_eq_loop in Hinner. rewrite Hinner. rewrite <-Hdepq. cbn. reflexivity.
+  Qed.
 
   Lemma teq_jeq_prefix u1 u2 q1 q2 l1 l2 n1 n2 j r1 r2
         (T : TeqPaths u1 u2 q1 q2 l1 l2 (n1 :: j) (n2 :: j) r1 r2)
@@ -25,6 +164,7 @@ Section cfg.
                /\ innermost_loop h q1
                /\ TeqPaths u1 u2 q1 h l1 l2 (n1 :: j) (n1 :: j) r1 r2'.
   Proof.
+    eapply tpath_jeq_prefix in Hlt as Hjeq;eauto with teq.
     destruct T.
   Admitted.
 
@@ -183,8 +323,25 @@ Section cfg.
       cbn in Dqj2. subst p.
       inv_path Dpath2.
       eapply tpath_jeq_prefix in H as Hpre;eauto.
-      2: rewrite <-Dloop; eapply lj_eq2;eauto.
-      2: eapply le_cons_tagle;lia.
+      2: eapply u_len2;eauto.
+      2: rewrite <-Dloop.
+      3: {
+        eapply lj_eq2 in D as Deq;eauto.
+        2: eapply le_cons_tagle;lia.
+        eapply tcfg_edge_destruct' in Dsk2.
+        destruct Dsk2 as [Dsk2|[Dsk2|[Dsk2|Dsk2]]].
+        all: destruct Dsk2 as [Htag Hedge].
+        - left. split;eauto. intro N. eapply basic_edge_no_loop2;eauto.
+        - right. left. split;eauto. destruct Hedge. eauto.
+        - cbn in Htag. right. right. split;eauto. rewrite <-Dloop. eapply loop_contains_ledge;eauto.
+        - cbn in Htag. subst.
+          destruct Deq as [Deq|[Deq|Deq]];exfalso.
+          + eapply list_cycle;eauto.
+          + destruct Deq. eapply list_cycle2;eauto.
+          + destruct Hedge. eapply no_exit_head;eauto. eapply loop_contains_loop_head;eauto.
+      }
+      2: { eapply u2_deq_q;eauto. intro N. congruence. }
+(*        eapply le_cons_tagle;lia.*)
       destructH.
       eapply path_prefix_path in H;eauto.
       eapply TPath_CPath in H. cbn in H.
