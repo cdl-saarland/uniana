@@ -9,7 +9,14 @@ Section cfg.
 
   Lemma depth_loop_contains p
     : depth p > 0 -> exists h, loop_contains h p.
-  Admitted.
+  Proof.
+    intros.
+    unfold depth in H.
+    destruct (filter (DecPred (fun h : Lab => loop_contains h p)) (elem Lab)) eqn:E. 1:cbn in H;lia.
+    cbn in H. exists e.
+    assert (e ∈ (e :: l)) by (left;auto). rewrite <-E in H0.
+    eapply in_filter_iff in H0. destruct H0. cbn in *. assumption.
+  Qed.
 
   Lemma tpath_jeq_prefix u2 l2 q2 n2 j n1 r2
         (Hdep : | l2 | = depth u2)
@@ -160,12 +167,25 @@ Section cfg.
   Lemma teq_jeq_prefix u1 u2 q1 q2 l1 l2 n1 n2 j r1 r2
         (T : TeqPaths u1 u2 q1 q2 l1 l2 (n1 :: j) (n2 :: j) r1 r2)
         (Hlt : n1 < n2)
-    : exists h r2', Prefix (h :: map fst r2') (q2 :: map fst r2)
+    : exists h q2' r2', Prefix (h :: q2' :: map fst r2') (q2 :: map fst r2)
                /\ innermost_loop h q1
-               /\ TeqPaths u1 u2 q1 h l1 l2 (n1 :: j) (n1 :: j) r1 r2'.
+               /\ TeqPaths u1 u2 q1 q2' l1 l2 (n1 :: j) (n1 :: j) r1 r2'
+               /\ (q2',n1 :: j) -t> (h, S n1 :: j).
   Proof.
-    eapply tpath_jeq_prefix in Hlt as Hjeq;eauto with teq.
-    destruct T.
+    eapply tpath_jeq_prefix in Hlt as Hjeq.
+    4: eapply Tpath2.
+    3: rewrite <-Tloop;eapply teq_u2_deq_q;eauto.
+    2: eapply teq_l_len2;eauto.
+    - destructH. exists h, (hd u2 (map fst r2')), (tl r2').
+      split_conj.
+      + eapply prefix_map_fst in Hjeq0. cbn in Hjeq0. eauto. destruct r2';cbn in *. admit.
+        eauto.
+      + rewrite Tloop. eauto.
+      + destruct T. econstructor.
+        * eapply Tpath1.
+        * eapply path_prefix_path. 1: eauto. 1: eapply Tpath2. destruct r2';cbn in *. admit. admit.
+        *
+
   Admitted.
 
   Lemma node_disj
@@ -262,23 +282,25 @@ Section cfg.
   Proof.
     eapply teq_jeq_prefix in Hlt;eauto.
     destructH.
-    eapply teq_node_disj_hpath' in Hlt3;eauto.
+    eapply teq_node_disj_hpath' in Hlt1.
+    3: { eapply tag_back_edge_iff in Hlt4. cbn in Hlt4. destruct Hlt4 as [Hlt4 _]. exploit Hlt4.
+         left. split;[destruct Hlt4;eauto|]. eapply back_edge_src_no_loop_head;eauto. }
     - destructH.
-      do 2 eexists;split_conj;eauto.
-      eapply prefix_incl in Hlt0.
-      transitivity (h :: map fst r2');eauto.
+      exists (q1 :: r1'), (h :: q2' :: r2'0).
+      split_conj;eauto.
+      + eapply PathCons;eauto. right. eexists. eapply tag_cons_exit in Hedge2.
+        destructH. eapply exit_edge_innermost in Hedge2 as Hinner2.
+        rewrite <-Tloop in Hinner2.
+        eapply innermost_unique in Hinner2. 2: eapply Hlt2. subst h0. eapply Hedge2.
+      + eapply prefix_incl in Hlt0. eapply disjoint_cons2. split;auto.
+        intro N. eapply teq_no_back. 1:eauto. 2: destruct Hlt2;eauto.
+        eapply Hlt6 in N. auto.
+      + eapply prefix_incl in Hlt0.
+        eapply incl_lcons. split.
+        * eapply Hlt0;eauto.
+        * rewrite Hlt8. rewrite incl_lcons in Hlt0. destruct Hlt0. eauto.
     - left;split;destruct Hedge1,Hedge2;eauto;intro N.
       eapply teq_no_back;eauto using loop_contains_self.
-    - right. exists q2.
-      eapply tag_cons_exit in Hedge2. destructH.
-      replace h with h0;eauto.
-      eapply loop_head_eq_loop_eq.
-      + destruct Hedge2. eapply loop_contains_loop_head;eauto.
-      + destruct Hlt2. eapply loop_contains_loop_head;eauto.
-      + eapply innermost_eq_loop in Hlt2. rewrite Hlt2.
-        eapply eq_loop_exiting in Hedge2.
-        rewrite Hedge2.
-        symmetry. eapply Tloop.
   Qed.
 
   Lemma tagle_monotone_eq_loop q1 q2 j1 j2 r
