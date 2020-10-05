@@ -1,6 +1,6 @@
-Require Export Precedes CFGancestor TcfgqMonotone TcfgDet.
+Require Export Precedes CFGancestor TcfgqMonotone TcfgDet TcfgDom.
 
-Require Import Lia.
+Require Import Lia MaxPreSuffix.
 
 Section tagged.
 
@@ -110,7 +110,21 @@ Proof.
     : exists j, Precedes fst l (q,j).
   Proof. (* used in uniana *)
     (* FIXME *)
-  Admitted.
+    eapply TPath_CPath in Hpath as Hpath'.
+    cbn in Hpath'.
+    eapply Hdom in Hpath'.
+    clear Hdom.
+    revert p i Hpath.
+    induction l;intros.
+    - contradiction.
+    - inv_path Hpath.
+      + cbn in Hpath'. destruct Hpath';[subst|contradiction]. eexists. econstructor.
+      + cbn in Hpath'. decide (p = q).
+        * eexists. subst. econstructor.
+        * destruct Hpath';[contradiction|].
+          exploit' IHl. destruct x. specialize (IHl e t). exploit IHl. destructH.
+          eexists. econstructor;eauto.
+  Qed.
 
   Lemma tag_prefix_head h p i j l
         (Hloop : loop_contains h p)
@@ -118,7 +132,50 @@ Proof.
         (Hprec : Precedes fst l (h,j))
     : Prefix j i.
   Proof. (* used in uniana *)
-  Admitted. (* FIXME *)
+    assert (| i | = depth p) as Hpdep.
+    { eapply tag_depth_unroot in Hpath;eauto. cbn. symmetry. eapply depth_root. }
+    eapply precedes_in in Hprec as Hin.
+    eapply path_from_elem in Hin as Hϕ;eauto. destructH.
+    assert (| j | = depth h) as Hhdep.
+    { eapply tag_depth_unroot2 in Hϕ0;eauto. }
+    eapply loop_contains_deq_loop in Hloop as Hdeq.
+    eapply deq_loop_depth in Hdeq as Hdepth.
+    copy Hdepth Hlenleq.
+    rewrite <-Hhdep, <-Hpdep in Hlenleq.
+    eapply tagle_monotone with (n:=|j|) in Hϕ0 as Hmon.
+    - rewrite take_r_self in Hmon. destruct Hmon.
+      + exfalso.
+        eapply path_to_elem in Hin as Hπ;eauto. destructH.
+        eapply path_app' in Hϕ0 as Hϕπ;eauto.
+        eapply loop_tag_dom with (h0:=h) (j0:=take_r (|j|) i) in Hϕπ;eauto.
+        2: { rewrite Hhdep. unfold sub_tag. split_conj;eauto. }
+        2: { rewrite take_r_length_le;eauto. }
+        eapply in_app_or in Hϕπ. destruct Hϕπ.
+        * eapply tpath_NoDup in Hpath as Hnd.
+          destr_r' ϕ. 1: subst;inv Hϕ0. subst. path_simpl' Hϕ0.
+          eapply In_rcons in H0. destruct H0.
+          1: { inv H0. rewrite H2 in H. eapply Taglt_irrefl;eauto. }
+          clear - H0 Hprec Hpath Hϕ0 Hϕ1 Hnd.
+          eapply postfix_eq in Hϕ1. destructH. subst l.
+          eapply precedes_app_drop in Hprec. 2: { cbn. rewrite map_rcons. eapply In_rcons. cbn;eauto. }
+          eapply NoDup_app_drop in Hnd.
+          eapply precedes_rcons in Hprec. 2:eauto. 2:eauto. cbn in Hprec. eauto.
+        * inv_path Hπ0. 1: cbn in H0;contradiction.
+          eapply in_tl_in in H0.
+          eapply path_from_elem in H0;eauto. destructH.
+          eapply tagle_monotone with (n:=|j|) in H3.
+          -- rewrite take_r_self in H3. rewrite take_r_take_r_leq in H3;eauto.
+             eapply Taglt_irrefl. eapply taglt_tagle_trans;eauto.
+          -- rewrite take_r_length_le;eauto.
+          -- reflexivity.
+          -- reflexivity.
+          -- eauto.
+      + eapply prefix_take_r;eauto.
+    - eauto.
+    - reflexivity.
+    - eapply Hdeq.
+    - eauto.
+  Qed.
 
   Lemma root_tag_nil p i j l
         (HPath : TPath (root,start_tag) (p,i) l)
@@ -197,6 +254,7 @@ Proof.
         (Hpath : TPath (root,start_tag) (p,j) t)
     : exists h, loop_contains h p /\ Precedes fst t (h,j2).
   Proof. (* used below *)
+    (* prove with loop_tag_dom the existence & prove with monotonicity the precedence *)
     (* FIXME *)
   Admitted.
 
@@ -208,6 +266,9 @@ Proof.
   Proof. (* used in uniana *)
     eapply path_to_elem in Hpath;eauto. destructH.
     eapply first_occ_tag in Hpath0;eauto. destructH.
+    exists h. split_conj;eauto.
+    - admit. (* prove with precedes prefix *)
+    - (* using monotonicity *)
     (* FIXME *)
   Admitted.
 (*
@@ -248,6 +309,7 @@ Proof.
         (Hib : (q,j) ≻* (a,k) | t)
     : exists a', Precedes fst t (a',k) /\ (p,i) ≻* (a',k) ≻* (q,j) | t.
   Proof. (* used in uniana *)
+    (* a' = pre-header of ocnc_loop _ p q *)
     (* FIXME *)
   Admitted.
 
@@ -258,6 +320,7 @@ Proof.
         (Hprec : Precedes fst l (h, n :: j))
     : exists qe e, (a,k) ≻* (e,j) ≻* (qe,n :: j) ≻* (h, n :: j) | l /\ (e,j) ≻ (qe,n :: j) | l /\ exit_edge h qe e.
   Proof. (* used in uniana *)
+    (* inductively look for the exit *)
     (* FIXME *)
   Admitted.
 
@@ -267,6 +330,7 @@ Proof.
         (Hpre : Prefix j i)
     : (q,j) ≻* (p,i) | t.
   Proof. (* used in uniana *)
+    (* easy using monotonicity *)
      (* FIXME *)
   Admitted.
 
@@ -280,6 +344,7 @@ Proof.
         (Hpath : TPath (root,start_tag) (p,i) ((p,i) :: l))
     : (q,j) ≻* (r,k) | (p,i) :: l.
   Proof. (* used in uniana *)
+    (* dom_trans is the key *)
     (* FIXME *)
   Admitted.
 
@@ -288,7 +353,7 @@ Proof.
         (Hloop : loop_contains h q)
         (Hexit : exited h e)
     : (e,j) ∉ t.
-  Proof. (* used in uniana *)
+  Proof. (* used in uniana *) (* contradict monotoncity *)
     intro N.
     unfold exited in Hexit. destructH.
     unfold exit_edge in Hexit. destructH.
@@ -301,6 +366,8 @@ Proof.
         (Hnoh : forall h k, loop_contains h q -> ~ (p,i) ≻* (h,k) ≻* (q,j) | (p,i) :: t)
     : exists t', Path a_edge__P q p t'.
   Proof. (* used in uniana *)
+    (* easy using loop_cutting *)
+
     (* FIXME *)
   Admitted.
 

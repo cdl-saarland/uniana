@@ -373,6 +373,28 @@ Section cfg.
           destruct Q0. eapply deq_loop_exited;eauto.
   Qed.
 
+  Lemma tagle_monotone_eq_loop q1 q2 j1 j2 r
+        (Hdep : | j1 | = depth q1)
+        (Hpath : TPath (q1,j1) (q2,j2) r)
+        (Hin : forall x, x ∈ map fst r -> deq_loop x q1)
+        (Heq : eq_loop q1 q2)
+    : j1 ⊴ j2.
+  Proof.
+    copy Hpath Hpath1.
+    eapply tagle_monotone in Hpath.
+    4: destruct Heq as [_ Heq];eapply Heq.
+    3: reflexivity.
+    2: assumption.
+    2: reflexivity.
+    rewrite take_r_geq in Hpath.
+    2: rewrite <-Hdep;eauto.
+    rewrite take_r_geq in Hpath.
+    1: assumption.
+    rewrite Heq.
+    eapply tag_depth_unroot in Hpath1;eauto.
+    rewrite Hpath1;eauto.
+  Qed.
+
   Lemma tcfg_acyclic p i q j t
         (Hdep : | i | = depth p)
         (Hedge : tcfg_edge (q,j) (p,i))

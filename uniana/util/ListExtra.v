@@ -759,3 +759,13 @@ Proof.
   - reflexivity.
   - simpl. rewrite <- 3 app_cons_rcons. remember (rev l) as l'. destruct l'; simpl; eauto.
 Qed.
+
+Lemma NoDup_app_drop (A : Type) (l l' : list A)
+      (Hnd : NoDup (l ++ l'))
+  : NoDup l.
+Proof.
+  induction l;inversion Hnd;cbn in *;eauto.
+  - econstructor.
+  - econstructor.
+  - subst. econstructor;eauto.
+Qed.
