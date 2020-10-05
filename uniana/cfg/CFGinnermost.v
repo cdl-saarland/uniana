@@ -567,6 +567,17 @@ Section cfg.
     eapply loop_contains_deq_loop;auto.
   Qed.
 
+  Lemma innermost_loop_head h h'
+        (Hloop : loop_head h)
+        (Hinner : innermost_loop h' h)
+    : h = h'.
+  Proof.
+    eapply eq_loop_same.
+    - symmetry. eapply innermost_eq_loop;eauto.
+    - eauto.
+    - destruct Hinner. eapply loop_contains_loop_head;eauto.
+  Qed.
+
   Lemma innermost_loop_deq_loop h p q
         (Hinner : innermost_loop h p)
         (Hloop : loop_contains h q)

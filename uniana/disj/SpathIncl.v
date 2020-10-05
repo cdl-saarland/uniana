@@ -282,3 +282,49 @@ Proof.
     eapply prefix_map_fst;eauto.
   - intros. eapply spath_no_back;eauto. eapply prefix_incl;eauto. eapply prefix_map_fst;eauto.
 Qed.
+
+Lemma spath_tag_eq2 `(S : SplitPaths)
+  : forall j, j ∈ map snd r2 -> take_r (depth q1 - 1) j = tl j1.
+Proof.
+  intros.
+  specialize Spath2 as Hpath2.
+  copy Hpath2 Hpath3.
+  eapply in_snd in H as Hin. destructH.
+  eapply path_to_elem in Hpath2. 2: eapply In_rcons;right;eauto. destructH.
+  eapply tag_depth_unroot in Hpath0 as Hdep;eauto with spath.
+  destruct r2. 1: contradiction. unfold TPath in Hpath3. destruct p.
+  cbn in Hpath3. path_simpl' Hpath3. eapply path_rcons_inv in Hpath3. destructH.
+  eapply path_from_elem in Hpath3. 2: eauto. 2: eauto.
+  destructH.
+  erewrite tpath_tag_take_r_eq with (i:=j2).
+  - rewrite Stl. rewrite Sloop. erewrite <-spath_j_len2;eauto.
+    symmetry. eapply take_r_tl_eq.
+  - eauto.
+  - eauto.
+  - intros. eapply spath_r2_incl_head_q;eauto. eapply postfix_map with (f:=fst) in Hpath4.
+    eapply postfix_incl;eauto.
+  - reflexivity.
+Qed.
+
+Lemma SplitPaths_Prefix `(S : SplitPaths) q2' j2' r2'
+      (Hpre : Prefix ((q2',j2') :: r2') r2)
+      (Heq : eq_loop q1 q2')
+  : SplitPaths s q1 q2' k j1 j2' r1 ((q2',j2') :: r2').
+Proof.
+  copy S S'.
+  destruct S.
+  assert (TPath (s, k) (q2', j2') (((q2', j2') :: r2') :r: (s, k))) as Hpath2.
+  { cbn. eapply path_prefix_path;eauto. rewrite app_comm_cons. eapply prefix_rcons;eauto. }
+  econstructor;eauto.
+  - eapply disjoint_subset. 1:reflexivity. 1: eapply prefix_incl;eauto. eauto.
+  - erewrite <-spath_tag_eq2;eauto;cycle 1.
+    + eapply prefix_incl in Hpre. eapply incl_map with (f:=snd) in Hpre. cbn in Hpre.
+      eapply Hpre. left. auto.
+    + destruct j2';[|].
+      * eapply tag_depth_unroot in Hpath2;eauto. cbn in Hpath2. cbn.
+        rewrite take_r_geq;cbn;eauto. lia.
+      * cbn. rewrite take_r_cons_drop.
+        -- rewrite take_r_geq;eauto. eapply tag_depth_unroot in Hpath2. rewrite Heq. rewrite <-Hpath2.
+           cbn. lia. eauto.
+        -- eapply tag_depth_unroot in Hpath2;eauto. rewrite Heq. rewrite <-Hpath2. cbn. lia.
+Qed.

@@ -166,6 +166,7 @@ Section cfg.
 
   Lemma teq_jeq_prefix u1 u2 q1 q2 l1 l2 n1 n2 j r1 r2
         (T : TeqPaths u1 u2 q1 q2 l1 l2 (n1 :: j) (n2 :: j) r1 r2)
+        (Hnloop : ~ loop_contains u2 q1)
         (Hlt : n1 < n2)
     : exists h q2' r2', Prefix (h :: q2' :: map fst r2') (q2 :: map fst r2)
                /\ innermost_loop h q1
@@ -176,17 +177,71 @@ Section cfg.
     4: eapply Tpath2.
     3: rewrite <-Tloop;eapply teq_u2_deq_q;eauto.
     2: eapply teq_l_len2;eauto.
-    - destructH. exists h, (hd u2 (map fst r2')), (tl r2').
+    - destructH.
+      destruct r2'.
+      {
+        exfalso. eapply Hnloop.
+        eapply prefix_singleton in Hjeq0. 2: eapply Tpath2. inv Hjeq0.
+        destruct Hjeq2. rewrite Tloop. assumption.
+      }
+      destruct p.
+      exists h, e, r2'.
+      replace l with (n1 :: j) in *.
+      2: {
+        eapply path_prefix_path in Hjeq0. 3: eapply Tpath2. 2:eauto.
+        inv_path Hjeq0. eapply tcfg_edge_destruct' in H0.
+        destruct H0 as [H0|[H0|[H0|H0]]]. all: destruct H0 as [Htag Hedge].
+        - exfalso. eapply basic_edge_no_loop2;eauto. destruct Hjeq2.
+          eapply loop_contains_loop_head;eauto.
+        - congruence.
+        - destruct l;cbn in Htag;[congruence|]. inv Htag. reflexivity.
+        - exfalso. destruct Hedge. eapply no_exit_head;eauto.
+          destruct Hjeq2. eapply loop_contains_loop_head;eauto.
+      }
+      assert ((e, n1 :: j) -t> (h, S n1 :: j)) as Heedge.
+      {
+        eapply path_prefix_path in Hjeq0. 3: eapply Tpath2. 2:eauto. inv_path Hjeq0. eauto.
+      }
+      assert (eq_loop q1 e) as Heq.
+      {
+        destruct T.
+        eapply tag_back_edge_iff in Heedge. destruct Heedge as [Heedge _]. cbn in Heedge.
+        exploit Heedge. eapply back_edge_eq_loop in Heedge. rewrite Heedge.
+        eapply innermost_eq_loop in Hjeq2. rewrite Hjeq2. eauto.
+      }
       split_conj.
-      + eapply prefix_map_fst in Hjeq0. cbn in Hjeq0. eauto. destruct r2';cbn in *. admit.
-        eauto.
+      + eapply prefix_map_fst in Hjeq0. cbn in Hjeq0. eauto.
       + rewrite Tloop. eauto.
-      + destruct T. econstructor.
+      + destruct T.
+        econstructor. 5-9:now eauto.
         * eapply Tpath1.
-        * eapply path_prefix_path. 1: eauto. 1: eapply Tpath2. destruct r2';cbn in *. admit. admit.
-        *
-
-  Admitted.
+        * eapply path_prefix_path. 1: eauto. 1: eapply Tpath2. eapply prefix_cons;eauto.
+        * eapply disjoint_subset. 1:reflexivity.
+          2: eapply Tdisj.
+          eapply prefix_cons in Hjeq0;eauto;eapply prefix_incl;eauto.
+        * eauto.
+        * destructH. eapply prefix_eq in Hjeq0 as Hjeq4. destructH.
+          eapply postfix_eq in TS3. destructH.
+          do 4 eexists. split_conj;cycle 1.
+          -- eauto.
+          -- eapply postfix_eq.
+             setoid_rewrite Hjeq4 in TS3.
+             exists l2'0. reflexivity.
+          -- cbn.
+             eapply SplitPaths_Prefix;eauto.
+             eapply prefix_eq. setoid_rewrite Hjeq4 in TS3.
+             rewrite app_cons_rcons in TS3. rewrite <-app_assoc in TS3.
+             eexists. eauto.
+      + eauto.
+    - copy T T'. destruct T.
+      destruct Tlj_eq2 as [Q|[Q|Q]].
+      + left. split;eauto. contradict Hnloop. eapply teq_l_len2 in T' as Hlen.
+        subst l2. rewrite Tj_len in Hlen. eapply deq_loop_depth_eq in Hlen;eauto.
+        * eapply Hlen. eapply loop_contains_self;eauto.
+        * eapply teq_u2_deq_q;eauto.
+      + right. left. eauto.
+      + exfalso. contradiction.
+  Qed.
 
   Lemma node_disj
         `(D : DiamondPaths)
@@ -280,6 +335,37 @@ Section cfg.
                  /\ (r1') ⊆ (q1 :: map fst r1)
                  /\ (r2') ⊆ (q2 :: map fst r2).
   Proof.
+    decide (loop_contains u2 q1).
+    {
+      copy T T'.
+      destruct T.
+      eapply TPath_CPath in Tpath1. cbn in Tpath1.
+      eapply contract_cpath' in Tpath1 as Hpath1.
+      2: eapply teq_u1_deq_q;eauto.
+      2: intros;eapply teq_no_back;eauto.
+      destructH.
+      exists ϕ, ([u2]).
+      split_conj.
+      - econstructor;eauto. eapply tag_cons_exit in Hedge1. destructH.
+        decide (loop_head q1).
+        + eapply exit_edge_innermost in Hedge1 as Hinner.
+          replace h with q1 in * by (eapply innermost_loop_head;eauto).
+          right. eexists;eauto.
+        + left. destruct Hedge1. destruct H0. split;eauto.
+      - econstructor. 1:econstructor.
+        eapply tag_cons_exit in Hedge2. destructH. right.
+        replace h with u2 in *.
+        + eexists;eauto.
+        + eapply innermost_unique.
+          * split;eauto. eapply teq_u2_deq_q;eauto.
+          * rewrite Tloop. eapply exit_edge_innermost;eauto.
+      - eapply disjoint_subset. 1:eassumption. 1:reflexivity.
+        eapply disjoint_cons2. split;[|eapply Disjoint_nil2].
+        intro N. eapply teq_no_back;eauto.
+      - assumption.
+      - eapply path_contains_back in Tpath2. eapply in_map with (f:=fst) in Tpath2.
+        cbn in Tpath2. eauto.
+    }
     eapply teq_jeq_prefix in Hlt;eauto.
     destructH.
     eapply teq_node_disj_hpath' in Hlt1.
