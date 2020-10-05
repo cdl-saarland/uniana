@@ -177,6 +177,43 @@ Proof.
     - eauto.
   Qed.
 
+Lemma loop_tag_dom_prec' (h p : Lab) (i j : Tag) t
+      (Hloop : loop_contains h p)
+      (Hpath : TPath (root,start_tag) (p,i) t)
+      (Hstag : Prefix j i)
+      (Hdep : |j| = depth h)
+  : Precedes fst t (h,j).
+Proof.
+  eapply loop_tag_dom in Hpath as Hdom;eauto.
+  - eapply path_from_elem in Hdom as Hϕ;eauto. destructH.
+    destr_r' ϕ;subst. 1: inv Hϕ0.
+    path_simpl' Hϕ0.
+    eapply postfix_eq in Hϕ1. destructH. subst t.
+    eapply tpath_NoDup in Hpath. eapply NoDup_app_drop in Hpath.
+    eapply NoDup_nin_rcons in Hpath. clear Hdom Hloop.
+    revert p i Hstag Hϕ0.
+    induction l;intros;cbn in *.
+    + eapply path_single in Hϕ0. destructH. inv Hϕ1. econstructor;eauto.
+    + simpl_dec' Hpath. destructH. destruct a.
+      path_simpl' Hϕ0.
+      decide (p = h).
+      * subst. exfalso. eapply Hpath0. f_equal.
+        eapply tag_depth_unroot in Hϕ0;eauto. rewrite <- Hϕ0 in Hdep.
+        symmetry. eapply prefix_length;eauto.
+      * econstructor. cbn. eauto. erewrite rcons_cons' in Hϕ0. inv_path Hϕ0.
+        rewrite <-rcons_cons' in H. destruct (hd (h,j) l).
+        eapply IHl. 3: eapply H.
+        -- admit.
+        -- admit.
+  - eapply prefix_eq in Hstag. destructH. subst i.
+    Lemma take_r_app_eq (A : Type) n (i j : list A)
+          (Hle : n = | j |)
+      : take_r n (i ++ j) = j.
+    Admitted.
+    rewrite take_r_app_eq;eauto.
+    unfold sub_tag. split_conj;eauto.
+Admitted.
+
   Lemma root_tag_nil p i j l
         (HPath : TPath (root,start_tag) (p,i) l)
         (Hin : (root,j) ∈ l)
@@ -249,14 +286,26 @@ Proof.
         * eauto.
   Qed.
 
-  Lemma first_occ_tag j j1 j2 p t
-        (Htag : j = j1 ++ j2)
-        (Hpath : TPath (root,start_tag) (p,j) t)
-    : exists h, loop_contains h p /\ Precedes fst t (h,j2).
-  Proof. (* used below *)
-    (* prove with loop_tag_dom the existence & prove with monotonicity the precedence *)
-    (* FIXME *)
+  Lemma ex_depth_head p n
+        (Hdep : n <= depth p)
+        (Hn0 : n <> 0)
+    : exists h, loop_contains h p /\ depth h = n.
   Admitted.
+
+  Lemma first_occ_tag n2 j j1 j2 p t
+        (Htag : j = j1 ++ (n2 :: j2))
+        (Hpath : TPath (root,start_tag) (p,j) t)
+    : exists h, loop_contains h p /\ Precedes fst t (h,n2 :: j2).
+  Proof. (* used below *)
+    eapply tag_depth' in Hpath as Hdep.
+    assert (| n2 :: j2 | <= depth p) as Hleq.
+    { rewrite Htag in Hdep. rewrite app_length in Hdep. cbn in Hdep. cbn. lia. }
+    eapply ex_depth_head in Hleq;eauto. 2: cbn;lia.
+    destructH.
+    exists h. split;auto. symmetry in Hleq1.
+    eapply loop_tag_dom_prec in Hleq1;eauto.
+    eapply prefix_eq. eexists;eauto.
+  Qed.
 
   Lemma first_occ_tag_elem i j j1 j2 p q t
         (Htag : j = j1 ++ j2)

@@ -1,4 +1,4 @@
-Require Export TcfgqMonotone.
+Require Export TcfgqMonotone Precedes.
 Require Import Lia.
 
 Definition sub_tag i j := |i| = |j| /\ hd 0 i <= hd 0 j /\ tl i = tl j.
@@ -154,6 +154,38 @@ Proof.
   eapply loop_tag_dom_same;eauto.
   eapply loop_contains_loop_head;eauto.
 Qed.
+
+Lemma loop_tag_dom_prec `(C : redCFG) (h p : Lab) (i j : Tag) t
+      (Hloop : loop_contains h p)
+      (Hpath : TPath (root,start_tag) (p,i) t)
+      (Hstag : Prefix j i)
+      (Hdep : |j| = depth h)
+  : Precedes fst t (h,j).
+Proof.
+  eapply loop_tag_dom in Hpath as Hdom;eauto.
+  - (*eapply path_from_elem in
+
+
+        eapply tpath_NoDup in Hpath as Hnd.
+          destr_r' ϕ. 1: subst;inv Hϕ0. subst. path_simpl' Hϕ0.
+          eapply In_rcons in H0. destruct H0.
+          1: { inv H0. rewrite H2 in H. eapply Taglt_irrefl;eauto. }
+          clear - H0 Hprec Hpath Hϕ0 Hϕ1 Hnd.
+          eapply postfix_eq in Hϕ1. destructH. subst l.
+          eapply precedes_app_drop in Hprec. 2: { cbn. rewrite map_rcons. eapply In_rcons. cbn;eauto. }
+          eapply NoDup_app_drop in Hnd.
+          eapply precedes_rcons in Hprec. 2:eauto. 2:eauto. cbn in Hprec. eauto.
+  - eapply prefix_eq in Hstag. destructH. subst i.
+    Lemma take_r_app_eq (A : Type) n (i j : list A)
+          (Hle : n = | j |)
+      : take_r n (i ++ j) = j.
+    Admitted.
+    rewrite take_r_app_eq;eauto.
+    unfold sub_tag. split_conj;eauto.
+
+    rewrite take_r_*)
+
+Admitted.
 
 Lemma tpath_deq_no_haed_tag_eq `(C : redCFG) p q q0 i j t
       (Hlen : | j | = depth q)
