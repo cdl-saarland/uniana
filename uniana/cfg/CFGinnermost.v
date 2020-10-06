@@ -466,6 +466,13 @@ Section cfg.
       eapply in_filter_iff. split;eauto.
   Qed.
 
+  Lemma ex_depth_head p n
+        (Hdep : n <= depth p)
+        (Hn0 : n <> 0)
+    : exists h, loop_contains h p /\ depth h = n.
+  Proof.
+  Admitted.
+
   Definition nexit_edge q p := forall h, ~ exit_edge h q p.
   Definition nexited p := forall h q, ~ exit_edge h q p.
 

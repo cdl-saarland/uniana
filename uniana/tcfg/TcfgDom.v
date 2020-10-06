@@ -155,6 +155,87 @@ Proof.
   eapply loop_contains_loop_head;eauto.
 Qed.
 
+Global Instance sub_tag_refl : Reflexive sub_tag.
+Proof.
+  unfold Reflexive. intros.
+  unfold sub_tag. split_conj;eauto.
+Qed.
+
+Lemma tcfg_prefix_no_back `(C : redCFG) (h p q : Lab) (i j k : Tag) t
+      (Hdeq : deq_loop p q)
+      (Hpath : TPath (q,j) (p,i) t)
+      (Hstag : Prefix j i)
+      (Hdep : |j| = depth q)
+      (Hin : (h,k) ∈ (r_tl t))
+  : ~ loop_contains h q.
+Proof.
+  specialize (tcfg_reachability Hdep) as Hreach.
+  destructH. intro Hloop.
+  eapply loop_contains_deq_loop in Hloop as Hdeqqh.
+  assert (| take_r (depth h) j | = depth h) as Hheq.
+  { rewrite take_r_length_le;auto. rewrite Hdep. eapply deq_loop_depth. eauto. }
+  eapply loop_tag_dom in Hreach as Hdom;eauto. 2:reflexivity.
+  destr_r' t;subst. 1: cbn in Hin;contradiction.
+  unfold TPath in Hpath. path_simpl' Hpath. rewrite r_tl_rcons in Hin.
+  eapply path_from_elem in Hpath as Hϕ. 2: eauto.
+  2: eapply In_rcons;right;eauto. destructH.
+  eapply tag_depth_unroot in Hdep as Hdepp;eauto.
+  eapply tag_depth_unroot2 in Hϕ0 as Hdeph;eauto.
+  eapply tagle_monotone in Hϕ0 as Hmon0. 3,5:reflexivity. all:eauto. 2: transitivity q;eauto.
+  eapply path_to_elem in Hpath as Hπ. 2: eapply In_rcons;right;eauto. destructH.
+  eapply tagle_monotone in Hπ0 as Hmon1;eauto. 2: reflexivity.
+  rewrite take_r_geq in Hmon0. 2:lia.
+  setoid_rewrite take_r_geq in Hmon1 at 2. 2:lia.
+  destruct Hmon1.
+  - eapply taglt_tagle_trans in H;eauto.
+    clear - H Hstag Hdeph Hdep Hdeqqh.
+    eapply taglt_leq with (n:=|j|) in H.
+    + eapply prefix_take_r in Hstag. rewrite Hstag in H. rewrite take_r_self in H.
+      eapply Taglt_irrefl;eauto.
+    + rewrite Hdep. eapply deq_loop_depth;eauto.
+    + eapply prefix_len_leq;eauto.
+    + reflexivity.
+  - subst k. eapply path_from_elem in Hdom;eauto. destructH.
+    destruct l;[contradiction|]. cbn in Hpath. path_simpl' Hpath. eapply path_rcons_inv' in Hpath.
+    destructH. destruct p0.
+    eapply path_to_elem in Hin;eauto. destructH.
+    eapply Taglt_irrefl. eapply tcfg_fresh.
+    + eapply path_app in Hpath1;eauto.
+    + eauto.
+    + destruct ϕ1;[inv Hdom0|];destruct ϕ2;[inv Hin0|]. cbn. rewrite app_length. cbn. lia.
+Qed.
+
+Lemma tcfg_prefix_deq `(C : redCFG) (x p q : Lab) (i j : Tag) t
+      (Hdeq : deq_loop p q)
+      (Hpath : TPath (q,j) (p,i) t)
+      (Hstag : Prefix j i)
+      (Hdep : |j| = depth q)
+      (Hin : x ∈ map fst t)
+  : deq_loop x q.
+Proof.
+  decide (deq_loop x q);[eauto|exfalso].
+  do 2 simpl_dec' n. destructH.
+  eapply in_fst in Hin. destructH.
+  eapply path_from_elem in Hin as Hϕ;eauto. destructH.
+  eapply tag_depth_unroot in Hpath as Hdepp;eauto.
+  eapply tag_depth_unroot2 in Hϕ0 as Hdepx;eauto.
+  assert (depth x0 <= depth p) as Hdep_leq.
+  { eapply loop_contains_deq_loop in n0. rewrite n0 in Hdeq. eapply deq_loop_depth in Hdeq;eauto. }
+  specialize (@take_take_r _ i (|i| - (depth x0 - 1)) (depth x0 - 1)) as Hi. exploit Hi. 1: lia.
+  copy n1 n1'.
+  eapply ex_entry in n1. 3:rewrite Hi in Hϕ0;eauto. all:eauto.
+  2: { rewrite take_r_length_le;eauto. lia. }
+  destr_r' t;subst. 1:contradiction. eapply In_rcons in Hin. destruct Hin.
+  - subst x1. unfold TPath in Hpath. eapply path_back in Hpath. inversion Hpath. subst x.
+    contradiction.
+  - destr_r' ϕ;subst. 1:contradiction. path_simpl' Hϕ0.
+    eapply In_rcons in n1. destruct n1.
+    + inv H0. eapply n1'. eauto using loop_contains_self, loop_contains_loop_head.
+    + eapply tcfg_prefix_no_back. 2: eapply Hpath. all:eauto.
+      eapply postfix_rcons_rcons in Hϕ1. eapply postfix_incl in H0;eauto.
+      rewrite r_tl_rcons. eauto.
+Qed.
+
 Lemma loop_tag_dom_prec `(C : redCFG) (h p : Lab) (i j : Tag) t
       (Hloop : loop_contains h p)
       (Hpath : TPath (root,start_tag) (p,i) t)
@@ -163,29 +244,28 @@ Lemma loop_tag_dom_prec `(C : redCFG) (h p : Lab) (i j : Tag) t
   : Precedes fst t (h,j).
 Proof.
   eapply loop_tag_dom in Hpath as Hdom;eauto.
-  - (*eapply path_from_elem in
-
-
-        eapply tpath_NoDup in Hpath as Hnd.
-          destr_r' ϕ. 1: subst;inv Hϕ0. subst. path_simpl' Hϕ0.
-          eapply In_rcons in H0. destruct H0.
-          1: { inv H0. rewrite H2 in H. eapply Taglt_irrefl;eauto. }
-          clear - H0 Hprec Hpath Hϕ0 Hϕ1 Hnd.
-          eapply postfix_eq in Hϕ1. destructH. subst l.
-          eapply precedes_app_drop in Hprec. 2: { cbn. rewrite map_rcons. eapply In_rcons. cbn;eauto. }
-          eapply NoDup_app_drop in Hnd.
-          eapply precedes_rcons in Hprec. 2:eauto. 2:eauto. cbn in Hprec. eauto.
+  - eapply path_from_elem in Hdom as Hϕ;eauto. destructH.
+    destr_r' ϕ;subst. 1: inv Hϕ0.
+    path_simpl' Hϕ0.
+    eapply postfix_eq in Hϕ1. destructH. subst t.
+    eapply loop_contains_deq_loop in Hloop as Hdeq.
+    assert (forall k, (h,k) ∉ l).
+    { intros. intro N.
+      eapply tcfg_prefix_no_back;eauto.
+      - rewrite r_tl_rcons. eauto.
+      - eauto using loop_contains_self,loop_contains_loop_head.
+    }
+    clear - H.
+    induction l;cbn.
+    + econstructor.
+    + destruct a.
+      econstructor.
+      * cbn. intro N. subst. eapply H. left;eauto.
+      * eapply IHl;eauto. intros k Hk. eapply H;eauto.
   - eapply prefix_eq in Hstag. destructH. subst i.
-    Lemma take_r_app_eq (A : Type) n (i j : list A)
-          (Hle : n = | j |)
-      : take_r n (i ++ j) = j.
-    Admitted.
     rewrite take_r_app_eq;eauto.
     unfold sub_tag. split_conj;eauto.
-
-    rewrite take_r_*)
-
-Admitted.
+Qed.
 
 Lemma tpath_deq_no_haed_tag_eq `(C : redCFG) p q q0 i j t
       (Hlen : | j | = depth q)

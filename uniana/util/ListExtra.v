@@ -769,3 +769,16 @@ Proof.
   - econstructor.
   - subst. econstructor;eauto.
 Qed.
+
+Lemma take_r_app_eq (A : Type) n (i j : list A)
+      (Hle : n = | j |)
+  : take_r n (i ++ j) = j.
+Proof.
+  revert i j Hle.
+  induction n;intros;destr_r' j;subst;inversion Hle.
+  - cbn. reflexivity.
+  - rewrite app_length in Hle. cbn in Hle. lia.
+  - rewrite app_length in Hle. cbn in Hle.
+    unfold take_r. rewrite app_assoc. rewrite rev_rcons. cbn. f_equal.
+    eapply IHn. lia.
+Qed.
