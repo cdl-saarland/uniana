@@ -451,12 +451,12 @@ Section uniana.
       - eapply loop_contains_deq_loop in H. split;auto.
         eapply deq_loop_depth_eq;eauto.
         erewrite <-tag_depth;eauto.
-        erewrite <-tag_depth. 3: eapply precedes_in;eauto. 2:eauto.
+        erewrite <-tag_depth. 3: eauto. 2:eauto.
         cbn. reflexivity.
       - eapply loop_contains_deq_loop in H. split;auto.
         eapply deq_loop_depth_eq;eauto.
-        erewrite <-tag_depth. 3:eapply precedes_in;eauto. 2:eauto.
-        erewrite <-tag_depth. 3:eapply precedes_in;eauto. 2:eauto.
+        erewrite <-tag_depth. 3:eauto. 2:eauto.
+        erewrite <-tag_depth. 3:eauto. 2:eauto.
         cbn. reflexivity.
     }
     (* find node on ancestor-depth that is between u & p *)
@@ -469,7 +469,7 @@ Section uniana.
     { eapply prefix_eq. eexists;reflexivity. }
     copy Hexit1 Hexit1'.
     eapply find_loop_exit with (a0:=a1') (n:=a1) (h0:=h) (l:= (p,i)::l1) in Hexit1;eauto.
-    eapply find_loop_exit with (a0:=a2') (n:=a2) in Hexit1';eauto.
+    eapply find_loop_exit with (a0:=a2') (n:=a2) (h0:=h) in Hexit1';eauto.
 
     2,3: unfold Tag in *; resolve_succ_rt.
     destruct Hexit1 as [qe1 [e1 [Hexit__seq1 [Hexit__succ1 Hexit__edge1]]]].

@@ -1,6 +1,6 @@
 Require Import Program.Equality.
 
-Require Export ListExtra.
+Require Export ListExtra PreSuffix.
 
 Inductive Precedes {A B : Type} (f : A -> B) : list A -> A -> Prop :=
 | Pr_in : forall (k : A) (l : list A), Precedes f (k :: l) k

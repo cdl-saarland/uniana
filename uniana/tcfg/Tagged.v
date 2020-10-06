@@ -264,20 +264,22 @@ Proof.
     eapply prefix_eq. eexists;eauto.
   Qed.
 
-  Lemma first_occ_tag_elem i j j1 j2 p q t
-        (Htag : j = j1 ++ j2)
+  Lemma first_occ_tag_elem i j j1 n2 j2 p q t
+        (Htag : j = j1 ++ (n2 :: j2))
         (Hpath : TPath (root,start_tag) (p,i) t)
         (Hin : (q,j) ∈ t)
-    : exists h, loop_contains h q /\ Precedes fst t (h,j2) /\ (q,j) ≻* (h, j2) | t.
+    : exists h, loop_contains h q /\ (h,n2 :: j2) ∈ t /\ (q,j) ≻* (h, n2 :: j2) | t.
   Proof. (* used in uniana *)
-    eapply path_to_elem in Hpath;eauto. destructH.
-    eapply first_occ_tag in Hpath0;eauto. destructH.
+    eapply path_to_elem in Hpath as Hϕ;eauto. destructH.
+    eapply first_occ_tag in Hϕ0 as Hocc;eauto. destructH.
     exists h. split_conj;eauto.
-    - admit. (* prove with precedes prefix *)
-    - (* using monotonicity *)
-    (* FIXME *)
-  Admitted.
-(*
+    - eapply precedes_in in Hocc1. eapply prefix_incl;eauto.
+    - eapply precedes_in in Hocc1.
+      eapply splinter_prefix;eauto.
+      destruct ϕ;[contradiction|]. path_simpl' Hϕ0.
+      econstructor. eapply splinter_single;eauto.
+  Qed.
+  (*
   (* possibly not used *)
   Lemma prec_prec_eq l (q : Lab) (j j' : Tag)
         (Hprec1 : Precedes fst l (q,j))
@@ -323,7 +325,6 @@ Proof.
         (Hpath : TPath (root,start_tag) (p,i) l)
         (Hpre : Prefix k j)
         (Hib : (a,k) ≻* (h, n :: j) | l)
-        (Hprec : Precedes fst l (h, n :: j))
     : exists qe e, (a,k) ≻* (e,j) ≻* (qe,n :: j) ≻* (h, n :: j) | l /\ (e,j) ≻ (qe,n :: j) | l /\ exit_edge h qe e.
   Proof. (* used in uniana *)
     (* inductively look for the exit *)
