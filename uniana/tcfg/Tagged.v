@@ -1,6 +1,6 @@
 Require Export Precedes CFGancestor TcfgqMonotone TcfgDet TcfgDom.
 
-Require Import Lia MaxPreSuffix.
+Require Import Lia MaxPreSuffix CncLoop.
 
 Section tagged.
 
@@ -308,7 +308,14 @@ Proof.
     : (q,j) ≻* (a,k) | (p,i) :: l.
   Proof.
   Admitted.
-*)
+   *)
+  Lemma near_ancestor_trichotomy a p q
+        (Hna : near_ancestor a p q)
+    : (eq_loop a p /\ eq_loop a q)
+      \/ (eq_loop a p /\ ~ deq_loop a q)
+      \/ (eq_loop a q /\ ~ deq_loop a p).
+  Admitted.
+  
   Lemma ancestor_level_connector p q a i j k t
         (Hpath : TPath (root,start_tag) (p,i) t)
         (Hin : (q,j) ∈ t)
@@ -319,6 +326,36 @@ Proof.
   Proof. (* used in uniana *)
     (* a' = pre-header of ocnc_loop _ p q *)
     (* FIXME *)
+    eapply tag_depth' in Hpath as Hdepp;eauto.
+    eapply precedes_in in Hprec as Hain. eapply path_from_elem in Hain as Hϕ;eauto. destructH.
+    eapply tag_depth_unroot2 in Hϕ0 as Hdepa;eauto.
+    eapply tpath_deq_no_haed_tag_eq with (q1:=a) in Hϕ0 as Htake;eauto. 2,3: admit.
+    setoid_rewrite take_r_geq in Htake at 2;[|lia].
+    decide (deq_loop a p).
+    - rewrite take_r_geq in Htake.
+      2: { rewrite Hdepp. unfold ">=". eapply deq_loop_depth;eauto. }
+      subst i.
+      exists p. split.
+      + inv_path Hpath;econstructor.
+      + eapply succ_rt_combine.
+        * eapply tpath_NoDup;eauto.
+        * inv_path Hpath.
+          -- destruct Hin;[|contradiction]. inv H. eapply succ_rt_refl;eauto.
+          -- econstructor. eapply splinter_single. eauto.
+        * eapply succ_rt_refl. eapply path_contains_front;eauto.
+    - eapply ex_ocnc_loop in n as Hocnc;eauto.
+      destructH.
+      unfold ocnc_loop, cnc_loop in *. destructH. do 2 simpl_dec' Hocnc3. destructH.
+      destruct k.
+      { cbn in Hdepp. symmetry in Hdepa. eapply depth_zero_iff in Hdepa. contradiction.
+        eapply loop_contains_self. eapply loop_contains_loop_head;eauto.
+        unfold near_ancestor,ancestor in Hanc. destructH. destruct Hanc0;eauto. admit. }
+      eapply ex_entry in Hocnc4.
+      3: eapply Hϕ0. 2: eapply loop_contains_trans;eauto. 2:eauto. 2,3:admit.
+      eapply path_to_elem in Hocnc4;eauto. destructH.
+      eapply ex_pre_header in Hocnc3;eauto. 2,3: admit.
+      destructH.
+      exists pre.
   Admitted.
 
   Lemma find_loop_exit h a p i j k n l
