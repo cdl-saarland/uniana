@@ -1,7 +1,9 @@
-Require Export TcfgqMonotone Precedes.
+Require Export TcfgqMonotone Precedes TcfgDet.
 Require Import Lia.
 
 Definition sub_tag i j := |i| = |j| /\ hd 0 i <= hd 0 j /\ tl i = tl j.
+
+Definition pre_sub_tag i j := exists j', Prefix j' j /\ sub_tag i j'.
 
 Lemma loop_tag_dom_eq `(C : redCFG) (h p : Lab) (i j : Tag) t
       (Hloop : loop_contains h p)
@@ -205,6 +207,69 @@ Proof.
     + destruct ϕ1;[inv Hdom0|];destruct ϕ2;[inv Hin0|]. cbn. rewrite app_length. cbn. lia.
 Qed.
 
+Lemma tcfg_subtag_deq `(C : redCFG) (x p q : Lab) (i j : Tag) t
+      (Hdeq : deq_loop p q)
+      (Hpath : TPath (q,j) (p,i) t)
+      (Hstag : sub_tag j (take_r (depth q) i))
+      (Hdep : |j| = depth q)
+      (Hin : x ∈ map fst t)
+  : deq_loop x q.
+Proof.
+  decide (deq_loop x q);[eauto|exfalso].
+  do 2 simpl_dec' n. destructH.
+  eapply in_fst in Hin. destructH.
+  eapply path_from_elem in Hin as Hϕ;eauto. destructH.
+  eapply tag_depth_unroot in Hpath as Hdepp;eauto.
+  eapply tag_depth_unroot2 in Hϕ0 as Hdepx;eauto.
+  assert (depth x0 <= depth p) as Hdep_leq.
+  { eapply loop_contains_deq_loop in n0. rewrite n0 in Hdeq. eapply deq_loop_depth in Hdeq;eauto. }
+  specialize (@take_take_r _ i (|i| - (depth x0 - 1)) (depth x0 - 1)) as Hi. exploit Hi. 1: lia.
+  copy n1 n1'.
+  eapply ex_entry in n1. 3:rewrite Hi in Hϕ0;eauto. all:eauto.
+  2: { rewrite take_r_length_le;eauto. lia. }
+  destr_r' t;subst. 1:contradiction. eapply In_rcons in Hin. destruct Hin.
+  - subst x1. unfold TPath in Hpath. eapply path_back in Hpath. inversion Hpath. subst x.
+    contradiction.
+  - destr_r' ϕ;subst. 1:contradiction. path_simpl' Hϕ0.
+    eapply In_rcons in n1. destruct n1.
+    + inv H0. eapply n1'. eauto using loop_contains_self, loop_contains_loop_head.
+    + specialize (tcfg_reachability Hdep) as Hreach.
+      destructH.
+      eapply loop_tag_dom with (j0:=0 :: take_r (depth x0 - 1) i) in Hreach as Hdom. 2: eapply n0.
+      * unfold TPath in Hpath. path_simpl' Hpath.
+        eapply path_app' in Hpath. 2: eapply Hreach. eapply tpath_NoDup in Hpath.
+        rewrite <-app_assoc in Hpath.
+        eapply NoDup_app in Hpath.
+        -- eapply Hpath. destruct t;[contradiction|]. unfold TPath in Hreach. path_simpl' Hreach.
+           cbn. eauto.
+        -- eapply postfix_incl;eauto using postfix_rcons_rcons.
+      * unfold sub_tag. split_conj.
+        -- cbn. rewrite take_r_length_le. 2: rewrite Hdepp;lia.
+           rewrite take_r_length_le. 2:rewrite Hdep;eauto using deq_loop_depth, loop_contains_deq_loop.
+           eapply loop_contains_loop_head in n0. eapply depth_loop_head in n0. lia.
+        -- cbn. lia.
+        -- cbn. rewrite take_r_tl_eq.
+           rewrite take_r_length_le. 2: rewrite Hdep;eauto using deq_loop_depth,loop_contains_deq_loop.
+           rewrite take_r_take_r_leq. 2:lia.
+           destruct j. 1: { cbn in Hdep. eapply loop_contains_depth_lt in n0. lia. }
+           assert (depth x0 > 0 ) as Hx0.
+           { cbn in Hdepp. eapply loop_contains_loop_head in n0. eapply depth_loop_head in n0. auto. }
+           destruct i. 1:{ cbn in Hdepp. lia. }
+           cbn in Hdep, Hdepp.
+           assert (depth x0 - 1 <= | j |) as Hx0j.
+           { eapply loop_contains_deq_loop in n0. eapply deq_loop_depth in n0. lia. }
+           rewrite take_r_cons_drop. 2:lia. rewrite take_r_cons_drop. 2:auto.
+           destruct Hstag as [_ [_ Hstag]]. cbn in Hstag.
+           rewrite take_r_tl_eq in Hstag.
+           eapply deq_loop_depth in Hdeq as Hdepleq.
+           rewrite take_r_length_le in Hstag. 2:cbn;lia.
+           rewrite take_r_take_r_leq in Hstag. 2:lia.
+           rewrite take_r_cons_drop in Hstag. 2:lia. rewrite Hstag.
+           rewrite take_r_take_r_leq. 2:lia. reflexivity.
+      * cbn. rewrite take_r_length_le. 2:lia. eapply loop_contains_loop_head in n0.
+        eapply depth_loop_head in n0. lia.
+Qed.
+
 Lemma tcfg_prefix_deq `(C : redCFG) (x p q : Lab) (i j : Tag) t
       (Hdeq : deq_loop p q)
       (Hpath : TPath (q,j) (p,i) t)
@@ -267,11 +332,11 @@ Proof.
     unfold sub_tag. split_conj;eauto.
 Qed.
 
-Lemma tpath_deq_no_haed_tag_eq `(C : redCFG) p q q0 i j t
+Lemma tpath_deq_no_haed_tag_eq' `(C : redCFG) p q q0 i j t
       (Hlen : | j | = depth q)
       (Hpath : TPath (q,j) (p,i) t)
       (Hincl : forall x, x ∈ map fst t -> deq_loop x q0)
-      (Hnback : forall x : Lab, x ∈ (map fst t) -> ~ loop_contains x q0)
+      (Hnback : forall x : Lab, x ∈ (map fst (r_tl t)) -> ~ loop_contains x q0)
   : take_r (depth q0) i = take_r (depth q0) j.
 Proof.
   revert q p i j Hpath Hlen.
@@ -280,7 +345,10 @@ Proof.
   - exploit' IHt.
     { intros. eapply Hincl. cbn. right;eauto. }
     exploit' IHt.
-    { intros. eapply Hnback. cbn. right. eauto. }
+    { intros. eapply Hnback.
+      eapply incl_map. 2: eapply H1.
+      destr_r' t;subst;cbn;eauto. rewrite app_comm_cons. do 2 rewrite r_tl_rcons. eauto.
+    }
     destruct x as [e l].
     eapply tcfg_edge_destruct' in H0.
     destruct H0 as [H0|[H0|[H0|H0]]].
@@ -297,7 +365,11 @@ Proof.
       * cbn in Hpath. cbn.
         erewrite take_r_cons_replace.
         -- eapply IHt;eauto.
-        -- specialize (Hnback p). exploit Hnback. 1: cbn;left;auto.
+        -- specialize (Hnback p). exploit Hnback.
+           {
+             destr_r' t;subst. 1: inv H. rewrite app_comm_cons. rewrite r_tl_rcons.
+             cbn. left;eauto.
+           }
            decide (S (|l|) <= depth q0);[exfalso|lia].
            eapply tag_depth_unroot in H as Hdep;eauto. cbn in Hdep. rewrite Hdep in l0.
            assert (deq_loop e q0) as Hdeq.
@@ -317,3 +389,30 @@ Proof.
         -- eapply tag_depth_unroot in Hpath;eauto. rewrite Hpath.
            eapply deq_loop_depth. eapply Hincl;cbn. eauto.
 Qed.
+
+Lemma tpath_deq_no_haed_tag_eq `(C : redCFG) p q q0 i j t
+      (Hlen : | j | = depth q)
+      (Hpath : TPath (q,j) (p,i) t)
+      (Hincl : forall x, x ∈ map fst t -> deq_loop x q0)
+      (Hnback : forall x : Lab, x ∈ (map fst t) -> ~ loop_contains x q0)
+  : take_r (depth q0) i = take_r (depth q0) j.
+Proof.
+  eapply tpath_deq_no_haed_tag_eq';eauto.
+  intros;eapply Hnback.
+  eapply incl_map. 2:eauto.
+  destr_r' t;subst;cbn;eauto. rewrite r_tl_rcons. eauto.
+Qed.
+
+Lemma head_precedes_no_back `(C : redCFG) h p k i t
+      (Hloop : loop_contains h p)
+      (Hpath : TPath (h,k) (p,i) t)
+      (Hprec : Precedes fst t (h,k))
+  : forall x : Lab, x ∈ (map fst (r_tl t)) -> ~ loop_contains x h.
+Admitted.
+
+Lemma head_precedes_deq `(C : redCFG) h p k i t
+      (Hloop : loop_contains h p)
+      (Hpath : TPath (h,k) (p,i) t)
+      (Hprec : Precedes fst t (h,k))
+  : forall x, x ∈ map fst t -> deq_loop x h.
+Admitted.

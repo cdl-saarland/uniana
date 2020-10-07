@@ -2,7 +2,7 @@ Require Export CFGinnermost ListExtra.
 
 Section cfg.
   Context `{C : redCFG}.
-  
+
   Notation "p '-a>b' q" := (a_edge p q) (at level 55).
   Notation "p '-a>' q" := (p -a>b q = true) (at level 55).
   Notation "p '-->b' q" := (edge p q) (at level 55).
@@ -17,7 +17,7 @@ Section cfg.
     ancestor a p q /\ forall a', loop_contains a' p /\ loop_contains a' q -> loop_contains a' a.
 
   Definition outermost_loop h p := loop_contains h p /\ forall h', loop_contains h' p -> loop_contains h h'.
-  
+
   Definition ex_outermost_loop p
     := finType_sig_or_never (DecPred (fun h => outermost_loop h p)).
 
@@ -78,7 +78,7 @@ Section cfg.
     - destruct s. cbn in *. auto.
     - cbn in *. intros. eapply loop_contains_outermost in H. destructH.
       eapply n;eauto.
-  Qed.                  
+  Qed.
 
   (*
   Lemma LPath_loop_contains  h h' p π
@@ -97,7 +97,7 @@ Section cfg.
    *)
 
   (** * Existence of ancestors, near_ancestors **)
-  
+
   Lemma ex_LPath p
     : exists h, (forall h', loop_contains h' p -> loop_contains h h') /\ exists π, LPath h p π.
   Proof.
@@ -157,7 +157,7 @@ Section cfg.
           eapply loop_contains_trans;eauto.
         * destruct IHl'0.
           -- exists a0. split;[left;auto|].
-             intros. 
+             intros.
              destruct H1.
              ++ subst. eapply loop_contains_either in a2;[|destruct H0 as [H0 _];apply H0].
                 destruct a2;[|eauto].
@@ -177,7 +177,7 @@ Section cfg.
   Qed.
 
   (** * Dominance **)
-  
+
   Lemma ancestor_dom1 a p q
     : ancestor a p q -> Dom edge__P root a p.
   Proof.
@@ -193,11 +193,25 @@ Section cfg.
   Proof.
     unfold ancestor;firstorder 0.
   Qed.
-  
+
   Lemma ancestor_dom2 a p q
     : ancestor a p q -> Dom edge__P root a q.
   Proof.
     eauto using ancestor_dom1, ancestor_sym.
+  Qed.
+
+  Lemma ancestor_deq_loop1 a p q
+    : ancestor a p q -> deq_loop p a.
+  Proof.
+    intros. destruct H.
+    - destructH. eapply loop_contains_deq_loop;eauto.
+    - subst a. eapply deq_loop_root.
+  Qed.
+
+  Lemma ancestor_deq_loop2 a p q
+    : ancestor a p q -> deq_loop q a.
+  Proof.
+    intros. eapply ancestor_sym in H. eapply ancestor_deq_loop1;eauto.
   Qed.
 
 End cfg.

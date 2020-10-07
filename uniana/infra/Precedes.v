@@ -41,3 +41,12 @@ Proof.
     + inv H. contradiction.
     + eapply IHl;eauto. inversion Hnd;eauto.
 Qed.
+
+Lemma postfix_precedes (A B : Type) (l l' : list (A * B)) x
+  : Postfix l l' -> Precedes fst l x -> Precedes fst l' x.
+Proof.
+  intros. eapply postfix_eq in H. destructH. subst l'.
+  revert H0. induction l;intros;inversion H0;cbn;subst.
+  - econstructor.
+  - econstructor;eauto.
+Qed.

@@ -471,6 +471,11 @@ Section cfg.
         (Hn0 : n <> 0)
     : exists h, loop_contains h p /\ depth h = n.
   Proof.
+    (*
+      induction on depth p. if depth p = 0, trivial.
+      step case: innermost loop exists, that one has a pre-header, the pre-header is stritly less deep.
+      -> use IH for the pre-header.
+     *)
   Admitted.
 
   Definition nexit_edge q p := forall h, ~ exit_edge h q p.

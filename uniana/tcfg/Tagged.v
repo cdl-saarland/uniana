@@ -309,13 +309,26 @@ Proof.
   Proof.
   Admitted.
    *)
-  Lemma near_ancestor_trichotomy a p q
-        (Hna : near_ancestor a p q)
-    : (eq_loop a p /\ eq_loop a q)
-      \/ (eq_loop a p /\ ~ deq_loop a q)
-      \/ (eq_loop a q /\ ~ deq_loop a p).
+
+(*
+  Lemma path_split1 (L : Type) (e : L -> L -> Prop) x y z π ϕ
+        (Hpath : Path e x y (π ++ z :: ϕ))
+    : Path e x z (z :: ϕ).
   Admitted.
-  
+*)
+  Lemma tcfg_entry h q i j
+        (Hloop : loop_head h)
+        (Hedge : (q,j) -t> (h, 0 :: i))
+    : entry_edge q h.
+  Proof.
+    eapply tcfg_edge_destruct' in Hedge.
+    destruct Hedge as [H|[H|[H|H]]].
+    all: destruct H as [H Q];eauto.
+    - eapply basic_edge_no_loop2 in Q. contradiction.
+    - destruct j;cbn in H;congruence.
+    - destruct Q. exfalso. eapply no_exit_head;eauto.
+  Qed.
+
   Lemma ancestor_level_connector p q a i j k t
         (Hpath : TPath (root,start_tag) (p,i) t)
         (Hin : (q,j) ∈ t)
@@ -329,7 +342,19 @@ Proof.
     eapply tag_depth' in Hpath as Hdepp;eauto.
     eapply precedes_in in Hprec as Hain. eapply path_from_elem in Hain as Hϕ;eauto. destructH.
     eapply tag_depth_unroot2 in Hϕ0 as Hdepa;eauto.
-    eapply tpath_deq_no_haed_tag_eq with (q1:=a) in Hϕ0 as Htake;eauto. 2,3: admit.
+    destruct Hanc.
+    eapply ancestor_deq_loop1 in H as Hdeqp.
+    eapply ancestor_deq_loop2 in H as Hdeqq.
+    eapply tpath_deq_no_haed_tag_eq' with (q1:=a) in Hϕ0 as Htake;eauto.
+    2: { eapply tag_prefix_ancestor in H;eauto.
+         intros.
+         eapply tcfg_prefix_deq in Hϕ0;eauto.
+    }
+    2: { eapply tag_prefix_ancestor in H;eauto.
+         intros.
+         eapply in_fst in H1. destructH.
+         eapply tcfg_prefix_no_back in Hϕ0;eauto.
+    }
     setoid_rewrite take_r_geq in Htake at 2;[|lia].
     decide (deq_loop a p).
     - rewrite take_r_geq in Htake.
@@ -340,23 +365,79 @@ Proof.
       + eapply succ_rt_combine.
         * eapply tpath_NoDup;eauto.
         * inv_path Hpath.
-          -- destruct Hin;[|contradiction]. inv H. eapply succ_rt_refl;eauto.
+          -- destruct Hin;[|contradiction]. inv H1. eapply succ_rt_refl;eauto.
           -- econstructor. eapply splinter_single. eauto.
         * eapply succ_rt_refl. eapply path_contains_front;eauto.
     - eapply ex_ocnc_loop in n as Hocnc;eauto.
       destructH.
-      unfold ocnc_loop, cnc_loop in *. destructH. do 2 simpl_dec' Hocnc3. destructH.
-      destruct k.
-      { cbn in Hdepp. symmetry in Hdepa. eapply depth_zero_iff in Hdepa. contradiction.
-        eapply loop_contains_self. eapply loop_contains_loop_head;eauto.
-        unfold near_ancestor,ancestor in Hanc. destructH. destruct Hanc0;eauto. admit. }
-      eapply ex_entry in Hocnc4.
-      3: eapply Hϕ0. 2: eapply loop_contains_trans;eauto. 2:eauto. 2,3:admit.
-      eapply path_to_elem in Hocnc4;eauto. destructH.
-      eapply ex_pre_header in Hocnc3;eauto. 2,3: admit.
-      destructH.
-      exists pre.
-  Admitted.
+      eapply ocnc_depth in Hocnc as Hhdep.
+      unfold ocnc_loop, cnc_loop in *. destructH.
+      assert (~ loop_contains h a) as Hnloop
+          by (contradict Hocnc3;eauto using loop_contains_deq_loop).
+      assert (~ loop_contains h q) as Hnloopq.
+      { contradict Hnloop. eauto. }
+      eapply path_from_elem in Hin as Hπ;eauto. destructH.
+      eapply tag_depth_unroot2 in Hπ0 as Hdepq;eauto.
+      eapply deq_loop_depth in Hdeqp as Hdep_leq.
+      eapply ex_entry with (k0:=take_r (depth a) i) in Hnloopq as Hentry. 3: eapply Hπ0. all:auto.
+      2: { eapply take_take_r with (n:=|i| - depth a). lia. }
+      2: { rewrite take_r_length_le. 2:lia. lia. }
+      eapply path_to_elem in Hentry as Hη;eauto. destructH.
+      eapply prefix_eq in Hη1. destructH.
+      subst ϕ0. inv_path Hη0.
+      { exfalso. eapply Hnloopq. eauto using loop_contains_self, loop_contains_loop_head. }
+      destruct x.
+      assert (entry_edge e h) as Heentry.
+      { eapply tcfg_entry;eauto. eapply loop_contains_loop_head;eauto. }
+      assert (l = take_r (depth a) i).
+      { eapply tag_entry_iff in Heentry. 2:eauto. inv Heentry. reflexivity. }
+      subst l.
+      exists e.
+      destruct π. 1: inv H1. path_simpl' H1.
+      eapply path_split2 in Hπ0 as Hl.
+      assert (forall x k, (x,k) ∈ (l2' :r: (h, 0 :: take_r (depth a) i)) -> x <> e).
+      {
+        intros x k Hinx Heq. subst x.
+        assert (depth h <= | i |) as Hdepthhi.
+        { rewrite Hdepp. eapply deq_loop_depth. eapply loop_contains_deq_loop;eauto. }
+        assert (| 0 :: take_r (depth a) i | = depth h) as Hhlen.
+        { cbn. rewrite take_r_length_le;eauto. lia. }
+        eapply tcfg_subtag_deq with (q0:=h) (x:=e) in Hl.
+        - destruct Heentry. destructH. eapply H5. eapply Hl. eapply loop_contains_self;eauto.
+        - eapply loop_contains_deq_loop;eauto.
+        - unfold sub_tag. split_conj.
+          + rewrite take_r_length_le; eauto.
+          + cbn. lia.
+          + cbn. rewrite take_r_tl_eq.
+            rewrite take_r_take_r_leq.
+            * rewrite take_r_length_le. 2:lia. rewrite Hhdep.
+              replace (S (depth a) - 1) with (depth a) by lia. reflexivity.
+            * rewrite take_r_length_le. lia. auto.
+        - auto.
+        - eapply in_map with (f:= fst ) in Hinx. eauto.
+      }
+      remember (l2' :r: (h, 0 :: take_r (depth a) i)) as l3 in *.
+      split.
+      + eapply postfix_precedes;eauto.
+        rewrite app_cons_rcons. rewrite <-Heql3.
+        clear - H3. induction l3.
+        * cbn. econstructor.
+        * cbn. econstructor.
+          -- cbn. destruct a0. cbn. eapply H3;eauto.
+          -- eauto.
+      + eapply splinter_postfix;eauto.
+        rewrite app_cons_rcons. rewrite <-Heql3.
+        destruct l3. 1: inv Hl. path_simpl' Hl.
+        assert ((q,j) ∈ ((e, take_r (depth a) i) :: π)) as qπ.
+        { eapply path_contains_back in H1;eauto. }
+        clear - H3 qπ. cbn. eapply splinter_lr.
+        induction l3;cbn.
+        * destruct qπ.
+          -- econstructor. rewrite H. econstructor. eapply splinter_nil.
+          -- eapply splinter_lr. eapply splinter_single;eauto.
+        * econstructor. eapply IHl3;eauto. intros. eapply H3;eauto.
+          destruct H;[left;eauto|right;right;eauto].
+  Qed.
 
   Lemma find_loop_exit h a p i j k n l
         (Hpath : TPath (root,start_tag) (p,i) l)

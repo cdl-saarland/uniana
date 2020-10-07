@@ -217,6 +217,17 @@ Section cfg.
     eapply tag_depth_unroot;eauto.
   Qed.
 
+  Lemma tag_depth_unroot_elem2 p q i j t x k
+        (Hpath : TPath (q,j) (p,i) t)
+        (Hlen : |i| = depth p)
+        (Hin : (x,k) ∈ t)
+    : |k| = depth x.
+  Proof.
+    eapply path_from_elem in Hin;eauto.
+    destructH.
+    eapply tag_depth_unroot2;eauto.
+  Qed.
+
   Lemma tcfg_enroot p q i j t
         (Hpath : TPath (p,i) (q,j) t)
         (Hlen  : | i | = depth p)

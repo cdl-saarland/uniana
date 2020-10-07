@@ -811,3 +811,15 @@ Proof.
   inv_path N.
   eapply Hacy;eauto.
 Qed.
+
+Lemma path_split2 (L : Type) (e : L -> L -> Prop) x y z π ϕ
+      (Hpath : Path e x y (π ++ z :: ϕ))
+  : Path e z y (π ++ [z]).
+Proof.
+  revert y Hpath.
+  induction π;cbn;intros.
+  - path_simpl' Hpath. econstructor.
+  - path_simpl' Hpath. destruct π;cbn in *;inv Hpath.
+    + econstructor;eauto.
+    + econstructor;eauto.
+Qed.
