@@ -439,6 +439,10 @@ Proof.
           destruct H;[left;eauto|right;right;eauto].
   Qed.
 
+  Lemma prefix_succ_in (A : Type)
+    : forall (a b : A) (l l' : list A), Prefix l l' -> a ≻ b | l -> a ≻ b | l'.
+  Admitted.
+
   Lemma find_loop_exit h a p i j k n l
         (Hpath : TPath (root,start_tag) (p,i) l)
         (Hpre : Prefix k j)
@@ -446,6 +450,27 @@ Proof.
     : exists qe e, (a,k) ≻* (e,j) ≻* (qe,n :: j) ≻* (h, n :: j) | l /\ (e,j) ≻ (qe,n :: j) | l /\ exit_edge h qe e.
   Proof. (* used in uniana *)
     (* inductively look for the exit *)
+    eapply succ_rt_prefix in Hib as Hprf. destructH.
+    clear Hib.
+    eapply path_prefix_path in Hprf0 as Hπ;eauto.
+    eapply path_from_elem in Hprf1;eauto. destructH.
+    enough (exists qe e : Lab, (e, j) ≻ (qe, n :: j) | ϕ /\ exit_edge h qe e).
+    { destructH. exists qe, e. split_conj.
+      - eapply splinter_prefix;eauto. econstructor.
+        destr_r' ϕ;subst. 1:inv Hprf2. path_simpl' Hprf2.
+        eapply splinter_postfix;eauto.
+        replace ([(e, j); (qe, n :: j); (h, n :: j)]) with (((e, j) :: [(qe, n :: j)]) ++ [(h, n :: j)]).
+        2: cbn;eauto.
+        eapply SplinterAux.splinter_rcons_left.
+        Lemma succ_in_succ_rt (A : Type) (x y : A) l
+              (Hsucc : x ≻ y | l)
+          : x ≻* y | l.
+        Admitted.
+        eapply succ_in_succ_rt;eauto.
+      - eapply prefix_succ_in;eauto. eapply postfix_succ_in;eauto.
+      - eauto.
+    }
+
     (* FIXME *)
   Admitted.
 
@@ -453,10 +478,18 @@ Proof.
         (Hdeq : deq_loop p q)
         (Hpath : TPath (x,l) (y,m) t)
         (Hpre : Prefix j i)
+        (Hinq : (q,j) ∈ t)
+        (Hinp : (p,i) ∈ t)
     : (q,j) ≻* (p,i) | t.
   Proof. (* used in uniana *)
     (* easy using monotonicity *)
-     (* FIXME *)
+    induction Hpath.
+    - destruct Hinq;[subst|contradiction]. destruct Hinp;[subst|contradiction]. inv H.
+      eauto with splinter.
+    - destruct Hinq.
+      + subst c. econstructor. eapply splinter_single;eauto.
+      + econstructor. eapply IHHpath.
+     (* FIXME: this lemma is WRONG *)
   Admitted.
 
   Hint Resolve precedes_in.
