@@ -475,22 +475,17 @@ Proof.
     (* FIXME *)
   Admitted.
 
-  Lemma tpath_deq_loop_prefix p q i j t x l y m
-        (Hdeq : deq_loop p q)
+  Lemma tpath_deq_loop_prefix (p q x y h : Lab) (k i j l m : Tag) t
+        (Hloop : loop_contains h p)
+        (Hnloop : ~ loop_contains h q)
+        (Hhp : (p,i) ≻* (h,k) | t)
+        (Hhq : (q,j) ≻* (h,k) | t)
+        (Hprec : Precedes fst t (h,k))
         (Hpath : TPath (x,l) (y,m) t)
-        (Hpre : Prefix j i)
-        (Hinq : (q,j) ∈ t)
-        (Hinp : (p,i) ∈ t)
     : (q,j) ≻* (p,i) | t.
   Proof. (* used in uniana *)
     (* easy using monotonicity *)
     induction Hpath.
-    - destruct Hinq;[subst|contradiction]. destruct Hinp;[subst|contradiction]. inv H.
-      eauto with splinter.
-    - destruct Hinq.
-      + subst c. econstructor. eapply splinter_single;eauto.
-      + econstructor. eapply IHHpath.
-     (* FIXME: this lemma is WRONG *)
   Admitted.
 
   Hint Resolve precedes_in.

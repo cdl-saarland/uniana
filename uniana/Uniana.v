@@ -544,9 +544,10 @@ Section uniana.
               eapply tpath_NoDup. eauto.
               eapply (succ_rt_trans) with  (b:=(e1, l' ++ j));eauto;[eauto| |find_succ_rel].
               eapply tpath_NoDup;eauto.
-              eapply tpath_deq_loop_prefix; eauto.
-              eapply prefix_eq. rewrite app_cons_assoc in Hj1. eexists;eauto.
-              eapply splinter_incl;eauto.
+              eapply tpath_deq_loop_prefix with (h1:=h); eauto with splinter.
+              ** destruct Hexit__edge1. destruct H0. eauto.
+              ** eapply splinter_trans in Hexit__seq1. 1:eauto.
+                 econstructor. eapply splinter_lr. econstructor. eapply splinter_lr. econstructor.
         -- unfold exited. eauto.
       + exists e2.
         repeat lazymatch goal with
@@ -578,9 +579,10 @@ Section uniana.
               eauto. eapply tpath_NoDup;eauto.
               eapply (succ_rt_trans) with (b:=(e2, l' ++ j));eauto;[eauto| |find_succ_rel].
               eapply tpath_NoDup;eauto.
-              eapply tpath_deq_loop_prefix; eauto.
-              eapply prefix_eq. rewrite app_cons_assoc in Hj2. eexists;eauto.
-              eapply splinter_incl;eauto.
+              eapply tpath_deq_loop_prefix with (h1:=h); eauto with splinter.
+              ** destruct Hexit__edge2. destruct H0. eauto.
+              ** eapply splinter_trans in Hexit__seq2. eauto.
+                 econstructor. eapply splinter_lr. econstructor. eapply splinter_lr. econstructor.
         -- unfold exited;eauto.
     - exists k.
       eapply last_common_ex_succ in Hlc; eauto.
