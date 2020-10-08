@@ -268,17 +268,17 @@ Proof.
         (Htag : j = j1 ++ (n2 :: j2))
         (Hpath : TPath (root,start_tag) (p,i) t)
         (Hin : (q,j) ∈ t)
-    : exists h, loop_contains h q /\ (h,n2 :: j2) ∈ t /\ (q,j) ≻* (h, n2 :: j2) | t.
+    : exists h, loop_contains h q /\ Precedes fst t (h,n2 :: j2) /\ (q,j) ≻* (h, n2 :: j2) | t.
   Proof. (* used in uniana *)
     eapply path_to_elem in Hpath as Hϕ;eauto. destructH.
     eapply first_occ_tag in Hϕ0 as Hocc;eauto. destructH.
     exists h. split_conj;eauto.
-    - eapply precedes_in in Hocc1. eapply prefix_incl;eauto.
+    - admit. (* eapply precedes_in in Hocc1. eapply prefix_incl;eauto.*)
     - eapply precedes_in in Hocc1.
       eapply splinter_prefix;eauto.
       destruct ϕ;[contradiction|]. path_simpl' Hϕ0.
       econstructor. eapply splinter_single;eauto.
-  Qed.
+  Admitted.
   (*
   (* possibly not used *)
   Lemma prec_prec_eq l (q : Lab) (j j' : Tag)
@@ -443,9 +443,15 @@ Proof.
     : forall (a b : A) (l l' : list A), Prefix l l' -> a ≻ b | l -> a ≻ b | l'.
   Admitted.
 
+  Lemma succ_in_succ_rt (A : Type) (x y : A) l
+        (Hsucc : x ≻ y | l)
+    : x ≻* y | l.
+  Admitted.
+
   Lemma find_loop_exit h a p i j k n l
         (Hpath : TPath (root,start_tag) (p,i) l)
         (Hpre : Prefix k j)
+        (Hprec : Precedes fst l (h, n :: j))
         (Hib : (a,k) ≻* (h, n :: j) | l)
     : exists qe e, (a,k) ≻* (e,j) ≻* (qe,n :: j) ≻* (h, n :: j) | l /\ (e,j) ≻ (qe,n :: j) | l /\ exit_edge h qe e.
   Proof. (* used in uniana *)
@@ -462,15 +468,10 @@ Proof.
         replace ([(e, j); (qe, n :: j); (h, n :: j)]) with (((e, j) :: [(qe, n :: j)]) ++ [(h, n :: j)]).
         2: cbn;eauto.
         eapply SplinterAux.splinter_rcons_left.
-        Lemma succ_in_succ_rt (A : Type) (x y : A) l
-              (Hsucc : x ≻ y | l)
-          : x ≻* y | l.
-        Admitted.
         eapply succ_in_succ_rt;eauto.
       - eapply prefix_succ_in;eauto. eapply postfix_succ_in;eauto.
       - eauto.
     }
-
     (* FIXME *)
   Admitted.
 
