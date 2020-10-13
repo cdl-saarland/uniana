@@ -8,6 +8,39 @@ Section disj.
   Context `(D : DiamondPaths).
   Hypothesis (Hjle : j1 ⊴ j2).
 
+  Lemma split_node
+        (Hnempty : r1 <> nil \/ r2 <> nil)
+    : hd (s,k) (rev r1) <> hd (s,k) (rev r2).
+  Proof.
+    destruct Hnempty.
+    - destr_r' r1;subst;[contradiction|].
+      destruct D.
+      rewrite rev_rcons. cbn.
+      destr_r' r2;subst;cbn in Dqj2.
+      + inv Dqj2. cbn. intro N. subst x. eapply path_rcons in Dsk1;eauto.
+        eapply tcfg_enroot in Dsk1;eauto. destructH.
+        eapply tpath_NoDup in Dsk1.
+        eapply NoDup_app with (a:=(q2,j2)).
+        * rewrite <-app_assoc in Dsk1. eapply Dsk1.
+        * rewrite app_comm_cons. eapply In_rcons. left. auto.
+        * cbn. left. auto.
+      + cbn. rewrite rev_rcons. cbn.
+        eapply disjoint2;eauto.
+    - destr_r' r2;subst;[contradiction|].
+      destruct D.
+      rewrite rev_rcons. cbn.
+      destr_r' r1;subst;cbn in Dqj1.
+      + inv Dqj2. cbn. intro N. subst x. eapply path_rcons in Dsk2;eauto.
+        eapply tcfg_enroot in Dsk2;eauto. destructH.
+        eapply tpath_NoDup in Dsk2.
+        eapply NoDup_app with (a:=(q1,j1)).
+        * rewrite <-app_assoc in Dsk2. eapply Dsk2.
+        * rewrite app_comm_cons. eapply In_rcons. left. auto.
+        * cbn. left. auto.
+      + cbn. rewrite rev_rcons. cbn.
+        eapply disjoint2;eauto.
+  Qed.
+
   Lemma s_deq_q
     : deq_loop s q1.
   Proof.

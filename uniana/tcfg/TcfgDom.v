@@ -402,17 +402,3 @@ Proof.
   eapply incl_map. 2:eauto.
   destr_r' t;subst;cbn;eauto. rewrite r_tl_rcons. eauto.
 Qed.
-
-Lemma head_precedes_no_back `(C : redCFG) h p k i t
-      (Hloop : loop_contains h p)
-      (Hpath : TPath (h,k) (p,i) t)
-      (Hprec : Precedes fst t (h,k))
-  : forall x : Lab, x ∈ (map fst (r_tl t)) -> ~ loop_contains x h.
-Admitted.
-
-Lemma head_precedes_deq `(C : redCFG) h p k i t
-      (Hloop : loop_contains h p)
-      (Hpath : TPath (h,k) (p,i) t)
-      (Hprec : Precedes fst t (h,k))
-  : forall x, x ∈ map fst t -> deq_loop x h.
-Admitted.
