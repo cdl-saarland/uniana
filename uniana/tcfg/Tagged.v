@@ -264,18 +264,25 @@ Proof.
     eapply prefix_eq. eexists;eauto.
   Qed.
 
+  Lemma precedes_app_nin (A B : Type) (l l' : list (A * B)) x
+        (Hprec : Precedes fst l x)
+        (Hnin : x ∈ l')
+    : Precedes fst (l' ++ l) x.
+  Admitted.
+
   Lemma first_occ_tag_elem i j j1 n2 j2 p q t
         (Htag : j = j1 ++ (n2 :: j2))
         (Hpath : TPath (root,start_tag) (p,i) t)
         (Hdom : Dom edge__P root q p)
         (Hprec : Precedes fst t (q, j))
-        (Hin : (q,j) ∈ t) (* redundant *)
     : exists h, loop_contains h q /\ Precedes fst t (h,n2 :: j2) /\ (q,j) ≻* (h, n2 :: j2) | t.
   Proof. (* used in uniana *)
+    eapply precedes_in in Hprec as Hin.
     eapply path_to_elem in Hpath as Hϕ;eauto. destructH.
     eapply first_occ_tag in Hϕ0 as Hocc;eauto. destructH.
     exists h. split_conj;eauto.
-    - admit. (* eapply precedes_in in Hocc1. eapply prefix_incl;eauto.*)
+    - eapply prefix_eq in Hϕ1. destructH. subst t.
+      eapply precedes_app_nin;eauto. admit. (* eapply precedes_in in Hocc1. eapply prefix_incl;eauto.*)
     - eapply precedes_in in Hocc1.
       eapply splinter_prefix;eauto.
       destruct ϕ;[contradiction|]. path_simpl' Hϕ0.
