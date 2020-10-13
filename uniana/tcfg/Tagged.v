@@ -267,7 +267,9 @@ Proof.
   Lemma first_occ_tag_elem i j j1 n2 j2 p q t
         (Htag : j = j1 ++ (n2 :: j2))
         (Hpath : TPath (root,start_tag) (p,i) t)
-        (Hin : (q,j) ∈ t)
+        (Hdom : Dom edge__P root q p)
+        (Hprec : Precedes fst t (q, j))
+        (Hin : (q,j) ∈ t) (* redundant *)
     : exists h, loop_contains h q /\ Precedes fst t (h,n2 :: j2) /\ (q,j) ≻* (h, n2 :: j2) | t.
   Proof. (* used in uniana *)
     eapply path_to_elem in Hpath as Hϕ;eauto. destructH.
@@ -454,7 +456,7 @@ Proof.
         (Hprec : Precedes fst l (h, n :: j))
         (Hib : (a,k) ≻* (h, n :: j) | l)
     : exists qe e, (a,k) ≻* (e,j) ≻* (qe,n :: j) ≻* (h, n :: j) | l /\ (e,j) ≻ (qe,n :: j) | l /\ exit_edge h qe e.
-  Proof. (* used in uniana *)
+  Proof. (* used in uniana *) (* only find_div_br *)
     (* inductively look for the exit *)
     eapply succ_rt_prefix in Hib as Hprf. destructH.
     clear Hib.
@@ -483,7 +485,7 @@ Proof.
         (Hprec : Precedes fst t (h,k))
         (Hpath : TPath (x,l) (y,m) t)
     : (q,j) ≻* (p,i) | t.
-  Proof. (* used in uniana *)
+  Proof. (* used in uniana *) (* only find_div_br *)
     (* easy using monotonicity *)
     induction Hpath.
   Admitted.
@@ -497,7 +499,7 @@ Proof.
         (Hin : (r,k) ∈ ((p,i) :: l))
         (Hpath : TPath (root,start_tag) (p,i) ((p,i) :: l))
     : (q,j) ≻* (r,k) | (p,i) :: l.
-  Proof. (* used in uniana *)
+  Proof. (* used in uniana *) (* only find_div_br *)
     (* dom_trans is the key *)
     (* FIXME *)
   Admitted.
@@ -507,7 +509,7 @@ Proof.
         (Hloop : loop_contains h q)
         (Hexit : exited h e)
     : (e,j) ∉ t.
-  Proof. (* used in uniana *) (* contradict monotoncity *)
+  Proof. (* used in uniana *) (* contradict monotoncity *) (* only find_div_br *)
     intro N.
     unfold exited in Hexit. destructH.
     unfold exit_edge in Hexit. destructH.
@@ -520,7 +522,7 @@ Proof.
         (Hnoh : forall h k, loop_contains h q -> ~ (p,i) ≻* (h,k) ≻* (q,j) | (p,i) :: t)
     : exists t', Path a_edge__P q p t'.
   Proof. (* used in uniana *)
-    (* easy using loop_cutting *)
+    (* easy using loop_cutting *) (* only find_div_br *)
 
     (* FIXME *)
   Admitted.
@@ -533,7 +535,7 @@ Proof.
     (* otw. there would be a path through this q to p without visiting u *)
     (* this could even be generalized to CPaths *)
     (* TODO: lift on tpaths, on cpaths we might have duplicates, thus it doesn't work there *)
-  Proof. (* used in uniana *) (* FIXME *)
+  Proof. (* used in uniana *) (* FIXME *) (* only find_div_br *)
   Admitted.
 
   (*

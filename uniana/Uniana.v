@@ -437,10 +437,9 @@ Section uniana.
     rename c' into Htag. destructH.
     subst j1' j2'. rewrite <-app_assoc in Hj1,Hj2. rewrite <-app_comm_cons in Hj1,Hj2.
     (* find the head of the divergent loop *)
-    eapply first_occ_tag_elem with (t:=(p,i) :: l1) in Hj1 as Hocc1;eauto;
-      eauto using precedes_in.
-    eapply first_occ_tag_elem in Hj2 as Hocc2;eauto;
-      eauto using precedes_in.
+    eapply first_occ_tag_elem with (t:=(p,i) :: l1) in Hj1 as Hocc1. 3: eapply Hunch.
+      2-4: eauto using precedes_in.
+    eapply first_occ_tag_elem in Hj2 as Hocc2. 3: eapply Hunch. 2-4: eauto using precedes_in.
     do 2 destructH.
     (* show that it is the same head in both traces *)
     assert (h0 = h);[|subst h0].
