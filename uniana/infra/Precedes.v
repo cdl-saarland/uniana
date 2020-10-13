@@ -50,3 +50,15 @@ Proof.
   - econstructor.
   - econstructor;eauto.
 Qed.
+
+Lemma precedes_app_nin (A B : Type) (l l' : list (A * B)) a b
+      (Hprec : Precedes fst l (a,b))
+      (Hnin : a ∉ map fst l')
+  : Precedes fst (l' ++ l) (a,b).
+Proof.
+  induction l'.
+  - cbn. eassumption.
+  - cbn. destruct a0. econstructor;eauto.
+    + contradict Hnin. cbn in Hnin. subst a0. cbn. left. reflexivity.
+    + eapply IHl'. contradict Hnin. cbn. right. assumption.
+Qed.

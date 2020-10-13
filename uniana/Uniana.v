@@ -323,16 +323,6 @@ Section uniana.
   Hint Resolve precedes_in.
 
 
-  Lemma prefix_succ_in (A : Type) (a b : A) l l'
-        (Hpre : Prefix l l')
-        (Hsucc : a ≻ b | l)
-    : a ≻ b | l'.
-  Proof.
-    induction Hpre;eauto.
-    eapply IHHpre in Hsucc.
-    unfold succ_in in Hsucc. destructH. exists l1, (a0 :: l2). rewrite Hsucc. cbn; reflexivity.
-  Qed.
-
   Local Ltac lc_ex_succ_pre_post :=
     eapply prefix_succ_in; eauto;
     eapply postfix_succ_in; eauto;
@@ -438,8 +428,8 @@ Section uniana.
     subst j1' j2'. rewrite <-app_assoc in Hj1,Hj2. rewrite <-app_comm_cons in Hj1,Hj2.
     (* find the head of the divergent loop *)
     eapply first_occ_tag_elem with (t:=(p,i) :: l1) in Hj1 as Hocc1. 3: eapply Hunch.
-      2-4: eauto using precedes_in.
-    eapply first_occ_tag_elem in Hj2 as Hocc2. 3: eapply Hunch. 2-4: eauto using precedes_in.
+      2-3: eauto using precedes_in.
+    eapply first_occ_tag_elem in Hj2 as Hocc2. 3: eapply Hunch. 2-3: eauto using precedes_in.
     do 2 destructH.
     (* show that it is the same head in both traces *)
     assert (h0 = h);[|subst h0].

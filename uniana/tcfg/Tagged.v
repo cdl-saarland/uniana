@@ -264,12 +264,6 @@ Proof.
     eapply prefix_eq. eexists;eauto.
   Qed.
 
-  Lemma precedes_app_nin (A B : Type) (l l' : list (A * B)) x
-        (Hprec : Precedes fst l x)
-        (Hnin : x ∈ l')
-    : Precedes fst (l' ++ l) x.
-  Admitted.
-
   Lemma first_occ_tag_elem i j j1 n2 j2 p q t
         (Htag : j = j1 ++ (n2 :: j2))
         (Hpath : TPath (root,start_tag) (p,i) t)
@@ -282,12 +276,42 @@ Proof.
     eapply first_occ_tag in Hϕ0 as Hocc;eauto. destructH.
     exists h. split_conj;eauto.
     - eapply prefix_eq in Hϕ1. destructH. subst t.
-      eapply precedes_app_nin;eauto. admit. (* eapply precedes_in in Hocc1. eapply prefix_incl;eauto.*)
+      eapply precedes_app_nin;eauto. intro N.
+      eapply in_fst in N. destructH.
+      eapply dom_trans with (h:=h) in Hdom;eauto;cycle 1.
+      + eapply path_to_elem in Hpath. 2: { eapply in_or_app. left. eapply N. } destructH.
+        eexists. eapply TPath_CPath in Hpath0. cbn in Hpath0. eapply Hpath0.
+      + eapply dom_loop;eauto.
+      + destr_r' l2'; subst. 1: contradiction.
+        assert (Postfix (l :r: x) (l :r: x ++ ϕ)) as Hpost.
+        { eapply postfix_eq. exists ϕ. reflexivity. }
+        eapply path_postfix_path in Hpost as Hπ;eauto.
+        eapply path_from_elem in Hπ;eauto. destructH.
+        eapply TPath_CPath in Hπ0 as Hπ0'. cbn in Hπ0'.
+        eapply Hdom in Hπ0'.
+        eapply in_fst in Hπ0'. destructH.
+        assert (b0 <> j1 ++ n2 :: j2).
+        {
+          decide (b0 = j1 ++ n2 :: j2);[intro M;subst|eauto].
+          eapply tpath_NoDup in Hpath.
+          eapply NoDup_app in Hpath.
+          - eapply Hpath. eapply path_contains_front;eauto.
+          - eapply postfix_incl;eauto.
+        }
+        inv_path Hϕ0. 1: { unfold start_tag in H2. destruct j1;cbn in H2;congruence. }
+        rewrite app_cons_assoc in Hprec.
+        eapply precedes_app_drop in Hprec. 2: { cbn. rewrite map_app. eapply in_or_app. right. cbn. eauto. }
+        eapply precedes_rcons.
+        * eapply Hprec.
+        * eapply NoDup_app_drop. rewrite <-app_cons_assoc. eapply tpath_NoDup;eauto.
+        * eapply postfix_incl;eauto.
+        * cbn. reflexivity.
     - eapply precedes_in in Hocc1.
       eapply splinter_prefix;eauto.
       destruct ϕ;[contradiction|]. path_simpl' Hϕ0.
       econstructor. eapply splinter_single;eauto.
-  Admitted.
+  Qed.
+
   (*
   (* possibly not used *)
   Lemma prec_prec_eq l (q : Lab) (j j' : Tag)
@@ -448,14 +472,25 @@ Proof.
           destruct H;[left;eauto|right;right;eauto].
   Qed.
 
-  Lemma prefix_succ_in (A : Type)
-    : forall (a b : A) (l l' : list A), Prefix l l' -> a ≻ b | l -> a ≻ b | l'.
-  Admitted.
+  Lemma prefix_succ_in (A : Type) (a b : A) l l'
+        (Hpre : Prefix l l')
+        (Hsucc : a ≻ b | l)
+    : a ≻ b | l'.
+  Proof.
+    induction Hpre;eauto.
+    eapply IHHpre in Hsucc.
+    unfold succ_in in Hsucc. destructH. exists l1, (a0 :: l2). rewrite Hsucc. cbn; reflexivity.
+  Qed.
 
   Lemma succ_in_succ_rt (A : Type) (x y : A) l
         (Hsucc : x ≻ y | l)
     : x ≻* y | l.
-  Admitted.
+  Proof.
+    destruct Hsucc as [l1 [l2 Hsucc]]. subst l.
+    induction l2;cbn.
+    - eapply splinter_lr. econstructor. eapply splinter_nil.
+    - econstructor. eapply IHl2.
+  Qed.
 
   Lemma find_loop_exit h a p i j k n l
         (Hpath : TPath (root,start_tag) (p,i) l)
