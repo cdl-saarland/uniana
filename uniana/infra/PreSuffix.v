@@ -621,6 +621,17 @@ Proof.
   - simpl. econstructor. eauto.
 Qed.
 
+Lemma prefix_cycle (A : Type) (l : list A) a
+  : Prefix (a :: l) l -> False.
+Proof.
+  revert a.
+  induction l;cbn;intros.
+  - inv H.
+  - inv H.
+    + exfalso;eapply list_cycle;eauto.
+    + eapply prefix_cons in H2. eauto.
+Qed.
+
 (** StrictPrefix **)
 
 Section StrictPre.

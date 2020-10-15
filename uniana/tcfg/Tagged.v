@@ -516,7 +516,54 @@ Proof.
       - eapply prefix_succ_in;eauto. eapply postfix_succ_in;eauto.
       - eauto.
     }
-    (* FIXME *)
+    assert (Precedes fst ϕ (h, n :: j)) as Hprecϕ.
+    {
+      admit. (* bc. preceding in l, we drop app on both sides *)
+    }
+    eapply tag_depth' in Hπ as Hdepa.
+    eapply tag_depth_unroot2 in Hprf2 as Hdeph;eauto.
+    clear Hprf3 Hπ Hprf0 Hprec Hpath Hdepa.
+    revert Hdeph Hprecϕ a k Hpre Hprf2.
+    specialize (well_founded_ind (R:=(@StrictPrefix' Coord)) (@StrictPrefix_well_founded Coord)
+                                 (fun ϕ : list Coord => | n :: j | = depth h ->
+                                                     Precedes fst ϕ (h, n :: j) ->
+                                                   forall (a : Lab) (k : list nat),
+                                                     Prefix k j ->
+                                                     Path tcfg_edge (h, n :: j) (a, k) ϕ ->
+                                                     exists qe e : Lab, (e, j) ≻ (qe, n :: j) | ϕ
+                                                        /\ exit_edge h qe e))
+      as WFind.
+    eapply WFind. clear WFind.
+    intros x IHwf Hdeph Hprec a k Hpre Hpath.
+    inv_path Hpath.
+    1: { exfalso. eapply prefix_cycle;eauto. }
+    destruct x0.
+    eapply tcfg_edge_destruct' in H0.
+    destruct H0 as [H0|[H0|[H0|H0]]].
+    all: destruct H0 as [Htag Hedge];subst.
+    - specialize IHwf with (y:=π)(a:=e)(k:=t). exploit' IHwf. econstructor. econstructor.
+      inv Hprec. 1: eapply prefix_cycle in Hpre; contradiction.
+      exploit IHwf. destructH. eexists. eexists. split;eauto. eapply succ_cons. eauto.
+    - specialize IHwf with (y:=π)(a:=e)(k:=t). exploit' IHwf. econstructor. econstructor.
+      inv Hprec. 1: eapply prefix_cycle in Hpre;contradiction.
+      eapply prefix_cons in Hpre.
+      exploit IHwf. destructH. do 2 eexists. split;eauto. eapply succ_cons. eauto.
+    - decide (deq_loop h a).
+      + (* impossible by precedence *) admit.
+      + (* search for entry of a. the pre-headers tag is still a prefix -> IH *) admit.
+
+        (*decide (deq_loop a h).
+      + exfalso. eapply deq_loop_depth in d. rewrite <-Hdeph in d.
+        eapply tag_depth_unroot in Hpath as Hdepa;eauto. rewrite <-Hdepa in d.
+        cbn in d. eapply prefix_len_leq in Hpre. lia.
+      + eapply ex_entry in
+      admit. (* there are no back edges of loops containing h *)
+      (* h is always deeper-eq to a, thus there are no back edges *) *)
+    - decide (deq_loop h e).
+      + decide (deq_loop e h).
+        * (* done *) admit.
+        * (* take the exit, IH *) admit.
+      + (* jump over loop *) admit.
   Admitted.
 
   Lemma tpath_deq_loop_prefix (p q x y h : Lab) (k i j l m : Tag) t
