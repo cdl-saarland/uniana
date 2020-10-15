@@ -497,6 +497,7 @@ Proof.
         (Hpre : Prefix k j)
         (Hprec : Precedes fst l (h, n :: j))
         (Hib : (a,k) ≻* (h, n :: j) | l)
+        (Hloop : loop_head h)
     : exists qe e, (a,k) ≻* (e,j) ≻* (qe,n :: j) ≻* (h, n :: j) | l /\ (e,j) ≻ (qe,n :: j) | l /\ exit_edge h qe e.
   Proof. (* used in uniana *) (* only find_div_br *)
     (* inductively look for the exit *)
@@ -540,7 +541,7 @@ Proof.
     destruct x0.
     eapply tcfg_edge_destruct' in H0.
     destruct H0 as [H0|[H0|[H0|H0]]].
-    all: destruct H0 as [Htag Hedge];subst.
+    all: destruct H0 as [Htag Hedge]. 1,2:subst.
     - specialize IHwf with (y:=π)(a:=e)(k:=t). exploit' IHwf. econstructor. econstructor.
       inv Hprec. 1: eapply prefix_cycle in Hpre; contradiction.
       exploit IHwf. destructH. eexists. eexists. split;eauto. eapply succ_cons. eauto.
@@ -561,7 +562,21 @@ Proof.
       (* h is always deeper-eq to a, thus there are no back edges *) *)
     - decide (deq_loop h e).
       + decide (deq_loop e h).
-        * (* done *) admit.
+        * (* done *)
+          destruct Hedge.
+          assert (x = h) as Hxh.
+          { eapply eq_loop_same.
+            - eapply eq_loop_exiting in H0. rewrite H0. split;eauto.
+            - destruct H0. eapply loop_contains_loop_head;eauto.
+            - eauto.
+          }
+
+          (*
+          enough (j = tl t).
+          -- subst x j. exists e, a. split;eauto. exists (tl π), nil. cbn. f_equal.
+             inv_path H;cbn;eauto.*)
+
+          admit.
         * (* take the exit, IH *) admit.
       + (* jump over loop *) admit.
   Admitted.

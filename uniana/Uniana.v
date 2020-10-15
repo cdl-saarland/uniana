@@ -457,8 +457,9 @@ Section uniana.
     assert (Prefix j (l' ++ j)) as Hexit1.
     { eapply prefix_eq. eexists;reflexivity. }
     copy Hexit1 Hexit1'.
-    eapply find_loop_exit with (a0:=a1') (n:=a1) (h0:=h) (l:= (p,i)::l1) in Hexit1;eauto.
-    eapply find_loop_exit with (a0:=a2') (n:=a2) in Hexit1';eauto.
+    eapply find_loop_exit with (a0:=a1') (n:=a1) (h0:=h) (l:= (p,i)::l1) in Hexit1;
+      eauto using loop_contains_loop_head.
+    eapply find_loop_exit with (a0:=a2') (n:=a2) in Hexit1';eauto using loop_contains_loop_head.
 
     2,3: unfold Tag in *; resolve_succ_rt.
     destruct Hexit1 as [qe1 [e1 [Hexit__seq1 [Hexit__succ1 Hexit__edge1]]]].
