@@ -62,3 +62,15 @@ Proof.
     + contradict Hnin. cbn in Hnin. subst a0. cbn. left. reflexivity.
     + eapply IHl'. contradict Hnin. cbn. right. assumption.
 Qed.
+
+Lemma precedes_app_nin2 (A B : Type) (l l' : list (A * B)) a b
+      (Hprec : Precedes fst (l' ++ l) (a,b))
+      (Hnin : (a,b) ∉ l')
+  : Precedes fst l (a,b).
+Proof.
+  induction l'.
+  - cbn in Hprec. eassumption.
+  - cbn in Hprec. destruct a0. inv Hprec.
+    + exfalso. eapply Hnin. cbn. left. auto.
+    + eapply IHl';eauto.
+Qed.

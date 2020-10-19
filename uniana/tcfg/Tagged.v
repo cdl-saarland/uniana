@@ -492,6 +492,19 @@ Proof.
     - econstructor. eapply IHl2.
   Qed.
 
+  Lemma tpath_prec_loop_eq h p i j t
+        (Hpath : TPath (h,i) (p,j) t)
+        (Hprec : Precedes fst t (h,i))
+        (Hloop : loop_contains h p)
+    : i = take_r (depth h) j.
+  Admitted.
+  Lemma tpath_prec_innermost_eq h p i j t
+        (Hpath : TPath (h,i) (p,j) t)
+        (Hprec : Precedes fst t (h,i))
+        (Hloop : innermost_loop h p)
+    : i = j.
+  Admitted.
+
   Lemma find_loop_exit h a p i j k n l
         (Hpath : TPath (root,start_tag) (p,i) l)
         (Hpre : Prefix k j)
@@ -519,7 +532,18 @@ Proof.
     }
     assert (Precedes fst ϕ (h, n :: j)) as Hprecϕ.
     {
-      admit. (* bc. preceding in l, we drop app on both sides *)
+      eapply postfix_eq in Hprf3.
+      eapply prefix_eq in Hprf0. do 2 destructH.
+      rewrite Hprf3 in Hprf0. subst l.
+      eapply precedes_app_nin2 in Hprec.
+      - eapply precedes_app_drop in Hprec.
+        + eauto.
+        + eapply in_map. eapply path_contains_back;eauto.
+      - eapply tpath_NoDup in Hpath.
+        intro N.
+        eapply NoDup_app;eauto.
+        eapply in_or_app. left.
+        eapply path_contains_back;eauto.
     }
     eapply tag_depth' in Hπ as Hdepa.
     eapply tag_depth_unroot2 in Hprf2 as Hdeph;eauto.
@@ -539,6 +563,8 @@ Proof.
     inv_path Hpath.
     1: { exfalso. eapply prefix_cycle;eauto. }
     destruct x0.
+    eapply tag_depth_unroot in H as Hdepe;eauto.
+    eapply tag_depth_unroot in Hpath as Hdepa;eauto.
     eapply tcfg_edge_destruct' in H0.
     destruct H0 as [H0|[H0|[H0|H0]]].
     all: destruct H0 as [Htag Hedge]. 1,2:subst.
@@ -550,16 +576,43 @@ Proof.
       eapply prefix_cons in Hpre.
       exploit IHwf. destructH. do 2 eexists. split;eauto. eapply succ_cons. eauto.
     - decide (deq_loop h a).
-      + (* impossible by precedence *) admit.
-      + (* search for entry of a. the pre-headers tag is still a prefix -> IH *) admit.
-
-        (*decide (deq_loop a h).
-      + exfalso. eapply deq_loop_depth in d. rewrite <-Hdeph in d.
-        eapply tag_depth_unroot in Hpath as Hdepa;eauto. rewrite <-Hdepa in d.
-        cbn in d. eapply prefix_len_leq in Hpre. lia.
-      + eapply ex_entry in
-      admit. (* there are no back edges of loops containing h *)
-      (* h is always deeper-eq to a, thus there are no back edges *) *)
+      + exfalso. eapply tagle_monotone in H;eauto.
+        * subst k. eapply prefix_eq in Hpre. destructH. subst j.
+          destruct t.
+          { cbn in Hdepe. eapply loop_contains_ledge in Hedge.
+            eapply loop_contains_depth_lt in Hedge. lia. }
+          setoid_rewrite take_r_geq in H at 2.
+          2: { rewrite <-Hdepa. cbn. eauto. }
+          cbn in H.
+          rewrite app_comm_cons in H. rewrite take_r_app_eq in H;eauto.
+          destruct H.
+          -- dependent destruction H. 1:lia. eapply Taglt_irrefl;eauto.
+          -- inv H. lia.
+        * eapply back_edge_eq_loop in Hedge. destruct Hedge;eassumption.
+      + (* search for entry of a. the pre-headers tag is still a prefix -> IH *)
+        destruct t.
+        { cbn in Hdepe. eapply loop_contains_ledge in Hedge.
+          eapply loop_contains_depth_lt in Hedge. lia. }
+        eapply ex_entry with (j':=[n1]) (k0:=t) in H as Hentry.
+        2: eapply loop_contains_ledge;eauto.
+        2: contradict n0;eauto using loop_contains_deq_loop.
+        2: eauto.
+        2: cbn;reflexivity.
+        2: { subst k. cbn in Hdepa. lia. }
+        eapply path_to_elem in Hentry;eauto. destructH.
+        inv_path Hentry0.
+        { exfalso. eapply n0. reflexivity. }
+        destruct x.
+        eapply tcfg_entry in H1 as Heentry. 2: eauto using loop_contains_ledge,loop_contains_loop_head.
+        eapply tag_entry_iff in Heentry;eauto. inv Heentry. rename l0 into t.
+        cbn.
+        specialize IHwf with (y:=π0) (a:=e0) (k:=t). exploit IHwf.
+        * cbn. econstructor. econstructor. eapply Hentry1.
+        * admit.
+        * cbn in Hpre. eapply prefix_cons;eauto.
+        * destructH. exists qe, e1. split;eauto.
+          eapply prefix_succ_in. 2:eauto.
+          econstructor. eapply prefix_cons;eauto.
     - decide (deq_loop h e).
       + decide (deq_loop e h).
         * (* done *)
@@ -570,14 +623,18 @@ Proof.
             - destruct H0. eapply loop_contains_loop_head;eauto.
             - eauto.
           }
-
-          (*
-          enough (j = tl t).
-          -- subst x j. exists e, a. split;eauto. exists (tl π), nil. cbn. f_equal.
-             inv_path H;cbn;eauto.*)
-
-          admit.
-        * (* take the exit, IH *) admit.
+          subst x.
+          inv Hprec.
+          { exfalso. destruct H0. destruct H1. eapply H1.
+            eauto using loop_contains_self,loop_contains_loop_head. }
+          eapply tpath_prec_innermost_eq in H5;eauto using exit_edge_innermost.
+          exists e, a. split;eauto.
+          destruct t;[congruence|].
+          inv H5.
+          cbn in *.
+          destruct π. 1: inv H. path_simpl' H.
+          exists π, nil. cbn. reflexivity.
+        * (* jump to back_edge *) admit.
       + (* jump over loop *) admit.
   Admitted.
 
