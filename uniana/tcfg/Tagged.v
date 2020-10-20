@@ -504,6 +504,26 @@ Proof.
         (Hloop : innermost_loop h p)
     : i = j.
   Admitted.
+  Lemma precedes_prefix_NoDup (A B : Type) (a : A) (b : B) l l'
+        (Hprec : Precedes fst l' (a,b))
+        (Hpre : Prefix l l')
+        (Hnd : NoDup l')
+    : Precedes fst l (a,b).
+  Admitted.
+  Lemma tpath_NoDup_unroot p q i j t
+        (Hpath : TPath (p,i) (q,j) t)
+        (Hdep : | i | = depth p)
+    : NoDup t.
+  Proof.
+    eapply tcfg_enroot in Hpath;eauto. destructH.
+    eapply tpath_NoDup in Hpath. eapply NoDup_app_drop;eauto.
+  Qed.
+
+  Lemma tcfg_head_back p q i j n
+        (Hedge : (p,i) -t> (q, S n :: j))
+        (Hloop : loop_head q)
+    : i = n :: j.
+  Admitted.
 
   Lemma find_loop_exit h a p i j k n l
         (Hpath : TPath (root,start_tag) (p,i) l)
@@ -608,7 +628,9 @@ Proof.
         cbn.
         specialize IHwf with (y:=π0) (a:=e0) (k:=t). exploit IHwf.
         * cbn. econstructor. econstructor. eapply Hentry1.
-        * admit.
+        * eapply precedes_prefix_NoDup;eauto.
+          -- econstructor. eapply prefix_cons;eauto.
+          -- eapply tpath_NoDup_unroot;eauto.
         * cbn in Hpre. eapply prefix_cons;eauto.
         * destructH. exists qe, e1. split;eauto.
           eapply prefix_succ_in. 2:eauto.
@@ -634,9 +656,103 @@ Proof.
           cbn in *.
           destruct π. 1: inv H. path_simpl' H.
           exists π, nil. cbn. reflexivity.
-        * (* jump to back_edge *) admit.
-      + (* jump over loop *) admit.
-  Admitted.
+        * destruct t;[exfalso|].
+          { cbn in Hdepe. destruct Hedge. destruct H0. eapply loop_contains_depth_lt in H0. lia. }
+          cbn in Htag. subst t.
+          specialize (tcfg_reachability Hdeph) as Hreach. destructH.
+          eapply path_app' in H as HHreach;eauto.
+          unfold eexit_edge in Hedge. destructH.
+          eapply prefix_eq in Hpre as Hpre'. destructH.
+          destr_r' l2';subst.
+          { eapply deq_loop_depth_eq in d;[contradiction|]. rewrite <-Hdepe, <-Hdeph. cbn. reflexivity. }
+          eapply eq_loop_exiting in Hedge as Hexeq.
+          assert (x <= n1) as Hleq.
+          {
+            eapply tagle_monotone with (h1:=h0) (n2:=depth h0) in H;eauto.
+            - setoid_rewrite take_r_geq in H at 2. 2: { rewrite Hexeq. lia. }
+              rewrite <-app_assoc in H. rewrite app_comm_cons in H. rewrite take_r_app_eq in H.
+              2: { cbn. rewrite Hexeq. rewrite <-Hdepe. cbn. reflexivity. }
+              cbn in H. destruct H.
+              + dependent destruction H;[lia|]. exfalso. eapply Taglt_irrefl;eauto.
+              + inv H. reflexivity.
+            - rewrite Hexeq. eauto.
+            - destruct Hexeq;eauto.
+          }
+          eapply le_lt_or_eq in Hleq. destruct Hleq as [Hlt|Heq];[|subst x].
+          -- (* jump to back_edge *)
+            eapply loop_tag_dom with (h1:=h0) (j:=(S x) :: k) in HHreach.
+            ++ eapply in_app_or in HHreach. destruct HHreach as [HHreach|HHreach];[|exfalso].
+               ** eapply path_to_elem in HHreach;eauto. destructH. inv_path HHreach0.
+                  { exfalso. clear - H3. eapply lengthEq in H3.
+                    do 2 rewrite app_length in H3. cbn in H3. lia. }
+                  destruct x0.
+                  eapply tcfg_head_back in H1. subst t0.
+                  2: destruct Hedge; eauto using loop_contains_loop_head.
+                  specialize IHwf with (y:=π0) (a:=e0) (k0:= x :: k).
+                  exploit IHwf.
+                  --- econstructor. econstructor. eauto.
+                  --- eapply precedes_prefix_NoDup;eauto. 1: eapply prefix_cons;econstructor;eauto.
+                      eapply tpath_NoDup_unroot;eauto.
+                  --- eapply prefix_eq. exists l0. rewrite <-app_assoc. cbn. reflexivity.
+                  --- destructH. exists qe, e1. split;eauto.
+                      eapply prefix_succ_in;eauto. econstructor. eapply prefix_cons. eauto.
+               ** eapply path_from_elem in Hreach;eauto. 2: eapply tl_incl;eauto.
+                  destructH.
+                  eapply tagle_monotone with (h1:=h0) in Hreach0;eauto. 3:reflexivity.
+                  --- rewrite take_r_geq in Hreach0.
+                      2: { cbn. rewrite Hexeq. cbn in Hdepe. lia. }
+                      rewrite <-app_assoc in Hreach0. rewrite app_comm_cons in Hreach0.
+                      rewrite take_r_app_eq in Hreach0.
+                      2: { cbn. rewrite Hexeq. cbn in Hdepe. lia. }
+                      cbn in Hreach0.
+                      destruct Hreach0.
+                      +++ dependent destruction H0. lia. eapply Taglt_irrefl;eauto.
+                      +++ inv H0. lia.
+                  --- cbn. rewrite Hexeq. cbn in Hdepe. lia.
+                  --- rewrite Hexeq. eauto.
+            ++ destruct Hedge. eauto.
+            ++ rewrite take_r_geq. 2: { rewrite Hexeq. lia. }
+               unfold sub_tag. cbn; split_conj;eauto.
+            ++ cbn. rewrite Hexeq. cbn in Hdepe. lia.
+          -- (* step *)
+            specialize IHwf with (y:=π) (a:=e) (k0:=n1 :: k).
+            exploit IHwf.
+            ++ econstructor. econstructor.
+            ++ inv Hprec.
+               { exfalso. clear - H4. eapply lengthEq in H4.
+                 cbn in H4. do 2 rewrite app_length in H4. lia. }
+               eauto.
+            ++ eapply prefix_eq. eexists. rewrite <-app_assoc. cbn. reflexivity.
+            ++ destructH. exists qe, e0. split_conj;eauto. eapply succ_cons;eauto.
+      + (* jump over loop *)
+        destruct t.
+        { cbn in Hdepe. destruct Hedge. destruct H0.
+          eapply loop_contains_depth_lt in H0. lia. }
+        destruct Hedge.
+        eapply ex_entry with (j':=[n1]) (k0:=t) in H as Hentry.
+        2: destruct H0;eauto.
+        2: { contradict n0. eapply eq_loop_exiting in H0. rewrite <-H0.
+             eapply loop_contains_deq_loop;eauto. }
+        2: eauto.
+        2: cbn;reflexivity.
+        2: { subst k. eapply eq_loop_exiting in H0. rewrite H0. cbn in Hdepe. lia. }
+        eapply path_to_elem in Hentry;eauto. destructH.
+        inv_path Hentry0.
+        { exfalso. eapply eq_loop_exiting in H0. destruct H0. contradiction. }
+        destruct x0.
+        eapply tcfg_entry in H2 as Heentry.
+        2: destruct H0;eauto using loop_contains_loop_head.
+        eapply tag_entry_iff in Heentry;eauto. inv Heentry. rename l0 into t.
+        cbn.
+        specialize IHwf with (y:=π0) (a:=e0) (k:=t). exploit IHwf.
+        * cbn. econstructor. econstructor. eapply Hentry1.
+        * eapply precedes_prefix_NoDup;eauto.
+          -- econstructor. eapply prefix_cons;eauto.
+          -- eapply tpath_NoDup_unroot;eauto.
+        * destructH. exists qe, e1. split;eauto.
+          eapply prefix_succ_in. 2:eauto.
+          econstructor. eapply prefix_cons;eauto.
+  Qed.
 
   Lemma tpath_deq_loop_prefix (p q x y h : Lab) (k i j l m : Tag) t
         (Hloop : loop_contains h p)
