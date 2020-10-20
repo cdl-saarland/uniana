@@ -58,4 +58,14 @@ Section cfg.
       + inversion Hpath; subst;[econstructor|]. destruct b, q.
         eapply IHt;eauto.
   Qed.
+
+  Lemma tpath_NoDup_unroot p q i j t
+        (Hpath : TPath (p,i) (q,j) t)
+        (Hdep : | i | = depth p)
+    : NoDup t.
+  Proof.
+    eapply tcfg_enroot in Hpath;eauto. destructH.
+    eapply tpath_NoDup in Hpath. eapply NoDup_app_drop;eauto.
+  Qed.
+
 End cfg.

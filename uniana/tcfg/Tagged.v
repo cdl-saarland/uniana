@@ -349,19 +349,6 @@ Proof.
     : Path e x z (z :: ϕ).
   Admitted.
 *)
-  Lemma tcfg_entry h q i j
-        (Hloop : loop_head h)
-        (Hedge : (q,j) -t> (h, 0 :: i))
-    : entry_edge q h.
-  Proof.
-    eapply tcfg_edge_destruct' in Hedge.
-    destruct Hedge as [H|[H|[H|H]]].
-    all: destruct H as [H Q];eauto.
-    - eapply basic_edge_no_loop2 in Q. contradiction.
-    - destruct j;cbn in H;congruence.
-    - destruct Q. exfalso. eapply no_exit_head;eauto.
-  Qed.
-
   Lemma ancestor_level_connector p q a i j k t
         (Hpath : TPath (root,start_tag) (p,i) t)
         (Hin : (q,j) ∈ t)
@@ -472,59 +459,6 @@ Proof.
           destruct H;[left;eauto|right;right;eauto].
   Qed.
 
-  Lemma prefix_succ_in (A : Type) (a b : A) l l'
-        (Hpre : Prefix l l')
-        (Hsucc : a ≻ b | l)
-    : a ≻ b | l'.
-  Proof.
-    induction Hpre;eauto.
-    eapply IHHpre in Hsucc.
-    unfold succ_in in Hsucc. destructH. exists l1, (a0 :: l2). rewrite Hsucc. cbn; reflexivity.
-  Qed.
-
-  Lemma succ_in_succ_rt (A : Type) (x y : A) l
-        (Hsucc : x ≻ y | l)
-    : x ≻* y | l.
-  Proof.
-    destruct Hsucc as [l1 [l2 Hsucc]]. subst l.
-    induction l2;cbn.
-    - eapply splinter_lr. econstructor. eapply splinter_nil.
-    - econstructor. eapply IHl2.
-  Qed.
-
-  Lemma tpath_prec_loop_eq h p i j t
-        (Hpath : TPath (h,i) (p,j) t)
-        (Hprec : Precedes fst t (h,i))
-        (Hloop : loop_contains h p)
-    : i = take_r (depth h) j.
-  Admitted.
-  Lemma tpath_prec_innermost_eq h p i j t
-        (Hpath : TPath (h,i) (p,j) t)
-        (Hprec : Precedes fst t (h,i))
-        (Hloop : innermost_loop h p)
-    : i = j.
-  Admitted.
-  Lemma precedes_prefix_NoDup (A B : Type) (a : A) (b : B) l l'
-        (Hprec : Precedes fst l' (a,b))
-        (Hpre : Prefix l l')
-        (Hnd : NoDup l')
-    : Precedes fst l (a,b).
-  Admitted.
-  Lemma tpath_NoDup_unroot p q i j t
-        (Hpath : TPath (p,i) (q,j) t)
-        (Hdep : | i | = depth p)
-    : NoDup t.
-  Proof.
-    eapply tcfg_enroot in Hpath;eauto. destructH.
-    eapply tpath_NoDup in Hpath. eapply NoDup_app_drop;eauto.
-  Qed.
-
-  Lemma tcfg_head_back p q i j n
-        (Hedge : (p,i) -t> (q, S n :: j))
-        (Hloop : loop_head q)
-    : i = n :: j.
-  Admitted.
-
   Lemma find_loop_exit h a p i j k n l
         (Hpath : TPath (root,start_tag) (p,i) l)
         (Hpre : Prefix k j)
@@ -631,6 +565,7 @@ Proof.
         * eapply precedes_prefix_NoDup;eauto.
           -- econstructor. eapply prefix_cons;eauto.
           -- eapply tpath_NoDup_unroot;eauto.
+          -- eapply path_contains_back;eauto.
         * cbn in Hpre. eapply prefix_cons;eauto.
         * destructH. exists qe, e1. split;eauto.
           eapply prefix_succ_in. 2:eauto.
@@ -691,8 +626,10 @@ Proof.
                   specialize IHwf with (y:=π0) (a:=e0) (k0:= x :: k).
                   exploit IHwf.
                   --- econstructor. econstructor. eauto.
-                  --- eapply precedes_prefix_NoDup;eauto. 1: eapply prefix_cons;econstructor;eauto.
-                      eapply tpath_NoDup_unroot;eauto.
+                  --- eapply precedes_prefix_NoDup;eauto.
+                      +++ eapply prefix_cons;econstructor;eauto.
+                      +++ eapply tpath_NoDup_unroot;eauto.
+                      +++ eapply path_contains_back;eauto.
                   --- eapply prefix_eq. exists l0. rewrite <-app_assoc. cbn. reflexivity.
                   --- destructH. exists qe, e1. split;eauto.
                       eapply prefix_succ_in;eauto. econstructor. eapply prefix_cons. eauto.
@@ -749,6 +686,7 @@ Proof.
         * eapply precedes_prefix_NoDup;eauto.
           -- econstructor. eapply prefix_cons;eauto.
           -- eapply tpath_NoDup_unroot;eauto.
+          -- eapply path_contains_back;eauto.
         * destructH. exists qe, e1. split;eauto.
           eapply prefix_succ_in. 2:eauto.
           econstructor. eapply prefix_cons;eauto.

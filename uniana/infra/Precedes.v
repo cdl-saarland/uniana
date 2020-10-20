@@ -74,3 +74,18 @@ Proof.
     + exfalso. eapply Hnin. cbn. left. auto.
     + eapply IHl';eauto.
 Qed.
+
+Lemma precedes_prefix_NoDup (A B : Type) (a : A) (b : B) l l'
+      (Hprec : Precedes fst l' (a,b))
+      (Hpre : Prefix l l')
+      (Hnd : NoDup l')
+      (Hin : (a,b) ∈ l)
+  : Precedes fst l (a,b).
+Proof.
+  eapply prefix_eq in Hpre. destructH. subst l'.
+  induction l2'.
+  - cbn in *. eauto.
+  - inv Hprec.
+    + exfalso. eapply NoDup_app;eauto.
+    + inv Hnd. exploit IHl2'. eauto.
+Qed.

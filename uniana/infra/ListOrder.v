@@ -11,7 +11,7 @@ Local Definition prefix_nincl' {A : Type} `{EqDec A eq} (a : A) l
 Section aux.
 
   Context {A : Type} `{EqDec A eq}.
-  
+
   Lemma postfix_nincl_rcons_a (a : A) (l : list A)
     : postfix_nincl a (l :r: a) = postfix_nincl a l.
   Proof.
@@ -36,7 +36,7 @@ Section aux.
   Qed.
 
   Hint Resolve postfix_nincl_app_in.
-  
+
   Lemma post_pre_nincl_NoDup (l : list A) (a : A)
         (Hnd : NoDup l)
         (Hin : a ∈ l)
@@ -70,7 +70,7 @@ Section aux.
     - econstructor.
       + contradict Hnin.
         eapply In_rcons in Hnin. destruct Hnin;[left;eauto|inversion Hnd;contradiction].
-      + eapply IHl; inversion Hnd;subst; eauto. 
+      + eapply IHl; inversion Hnd;subst; eauto.
   Qed.
 
   Lemma NoDup_rev (l : list A)
@@ -119,7 +119,7 @@ Module SplinterAux.
   Section splinter_aux.
 
     Context {A : Type} `{EqDec A eq}.
-    
+
     Lemma splinter_double (l1 l2 l' : list A) a
           (Hsp : splinter (l1 ++ a :: l2) l')
       : splinter (l1 ++ a :: a :: l2) l'.
@@ -149,7 +149,7 @@ Module SplinterAux.
 
     Lemma splinter_remove_dup (l1 l2 l' : list A) a
           (Hsp : splinter l' (l1 ++ a :: a :: l2))
-      : splinter l' (l1 ++ a :: l2). 
+      : splinter l' (l1 ++ a :: l2).
     Proof.
       dependent induction Hsp; cbn in *; subst.
       - congruence'.
@@ -187,7 +187,7 @@ Module SplinterAux.
         + inversion x; subst. inversion Hsp; subst; cbn; eauto.
         + econstructor. inversion x; subst. eapply IHHsp; eauto.
     Qed.
-    
+
   End splinter_aux.
 
 End SplinterAux.
@@ -233,16 +233,16 @@ Section splinterStrict.
       eapply H; eauto.
     }
     intros ? ? Hsp.
-    induction Hsp; cbn in *; eauto;econstructor. 
+    induction Hsp; cbn in *; eauto;econstructor.
   Qed.
-  
+
   Lemma splinter_strict_incl (l l' : list A)
     : splinter_strict l l' -> l ⊆ l'.
   Proof.
     intros.
     induction H;eauto.
   Qed.
-  
+
   Lemma splinter_strict_refl (l : list A)
     : splinter_strict l l.
   Proof.
@@ -281,7 +281,7 @@ Section splinterStrict.
 End splinterStrict.
 
 Hint Resolve splinter_strict_nil splinter_strict_prefix splinter_strict_refl : splinter.
-    
+
 
 Section splinter.
   Context {A : Type} `{EqDec A eq}.
@@ -302,13 +302,13 @@ Section splinter.
   Qed.
 
   Hint Constructors splinter.
-  
+
   Lemma splinter_refl (l : list A)
     : splinter l l.
   Proof.
     induction l; eauto with splinter.
   Qed.
-  
+
   Lemma splinter_app (l1 l2 l1' l2' : list A)
         (Hleft : splinter l1' l1)
         (Hright : splinter l2' l2)
@@ -347,7 +347,7 @@ Section splinter.
     - eapply splinter_in; eauto.
     - eapply IHl;eauto. eapply splinter_cons. eauto.
   Qed.
-  
+
   Hint Resolve splinter_nil splinter_in splinter_incl : splinter.
 
   Lemma splinter_single (a : A) l
@@ -373,7 +373,7 @@ Section splinter.
     revert dependent l1;induction H23;intros;eauto.
     - dependent induction H12; do 2 exploit' IHsplinter0; intros.
       + econstructor. eapply IHsplinter0;eauto.
-      + eapply IHsplinter; eauto. 
+      + eapply IHsplinter; eauto.
   Qed.
 
   Hint Constructors splinter.
@@ -427,7 +427,7 @@ Section splinter.
     lazymatch type of H with
     | Postfix (_ :: _) nil => exfalso; eapply postfix_nil_nil in H; congruence
     end.
-  
+
   Lemma splinter_postfix (l l' l'' : list A)
         (Hpost : Postfix l l')
         (Hsp : splinter l'' l)
@@ -435,7 +435,7 @@ Section splinter.
   Proof with (eauto with splinter).
     induction Hpost...
   Qed.
-  
+
 End splinter.
 
 Hint Constructors splinter : splinter.
@@ -456,7 +456,7 @@ Lemma splinter_neq_strict (A : Type) (l : list A) (a b : A)
       (Hneqq : a <> b)
   : splinter_strict [a;b] l.
 Proof.
-  clear - Hsp Hneqq. 
+  clear - Hsp Hneqq.
   dependent induction Hsp;subst;eauto with splinter.
   - econstructor. inversion Hsp; subst;[contradiction|]. eapply splinter_in in H1.
     eapply splinter_strict_single;auto.
@@ -489,7 +489,7 @@ Section succ_rt.
     - exists l'. split; [econstructor| eauto with splinter].
     - specialize (IHHsp _ _ eq_refl). destructH. eexists. split; [ econstructor|]; eauto.
   Qed.
-  
+
   Lemma succ_rt_refl (a : A) l
         (Hin : a ∈ l)
     : a ≻* a | l.
@@ -510,10 +510,10 @@ Section succ_rt.
     induction l; inversion Hsucc1; inversion Hsucc2; inversion Hnd; subst.
     - (* copy-copy *) eauto.
     - (* copy-skip -> contradiction *)
-      exfalso. eapply H11. eapply splinter_incl;eauto. 
+      exfalso. eapply H11. eapply splinter_incl;eauto.
     - (* skip-copy *)
       econstructor. eapply splinter_incl in H2.
-      eapply splinter_single;eauto. 
+      eapply splinter_single;eauto.
     - (* skip-skip *)
       econstructor;eauto.
   Qed.
@@ -544,9 +544,9 @@ Section succ_rt.
         inversion Hnd;subst.
         eapply IHl;eauto.
   Qed.
-  
+
   Ltac find_in_succ_rt := eapply splinter_incl; eauto; firstorder.
-  
+
   Lemma postfix_succ_in (a b : A) l l'
         (Hpost : Postfix l l')
         (Hsucc : a ≻ b | l)
@@ -558,13 +558,13 @@ Section succ_rt.
     rewrite <- cons_rcons_assoc. rewrite <-app_assoc.
     rewrite app_comm_cons. reflexivity.
   Qed.
-  
+
   Lemma succ_in_cons_cons (a b : A) l
     : a ≻ b | a :: b :: l.
   Proof.
     exists l, nil. cbn. reflexivity.
   Qed.
-  
+
   Lemma succ_cons (a b c : A) l
         (Hsucc : b ≻ c | l)
     : b ≻ c | a :: l.
@@ -579,7 +579,7 @@ Section succ_rt.
         (Hsucc : a ≻ b | c :: l)
     : b ∈ l.
   Proof.
-    unfold succ_in in Hsucc. destructH. 
+    unfold succ_in in Hsucc. destructH.
     destruct l2;cbn in *; inversion Hsucc;subst; [|eapply in_or_app]; firstorder.
   Qed.
 
@@ -593,7 +593,7 @@ Section succ_rt.
     - symmetry in Hsucc. eapply eq_incl in Hsucc. eapply Hsucc.
       clear Hsucc. induction l2;cbn;firstorder.
   Qed.
-  
+
   Lemma succ_in_prefix_nd (l l' : list A) (a b c : A)
         (Hpre : Prefix (c :: l) l')
         (Hel : a ∈ l)
@@ -602,6 +602,25 @@ Section succ_rt.
     : b ≻ a | c :: l.
   Proof.
   Admitted.
-  
-End succ_rt.
 
+  Lemma succ_in_succ_rt (x y : A) l
+        (Hsucc : x ≻ y | l)
+    : x ≻* y | l.
+  Proof.
+    destruct Hsucc as [l1 [l2 Hsucc]]. subst l.
+    induction l2;cbn.
+    - eapply splinter_lr. econstructor. eapply splinter_nil.
+    - econstructor. eapply IHl2.
+  Qed.
+
+  Lemma prefix_succ_in (a b : A) l l'
+        (Hpre : Prefix l l')
+        (Hsucc : a ≻ b | l)
+    : a ≻ b | l'.
+  Proof.
+    induction Hpre;eauto.
+    eapply IHHpre in Hsucc.
+    unfold succ_in in Hsucc. destructH. exists l1, (a0 :: l2). rewrite Hsucc. cbn; reflexivity.
+  Qed.
+
+End succ_rt.

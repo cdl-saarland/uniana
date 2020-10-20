@@ -431,4 +431,31 @@ Section cfg.
     - subst i. destruct j1,j2; cbn in *. all: congruence.
   Qed.
 
+  Lemma tcfg_head_back p q i j n
+        (Hedge : (p,i) -t> (q, S n :: j))
+        (Hloop : loop_head q)
+    : i = n :: j.
+  Proof.
+    eapply tcfg_edge_destruct' in Hedge.
+    destruct Hedge as [H|[H|[H|H]]].
+    all: destruct H as [Htag Hedge].
+    - eapply basic_edge_no_loop2 in Hedge. contradiction.
+    - inv Htag.
+    - destruct i;[cbn in Htag;congruence|]. cbn in Htag. inv Htag. reflexivity.
+    - destruct Hedge. eapply no_exit_head in H. contradiction.
+  Qed.
+
+  Lemma tcfg_entry h q i j
+        (Hloop : loop_head h)
+        (Hedge : (q,j) -t> (h, 0 :: i))
+    : entry_edge q h.
+  Proof.
+    eapply tcfg_edge_destruct' in Hedge.
+    destruct Hedge as [H|[H|[H|H]]].
+    all: destruct H as [H Q];eauto.
+    - eapply basic_edge_no_loop2 in Q. contradiction.
+    - destruct j;cbn in H;congruence.
+    - destruct Q. exfalso. eapply no_exit_head;eauto.
+  Qed.
+
 End cfg.
