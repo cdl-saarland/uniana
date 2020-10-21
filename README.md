@@ -4,7 +4,7 @@ Reducible Control Flow Graphs"
 
 The documentation of the Coq code is available [here](http://compilers.cs.uni-saarland.de/projects/uniana/toc.html).
 
-To compile the Coq proofs you need [Coq 8.12.0](https://github.com/coq/coq/releases/tag/V8.10.1).
+To compile the Coq proofs you need [Coq 8.12.0](https://github.com/coq/coq/releases/tag/V8.12.0).
 There are no further dependencies.
 
 Executing
