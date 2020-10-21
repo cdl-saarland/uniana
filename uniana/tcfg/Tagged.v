@@ -744,8 +744,6 @@ Proof.
       + eapply splinter_single;eauto.
   Qed.
 
-  Hint Resolve precedes_in.
-
   Lemma dom_dom_in_between  (p q r : Lab) (i j k : Tag) l
         (Hdom1 : Dom edge__P root r q)
         (Hdom2 : Dom edge__P root q p)
@@ -755,8 +753,46 @@ Proof.
     : (q,j) ≻* (r,k) | (p,i) :: l.
   Proof. (* used in uniana *) (* only find_div_br *)
     (* dom_trans is the key *)
-    (* FIXME *)
-  Admitted.
+    eapply dom_trans in Hdom2 as Hdom3;eauto.
+    2: { eapply path_to_elem in Hin;eauto. destructH.
+         eexists. eapply TPath_CPath in Hin0. cbn in Hin0. eauto. }
+    eapply path_from_elem in  Hpath as Hϕ. 2:eauto.
+    2: eapply precedes_in;eauto.
+    destructH.
+    eapply postfix_eq in Hϕ1. destructH.
+    rewrite Hϕ1 in Hin.
+    eapply in_app_or in Hin. destruct Hin.
+    - decide (q = r).
+      + subst r. clear - Hprec H Hϕ1.
+        rewrite Hϕ1 in *. clear Hϕ1.
+        induction ϕ.
+        * cbn in *. contradiction.
+        * inv Hprec.
+          -- cbn. econstructor. destruct H.
+             ++ inv H. eapply splinter_lr. eapply splinter_nil.
+             ++ econstructor. eapply splinter_single. eapply in_or_app. eauto.
+          -- destruct a. destruct H;[exfalso;inv H;cbn in H2;contradiction|].
+             cbn. econstructor. eapply IHϕ;eauto.
+      + exfalso. rewrite Hϕ1 in *.
+        eapply path_from_elem in H;eauto. destructH.
+        eapply TPath_CPath in H0 as H0'.
+        cbn in H0'. eapply Hdom3 in H0'.
+        eapply postfix_eq in H1. destructH. subst ϕ.
+        eapply in_fst in H0'. destructH.
+        eapply precedes_app_drop in Hprec. 2: { eapply in_map. eapply path_contains_back;eauto. }
+        eapply precedes_app_in_nin;eauto.
+        * destr_r' l2'0;subst.
+          -- cbn in *. rewrite app_nil_r in Hϕ0.
+             eapply path_same_back in Hϕ0;eauto. inv Hϕ0. contradiction.
+          -- rewrite app_assoc in Hϕ0. path_simpl' Hϕ0. eapply In_rcons. eauto.
+        * eapply tpath_NoDup_unroot;eauto. eapply tag_depth_unroot_elem.
+          1: eapply Hpath. 1:cbn;symmetry;eapply depth_root.
+          eapply in_or_app. left. eapply path_contains_back;eauto.
+    - rewrite consAppend.
+      rewrite Hϕ1.
+      eapply splinter_app;eapply splinter_single;eauto.
+      eapply path_contains_back;eauto.
+  Qed.
 
   Lemma tpath_exit_nin h q e n j t
         (Hpath : TPath (root, start_tag) (q,n :: j) t)
