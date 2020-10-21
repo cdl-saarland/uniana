@@ -436,6 +436,18 @@ Section splinter.
     induction Hpost...
   Qed.
 
+  Lemma splinter_app_drop (l l1 l2 : list A) a
+        (Hsp : splinter (a :: l) (l1 ++ l2))
+        (Hnin : a ∉ l1)
+    : splinter (a :: l) l2.
+  Proof.
+    induction l1.
+    - cbn in Hsp. eassumption.
+    - inv Hsp.
+      + cbn in Hnin. firstorder.
+      + eapply IHl1;eauto.
+  Qed.
+
 End splinter.
 
 Hint Constructors splinter : splinter.

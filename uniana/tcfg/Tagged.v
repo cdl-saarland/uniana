@@ -699,11 +699,50 @@ Proof.
         (Hhq : (q,j) ≻* (h,k) | t)
         (Hprec : Precedes fst t (h,k))
         (Hpath : TPath (x,l) (y,m) t)
+        (Hdep : | l | = depth x)
     : (q,j) ≻* (p,i) | t.
   Proof. (* used in uniana *) (* only find_div_br *)
     (* easy using monotonicity *)
-    induction Hpath.
-  Admitted.
+    eapply splinter_in in Hhp as Hinp.
+    eapply splinter_in in Hhq as Hinq.
+    eapply tag_depth_unroot_elem in Hinp as Hdepp;eauto.
+    eapply tag_depth_unroot_elem in Hinq as Hdepq;eauto.
+    assert (depth h - 1 <= | i |) as Hhi.
+    { eapply loop_contains_deq_loop in Hloop. eapply deq_loop_depth in Hloop.
+      eapply tag_depth_unroot_elem in Hinp;eauto. lia. }
+    eapply path_from_elem in Hinq;eauto.
+    destructH.
+    eapply postfix_eq in Hinq1.
+    destructH. subst t.
+    eapply in_app_or in Hinp. destruct Hinp;[exfalso|].
+    - eapply path_to_elem in H;eauto. destructH.
+      eapply prefix_eq in H1. destructH. subst ϕ.
+      assert ((h,k) ∈ l2') as Hhin.
+      {
+        destr_r' ϕ0;subst. 1:inv H0. path_simpl' H0.
+        rewrite <-app_assoc in Hhq.
+        setoid_rewrite <-app_cons_assoc in Hhq.
+        rewrite app_assoc in Hhq.
+        eapply splinter_app_drop in Hhq.
+        2: {
+          intro N. eapply NoDup_app.
+          - rewrite app_assoc in Hinq0. eapply tpath_NoDup_unroot. 1: eapply Hinq0. eauto.
+          - eapply N.
+          - eauto.
+        }
+        eapply splinter_cons in Hhq. eapply splinter_in in Hhq.
+        destruct Hhq;[|eauto].
+        exfalso. inv H. eapply Hnloop. eauto using loop_contains_self,loop_contains_loop_head.
+      }
+      eapply ex_entry with (k0:=take_r (depth h - 1) i) (j':=take (|i| - (depth h - 1)) i) in H0;eauto.
+      + eapply precedes_app_in_nin;eauto.
+        eapply tpath_NoDup_unroot;eauto.
+      + erewrite <-take_take_r;eauto. lia.
+      + rewrite take_r_length_le;eauto;lia.
+    - rewrite consAppend. eapply splinter_app.
+      + eapply splinter_single. eapply path_contains_back;eauto.
+      + eapply splinter_single;eauto.
+  Qed.
 
   Hint Resolve precedes_in.
 

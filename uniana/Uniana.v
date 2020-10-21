@@ -538,6 +538,7 @@ Section uniana.
               ** destruct Hexit__edge1. destruct H0. eauto.
               ** eapply splinter_trans in Hexit__seq1. 1:eauto.
                  econstructor. eapply splinter_lr. econstructor. eapply splinter_lr. econstructor.
+              ** cbn. symmetry. eapply depth_root.
         -- unfold exited. eauto.
       + exists e2.
         repeat lazymatch goal with
@@ -573,6 +574,7 @@ Section uniana.
               ** destruct Hexit__edge2. destruct H0. eauto.
               ** eapply splinter_trans in Hexit__seq2. eauto.
                  econstructor. eapply splinter_lr. econstructor. eapply splinter_lr. econstructor.
+              ** cbn. symmetry. eapply depth_root.
         -- unfold exited;eauto.
     - exists k.
       eapply last_common_ex_succ in Hlc; eauto.
