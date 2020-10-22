@@ -842,9 +842,23 @@ Proof.
     : exists t', Path a_edge__P q p t'.
   Proof. (* used in uniana *)
     (* easy using loop_cutting *) (* only find_div_br *)
-
-    (* FIXME *)
-  Admitted.
+    eapply splinter_cons in Hib as Hin. eapply splinter_in in Hin.
+    eapply path_from_elem in Hin;eauto. destructH.
+    eapply TPath_CPath in Hin0 as Hcpath;eauto. cbn in Hcpath.
+    eapply loop_cutting;eauto.
+    intros. intro N.
+    eapply in_fst in N. destructH.
+    eapply Hnoh;eauto.
+    econstructor.
+    eapply splinter_postfix;eauto.
+    eapply path_to_elem in N;eauto.
+    destructH.
+    destruct ϕ0. 1: inv N0. path_simpl' N0.
+    eapply splinter_prefix;eauto.
+    econstructor.
+    eapply splinter_single.
+    eapply path_contains_back;eauto.
+  Qed.
 
   Lemma exit_cascade u p t i j k x l
         (Hdom : Dom edge__P root u p)
