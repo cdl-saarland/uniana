@@ -801,10 +801,39 @@ Proof.
     : (e,j) ∉ t.
   Proof. (* used in uniana *) (* contradict monotoncity *) (* only find_div_br *)
     intro N.
-    unfold exited in Hexit. destructH.
-    unfold exit_edge in Hexit. destructH.
-    eapply PathCons in Hexit3;eauto. cycle 1.
-  Admitted. (* FIXME *)
+    destruct Hexit as [qe Hexit].
+    eapply tag_depth_unroot_elem in N as Hdepe;eauto. 2: cbn;eauto using depth_root.
+    assert (|0 :: j| = depth qe) as Hdepqe.
+    {
+      cbn. erewrite depth_exit.
+      - erewrite <-Hdepe. reflexivity.
+      - exists h. eauto.
+    }
+    eapply eq_loop_exiting in Hexit as Hexeq.
+    specialize (tcfg_reachability Hdepqe) as Hreach. destructH.
+    eapply loop_tag_dom_eq in Hreach as Hhin.
+    2: destruct Hexit;eauto.
+    3: rewrite Hexeq;eauto.
+    2: { rewrite take_r_geq;eauto. rewrite Hexeq. lia. }
+    eapply path_from_elem in Hhin;eauto. destructH.
+    eapply path_from_elem in N;eauto. destructH.
+    eapply ex_entry with (k:=j) (j':=[n]) in N0 as Hentry;eauto.
+    2: destruct Hexit as [? Hexit];destruct Hexit;eauto.
+    2: rewrite Hexeq;cbn in *;lia.
+    eapply path_to_elem in Hentry;eauto. destructH.
+    assert ((qe, 0 :: j) -t> (e,j)) as Hedge.
+    {
+      eapply tcfg_exit_edge. eexists;eauto.
+    }
+    eapply PathCons in Hedge;eauto.
+    eapply path_app' in Hedge;eauto.
+    eapply NoDup_app.
+    - eapply tpath_NoDup_unroot;eauto.
+    - left. reflexivity.
+    - inv_path Hentry0.
+      + exfalso. eapply list_cycle;eauto.
+      + cbn. eapply path_contains_back;eauto.
+  Qed.
 
   Lemma loop_cutting_elem q p t i j x l
         (Hpath : TPath (x,l) (p,i) ((p,i) :: t))
