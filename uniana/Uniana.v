@@ -521,25 +521,42 @@ Section uniana.
             + eapply deq_loop_exiting;eauto.
             + eapply loop_contains_deq_loop;eauto.
         }
-        eapply (loop_cutting_elem (t:=l1)).
-        -- eapply Htr1.
-        -- econstructor.
-           instantiate (1 := l' ++ j).
-           eapply splinter_single.
-           unfold Tag in *. find_in_splinter.
-        -- intros h0 k0 Hloop0. eapply Hdeq in Hloop0. eapply exit_cascade in Hunch;eauto.
-           ++ contradict Hunch.
-              instantiate (1 := k0).
-              eapply succ_rt_combine;eauto;[eauto| | find_succ_rel].
-              eapply tpath_NoDup. eauto.
-              eapply (succ_rt_trans) with  (b:=(e1, l' ++ j));eauto;[eauto| |find_succ_rel].
-              eapply tpath_NoDup;eauto.
-              eapply tpath_deq_loop_prefix with (h1:=h); eauto with splinter.
-              ** destruct Hexit__edge1. destruct H0. eauto.
-              ** eapply splinter_trans in Hexit__seq1. 1:eauto.
-                 econstructor. eapply splinter_lr. econstructor. eapply splinter_lr. econstructor.
-              ** cbn. symmetry. eapply depth_root.
-        -- unfold exited. eauto.
+        2: eexists;eauto.
+
+        eapply splinter_in in Hocc6 as Hϕ.
+        eapply path_from_elem in Hϕ;eauto. destructH.
+        eapply in_succ_in1 in Hexit__succ1 as Hein.
+        eapply postfix_eq in Hϕ1 as Hϕeq. destructH. rewrite Hϕeq in Hein.
+        eapply in_app_or in Hein.
+        destruct Hein as [Hein|Hein];[|exfalso].
+        2: {
+          destr_r' ϕ;subst. 1: inv Hϕ0. path_simpl' Hϕ0.
+          rewrite Hϕeq in Htr1.
+          destruct l;cbn in Hϕ0. 1: cbn in Hϕeq;inv Hϕeq;contradiction.
+          eapply path_prefix_path in Htr1. 2:eauto.
+          2: {
+            eapply prefix_eq.
+            exists (p0 :: l). rewrite <-app_cons_rcons. reflexivity.
+          }
+          rewrite app_cons_rcons in Htr1.
+          eapply tpath_exit_nin_app in Htr1;eauto.
+          eexists;eauto.
+        }
+        eapply path_from_elem in Hein;eauto. destructH.
+        eapply TPath_CPath in Hein0 as Hcein0. cbn in Hcein0.
+        eapply loop_cutting'.
+        -- eapply Hcein0.
+        -- intros h0 Hloop Hneq0 Hel.
+           eapply in_fst in Hel. destructH.
+           eapply exit_cascade' with (h1:=h0).
+           1:eapply Hunch.
+           1,2,4:eauto.
+           1: eapply tag_depth';eauto.
+           intro N. subst h0.
+           eapply loop_contains_trans in Hloop. 2: eapply Hocc0. destruct Hexit__edge1. destruct H0.
+           contradiction.
+           1,2: eauto.
+           eapply postfix_incl;eauto.
       + exists e2.
         repeat lazymatch goal with
                | [H : context C [l1] |- _ ] => clear H
@@ -557,25 +574,41 @@ Section uniana.
             + eapply deq_loop_exiting;eauto.
             + eapply loop_contains_deq_loop;eauto.
         }
-        eapply (loop_cutting_elem (t:=l2)).
-        -- eapply Htr2.
-        -- econstructor.
-           instantiate (1 := l' ++ j).
-           eapply splinter_single.
-           unfold Tag in *. find_in_splinter.
-        -- intros h0 k0 Hloop0. eapply Hdeq in Hloop0. eapply exit_cascade in Hunch;eauto.
-           ++ contradict Hunch.
-              instantiate (1 := k0).
-              eapply succ_rt_combine;eauto;[ eauto| | find_succ_rel].
-              eauto. eapply tpath_NoDup;eauto.
-              eapply (succ_rt_trans) with (b:=(e2, l' ++ j));eauto;[eauto| |find_succ_rel].
-              eapply tpath_NoDup;eauto.
-              eapply tpath_deq_loop_prefix with (h1:=h); eauto with splinter.
-              ** destruct Hexit__edge2. destruct H0. eauto.
-              ** eapply splinter_trans in Hexit__seq2. eauto.
-                 econstructor. eapply splinter_lr. econstructor. eapply splinter_lr. econstructor.
-              ** cbn. symmetry. eapply depth_root.
-        -- unfold exited;eauto.
+        2: unfold exited;eauto.
+        eapply splinter_in in Hocc4 as Hϕ.
+        eapply path_from_elem in Hϕ;eauto. destructH.
+        eapply in_succ_in1 in Hexit__succ2 as Hein.
+        eapply postfix_eq in Hϕ1 as Hϕeq. destructH. rewrite Hϕeq in Hein.
+        eapply in_app_or in Hein.
+        destruct Hein as [Hein|Hein];[|exfalso].
+        2: {
+          destr_r' ϕ;subst. 1: inv Hϕ0. path_simpl' Hϕ0.
+          rewrite Hϕeq in Htr2.
+          destruct l;cbn in Hϕ0. 1: cbn in Hϕeq;inv Hϕeq;contradiction.
+          eapply path_prefix_path in Htr2. 2:eauto.
+          2: {
+            eapply prefix_eq.
+            exists (p0 :: l). rewrite <-app_cons_rcons. reflexivity.
+          }
+          rewrite app_cons_rcons in Htr2.
+          eapply tpath_exit_nin_app in Htr2;eauto.
+          eexists;eauto.
+        }
+        eapply path_from_elem in Hein;eauto. destructH.
+        eapply TPath_CPath in Hein0 as Hcein0. cbn in Hcein0.
+        eapply loop_cutting'.
+        -- eapply Hcein0.
+        -- intros h0 Hloop Hneq0 Hel.
+           eapply in_fst in Hel. destructH.
+           eapply exit_cascade' with (h1:=h0).
+           1:eapply Hunch.
+           1,2,4:eauto.
+           1: eapply tag_depth';eauto.
+           intro N. subst h0.
+           eapply loop_contains_trans in Hloop. 2: eapply Hocc0. destruct Hexit__edge2. destruct H0.
+           contradiction.
+           1,2: eauto.
+           eapply postfix_incl;eauto.
     - exists k.
       eapply last_common_ex_succ in Hlc; eauto.
       2: unfold Tag in *; rewrite <-ηeq1;eauto.

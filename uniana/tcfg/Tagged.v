@@ -312,43 +312,6 @@ Proof.
       econstructor. eapply splinter_single;eauto.
   Qed.
 
-  (*
-  (* possibly not used *)
-  Lemma prec_prec_eq l (q : Lab) (j j' : Tag)
-        (Hprec1 : Precedes fst l (q,j))
-        (Hprec2 : Precedes fst l (q,j'))
-    : j = j'.
-  Proof.
-  Admitted.
-
-  (* possibly not used *)
-  Lemma prefix_prec_prec_eq l l' (p q : Lab) (i j j' : Tag)
-        (Hpre : Prefix ((p,i) :: l') l)
-        (Hprec1 : Precedes fst l (q,j))
-        (Hprec2 : Precedes fst ((p,i) :: l') (q,j'))
-        (Hnd : NoDup l)
-        (Hib : (p,i) ≻* (q,j) | l)
-    : j' = j.
-  Proof.
-  Admitted.
-
-  (* possibly not used *)
-  Lemma ancestor_in_before_dominating a p q (i j k : Tag) l
-        (Hdom : Dom edge__P root q p)
-        (Hanc : ancestor a q p)
-        (Hprec__a: Precedes fst ((p,i) :: l) (a,k))
-        (Hprec__q: Precedes fst ((p,i) :: l) (q,j))
-    : (q,j) ≻* (a,k) | (p,i) :: l.
-  Proof.
-  Admitted.
-   *)
-
-(*
-  Lemma path_split1 (L : Type) (e : L -> L -> Prop) x y z π ϕ
-        (Hpath : Path e x y (π ++ z :: ϕ))
-    : Path e x z (z :: ϕ).
-  Admitted.
-*)
   Lemma ancestor_level_connector p q a i j k t
         (Hpath : TPath (root,start_tag) (p,i) t)
         (Hin : (q,j) ∈ t)
@@ -794,12 +757,13 @@ Proof.
       eapply path_contains_back;eauto.
   Qed.
 
-  Lemma tpath_exit_nin h q e n j t
-        (Hpath : TPath (root, start_tag) (q,n :: j) t)
+
+  Lemma tpath_exit_nin_app h q e i j t
+        (Hpath : TPath (root, start_tag) (q, i ++ j) t)
         (Hloop : loop_contains h q)
         (Hexit : exited h e)
-    : (e,j) ∉ t.
-  Proof. (* used in uniana *) (* contradict monotoncity *) (* only find_div_br *)
+    : (e, j) ∉ t.
+  Proof.
     intro N.
     destruct Hexit as [qe Hexit].
     eapply tag_depth_unroot_elem in N as Hdepe;eauto. 2: cbn;eauto using depth_root.
@@ -817,7 +781,7 @@ Proof.
     2: { rewrite take_r_geq;eauto. rewrite Hexeq. lia. }
     eapply path_from_elem in Hhin;eauto. destructH.
     eapply path_from_elem in N;eauto. destructH.
-    eapply ex_entry with (k:=j) (j':=[n]) in N0 as Hentry;eauto.
+    eapply ex_entry with (k:=j) (j':=i) in N0 as Hentry;eauto.
     2: destruct Hexit as [? Hexit];destruct Hexit;eauto.
     2: rewrite Hexeq;cbn in *;lia.
     eapply path_to_elem in Hentry;eauto. destructH.
@@ -835,17 +799,26 @@ Proof.
       + cbn. eapply path_contains_back;eauto.
   Qed.
 
+  Lemma tpath_exit_nin h q e n j t
+        (Hpath : TPath (root, start_tag) (q,n :: j) t)
+        (Hloop : loop_contains h q)
+        (Hexit : exited h e)
+    : (e,j) ∉ t.
+  Proof. (* used in uniana *) (* contradict monotoncity *) (* only find_div_br *)
+    eapply tpath_exit_nin_app with (i:=[n]);eauto.
+  Qed.
+
   Lemma loop_cutting_elem q p t i j x l
         (Hpath : TPath (x,l) (p,i) ((p,i) :: t))
         (Hib : (p,i) ≻* (q,j) | (p,i) :: t)
-        (Hnoh : forall h k, loop_contains h q -> ~ (p,i) ≻* (h,k) ≻* (q,j) | (p,i) :: t)
+        (Hnoh : forall h k, loop_contains h q -> h <> q -> ~ (p,i) ≻* (h,k) ≻* (q,j) | (p,i) :: t)
     : exists t', Path a_edge__P q p t'.
   Proof. (* used in uniana *)
     (* easy using loop_cutting *) (* only find_div_br *)
     eapply splinter_cons in Hib as Hin. eapply splinter_in in Hin.
     eapply path_from_elem in Hin;eauto. destructH.
     eapply TPath_CPath in Hin0 as Hcpath;eauto. cbn in Hcpath.
-    eapply loop_cutting;eauto.
+    eapply loop_cutting';eauto.
     intros. intro N.
     eapply in_fst in N. destructH.
     eapply Hnoh;eauto.
@@ -860,27 +833,72 @@ Proof.
     eapply path_contains_back;eauto.
   Qed.
 
+  Lemma exit_cascade' u p t i j k x l ϕ h
+        (Hdom : Dom edge__P root u p)
+        (Hprec : Precedes fst ((p,i) :: t) (u,j))
+        (Hpath : TPath (x,l) (p,i) ((p,i) :: t))
+        (Hdep : | i | = depth p)
+        (H : loop_contains h u)
+        (Hneq : h <> u)
+        (Hϕ0 : Path tcfg_edge (u, j) (p, i) ϕ)
+        (Hϕ1 : Postfix ϕ ((p, i) :: t))
+    : (h,k) ∉ ϕ.
+  Proof.
+    eapply precedes_in in Hprec as Hin.
+    eapply path_from_elem in Hin as Hϕ;eauto. destructH.
+    eapply tag_depth_unroot2 in Hpath as Hx;eauto.
+    intro Hel.
+    eapply path_from_elem in Hϕ0 as Hπ;eauto. destructH.
+    eapply dom_loop in H.
+    eapply dom_trans in Hdom;eauto.
+    2: eapply reachability.
+    eapply TPath_CPath in Hπ0 as Hη.
+    cbn in Hη.
+    eapply Hdom in Hη.
+    eapply in_fst in Hη. destructH.
+    eapply postfix_eq in Hπ1. destructH. subst ϕ.
+    destr_r' l2';subst.
+    { rewrite app_nil_r in Hϕ0. eapply path_same_back in Hπ0. 2:eapply Hϕ0. inv Hπ0. contradiction. }
+    rewrite app_assoc in Hϕ0. path_simpl' Hϕ0.
+    rewrite <-app_assoc in Hϕ0.
+    decide (j = b).
+    - subst b.
+      eapply NoDup_app.
+      + eapply tpath_NoDup_unroot;eauto.
+        eapply tag_depth_unroot_elem in Hpath;eauto.
+      + eassumption.
+      + eapply In_rcons. left. reflexivity.
+    - eapply postfix_eq in Hϕ1. destructH.
+      do 2 rewrite <-app_assoc in Hϕ1.
+      eapply precedes_app_in_nin.
+      4: eapply Hη.
+      + rewrite Hϕ1 in Hprec. eassumption.
+      + eapply in_or_app. right. cbn. left. eauto.
+      + eapply tpath_NoDup_unroot;eauto. setoid_rewrite <-Hϕ1. eassumption.
+  Qed.
+
   Lemma exit_cascade u p t i j k x l
         (Hdom : Dom edge__P root u p)
         (Hprec : Precedes fst ((p,i) :: t) (u,j))
         (Hpath : TPath (x,l) (p,i) ((p,i) :: t))
-    : forall h, loop_contains h u -> ~ (p,i) ≻* (h,k) ≻* (u,j) | (p,i) :: t.
+        (Hdep : | i | = depth p)
+    : forall h, loop_contains h u -> h <> u -> ~ (p,i) ≻* (h,k) ≻* (u,j) | (p,i) :: t.
     (* otw. there would be a path through this q to p without visiting u *)
-    (* this could even be generalized to CPaths *)
-    (* TODO: lift on tpaths, on cpaths we might have duplicates, thus it doesn't work there *)
-  Proof. (* used in uniana *) (* FIXME *) (* only find_div_br *)
-  Admitted.
-
-  (*
-
-  Lemma loop_tag_prec (h p : Lab) (i j : Tag) t
-    (Hloop : loop_contains h p)
-    (Hpath : TPath (root,start_tag) (p,i) t)
-    (Htagle : j ⊴ i)
-    (Hdep : |j| = depth h)
-    : Precedes fst t (h,j).
-  Proof.
-  Admitted.
-*)
+    (* on cpaths we might have duplicates, thus it doesn't work there *)
+  Proof. (* used in uniana *) (* only find_div_br *)
+    intros.
+    eapply precedes_in in Hprec as Hin.
+    eapply path_from_elem in Hin as Hϕ;eauto. destructH.
+    eapply tag_depth_unroot2 in Hpath as Hx;eauto.
+    enough ((h,k) ∉ ϕ).
+    {
+      contradict H1. eapply splinter_cons in H1.
+      eapply postfix_eq in Hϕ1. destructH. rewrite Hϕ1 in H1.
+      eapply succ_NoDup_app in H1;eauto.
+      - rewrite <-Hϕ1. eapply tpath_NoDup_unroot;eauto.
+      - eapply path_contains_back;eauto.
+    }
+    eapply exit_cascade';eauto.
+  Qed.
 
 End tagged.
