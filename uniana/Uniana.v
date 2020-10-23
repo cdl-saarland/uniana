@@ -499,6 +499,7 @@ Section uniana.
       + rewrite ηeq2 in Hη2. eauto.
       + eapply succ_in_path_edge;cycle 1;eauto.
     }
+    { contradict Htag0. inv Htag0. reflexivity. }
     1,2: eapply tpath_NoDup;eauto.
     repeat splice_splinter.
     2-4: eauto.

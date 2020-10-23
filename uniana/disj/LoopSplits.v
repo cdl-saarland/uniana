@@ -55,6 +55,7 @@ Theorem lc_disj_exits_lsplits `{redCFG}
           (Hexit2 : exit_edge h q2 e2)
           (Hpath1 : TPath (root,start_tag) (e1,i) ((e1,i) :: (q1,j1) :: t1))
           (Hpath2 : TPath (root,start_tag) (e2,i) ((e2,i) :: (q2,j2) :: t2))
+          (Hneq : j1 <> j2)
   : s ∈ splitsT e1 \/ s ∈ splitsT e2.
 Proof.
   destruct Hlc. destructH.
@@ -64,6 +65,8 @@ Proof.
   remember (hd (e2,i) (rev r2)) as ul2.
   destruct ul1 as [u1 l1].
   destruct ul2 as [u2 l2].
+  eapply tag_depth' in Hpath1 as Hdepe1.
+  eapply tag_depth' in Hpath2 as Hdepe2.
   assert (DiamondPaths s u1 u2 e1 e2 q1 q2 k i l1 l2 j1 j2 r1 r2) as D.
   {
     inv_path Hpath1. inv_path Hpath2.
@@ -92,7 +95,7 @@ Proof.
     - destruct r2; cbn; cbn in H0; inv_path H0; eauto.
     - auto.
     - eapply exiting_eq_loop;eauto.
-    - admit.
+    - eapply tag_depth_unroot2;eauto. eapply tag_depth';eauto.
   }
   inv_path Hpath1. inv_path Hpath2.
   eapply tag_exit_eq' in Hexit1;eauto.
@@ -118,12 +121,43 @@ Proof.
     2: symmetry;eapply tag_depth'.
     2: { eapply path_app';eauto. }
     destructH.
-    do 8 eexists.
+    eapply path_postfix_path in H1 as Hϕ1;eauto.
+    eapply path_postfix_path in H0 as Hϕ2;eauto.
+    (* I need another exists: both paths lead to (e1,i0), thus I have to use the path to the latch
+       and then the path from there to the exit. (similar to head_rewire and things in NodeDisj *)
+    exists ((e1,i) :: r1), ((e2,i) :: r2), u1, u2, k, i, l1, l2.
     split_conj.
+    + eapply PathCons in H6. 2:eauto.
+      eapply path_rcons_inv in H6. destructH.
+      destr_r' r1;subst.
+      * cbn in Hequl1. inv Hequl1. econstructor.
+      * rewrite rev_rcons in Hequl1. cbn in Hequl1. subst x2.
+        rewrite <-cons_rcons_assoc in H6. path_simpl' H6. eapply H6.
+    + eapply PathCons in H8. 2:eauto.
+      eapply path_rcons_inv in H8. destructH.
+      destr_r' r2;subst.
+      * cbn in Hequl2. inv Hequl2. admit.
+      * rewrite rev_rcons in Hequl2. cbn in Hequl2. subst x2.
+        rewrite <-cons_rcons_assoc in H8. path_simpl' H8. admit. (*eapply H8.*)
+    + cbn. eauto.
+    + destr_r' r1;subst.
+      * cbn in Hequl1. inv Hequl1. cbn in Hϕ1. inv_path Hϕ1. assumption.
+      * rewrite rev_rcons in Hequl1. cbn in Hequl1. subst x2.
+        eapply path_nlrcons_edge in Hϕ1. assumption.
+    + destr_r' r2;subst.
+      * cbn in Hequl2. inv Hequl2. cbn in Hϕ2. inv_path Hϕ2. assumption.
+      * rewrite rev_rcons in Hequl2. cbn in Hequl2. subst x2.
+        eapply path_nlrcons_edge in Hϕ2. assumption.
+    + cbn. destruct r1,r2. 2:right;intro;congruence. 2,3:left;intro;congruence.
+      exfalso.
+      cbn in Hϕ1,Hϕ2.
+      eapply path_single in Hϕ1.
+      eapply path_single in Hϕ2.
+      do 2 destructH.
+      inv Hϕ2. inv Hϕ0. eapply Hneq.
+      inv Hϕ4. reflexivity.
     + admit.
-    + admit.
-    + cbn. admit.
-    + admit.
+  -
 Admitted.
 
 Corollary lc_disj_exit_lsplits `{redCFG} (s e q1 q2 h : Lab) (i j1 j2 k : Tag) (t1 t2 : list Coord)
@@ -132,6 +166,7 @@ Corollary lc_disj_exit_lsplits `{redCFG} (s e q1 q2 h : Lab) (i j1 j2 k : Tag) (
           (Hexit2 : exit_edge h q2 e)
           (Hpath1 : TPath (root,start_tag) (e,i) ((e,i) :: (q1, j1) :: t1))
           (Hpath2 : TPath (root,start_tag) (e,i) ((e,i) :: (q2, j2) :: t2))
+          (Hneq : j1 <> j2)
   : s ∈ splitsT e.
 Proof.
   eapply lc_disj_exits_lsplits in Hlc;eauto.
