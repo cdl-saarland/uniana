@@ -241,6 +241,16 @@ Section eval.
     - cbn. destruct b. cbn. destruct c0, c. eapply eval_edge_tcfg_edge;eauto.
   Qed.
 
+  Lemma Tr_tag_depth p i s t
+        (Htr : Tr ((p,i,s) :: t))
+    : |i| = depth p.
+  Proof.
+    eapply Tr_EPath in Htr;cbn;eauto. destructH.
+    eapply EPath_TPath in Htr.
+    cbn in Htr.
+    eapply tag_depth';eauto.
+  Qed.
+
   Definition proj_Tr_TPath (π : list Conf)
     := map fst π.
 
