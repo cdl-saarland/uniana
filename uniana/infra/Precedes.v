@@ -89,3 +89,21 @@ Proof.
     + exfalso. eapply NoDup_app;eauto.
     + inv Hnd. exploit IHl2'. eauto.
 Qed.
+
+Lemma precedes_app_in_nin (A B : Type) (l l' : list (A * B)) a b b2
+      (Hprec : Precedes fst (l ++ l') (a,b))
+      (Hin : (a,b) ∈ l')
+      (Hnd : NoDup (l ++ l'))
+  : (a,b2) ∉ l.
+Proof.
+  induction l.
+  - eauto.
+  - intro N.
+    inv Hprec.
+    + eapply NoDup_app. 1: eapply Hnd. 2:eauto. 1:eauto.
+    + destruct N.
+      * destruct a0. inv H.
+        cbn in H1. contradiction.
+      * eapply IHl;eauto.
+        cbn in Hnd. inv Hnd. assumption.
+Qed.

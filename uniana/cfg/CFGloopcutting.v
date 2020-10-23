@@ -17,16 +17,16 @@ Section cfg.
     - destruct e. eapply no_exit_head;eauto.
   Qed.
 
-  Lemma loop_cutting q p t
+  Lemma loop_cutting' q p t
         (Hpath : CPath q p t)
-        (Hnoh : forall h, loop_contains h q -> h ∉ t)
+        (Hnoh : forall h, loop_contains h q -> h <> q -> h ∉ t)
     : exists t', Path a_edge__P q p t'.
   Proof.
     revert p Hpath Hnoh.
     specialize (well_founded_ind (R:=(@StrictPrefix' Lab)) (@StrictPrefix_well_founded Lab)
                                  (fun t => forall p : Lab,
                                       CPath q p t
-                                      -> (forall h : Lab, loop_contains h q -> h ∉ t)
+                                      -> (forall h : Lab, loop_contains h q -> h <> q -> h ∉ t)
                                       -> exists t' : list Lab, Path a_edge__P q p t'))
       as WFind.
     eapply WFind.
@@ -42,7 +42,11 @@ Section cfg.
       destructH.
       destruct (edge_Edge H3).
       + exists (p :: t'). destruct b. econstructor;eauto.
-      + eapply loop_contains_ledge in b. eapply dom_loop_contains in b;cycle 1.
+      + decide (p = q).
+        {
+          subst. eexists. econstructor.
+        }
+        eapply loop_contains_ledge in b. eapply dom_loop_contains in b;cycle 1.
         * intro N. eapply H1;eauto.
         * eapply dom_dom_acyclic in b. eapply b in Hπ as Hb.
           eapply path_to_elem in Hb;eauto. destructH. eexists;eauto.
@@ -50,6 +54,14 @@ Section cfg.
         eapply entry_edge_acyclic in e. econstructor;eauto.
       + exists (p :: t').
         eapply exit_edge_acyclic in e. econstructor;eauto.
+  Qed.
+
+  Lemma loop_cutting q p t
+        (Hpath : CPath q p t)
+        (Hnoh : forall h, loop_contains h q -> h <> q -> h ∉ t)
+    : exists t', Path a_edge__P q p t'.
+  Proof.
+    eapply loop_cutting';eauto.
   Qed.
 
   Lemma member_reachs_innermost_latch_acyclic h q

@@ -823,3 +823,23 @@ Proof.
     + econstructor;eauto.
     + econstructor;eauto.
 Qed.
+
+Lemma path_same_front (L : Type) (e : L -> L -> Prop) (p q' q : L) π
+      (Hpath1 : Path e p q π)
+      (Hpath2 : Path e p q' π)
+  : q = q'.
+Proof.
+  destruct π.
+  - inv Hpath1.
+  - path_simpl' Hpath1. path_simpl' Hpath2. reflexivity.
+Qed.
+
+Lemma path_same_back (L : Type) (e : L -> L -> Prop) (p p' q : L) π
+      (Hpath1 : Path e p q π)
+      (Hpath2 : Path e p' q π)
+  : p = p'.
+Proof.
+  destr_r' π;subst.
+  - inv Hpath1.
+  - path_simpl' Hpath1. path_simpl' Hpath2. reflexivity.
+Qed.
