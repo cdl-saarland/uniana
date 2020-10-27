@@ -46,8 +46,8 @@ Section eval.
   Global Existing Instance Tag_dec.
   Global Existing Instance State_dec.
 
+  Parameter S : list State.
 
-  Definition States := State -> Prop.
   Definition Conf := ((@Coord Lab)* State)%type.
 
   Hint Unfold Conf Coord.
@@ -168,7 +168,7 @@ Section eval.
   (** * Traces **)
 
   Inductive Tr : list Conf -> Prop :=
-  | Init : forall s, Tr [(root, start_tag, s)]
+  | Init : forall s, s ∈ S -> Tr [(root, start_tag, s)]
   | Step : forall l (k : Conf), Tr l -> sem_step l k -> Tr (k :: l).
 
   Definition EPath := Path eval_edge.
@@ -178,11 +178,13 @@ Section eval.
   (** ** Lemmas **)
 
   Lemma EPath_Tr s0 p i s π :
-    EPath (root,start_tag,s0) (p,i,s) π -> Tr π.
+    s0 ∈ S -> EPath (root,start_tag,s0) (p,i,s) π -> Tr π.
   Proof.
-    intro H. remember (root, start_tag, s0) as start_c.
+    intros Hel H. remember (root, start_tag, s0) as start_c.
     remember (p,i,s) as pis_c. revert p i s Heqpis_c.
-    induction H; intros p i s Heqpis_c; [rewrite Heqstart_c|];econstructor;destruct b as [[b1 b2] b3].
+    induction H; intros p i s Heqpis_c; [rewrite Heqstart_c|];econstructor.
+    2,3: destruct b as [[b1 b2] b3].
+    - eauto.
     - eapply IHPath; eauto.
     - subst c. destruct π;[inversion H|].
       unfold sem_step;cbn.
@@ -304,7 +306,7 @@ Section eval.
     dependent induction t; intros k Hin Hneq Htr; inversion Htr.
     - exfalso.
       destruct Hin;[|contradiction].
-      subst k. inversion H0. eapply Hneq. rewrite H1. reflexivity.
+      subst k. inversion H. eapply Hneq. rewrite H2. reflexivity.
     - inversion H1.
     - subst.
       destruct Hin.
@@ -509,7 +511,7 @@ Section eval.
     Prefix (c :: l) l' -> Tr l' -> Tr (c :: l).
   Proof.
     intros Hpr Htr. induction Htr;cbn in *.
-    - inversion Hpr;[econstructor|]. inversion H1.
+    - inversion Hpr;[econstructor|]. 1:eauto. inversion H2.
     - inversion Hpr.
       + subst. econstructor;eauto.
       + eapply IHHtr;eauto.
