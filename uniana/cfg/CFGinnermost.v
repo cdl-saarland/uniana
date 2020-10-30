@@ -466,17 +466,18 @@ Section cfg.
       eapply in_filter_iff. split;eauto.
   Qed.
 
-  Lemma ex_depth_head p n
-        (Hdep : n <= depth p)
-        (Hn0 : n <> 0)
-    : exists h, loop_contains h p /\ depth h = n.
+  Lemma acyclic_entry_head h p
+        (Hedge : p -a> h)
+        (Hloop : loop_head h)
+    : entry_edge p h.
   Proof.
-    (*
-      induction on depth p. if depth p = 0, trivial.
-      step case: innermost loop exists, that one has a pre-header, the pre-header is stritly less deep.
-      -> use IH for the pre-header.
-     *)
-  Admitted.
+    unfold entry_edge. split;eauto.
+    split;[|eapply a_edge_incl;eauto].
+    intro N.
+    eapply loop_reachs_member in N.
+    destruct N.
+    eapply a_edge_acyclic;eauto.
+  Qed.
 
   Definition nexit_edge q p := forall h, ~ exit_edge h q p.
   Definition nexited p := forall h q, ~ exit_edge h q p.
@@ -504,6 +505,13 @@ Section cfg.
     - unfold nexited,nexit_edge in *. split;intros;eapply  H.
   Qed.
 
+  Lemma depth_exit': forall [h p q : Lab], exit_edge h p q -> depth p = S (depth q).
+  Proof.
+    intros.
+    eapply depth_exit.
+    eexists;eauto.
+  Qed.
+
   Lemma exit_edges_loop_eq h1 h2 e1 e2 q1 q2 p
         (Hexit1 : exit_edge h1 q1 e1)
         (Hexit2 : exit_edge h2 q2 e2)
@@ -512,7 +520,18 @@ Section cfg.
         (Heq : eq_loop e1 e2)
     : eq_loop q1 q2.
   Proof.
-  Admitted.
+    eapply loop_contains_either in Hin1 as Heither. 2: eapply Hin2.
+    eapply depth_exit' in Hexit1 as Hexdep1.
+    eapply depth_exit' in Hexit2 as Hexdep2.
+    eapply eq_loop_exiting in Hexit1.
+    eapply eq_loop_exiting in Hexit2.
+    rewrite <-Hexit1. rewrite <-Hexit2.
+    rewrite Heq in Hexdep1. rewrite <-Hexdep1 in Hexdep2.
+    rewrite <-Hexit1 in Hexdep2. rewrite <-Hexit2 in Hexdep2.
+    destruct Heither;eapply loop_contains_deq_loop in H.
+    - eapply deq_loop_depth_eq in Hexdep2;eauto. split;eauto.
+    - symmetry in Hexdep2. eapply deq_loop_depth_eq in Hexdep2;eauto. split;eauto.
+  Qed.
 
   (** * Innermost loops and strit-innermost loops **)
 
@@ -912,6 +931,49 @@ Section cfg.
     decide (exists h, loop_contains h p).
     - destructH. eapply loop_contains_innermost;eauto.
     - simpl_dec' n. eapply depth_zero_iff in n. lia.
+  Qed.
+
+  Lemma ex_depth_head' p n
+        (Hdep : S n <= depth p)
+    : exists h, loop_contains h p /\ depth h = S n.
+  Proof.
+    eapply Nat.le_exists_sub in Hdep. destructH. clear Hdep1.
+    rename Hdep0 into Hdep. rename p0 into d.
+    revert dependent p.
+    induction d;intros.
+    - specialize (@depth_ex_innermost p) as Hinner.
+      exploit Hinner. lia. destructH.
+      exists h. split;[destruct Hinner;eauto|].
+      eapply innermost_eq_loop in Hinner. rewrite Hinner. lia.
+    - specialize (@depth_ex_innermost p) as Hinner.
+      exploit Hinner. lia. destructH.
+      eapply innermost_eq_loop in Hinner as Heq.
+      destruct Hinner as [Hloop Hdeq].
+      specialize (a_reachability h) as Hreach.
+      destructH.
+      destruct π as [ | x π];[inv Hreach|].
+      destruct π as [ | y π].
+      { exfalso. eapply path_single in Hreach. destructH. subst h. subst x.
+        eapply root_no_loop. eauto using loop_contains_self, loop_contains_loop_head. }
+      inv_path Hreach.
+      eapply acyclic_entry_head in H0 as Hentry. 2:eauto using loop_contains_loop_head.
+      eapply depth_entry in Hentry as Hentry_dep.
+      specialize (IHd y).
+      exploit IHd. rewrite Heq in Hentry_dep. lia.
+      destructH.
+      exists h0. split;[|eauto].
+      eapply deq_loop_entry in Hentry.
+      eapply Hentry in IHd0.
+      eapply loop_contains_trans;eauto.
+  Qed.
+
+  Lemma ex_depth_head p n
+        (Hdep : n <= depth p)
+        (Hn0 : n <> 0)
+    : exists h, loop_contains h p /\ depth h = n.
+  Proof.
+    destruct n. 1:contradiction.
+    eapply ex_depth_head' in Hdep;eauto.
   Qed.
 
 (*  Lemma dom_self_loop h p π
