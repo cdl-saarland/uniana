@@ -1,19 +1,5 @@
 Require Export LoopSplits SplitsSound.
 
-Lemma both_exit_or_teq `(C : redCFG) q1 q2 p j1 j2 i
-      (Hedge1 : (q1,j1) -t> (p,i))
-      (Hedge2 : (q2,j2) -t> (p,i))
-  : exists h, exit_edge h q1 p /\ exit_edge h q2 p \/ j1 = j2 /\ deq_loop p q1.
-Proof.
-Admitted.
-
-Lemma edge_edge_loop `(C : redCFG) q1 q2 p
-      (Hedge1 : edge__P q1 p)
-      (Hedge2 : edge__P q2 p)
-  : eq_loop q1 q2.
-Proof.
-Admitted.
-
 (** * Corollaries **)
 
 Lemma hd_nnil (A : Type) (l : list A) a b
@@ -46,7 +32,10 @@ Proof.
   1: contradiction.
   all: split_conj.
   7,14: eapply tag_depth';eauto.
-  19: { admit. }
+  19: {
+    eapply tag_depth' in H.
+    eapply tag_depth_unroot2 in Hpath1';eauto.
+  }
   3,9,15: eauto.
   1,5,7,10,15: cbn.
   1,3:econstructor.
@@ -68,4 +57,4 @@ Proof.
   all: try (replace (hd (p, i) (rev ((q1, j1) :: x))) with (hd (q1, j1) (rev ((q1, j1) :: x)));
             [|eapply hd_nnil;cbn;intro N;congruence']).
   all:now eauto.
-Admitted.
+Qed.
