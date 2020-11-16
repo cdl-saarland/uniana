@@ -500,8 +500,11 @@ Proof.
     assert ((h, 0 :: j1) ∈ ϕ0) as Hinϕ0.
     { clear T. eapply node_disj_find_head;eauto.
       - unfold ocnc_loop, cnc_loop.
-        split;destruct n;eauto. destruct H;split;eauto. contradict H1.
-        eapply eq_loop1;eauto with teq.
+        split;destruct n;eauto.
+        + destruct H;split;eauto. contradict H1.
+          eapply eq_loop1;eauto with teq.
+        + intros. eapply H0. destructH. split;eauto. destruct Tsym.
+          contradict H3. eapply eq_loop1. 1:symmetry. 1,2:eauto.
       - setoid_rewrite Tloop. eassumption.
     }
     eapply Tdisj. 1,2: eapply prefix_incl;eauto.
