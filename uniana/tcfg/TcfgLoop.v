@@ -141,13 +141,6 @@ Section cfg.
       + cbn. lia.
   Qed.
 
-  Lemma tpath_tag_take_r_eq p i q j t h n
-        (Hpath : TPath (q,j) (p,i) t)
-        (Hincl : forall r, r ∈ map fst t -> loop_contains h r)
-        (Hdep : depth h = n)
-    : take_r (n-1) j = take_r (n-1) i.
-  Admitted.
-
   (** ** Lemmas with take_r **)
 
   Lemma taglt_take_r_taglt i j n
@@ -242,14 +235,8 @@ Section cfg.
     : forall (p q : Lab) (i j : Tag) (t : list Coord) (a b : Coord),
       TPath a b t -> (p, i) ≻ (q, j) | t -> tcfg_edge (q,j) (p,i).
     (* PROVEME (analogous to below lemma) *)
-  Admitted.
-
-  (* TODO: remove (after proof is adjusted to above lemma) *)
-  Lemma succ_in_tpath_eff_tag p q i j t a b
-        (Hpath : TPath a b t)
-        (Hsucc : (p,i) ≻ (q,j) | t)
-    : eff_tag q p j = Some i.
   Proof.
+    intros ? ? ? ? ? ? ? Hpath Hsucc.
     unfold succ_in in Hsucc. destructH.
     revert dependent t. revert b. induction l2; cbn in *; intros.
     - rewrite Hsucc in Hpath. unfold TPath in Hpath. destruct b.

@@ -606,15 +606,6 @@ Section succ_rt.
       clear Hsucc. induction l2;cbn;firstorder.
   Qed.
 
-  Lemma succ_in_prefix_nd (l l' : list A) (a b c : A)
-        (Hpre : Prefix (c :: l) l')
-        (Hel : a ∈ l)
-        (Hsucc : b ≻ a | l')
-        (Hnd : NoDup l')
-    : b ≻ a | c :: l.
-  Proof.
-  Admitted.
-
   Lemma succ_in_succ_rt (x y : A) l
         (Hsucc : x ≻ y | l)
     : x ≻* y | l.

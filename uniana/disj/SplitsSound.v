@@ -164,11 +164,13 @@ Context `{C : redCFG}.
           split. {
             replace j with (take_r (depth h - 1) m).
             - eapply tpath_tag_take_r_eq.
+              + eauto.
               + eapply path_app.
                 1: eapply PathSingle. eassumption.
                 rewrite Hn. eassumption.
               (* eapply path_app. eapply Hpath. eassumption. eapply PathSingle. *)
-              + intros x Hxin. eapply Hallinh. rewrite Hn in Hxin. eassumption.
+              + intros x Hxin. eapply loop_contains_deq_loop.
+                eapply Hallinh. rewrite Hn in Hxin. eassumption.
               + reflexivity.
             - eapply eq_loop_exiting in Hexit. rewrite Hexit.
               replace (depth b) with (| m |).
