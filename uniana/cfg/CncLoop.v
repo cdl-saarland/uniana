@@ -58,21 +58,6 @@ Proof.
   destruct Hanc as [[Hp Hq] | Hroot].
   - eapply loop_LPath in Hp as HL.
     destructH.
-
-    (*
-    destr_r' π;subst. 1: inv HL.
-    unfold LPath in HL. path_simpl' HL.
-    destr_r' l;subst.
-    1: {
-      cbn in HL. eapply path_single in HL. destruct HL. subst a.
-      exfalso. eapply Hndeq. eapply loop_contains_deq_loop;eauto.
-    }
-    exists x0.
-    *)
-
-
-
-
     inv_path HL.
     + exfalso.
       eapply Hndeq. eapply loop_contains_deq_loop;eauto.
@@ -140,8 +125,36 @@ Proof.
       eapply H2;eauto.
 Qed.
 
-(* FIXME: this proposition is WRONG *)
 Lemma ocnc_depth `(C : redCFG) h p q
       (Hocnc : ocnc_loop h p q)
+      (Hdeq : deq_loop p q)
   : depth h = S (depth q).
-Admitted.
+Proof.
+  unfold ocnc_loop,cnc_loop in *. destructH.
+  assert (deq_loop h q) as Hhq.
+  {
+    intros h0 Hh0.
+    eapply Hdeq in Hh0 as Hh0p.
+    eapply loop_contains_either in Hh0p as Heith. 2:eapply Hocnc2. destruct Heith;[exfalso|eauto].
+    eapply Hocnc3. eapply loop_contains_deq_loop. eapply loop_contains_trans;eauto.
+  }
+  assert (S (depth q) <= depth h) as Hqs.
+  {
+    assert (~ depth h <= depth q) as Q.
+    {
+      contradict Hocnc3.
+      eapply deq_loop_depth_leq;eauto.
+    }
+    lia.
+  }
+  eapply Nat.le_antisymm;[|eauto].
+  eapply loop_contains_deq_loop in Hocnc2 as Hqp.
+  eapply deq_loop_depth in Hqp. setoid_rewrite <-Hqs in Hqp.
+  eapply ex_depth_head' in Hqp as Hhead. destructH.
+  specialize (Hocnc1 h0).
+  exploit Hocnc1.
+  - split;eauto.
+    intro N.
+    eapply deq_loop_depth in N. lia.
+  - eapply deq_loop_depth in Hocnc1. rewrite <-Hhead1. eauto.
+Qed.

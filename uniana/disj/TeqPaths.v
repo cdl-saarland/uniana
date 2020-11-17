@@ -486,6 +486,7 @@ Proof.
     subst. reflexivity.
   - eapply ex_ocnc_loop in n. destructH.
     eapply ocnc_depth in n as Hdep.
+    2: eapply teq_r1_incl_head_q;eauto.
     specialize Tpath1 as Hpath1.
     specialize Tpath2 as Hpath2.
     subst j2. eapply TeqPaths_sym in T as Tsym.
@@ -494,7 +495,6 @@ Proof.
     copy Hin1 Hin1'. copy Hin2 Hin2'.
     eapply path_to_elem in Hin1;eauto. destructH.
     eapply path_to_elem in Hin2;eauto. destructH.
-
     assert ((h, 0 :: j1) ∈ ϕ) as Hinϕ.
     { clear Tsym. eapply node_disj_find_head;eauto. }
     assert ((h, 0 :: j1) ∈ ϕ0) as Hinϕ0.

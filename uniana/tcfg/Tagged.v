@@ -353,7 +353,7 @@ Proof.
         * eapply succ_rt_refl. eapply path_contains_front;eauto.
     - eapply ex_ocnc_loop in n as Hocnc;eauto.
       destructH.
-      eapply ocnc_depth in Hocnc as Hhdep.
+      eapply ocnc_depth in Hocnc as Hhdep. 2:eauto.
       unfold ocnc_loop, cnc_loop in *. destructH.
       assert (~ loop_contains h a) as Hnloop
           by (contradict Hocnc3;eauto using loop_contains_deq_loop).
