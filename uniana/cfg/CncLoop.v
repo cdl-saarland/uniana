@@ -9,14 +9,6 @@ Definition cnc_loop `{C : redCFG} h p q
 Definition ocnc_loop `{C : redCFG} h p q
   := cnc_loop h p q /\ forall h', cnc_loop h' p q -> deq_loop h' h.
 
-(*
-(* the ocnc loop has an exit such that q is deeper or equal to the exit *)
-Lemma ocnc_loop_exit `(C : redCFG) s q s'
-      (Hocnc : ocnc_loop s q s')
-  : exists e : Lab, exited s' e /\ deq_loop q e.
-Admitted.
- *)
-
 Lemma LPath_deq_loop `(C : redCFG) p q π
       (Hpath : LPath p q π)
   : deq_loop q p.

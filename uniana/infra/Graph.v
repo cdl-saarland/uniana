@@ -11,6 +11,8 @@ Require Import Coq.Program.Utils.
 
 Require Export ConvBoolTac ListOrder DecTac.
 
+Require Import Lia.
+
 (** Graph **)
 
 Section graph.
@@ -743,7 +745,6 @@ Proof.
       econstructor.
 Qed.
 
-(*
 Lemma rotate_forward' (L : Type) (e : L -> L -> Prop) (p q : L) π
       (Hedge : e q p)
       (Hpath : Path e p q π)
@@ -771,7 +772,40 @@ Lemma rotate_forward (L : Type) (e : L -> L -> Prop) (p q : L) π
 Proof.
   do 2 eexists;eapply rotate_forward';eauto.
 Qed.
-*)
+
+Lemma rotate_find (L : Type) `{EqDec L eq} (e : L -> L -> Prop) (p q : L) π
+      (Hpath : Path e p p π)
+      (Hin : q ∈ π)
+  : exists ϕ, Path e q q ϕ /\ π =' ϕ /\ | π | = | ϕ |.
+Proof.
+  inv_path Hpath.
+  - exists [p]. destruct Hin;[subst|contradiction]. split_conj;eauto. split;eauto.
+  - eapply path_to_elem in Hin as Hto;eauto.
+    destructH.
+    eapply prefix_eq in Hto1. destructH.
+    destruct ϕ;[inv Hto0|]. path_simpl' Hto0.
+    eapply path_postfix_path in Hpath as Hfrom.
+    2: { eapply postfix_eq. exists ϕ. rewrite <-app_cons_rcons. eassumption. }
+    exists (q :: ϕ ++ tl (l2' ++ [q])).
+    destruct l2'.
+    + cbn in *. rewrite app_nil_r. eapply path_single in Hfrom. destructH. subst p.
+      split_conj.
+      * eassumption.
+      * rewrite Hto1. reflexivity.
+      * inv Hto1. reflexivity.
+    + cbn. cbn in Hto1,Hfrom. inv Hto1.
+      split_conj.
+      * rewrite app_comm_cons.
+        replace (l2' :r: q) with (tl (l0 :: l2' :r: q)) by (cbn;eauto). eapply path_app';eauto.
+      * split;cbn.
+        -- intros y Hy. destruct Hy;subst.
+           ++ rewrite app_comm_cons. eapply in_or_app. left. eapply path_contains_back;eauto.
+           ++ eapply in_app_or in H2. firstorder.
+        -- intros y Hy. destruct Hy;subst. 1: firstorder.
+           eapply in_app_or in H2. rewrite In_rcons in H2.
+           rewrite app_comm_cons. eapply in_or_app. firstorder.
+      * do 3 rewrite app_length. cbn. lia.
+Qed.
 
 Lemma acyclic_path_NoDup (L : Type) `{EqDec L eq} (ed : L -> L -> Prop) (π : list L) p q
       (Hpath : Path ed p q π)
