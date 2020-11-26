@@ -210,7 +210,7 @@ Proof.
     symmetry; eapply root_tag_nil;eauto using precedes_in.
   Qed.
 
-  Hint Unfold Coord.
+  Hint Unfold Coord : core.
 
   Lemma tag_prefix_ancestor_elem a p q r i j k l
         (Hanc : ancestor a p q)

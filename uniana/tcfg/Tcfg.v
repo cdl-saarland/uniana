@@ -12,7 +12,7 @@ Section cfg.
   Definition start_tag : Tag := nil.
 
   Definition Coord : Type := (Lab * Tag).
-  Hint Resolve Tag_dec.
+  Hint Resolve Tag_dec : core.
 
   Program Instance Coord_dec : EqDec Coord eq.
   Next Obligation.

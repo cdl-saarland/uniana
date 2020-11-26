@@ -317,12 +317,12 @@ Section uniana.
           cbn. eauto.
   Qed.
 
-  Hint Resolve Conf_dec.
+  Hint Resolve Conf_dec : core.
 
-  Hint Unfold Coord.
-  Hint Unfold Tag.
-  Hint Immediate tpath_NoDup.
-  Hint Resolve precedes_in.
+  Hint Unfold Coord : core.
+  Hint Unfold Tag : core.
+  Hint Immediate tpath_NoDup : core.
+  Hint Resolve precedes_in : core.
 
 
   Local Ltac lc_ex_succ_pre_post :=

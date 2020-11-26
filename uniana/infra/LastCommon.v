@@ -1,4 +1,5 @@
 Require Import LastCommonTac DecTac Lia.
+Require Import ListOrder.
 
 Section Lc.
 
@@ -93,8 +94,6 @@ Section Lc.
     split_conj;eauto.
     eapply Disjoint_sym. auto.
   Qed.
-
-  Require Import ListOrder.
 
 
   Lemma ne_last_common `{EqDec A eq} (l1 l2 : list A) (a : A) :

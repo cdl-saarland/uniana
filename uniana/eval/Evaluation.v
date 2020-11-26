@@ -50,7 +50,7 @@ Section eval.
 
   Definition Conf := ((@Coord Lab)* State)%type.
 
-  Hint Unfold Conf Coord.
+  Hint Unfold Conf Coord : core.
 
   Definition lab_of (k : Conf) :=
     match k with
@@ -173,7 +173,7 @@ Section eval.
 
   Definition EPath := Path eval_edge.
 
-  Hint Unfold Conf Coord.
+  Hint Unfold Conf Coord : core.
 
   (** ** Lemmas **)
 
@@ -443,7 +443,7 @@ Section eval.
     - cbn in Heff, H2. destruct a as [[q j] r]. exists q,j,r. firstorder.
     - exfalso. inversion H; inversion H0. subst p; contradiction.
     - destruct H.
-      + subst a. remember (hd_error l) as qjr. destruct qjr as [qjr|qjr].
+      + subst a. remember (hd_error l) as qjr. destruct qjr as [qjr|].
         2: destruct l; unfold sem_step in H3;cbn in *;congruence.
         destruct qjr as [[q j] r].
         exists q,j,r. split; [econstructor 2 | eauto].

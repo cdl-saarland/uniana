@@ -21,7 +21,7 @@ Section aux.
       rewrite <-IHl. reflexivity.
   Qed.
 
-  Hint Resolve postfix_nincl_rcons_a.
+  Hint Resolve postfix_nincl_rcons_a : core.
 
   Lemma postfix_nincl_app_in (a : A) (l l' : list A)
         (Hin : a ∈ l)
@@ -35,7 +35,7 @@ Section aux.
         rewrite IHl;eauto.
   Qed.
 
-  Hint Resolve postfix_nincl_app_in.
+  Hint Resolve postfix_nincl_app_in : core.
 
   Lemma post_pre_nincl_NoDup (l : list A) (a : A)
         (Hnd : NoDup l)
@@ -132,7 +132,7 @@ Module SplinterAux.
       - econstructor. eapply IHHsp; eauto.
     Qed.
 
-    Hint Resolve splinter_double.
+    Hint Resolve splinter_double : core.
 
     Lemma splinter_remove (l1 l2 l' : list A) a
           (Hsp : splinter (l1 ++ a :: l2) l')
@@ -145,7 +145,7 @@ Module SplinterAux.
       - econstructor. eapply IHHsp;eauto.
     Qed.
 
-    Hint Resolve splinter_remove.
+    Hint Resolve splinter_remove : core.
 
     Lemma splinter_remove_dup (l1 l2 l' : list A) a
           (Hsp : splinter l' (l1 ++ a :: a :: l2))
@@ -162,7 +162,7 @@ Module SplinterAux.
         + econstructor. eapply IHHsp; eauto. inversion x; subst; eauto.
     Qed.
 
-    Hint Resolve splinter_remove_dup.
+    Hint Resolve splinter_remove_dup : core.
 
     Lemma splinter_rcons_right (a : A) l l'
           (Hsp : splinter l l')
@@ -172,9 +172,9 @@ Module SplinterAux.
       econstructor.
     Qed.
 
-    Hint Resolve splinter_rcons_right.
+    Hint Resolve splinter_rcons_right : core.
 
-    Hint Constructors splinter.
+    Hint Constructors splinter : core.
 
     Lemma splinter_rcons_left (a : A) l l'
           (Hsp : splinter l (l' :r: a))
@@ -221,7 +221,7 @@ Section splinterStrict.
       - econstructor. fold (l' :r: a). auto.
     Qed.
 
-    Hint Resolve splinter_strict_rcons splinter_strict_rcons_right.
+    Hint Resolve splinter_strict_rcons splinter_strict_rcons_right : core.
 
   Lemma splinter_strict_rev (l l' : list A)
     : splinter_strict l l' <-> splinter_strict (rev l) (rev l').
@@ -262,7 +262,7 @@ Section splinterStrict.
     induction l;econstructor;eauto.
   Qed.
 
-  Hint Resolve splinter_strict_nil splinter_strict_prefix splinter_strict_refl.
+  Hint Resolve splinter_strict_nil splinter_strict_prefix splinter_strict_refl : core.
 
   Global Instance splinter_strict_trans
     : Transitive (@splinter_strict A).
@@ -301,7 +301,7 @@ Section splinter.
     induction l; econstructor;eauto.
   Qed.
 
-  Hint Constructors splinter.
+  Hint Constructors splinter : core.
 
   Lemma splinter_refl (l : list A)
     : splinter l l.
@@ -376,7 +376,7 @@ Section splinter.
       + eapply IHsplinter; eauto.
   Qed.
 
-  Hint Constructors splinter.
+  Hint Constructors splinter: core.
 
   Lemma splinter_rev (l l' : list A)
     : splinter l l' <-> splinter (rev l) (rev l').

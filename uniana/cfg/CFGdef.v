@@ -53,10 +53,10 @@ Class redCFG
       root_no_pred : forall p, edge p root <> true
     }.
 
-Hint Resolve loop_head_dom a_edge_incl a_edge_acyclic a_reachability.
+Hint Resolve loop_head_dom a_edge_incl a_edge_acyclic a_reachability : core.
 
 (** ** Notations for paths **)
-  
+
   Definition CPath `{redCFG} := Path edge__P.
   Definition APath `{redCFG} := Path a_edge__P.
   Infix "↪" := back_edge (at level 55).
@@ -83,14 +83,14 @@ Section cfg.
 
 
   (** * Decidable properties on redCFG **)
-  
+
   Global Instance Lab_dec : EqDec Lab eq.
   Proof.
     intros x y. destruct (decide_eq x y).
     - left. rewrite e. reflexivity.
     - right. eauto.
   Qed.
-  
+
   Instance loop_head_dec p : dec (loop_head p).
     eauto.
   Qed.
@@ -98,8 +98,8 @@ Section cfg.
   (* This could also be proven, but it is not trivial non-classical. *)
   Parameter loop_contains_dec : forall qh q, dec (loop_contains qh q).
   Global Existing Instance loop_contains_dec.
-  
-  Hint Resolve loop_contains_dec.
+
+  Hint Resolve loop_contains_dec : core.
 
   Global Instance exit_edge_dec : forall h p q, dec (exit_edge h p q).
   Proof.
@@ -116,21 +116,21 @@ Section cfg.
     eauto.
   Qed.
 
-  Hint Resolve back_edge_dec.
-  
+  Hint Resolve back_edge_dec : core.
+
   (** * Definition of depth **)
 
-  Definition depth (p : Lab) := length (filter (DecPred (fun h => loop_contains h p)) (elem Lab)). 
+  Definition depth (p : Lab) := length (filter (DecPred (fun h => loop_contains h p)) (elem Lab)).
 
-  (** * Some basic facts **)  
-  
+  (** * Some basic facts **)
+
   Lemma reachability (q : Lab) : exists π : list Lab, Path edge__P root q π.
   Proof.
-    specialize (a_reachability q) as Hreach. destructH. exists π. eapply subgraph_path';eauto. 
+    specialize (a_reachability q) as Hreach. destructH. exists π. eapply subgraph_path';eauto.
   Qed.
-  
+
   Lemma back_edge_incl (p q : Lab) (Hback : p ↪ q) : edge__P p q.
-  Proof. 
+  Proof.
     unfold back_edge in Hback. eapply minus_subgraph. eauto.
   Qed.
 
@@ -143,7 +143,7 @@ Section cfg.
     - cbn. econstructor;auto.
       intro N. specialize a_edge_acyclic as Hacy. unfold acyclic in Hacy.
       eapply path_from_elem in N;eauto. destructH. apply Hacy in N0;eauto.
-  Qed.  
+  Qed.
 
   Lemma edge_destruct p q
         (Hedge : p --> q)
@@ -153,7 +153,7 @@ Section cfg.
     unfold back_edge. unfold minus_edge. conv_bool. split; auto.
   Qed.
 
-  
+
 End cfg.
 
 (** * Generalizations of properties on CFGs for non-redCFG graphs **)
